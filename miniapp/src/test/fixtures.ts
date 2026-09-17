@@ -13,7 +13,7 @@ export const house = {
   is_demo: true,
 };
 export const capabilities: Capabilities = {
-  contract_version: "c0",
+  contract_version: "c0.1",
   environment: "test",
   features: {
     test_auth: true,
@@ -22,6 +22,10 @@ export const capabilities: Capabilities = {
     incident_detail: true,
     max_live: false,
     group_mode: false,
+    miniapp: true,
+    photo_analysis: false,
+    voice: false,
+    admin: false,
     routes: false,
     appeals: false,
     reminders: false,
@@ -37,7 +41,13 @@ export const incident: IncidentDetail = {
   description: "Лифт остановился на первом этаже.",
   created_at: "2026-09-17T10:00:00Z",
   report_count: 4,
-  allowed_actions: ["view"],
+  allowed_actions: [],
+  participant_count: 1,
+  updated_at: null,
+  due_at: null,
+  location: null,
+  is_demo: true,
+  provenance: { origin: "demo" },
   reports: [
     {
       id: "r1",
@@ -46,6 +56,7 @@ export const incident: IncidentDetail = {
     },
   ],
   rule: {
+    origin: "demo",
     verification_status: "demo",
     source_title: "Тестовый источник",
     source_url: "",
@@ -63,6 +74,7 @@ export function apiWith(items: IncidentDetail[] = [incident]): DomSignalApi {
         id: "user",
         display_name: "Житель",
         houses: [house],
+        capabilities: capabilities.features,
       }),
     incidents: vi
       .fn()
@@ -83,7 +95,8 @@ export function error(status: number) {
     title: "PRIVATE",
     detail: "PRIVATE",
     code: "failure",
-    request_id: "trace-123",
+    trace_id: "trace-123",
+    retryable: status >= 500 || status === 409,
   });
 }
 export function deferred<T>() {

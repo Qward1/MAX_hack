@@ -1,8 +1,5 @@
-import type {
-  IncidentDetail,
-  IncidentSummary,
-  ReportCreate,
-} from "../../shared/api/client";
+import type { components } from "../../shared/api/schema";
+import type { ReportCreate } from "../../shared/api/client";
 
 export const categoryLabels: Record<ReportCreate["category"], string> = {
   elevator: "Лифт",
@@ -21,7 +18,6 @@ export const statusLabels: Record<string, string> = {
   dismissed: "Не подтверждена",
 };
 export const actionLabels = {
-  view: "Открыть",
   prepare_appeal: "Подготовить обращение",
   edit_draft: "Редактировать черновик",
   join: "Меня тоже касается",
@@ -35,18 +31,9 @@ export const actionLabels = {
   retry: "Обновить данные",
 };
 export type ActionCode = keyof typeof actionLabels;
-export type ActionDescriptor = {
-  code: ActionCode;
-  enabled: boolean;
-  reason: string | null;
-};
-export type Source = {
-  type: string;
-  source_title?: string | null;
-  source_url?: string | null;
-  verified_at?: string | null;
-  recorded_at?: string | null;
-  note?: string | null;
+export type ActionDescriptor = components["schemas"]["ActionDescriptor"];
+export type Source = Omit<components["schemas"]["Provenance"], "origin"> & {
+  origin: string | null;
 };
 
 export function warnUnknown(kind: string) {
@@ -61,14 +48,10 @@ export function categoryLabel(value: string): string {
   return "Другая проблема дома";
 }
 
-// C0's only legacy string action is a read action. Never convert an arbitrary string into permission.
-// Object descriptors are accepted defensively for forward compatibility, not fabricated from status.
 export function knownActions(raw: unknown): ActionDescriptor[] {
   if (!Array.isArray(raw)) return [];
   const result: ActionDescriptor[] = [];
-  for (const entry of raw) {
-    const action =
-      entry === "view" ? { code: "view", enabled: true, reason: null } : entry;
+  for (const action of raw) {
     if (
       !action ||
       typeof action !== "object" ||
@@ -99,23 +82,4 @@ export function formatDate(value?: string | null): string | null {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
-}
-
-// C0 verification_status does NOT establish provenance.type=official/user_reported.
-// Only its explicit demo marker has equivalent meaning. No invented source on the board.
-export function ruleSource(
-  rule: IncidentDetail["rule"] | null | undefined,
-): Source | null {
-  if (!rule) return null;
-  return {
-    type: rule.verification_status === "demo" ? "demo" : "unknown",
-    source_title: rule.source_title,
-    source_url: rule.source_url,
-    note: rule.note,
-  };
-}
-export function canView(incident: IncidentSummary): boolean {
-  return knownActions(incident.allowed_actions).some(
-    (action) => action.code === "view" && action.enabled,
-  );
 }

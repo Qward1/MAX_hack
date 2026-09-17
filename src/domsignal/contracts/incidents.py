@@ -23,6 +23,39 @@ class ReportSummary(ContractModel):
     created_at: datetime
 
 
+class ActionDescriptor(ContractModel):
+    code: Literal[
+        "prepare_appeal",
+        "edit_draft",
+        "join",
+        "copy_draft",
+        "open_official_channel",
+        "mark_filed",
+        "mark_resolved",
+        "mark_unresolved",
+        "escalate",
+        "report_not_problem",
+        "retry",
+    ]
+    enabled: bool
+    reason: str | None
+
+
+class Provenance(ContractModel):
+    origin: Literal["official", "product_derived", "user_reported", "demo"] | None
+    source_title: str | None = None
+    source_url: str | None = None
+    verified_at: datetime | None = None
+    recorded_at: datetime | None = None
+    note: str | None = None
+
+
+class IncidentLocation(ContractModel):
+    entrance: str | None = None
+    floor: str | None = None
+    label: str | None = None
+
+
 class IncidentSummary(ContractModel):
     id: UUID
     house_id: UUID
@@ -31,11 +64,19 @@ class IncidentSummary(ContractModel):
     description: str
     status: IncidentStatus
     created_at: datetime
-    report_count: int = 1
-    allowed_actions: list[Literal["view"]] = ["view"]
+    updated_at: datetime | None
+    due_at: datetime | None
+    location: IncidentLocation | None
+    report_count: int = Field(ge=0)
+    participant_count: int | None = Field(ge=0)
+    is_demo: bool
+    provenance: Provenance | None
+    allowed_actions: list[ActionDescriptor] = Field(default_factory=list)
 
 
 class RuleProvenance(ContractModel):
+    origin: Literal["official", "product_derived", "user_reported", "demo"] | None
+    verified_at: datetime | None = None
     verification_status: Literal["verified", "needs_verification", "demo"]
     source_url: str
     source_title: str

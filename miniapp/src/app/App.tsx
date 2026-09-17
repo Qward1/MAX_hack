@@ -29,7 +29,6 @@ import {
   categoryLabel,
   formatDate,
   knownActions,
-  ruleSource,
   statusLabels,
 } from "../features/incidents/presentation";
 
@@ -84,6 +83,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       await client.authenticate(capabilities, signal);
       const me = await client.me(signal);
       if (
+        !capabilities.features.miniapp ||
         !(incidentId
           ? capabilities.features.incident_detail
           : capabilities.features.incident_board)
@@ -91,7 +91,9 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
         return { capabilities, me, unavailable: true };
       }
       if (incidentId) {
-        const incident = await client.incident(incidentId, signal);
+        const incident = await client.incident(
+          incidentId, signal, houseId ?? undefined,
+        );
         return {
           capabilities,
           me,
@@ -99,17 +101,20 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
           house: me.houses.find((house) => house.id === incident.house_id),
         };
       }
-      const house = houseId
+      const house = houseId !== null
         ? me.houses.find((item) => item.id === houseId)
-        : me.houses[0];
-      if (houseId && !house)
+        : me.houses.length === 1
+          ? me.houses[0]
+          : undefined;
+      if (houseId !== null && !house)
         throw new ApiProblem({
           status: 403,
           type: "about:blank",
           code: "house_access_denied",
           title: "",
           detail: "",
-          request_id: "",
+          trace_id: "",
+          retryable: false,
         });
       if (!house) return { capabilities, me };
       const incidents = await client.incidents(house.id, signal, offset);
@@ -173,12 +178,23 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
     return (
       <main className="app-shell">
         <PageHeader title="Мой дом" />
-        <StatePanel
-          title="Пока нет доступных домов"
-          detail="Откройте ДомСигнал из своего дома в MAX. Ссылка сама по себе не предоставляет доступ."
-          action="Обновить"
-          onAction={resource.refresh}
-        />
+        {data.me.houses.length > 1 ? (
+          <Panel>
+            <h2>Выберите дом</h2>
+            {data.me.houses.map((house) => (
+              <Button key={house.id} onClick={() => navigate(routeUrl(house.id))}>
+                {house.address}
+              </Button>
+            ))}
+          </Panel>
+        ) : (
+          <StatePanel
+            title="Пока нет доступных домов"
+            detail="Откройте ДомСигнал из своего дома в MAX. Ссылка сама по себе не предоставляет доступ."
+            action="Обновить"
+            onAction={resource.refresh}
+          />
+        )}
       </main>
     );
 
@@ -270,15 +286,31 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
           <p className="full-text">
             {incident.description || "Описание пока не добавлено."}
           </p>
+          <SourceChip source={incident.provenance} />
           <dl>
             <InfoRow label="Сообщений по проблеме">
               {incident.report_count ?? "Нет данных"}
+            </InfoRow>
+            <InfoRow label="Участников">
+              {incident.participant_count ?? "Нет данных"}
+            </InfoRow>
+            <InfoRow label="Место">
+              {incident.location
+                ? [
+                    incident.location.entrance && `Подъезд ${incident.location.entrance}`,
+                    incident.location.floor && `Этаж ${incident.location.floor}`,
+                    incident.location.label,
+                  ].filter(Boolean).join(", ") || "Не указано"
+                : "Не указано"}
+            </InfoRow>
+            <InfoRow label="Обновлена">
+              {formatDate(incident.updated_at) ?? "Нет данных"}
             </InfoRow>
             <InfoRow label="Создана">
               {formatDate(incident.created_at) ?? "Дата не указана"}
             </InfoRow>
             <InfoRow label="Срок">
-              {formatDate(incident.rule?.due_at) ?? "Не определён"}
+              {formatDate(incident.due_at) ?? "Не определён"}
             </InfoRow>
           </dl>
         </Panel>
@@ -287,7 +319,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
             <Typography.Title asChild>
               <h2>Источник и основание</h2>
             </Typography.Title>
-            <SourceChip source={ruleSource(incident.rule)} />
+            <SourceChip source={incident.rule} />
           </Panel>
         )}
         {incident.reports?.length > 0 && (
@@ -324,7 +356,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
   ).length;
   const actionCount = list.items.filter((item) =>
     knownActions(item.allowed_actions).some(
-      (action) => action.enabled && !["view", "retry"].includes(action.code),
+      (action) => action.enabled && action.code !== "retry",
     ),
   ).length;
   return (
@@ -481,7 +513,7 @@ function ErrorPanel({
   back: ReactNode;
 }) {
   const status = problemStatus(error);
-  const trace = error instanceof ApiProblem ? error.problem.request_id : null;
+  const trace = error instanceof ApiProblem ? error.problem.trace_id : null;
   const safeTrace =
     typeof trace === "string" &&
     /^[a-zA-Z0-9._:-]{1,80}$/.test(trace) &&

@@ -20,6 +20,12 @@ describe("real HTTP client contract", () => {
     expect(localStorage.length).toBe(0);
     expect(window.location.href).not.toContain("test-token");
   });
+  it("encodes the house selector without treating it as authorization", async () => {
+    const fetcher = vi.fn().mockResolvedValue(Response.json(incident));
+    vi.stubGlobal("fetch", fetcher);
+    await new ApiClient().incident("id", undefined, "house/selector");
+    expect(fetcher.mock.calls[0][0]).toBe("/api/v1/incidents/id?house_id=house%2Fselector");
+  });
   it("production never falls back to test auth", async () => {
     const fetcher = vi.fn();
     vi.stubGlobal("fetch", fetcher);

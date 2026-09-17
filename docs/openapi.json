@@ -1,12 +1,56 @@
 {
   "components": {
     "schemas": {
+      "ActionDescriptor": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "prepare_appeal",
+              "edit_draft",
+              "join",
+              "copy_draft",
+              "open_official_channel",
+              "mark_filed",
+              "mark_resolved",
+              "mark_unresolved",
+              "escalate",
+              "report_not_problem",
+              "retry"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "code",
+          "enabled",
+          "reason"
+        ],
+        "title": "ActionDescriptor",
+        "type": "object"
+      },
       "CapabilitiesResponse": {
         "additionalProperties": false,
         "properties": {
           "contract_version": {
-            "const": "c0",
-            "default": "c0",
+            "const": "c0.1",
+            "default": "c0.1",
             "title": "Contract Version",
             "type": "string"
           },
@@ -33,6 +77,11 @@
       "CapabilityFlags": {
         "additionalProperties": false,
         "properties": {
+          "admin": {
+            "default": false,
+            "title": "Admin",
+            "type": "boolean"
+          },
           "appeals": {
             "default": false,
             "title": "Appeals",
@@ -63,6 +112,16 @@
             "title": "Media",
             "type": "boolean"
           },
+          "miniapp": {
+            "default": true,
+            "title": "Miniapp",
+            "type": "boolean"
+          },
+          "photo_analysis": {
+            "default": false,
+            "title": "Photo Analysis",
+            "type": "boolean"
+          },
           "reminders": {
             "default": false,
             "title": "Reminders",
@@ -81,6 +140,11 @@
           "test_auth": {
             "title": "Test Auth",
             "type": "boolean"
+          },
+          "voice": {
+            "default": false,
+            "title": "Voice",
+            "type": "boolean"
           }
         },
         "required": [
@@ -95,6 +159,30 @@
         ],
         "title": "ClassificationMode",
         "type": "string"
+      },
+      "FieldError": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "code",
+          "message"
+        ],
+        "title": "FieldError",
+        "type": "object"
       },
       "HouseAccess": {
         "additionalProperties": false,
@@ -176,12 +264,8 @@
         "additionalProperties": false,
         "properties": {
           "allowed_actions": {
-            "default": [
-              "view"
-            ],
             "items": {
-              "const": "view",
-              "type": "string"
+              "$ref": "#/components/schemas/ActionDescriptor"
             },
             "title": "Allowed Actions",
             "type": "array"
@@ -198,6 +282,18 @@
             "title": "Description",
             "type": "string"
           },
+          "due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
           "house_id": {
             "format": "uuid",
             "title": "House Id",
@@ -208,8 +304,44 @@
             "title": "Id",
             "type": "string"
           },
+          "is_demo": {
+            "title": "Is Demo",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IncidentLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "participant_count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participant Count"
+          },
+          "provenance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Provenance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "report_count": {
-            "default": 1,
+            "minimum": 0.0,
             "title": "Report Count",
             "type": "integer"
           },
@@ -229,6 +361,18 @@
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
           }
         },
         "required": [
@@ -239,6 +383,13 @@
           "description",
           "status",
           "created_at",
+          "updated_at",
+          "due_at",
+          "location",
+          "report_count",
+          "participant_count",
+          "is_demo",
+          "provenance",
           "reports",
           "rule"
         ],
@@ -266,6 +417,46 @@
         "title": "IncidentList",
         "type": "object"
       },
+      "IncidentLocation": {
+        "additionalProperties": false,
+        "properties": {
+          "entrance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entrance"
+          },
+          "floor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floor"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "title": "IncidentLocation",
+        "type": "object"
+      },
       "IncidentStatus": {
         "enum": [
           "open",
@@ -279,12 +470,8 @@
         "additionalProperties": false,
         "properties": {
           "allowed_actions": {
-            "default": [
-              "view"
-            ],
             "items": {
-              "const": "view",
-              "type": "string"
+              "$ref": "#/components/schemas/ActionDescriptor"
             },
             "title": "Allowed Actions",
             "type": "array"
@@ -301,6 +488,18 @@
             "title": "Description",
             "type": "string"
           },
+          "due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
           "house_id": {
             "format": "uuid",
             "title": "House Id",
@@ -311,8 +510,44 @@
             "title": "Id",
             "type": "string"
           },
+          "is_demo": {
+            "title": "Is Demo",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IncidentLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "participant_count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participant Count"
+          },
+          "provenance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Provenance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "report_count": {
-            "default": 1,
+            "minimum": 0.0,
             "title": "Report Count",
             "type": "integer"
           },
@@ -322,6 +557,18 @@
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
           }
         },
         "required": [
@@ -331,7 +578,14 @@
           "title",
           "description",
           "status",
-          "created_at"
+          "created_at",
+          "updated_at",
+          "due_at",
+          "location",
+          "report_count",
+          "participant_count",
+          "is_demo",
+          "provenance"
         ],
         "title": "IncidentSummary",
         "type": "object"
@@ -355,6 +609,9 @@
       "MeResponse": {
         "additionalProperties": false,
         "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/CapabilityFlags"
+          },
           "display_name": {
             "title": "Display Name",
             "type": "string"
@@ -375,7 +632,8 @@
         "required": [
           "id",
           "display_name",
-          "houses"
+          "houses",
+          "capabilities"
         ],
         "title": "MeResponse",
         "type": "object"
@@ -470,12 +728,11 @@
             "title": "Detail",
             "type": "string"
           },
-          "errors": {
+          "field_errors": {
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": true,
-                  "type": "object"
+                  "$ref": "#/components/schemas/FieldError"
                 },
                 "type": "array"
               },
@@ -483,11 +740,11 @@
                 "type": "null"
               }
             ],
-            "title": "Errors"
+            "title": "Field Errors"
           },
-          "request_id": {
-            "title": "Request Id",
-            "type": "string"
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
           },
           "status": {
             "title": "Status",
@@ -495,6 +752,10 @@
           },
           "title": {
             "title": "Title",
+            "type": "string"
+          },
+          "trace_id": {
+            "title": "Trace Id",
             "type": "string"
           },
           "type": {
@@ -508,9 +769,94 @@
           "status",
           "detail",
           "code",
-          "request_id"
+          "retryable",
+          "trace_id"
         ],
         "title": "Problem",
+        "type": "object"
+      },
+      "Provenance": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "enum": [
+                  "official",
+                  "product_derived",
+                  "user_reported",
+                  "demo"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded At"
+          },
+          "source_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Title"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          }
+        },
+        "required": [
+          "origin"
+        ],
+        "title": "Provenance",
         "type": "object"
       },
       "ReportCategory": {
@@ -618,6 +964,23 @@
             "title": "Note",
             "type": "string"
           },
+          "origin": {
+            "anyOf": [
+              {
+                "enum": [
+                  "official",
+                  "product_derived",
+                  "user_reported",
+                  "demo"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
           "source_title": {
             "title": "Source Title",
             "type": "string"
@@ -634,9 +997,22 @@
             ],
             "title": "Verification Status",
             "type": "string"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
           }
         },
         "required": [
+          "origin",
           "verification_status",
           "source_url",
           "source_title",
@@ -727,43 +1103,83 @@
           },
           "401": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Authentication failed"
+            "description": "Unauthorized"
           },
           "403": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "House access denied"
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed"
           },
           "409": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Idempotency conflict"
+            "description": "Conflict"
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Request validation failed"
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "Max Session",
@@ -798,43 +1214,83 @@
           },
           "401": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Authentication failed"
+            "description": "Unauthorized"
           },
           "403": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "House access denied"
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed"
           },
           "409": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Idempotency conflict"
+            "description": "Conflict"
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Request validation failed"
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "Test Session",
@@ -859,43 +1315,83 @@
           },
           "401": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Authentication failed"
+            "description": "Unauthorized"
           },
           "403": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "House access denied"
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed"
           },
           "409": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Idempotency conflict"
+            "description": "Conflict"
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Request validation failed"
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "Capabilities",
@@ -955,43 +1451,83 @@
           },
           "401": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Authentication failed"
+            "description": "Unauthorized"
           },
           "403": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "House access denied"
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed"
           },
           "409": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Idempotency conflict"
+            "description": "Conflict"
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Request validation failed"
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "security": [
@@ -1018,6 +1554,23 @@
               "title": "Incident Id",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "house_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "House Id"
+            }
           }
         ],
         "responses": {
@@ -1033,43 +1586,83 @@
           },
           "401": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Authentication failed"
+            "description": "Unauthorized"
           },
           "403": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "House access denied"
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed"
           },
           "409": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Idempotency conflict"
+            "description": "Conflict"
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Request validation failed"
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "security": [
@@ -1099,43 +1692,83 @@
           },
           "401": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Authentication failed"
+            "description": "Unauthorized"
           },
           "403": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "House access denied"
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed"
           },
           "409": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Idempotency conflict"
+            "description": "Conflict"
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Request validation failed"
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "security": [
@@ -1188,43 +1821,83 @@
           },
           "401": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Authentication failed"
+            "description": "Unauthorized"
           },
           "403": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "House access denied"
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed"
           },
           "409": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Idempotency conflict"
+            "description": "Conflict"
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Request validation failed"
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "security": [
@@ -1264,43 +1937,83 @@
           },
           "401": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Authentication failed"
+            "description": "Unauthorized"
           },
           "403": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "House access denied"
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed"
           },
           "409": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Idempotency conflict"
+            "description": "Conflict"
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Request validation failed"
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "security": [
@@ -1320,48 +2033,80 @@
         "responses": {
           "401": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Authentication failed"
+            "description": "Unauthorized"
           },
           "403": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "House access denied"
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed"
           },
           "409": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Idempotency conflict"
+            "description": "Conflict"
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Request validation failed"
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error"
           },
           "503": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
               }
             },
             "description": "Successful Response"

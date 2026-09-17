@@ -10,6 +10,10 @@ class CapabilityFlags(ContractModel):
     incident_detail: bool = True
     max_live: bool = False
     group_mode: bool = False
+    miniapp: bool = True
+    photo_analysis: bool = False
+    voice: bool = False
+    admin: bool = False
     routes: bool = False
     appeals: bool = False
     reminders: bool = False
@@ -17,6 +21,6 @@ class CapabilityFlags(ContractModel):
 
 
 class CapabilitiesResponse(ContractModel):
-    contract_version: Literal["c0"] = "c0"
+    contract_version: Literal["c0.1"] = "c0.1"
     environment: Literal["local", "test", "production"]
     features: CapabilityFlags

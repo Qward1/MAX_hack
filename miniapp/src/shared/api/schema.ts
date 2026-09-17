@@ -161,14 +161,26 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActionDescriptor */
+        ActionDescriptor: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "prepare_appeal" | "edit_draft" | "join" | "copy_draft" | "open_official_channel" | "mark_filed" | "mark_resolved" | "mark_unresolved" | "escalate" | "report_not_problem" | "retry";
+            /** Enabled */
+            enabled: boolean;
+            /** Reason */
+            reason: string | null;
+        };
         /** CapabilitiesResponse */
         CapabilitiesResponse: {
             /**
              * Contract Version
-             * @default c0
+             * @default c0.1
              * @constant
              */
-            contract_version: "c0";
+            contract_version: "c0.1";
             /**
              * Environment
              * @enum {string}
@@ -178,6 +190,11 @@ export interface components {
         };
         /** CapabilityFlags */
         CapabilityFlags: {
+            /**
+             * Admin
+             * @default false
+             */
+            admin: boolean;
             /**
              * Appeals
              * @default false
@@ -209,6 +226,16 @@ export interface components {
              */
             media: boolean;
             /**
+             * Miniapp
+             * @default true
+             */
+            miniapp: boolean;
+            /**
+             * Photo Analysis
+             * @default false
+             */
+            photo_analysis: boolean;
+            /**
              * Reminders
              * @default false
              */
@@ -225,12 +252,26 @@ export interface components {
             routes: boolean;
             /** Test Auth */
             test_auth: boolean;
+            /**
+             * Voice
+             * @default false
+             */
+            voice: boolean;
         };
         /**
          * ClassificationMode
          * @enum {string}
          */
         ClassificationMode: "manual";
+        /** FieldError */
+        FieldError: {
+            /** Code */
+            code: string;
+            /** Field */
+            field: string;
+            /** Message */
+            message: string;
+        };
         /** HouseAccess */
         HouseAccess: {
             /** Address */
@@ -263,13 +304,8 @@ export interface components {
         };
         /** IncidentDetail */
         IncidentDetail: {
-            /**
-             * Allowed Actions
-             * @default [
-             *       "view"
-             *     ]
-             */
-            allowed_actions: "view"[];
+            /** Allowed Actions */
+            allowed_actions?: components["schemas"]["ActionDescriptor"][];
             category: components["schemas"]["ReportCategory"];
             /**
              * Created At
@@ -278,6 +314,8 @@ export interface components {
             created_at: string;
             /** Description */
             description: string;
+            /** Due At */
+            due_at: string | null;
             /**
              * House Id
              * Format: uuid
@@ -288,10 +326,13 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            /**
-             * Report Count
-             * @default 1
-             */
+            /** Is Demo */
+            is_demo: boolean;
+            location: components["schemas"]["IncidentLocation"] | null;
+            /** Participant Count */
+            participant_count: number | null;
+            provenance: components["schemas"]["Provenance"] | null;
+            /** Report Count */
             report_count: number;
             /** Reports */
             reports: components["schemas"]["ReportSummary"][];
@@ -299,12 +340,23 @@ export interface components {
             status: components["schemas"]["IncidentStatus"];
             /** Title */
             title: string;
+            /** Updated At */
+            updated_at: string | null;
         };
         /** IncidentList */
         IncidentList: {
             /** Items */
             items: components["schemas"]["IncidentSummary"][];
             page: components["schemas"]["PageMeta"];
+        };
+        /** IncidentLocation */
+        IncidentLocation: {
+            /** Entrance */
+            entrance?: string | null;
+            /** Floor */
+            floor?: string | null;
+            /** Label */
+            label?: string | null;
         };
         /**
          * IncidentStatus
@@ -313,13 +365,8 @@ export interface components {
         IncidentStatus: "open" | "resolved" | "dismissed";
         /** IncidentSummary */
         IncidentSummary: {
-            /**
-             * Allowed Actions
-             * @default [
-             *       "view"
-             *     ]
-             */
-            allowed_actions: "view"[];
+            /** Allowed Actions */
+            allowed_actions?: components["schemas"]["ActionDescriptor"][];
             category: components["schemas"]["ReportCategory"];
             /**
              * Created At
@@ -328,6 +375,8 @@ export interface components {
             created_at: string;
             /** Description */
             description: string;
+            /** Due At */
+            due_at: string | null;
             /**
              * House Id
              * Format: uuid
@@ -338,14 +387,19 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            /**
-             * Report Count
-             * @default 1
-             */
+            /** Is Demo */
+            is_demo: boolean;
+            location: components["schemas"]["IncidentLocation"] | null;
+            /** Participant Count */
+            participant_count: number | null;
+            provenance: components["schemas"]["Provenance"] | null;
+            /** Report Count */
             report_count: number;
             status: components["schemas"]["IncidentStatus"];
             /** Title */
             title: string;
+            /** Updated At */
+            updated_at: string | null;
         };
         /** MaxSessionRequest */
         MaxSessionRequest: {
@@ -354,6 +408,7 @@ export interface components {
         };
         /** MeResponse */
         MeResponse: {
+            capabilities: components["schemas"]["CapabilityFlags"];
             /** Display Name */
             display_name: string;
             /** Houses */
@@ -404,18 +459,33 @@ export interface components {
             code: string;
             /** Detail */
             detail: string;
-            /** Errors */
-            errors?: {
-                [key: string]: unknown;
-            }[] | null;
-            /** Request Id */
-            request_id: string;
+            /** Field Errors */
+            field_errors?: components["schemas"]["FieldError"][] | null;
+            /** Retryable */
+            retryable: boolean;
             /** Status */
             status: number;
             /** Title */
             title: string;
+            /** Trace Id */
+            trace_id: string;
             /** Type */
             type: string;
+        };
+        /** Provenance */
+        Provenance: {
+            /** Note */
+            note?: string | null;
+            /** Origin */
+            origin: ("official" | "product_derived" | "user_reported" | "demo") | null;
+            /** Recorded At */
+            recorded_at?: string | null;
+            /** Source Title */
+            source_title?: string | null;
+            /** Source Url */
+            source_url?: string | null;
+            /** Verified At */
+            verified_at?: string | null;
         };
         /**
          * ReportCategory
@@ -465,6 +535,8 @@ export interface components {
             due_at?: string | null;
             /** Note */
             note: string;
+            /** Origin */
+            origin: ("official" | "product_derived" | "user_reported" | "demo") | null;
             /** Source Title */
             source_title: string;
             /** Source Url */
@@ -474,6 +546,8 @@ export interface components {
              * @enum {string}
              */
             verification_status: "verified" | "needs_verification" | "demo";
+            /** Verified At */
+            verified_at?: string | null;
         };
         /** SessionResponse */
         SessionResponse: {
@@ -531,40 +605,76 @@ export interface operations {
                     "application/json": components["schemas"]["SessionResponse"];
                 };
             };
-            /** @description Authentication failed */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description House access denied */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Idempotency conflict */
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Request validation failed */
+            /** @description Unprocessable Entity */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -591,40 +701,76 @@ export interface operations {
                     "application/json": components["schemas"]["SessionResponse"];
                 };
             };
-            /** @description Authentication failed */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description House access denied */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Idempotency conflict */
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Request validation failed */
+            /** @description Unprocessable Entity */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -647,40 +793,76 @@ export interface operations {
                     "application/json": components["schemas"]["CapabilitiesResponse"];
                 };
             };
-            /** @description Authentication failed */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description House access denied */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Idempotency conflict */
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Request validation failed */
+            /** @description Unprocessable Entity */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -708,47 +890,85 @@ export interface operations {
                     "application/json": components["schemas"]["IncidentList"];
                 };
             };
-            /** @description Authentication failed */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description House access denied */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Idempotency conflict */
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Request validation failed */
+            /** @description Unprocessable Entity */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
     };
     incident_detail_api_v1_incidents__incident_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                house_id?: string | null;
+            };
             header?: never;
             path: {
                 incident_id: string;
@@ -766,40 +986,76 @@ export interface operations {
                     "application/json": components["schemas"]["IncidentDetail"];
                 };
             };
-            /** @description Authentication failed */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description House access denied */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Idempotency conflict */
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Request validation failed */
+            /** @description Unprocessable Entity */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -822,40 +1078,76 @@ export interface operations {
                     "application/json": components["schemas"]["MeResponse"];
                 };
             };
-            /** @description Authentication failed */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description House access denied */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Idempotency conflict */
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Request validation failed */
+            /** @description Unprocessable Entity */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -884,40 +1176,76 @@ export interface operations {
                     "application/json": components["schemas"]["ReportCreated"];
                 };
             };
-            /** @description Authentication failed */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description House access denied */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Idempotency conflict */
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Request validation failed */
+            /** @description Unprocessable Entity */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -944,40 +1272,76 @@ export interface operations {
                     "application/json": components["schemas"]["InboundAccepted"];
                 };
             };
-            /** @description Authentication failed */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description House access denied */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Idempotency conflict */
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Request validation failed */
+            /** @description Unprocessable Entity */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -991,40 +1355,67 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Authentication failed */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description House access denied */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Idempotency conflict */
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Request validation failed */
+            /** @description Unprocessable Entity */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description Successful Response */
@@ -1033,7 +1424,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };

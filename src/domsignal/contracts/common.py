@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from typing import Any
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class ContractModel(BaseModel):
     model_config = ConfigDict(extra="forbid", from_attributes=True)
+
+
+class FieldError(ContractModel):
+    field: str
+    code: str
+    message: str
 
 
 class Problem(ContractModel):
@@ -15,8 +19,9 @@ class Problem(ContractModel):
     status: int
     detail: str
     code: str
-    request_id: str
-    errors: list[dict[str, Any]] | None = None
+    retryable: bool
+    trace_id: str
+    field_errors: list[FieldError] | None = None
 
 
 class MessageResponse(ContractModel):

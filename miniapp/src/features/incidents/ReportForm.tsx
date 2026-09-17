@@ -1,6 +1,6 @@
 import { Button, Textarea, Typography } from "@maxhub/max-ui";
 import { type FormEvent, useRef, useState } from "react";
-import type { DomSignalApi, ReportCreate } from "../../shared/api/client";
+import { ApiProblem, retryable, type DomSignalApi, type ReportCreate } from "../../shared/api/client";
 import { categoryLabels } from "./presentation";
 
 // Preserved FND-01 manual report flow. B-02 does not add analysis or appeal screens.
@@ -16,7 +16,7 @@ export function ReportForm({
   const [category, setCategory] =
     useState<ReportCreate["category"]>("elevator");
   const [description, setDescription] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
   const pending = useRef(false);
   const attempt = useRef<{ body: string; key: string } | null>(null);
@@ -25,7 +25,7 @@ export function ReportForm({
     if (pending.current) return;
     pending.current = true;
     setSaving(true);
-    setError(false);
+    setError(null);
     const payload: ReportCreate = {
       house_id: houseId,
       category,
@@ -38,8 +38,8 @@ export function ReportForm({
     try {
       await client.createReport(payload, attempt.current.key);
       onCreated();
-    } catch {
-      setError(true);
+    } catch (failure) {
+      setError(failure);
     } finally {
       pending.current = false;
       setSaving(false);
@@ -55,9 +55,10 @@ export function ReportForm({
         <select
           disabled={saving}
           value={category}
-          onChange={(event) =>
-            setCategory(event.target.value as ReportCreate["category"])
-          }
+          onChange={(event) => {
+            setCategory(event.target.value as ReportCreate["category"]);
+            setError(null);
+          }}
         >
           {Object.entries(categoryLabels).map(([value, label]) => (
             <option key={value} value={value}>
@@ -71,7 +72,10 @@ export function ReportForm({
         <Textarea
           disabled={saving}
           value={description}
-          onChange={(event) => setDescription(event.target.value)}
+          onChange={(event) => {
+            setDescription(event.target.value);
+            setError(null);
+          }}
           minLength={5}
           maxLength={2000}
           required
@@ -81,13 +85,17 @@ export function ReportForm({
       <p className="muted">
         Категория выбрана вручную. Маршрут и обращение ещё не формируются.
       </p>
-      {error && (
+      {Boolean(error) && (
         <p role="alert">
-          Не удалось сохранить сигнал. Текст сохранён в форме. Попробуйте ещё
-          раз.
+          Не удалось сохранить сигнал. Текст сохранён в форме.{" "}
+          {error instanceof ApiProblem && error.problem.field_errors?.length
+            ? "Проверьте поля формы."
+            : retryable(error)
+              ? "Попробуйте ещё раз."
+              : "Обновите данные и проверьте доступ перед отправкой."}
         </p>
       )}
-      <Button type="submit" disabled={saving || description.trim().length < 5}>
+      <Button type="submit" disabled={saving || description.trim().length < 5 || (Boolean(error) && !retryable(error))}>
         {saving ? "Сохраняем…" : "Сохранить сигнал"}
       </Button>
     </form>

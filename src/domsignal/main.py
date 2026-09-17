@@ -3,9 +3,11 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
 
 from domsignal.api.errors import RequestIdMiddleware, install_error_handlers
@@ -30,12 +32,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version="0.1.0",
         openapi_version="3.1.0",
         lifespan=lifespan,
-        responses={
-            401: {"model": Problem, "description": "Authentication failed"},
-            403: {"model": Problem, "description": "House access denied"},
-            409: {"model": Problem, "description": "Idempotency conflict"},
-            422: {"model": Problem, "description": "Request validation failed"},
-        },
+        responses={code: {"model": Problem} for code in (401, 403, 404, 405, 409, 422, 500, 503)},
     )
     app.state.container = container
     app.add_middleware(RequestIdMiddleware)
@@ -52,6 +49,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(me.router)
     app.include_router(incidents.router)
     app.include_router(max_ingress.router)
+
+    def problem_openapi() -> dict[str, Any]:
+        if app.openapi_schema is None:
+            schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+            for path in schema["paths"].values():
+                for operation in path.values():
+                    for code, response in operation.get("responses", {}).items():
+                        if code.isdigit() and int(code) >= 400:
+                            response["content"] = {
+                                "application/problem+json": {
+                                    "schema": {"$ref": "#/components/schemas/Problem"}
+                                }
+                            }
+            app.openapi_schema = schema
+        return app.openapi_schema
+
+    app.openapi = problem_openapi  # type: ignore[method-assign]
 
     static_dir = Path(resolved_settings.static_dir)
     if static_dir.is_dir():

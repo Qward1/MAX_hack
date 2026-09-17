@@ -13,6 +13,7 @@ from domsignal.contracts.incidents import (
     IncidentDetail,
     IncidentList,
     IncidentSummary,
+    Provenance,
     ReportCreate,
     ReportCreated,
     ReportSummary,
@@ -22,6 +23,7 @@ from domsignal.core.incidents import CATEGORY_TITLES, IncidentStatus, ReportCate
 from domsignal.db.models import Incident, Report
 from domsignal.db.repositories.incidents import IncidentRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
+from domsignal.services.context import OperationSource
 from domsignal.services.errors import IdempotencyConflict, ResourceNotFound
 from domsignal.services.membership import MembershipService
 
@@ -46,14 +48,17 @@ class ReportService:
         actor_id: UUID,
         payload: ReportCreate,
         idempotency_key: str,
-        provenance: str = "api",
+        provenance: OperationSource = "api",
     ) -> ReportCreated:
         request_hash = _stable_hash(payload.model_dump(mode="json"))
         action = "report.create"
         async with session.begin():
             reliability = ReliabilityRepository(session)
-            await self.memberships.require_house(
-                session, user_id=actor_id, house_id=payload.house_id
+            context = await self.memberships.require_house(
+                session,
+                user_id=actor_id,
+                house_id=payload.house_id,
+                source=provenance,
             )
             existing = await reliability.idempotency_record(
                 actor_id=actor_id, action=action, key=idempotency_key
@@ -63,27 +68,39 @@ class ReportService:
                     raise IdempotencyConflict(
                         "This Idempotency-Key was already used with a different request body"
                     )
-                return ReportCreated.model_validate(existing.response_body)
+                # Stored C0 receipts contain the old read DTO. Preserve the effect/IDs,
+                # but publish the current authorized representation on every replay.
+                return ReportCreated(
+                    report_id=UUID(existing.response_body["report_id"]),
+                    incident=await self.detail(
+                        session,
+                        actor_id=context.actor_user_id,
+                        incident_id=UUID(existing.response_body["incident"]["id"]),
+                        house_id=context.house_id,
+                    ),
+                )
 
             repo = IncidentRepository(session)
             incident = await repo.create_incident(
-                house_id=payload.house_id,
+                house_id=context.house_id,
                 category=payload.category.value,
                 title=CATEGORY_TITLES[payload.category],
                 description=payload.description,
             )
             report = await repo.create_report(
                 incident_id=incident.id,
-                house_id=payload.house_id,
-                author_id=actor_id,
+                house_id=context.house_id,
+                author_id=context.actor_user_id,
                 category=payload.category.value,
                 description=payload.description,
                 classification_mode=payload.classification_mode.value,
-                provenance=provenance,
+                provenance=context.source,
             )
             response = ReportCreated(
                 report_id=report.id,
-                incident=self._detail(incident, [report]),
+                incident=self._detail(
+                    incident, [report], is_demo=await repo.house_is_demo(context.house_id)
+                ),
             )
             response_body = response.model_dump(mode="json")
             reliability.add_idempotency(
@@ -110,27 +127,44 @@ class ReportService:
         limit: int,
         offset: int,
     ) -> IncidentList:
-        await self.memberships.require_house(session, user_id=actor_id, house_id=house_id)
-        incidents, total = await IncidentRepository(session).list_for_house(
-            house_id, limit=limit, offset=offset
-        )
+        context = await self.memberships.require_house(session, user_id=actor_id, house_id=house_id)
+        repo = IncidentRepository(session)
+        incidents, total = await repo.list_for_house(context.house_id, limit=limit, offset=offset)
+        counts = await repo.counts([item.id for item in incidents])
+        is_demo = await repo.house_is_demo(context.house_id)
         return IncidentList(
-            items=[self._summary(incident) for incident in incidents],
+            items=[
+                self._summary(incident, counts=counts.get(incident.id, (0, 0)), is_demo=is_demo)
+                for incident in incidents
+            ],
             page=PageMeta(limit=limit, offset=offset, total=total),
         )
 
     async def detail(
-        self, session: AsyncSession, *, actor_id: UUID, incident_id: UUID
+        self,
+        session: AsyncSession,
+        *,
+        actor_id: UUID,
+        incident_id: UUID,
+        house_id: UUID | None = None,
     ) -> IncidentDetail:
         repo = IncidentRepository(session)
         incident = await repo.incident(incident_id)
         if incident is None:
             raise ResourceNotFound("Incident was not found")
-        await self.memberships.require_house(session, user_id=actor_id, house_id=incident.house_id)
+        context = await self.memberships.require_house(
+            session,
+            user_id=actor_id,
+            house_id=house_id if house_id is not None else incident.house_id,
+        )
+        if incident.house_id != context.house_id:
+            raise ResourceNotFound("Incident was not found in the selected house")
         reports = await repo.reports(incident_id)
-        return self._detail(incident, reports)
+        return self._detail(incident, reports, is_demo=await repo.house_is_demo(context.house_id))
 
-    def _summary(self, incident: Incident) -> IncidentSummary:
+    def _summary(
+        self, incident: Incident, *, counts: tuple[int, int], is_demo: bool
+    ) -> IncidentSummary:
         return IncidentSummary(
             id=incident.id,
             house_id=incident.house_id,
@@ -139,10 +173,26 @@ class ReportService:
             description=incident.description,
             status=IncidentStatus(incident.status),
             created_at=incident.created_at,
+            updated_at=None,  # C0 stores no update event/time; do not substitute created_at.
+            due_at=None,
+            location=None,  # C0 stores free text only, never extract at read time.
+            report_count=counts[0],
+            participant_count=counts[1],
+            is_demo=is_demo,
+            provenance=Provenance(
+                origin="demo" if is_demo else "user_reported",
+                recorded_at=incident.created_at,
+            ),
         )
 
-    def _detail(self, incident: Incident, reports: list[Report]) -> IncidentDetail:
-        summary = self._summary(incident)
+    def _detail(
+        self, incident: Incident, reports: list[Report], *, is_demo: bool
+    ) -> IncidentDetail:
+        summary = self._summary(
+            incident,
+            counts=(len(reports), len({item.author_id for item in reports})),
+            is_demo=is_demo,
+        )
         detail = IncidentDetail(
             **summary.model_dump(),
             reports=[
@@ -150,6 +200,7 @@ class ReportService:
                 for item in reports
             ],
             rule=RuleProvenance(
+                origin="demo",  # This is explicitly DemoRule, not a routing engine result.
                 verification_status=cast(
                     Literal["verified", "needs_verification", "demo"],
                     self.demo_rule.verification_status,

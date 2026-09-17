@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from domsignal.api.dependencies import ContainerDep, CurrentUserDep, DbDep
+from domsignal.contracts.capabilities import CapabilityFlags
 from domsignal.contracts.identity import MeResponse
 
 router = APIRouter(prefix="/api/v1", tags=["identity"])
@@ -8,4 +9,7 @@ router = APIRouter(prefix="/api/v1", tags=["identity"])
 
 @router.get("/me", response_model=MeResponse)
 async def me(current_user: CurrentUserDep, session: DbDep, container: ContainerDep) -> MeResponse:
-    return await container.membership_service.me(session, user_id=current_user.id)
+    return await container.membership_service.me(
+        session, user_id=current_user.id,
+        capabilities=CapabilityFlags(test_auth=container.settings.test_session_enabled),
+    )

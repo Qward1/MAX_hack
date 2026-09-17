@@ -49,7 +49,8 @@ async def incident_detail(
     current_user: CurrentUserDep,
     session: DbDep,
     container: ContainerDep,
+    house_id: Annotated[UUID | None, Query()] = None,
 ) -> IncidentDetail:
     return await container.report_service.detail(
-        session, actor_id=current_user.id, incident_id=incident_id
+        session, actor_id=current_user.id, incident_id=incident_id, house_id=house_id
     )

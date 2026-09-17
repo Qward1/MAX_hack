@@ -21,7 +21,6 @@ async def replay(
     session: DbDep,
     container: ContainerDep,
 ) -> InboundAccepted:
-    del current_user
     if not container.settings.replay_enabled:
         raise FeatureUnavailable("Normalized replay is disabled in production")
-    return await container.inbound_service.accept(session, event=event)
+    return await container.inbound_service.accept(session, event=event, actor_id=current_user.id)

@@ -129,3 +129,33 @@ VERIFIED независимы. HTTP коды новых lifecycle-ошибок �
 | MT-18 | A-15, B-02, B-04, B-05 | Житель без групповых прав и без LLM; согласованный личный канал, чужая доска недоступна. | Пройти личный manual путь, вернуться к своему обращению после отзыва доступа к доске. | Собственный путь/история работают в разрешённом scope без группы и модели. | Нет выдачи чужой доски по введённому адресу; fallback сохраняет ввод без выдуманного анализа. | Сохранённые C01/C06/C17/C27 + negative API; реальный MAX personal path отдельно. | NOT RUN |
 | MT-19 | A-10, B-09, B-14, B-11 | Сотрудник с web-session и назначениями; житель с валидной MAX-session. | Открыть кабинет без window.WebApp; отдельно пройти основной путь в MAX web/mobile. | Кабинет работает в обычном браузере; MAX-путь одинаков по результату на клиентах. | Отсутствующий Bridge не блокирует кабинет; недоступный live клиент отмечен NOT VERIFIED. | Browser/API E2E без Bridge и отдельные live записи ref/клиент/роль/дата. | NOT RUN |
 | MT-20 | B-11, B-12 | Demo/target и реальные интеграционные данные разделены; доступны UI/материалы с источниками. | Сопоставить карточки, кабинет, демо и release evidence с ref/источником. | Demo marker не исчезает из-за official source; TARGET, локальный тест и LIVE различимы. | Неизвестное provenance не становится official, browser replay не становится live evidence. | Contract/UI assertions и review материалов; ref/дата/окружение для каждого утверждения. | NOT RUN |
+
+
+## A-01 / B-02 — фактический прогон 18.09.2026
+
+IMPLEMENTED IN BRANCH `dev/b-experience`, baseline `804f198`. A-01 PASS;
+текущий B-02 board/detail/manual binding DONE после нового прогона. Это не
+MERGED TO MAIN, не выполнение будущего golden path и не LIVE VERIFIED.
+Команды/окружение: [DEV-B evidence](../docs/status/dev-b.md).
+
+| Проверка среза | Фактический результат / свидетельство |
+|---|---|
+| Два дома, incident через неверный доступный/недоступный house | PASS: PostgreSQL `test_house_context_direct_id_and_untrusted_selectors`; 404 для несовпадения в доступном доме, 403 для недоступного |
+| Прямой ID, неизвестный selector, client tenant/chat/start_param/roles | PASS: нет обхода membership; metadata не повышает права; extra body → 422 |
+| Неоднозначный/потерянный house context | PASS в C0: отсутствие house в POST → 422; resolver None → отказ; UI с двумя домами требует выбора, foreign/empty selector не выбирает default |
+| Отзыв membership, включая idempotent retry | PASS: detail и повтор create → 403 |
+| Diagnostic replay actor/house spoofing | PASS: 403 до записи Job; прежние valid replay/worker tests тоже PASS |
+| Counts/read model/provenance | PASS: 4 reports одного actor → 1 участник; ещё один actor → 2. Board/detail совпадают; demo отделён от rule verification, missing location/update/due = null |
+| Старые C0 receipts | PASS: те же report/incident IDs, один эффект; текущий DTO и actions=[], без view |
+| Error runtime/schema | PASS: problem+json, trace_id и безопасные field_errors; 401/403/404/405/409/422/500/503 проверены в contract/integration; без input/auth/SQL/stack |
+| OpenAPI/TS drift | PASS: export check и штатная генерация/сравнение TS |
+| B-02 real API/reload | PASS: Chrome → API → PostgreSQL → board/detail/reload; нет domain CTA; реальный outsider 403 |
+| B-02 presentation/recovery | PASS: 73 Vitest tests, 8 browser tests, typecheck/build; unknown enums/actions, null source/count, retryable, keyboard/axe/contrast, 320/430/1280px × light/dark |
+| Tenant isolation, управление домом/assignments | NOT IMPLEMENTABLE UNTIL A-15; текущие проверки membership не имитируют две УК |
+| Active ChatBinding/version/real group context | NOT IMPLEMENTABLE UNTIL A-15 + A-07; fake bindings не созданы |
+| Live MAX Web/iOS/Android, реальные initData/webhook/host reload | NOT VERIFIED; browser emulation статус не повышает |
+
+MT-01…MT-20 остаются NOT RUN как полные target-сценарии. Локальные проверки
+C0 house isolation и явного выбора выше — только существующая foundation,
+не замена tenant/lifecycle/connection acceptance. `reported` остаётся self-report;
+filing, feedback, route, appeals и AI/NLP в этом срезе не реализованы.

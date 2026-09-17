@@ -180,13 +180,56 @@ describe("board/detail experience", () => {
     fireEvent(document, new Event("visibilitychange"));
     expect(await screen.findByText("Данные могли измениться.")).toBeTruthy();
   });
-  it("a selected foreign house does not show the default house", async () => {
-    window.history.replaceState(null, "", "/?house=foreign");
+  it.each(["foreign", ""])("invalid house selector %s does not show the default house", async (selector) => {
+    window.history.replaceState(null, "", `/?house=${selector}`);
     const client = apiWith();
     render(<App client={client} />);
     await screen.findByText("Нет доступа к этому дому");
     expect(client.incidents).not.toHaveBeenCalled();
     expect(screen.queryByText(house.address)).toBeNull();
+  });
+  it("requires an explicit selection with multiple houses", async () => {
+    const client = apiWith();
+    vi.mocked(client.me).mockResolvedValue({
+      ...(await client.me()), houses: [house, { ...house, id: "second", address: "Второй дом" }],
+    });
+    render(<App client={client} />);
+    await screen.findByText("Выберите дом");
+    expect(client.incidents).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Второй дом" }));
+    await waitFor(() => expect(client.incidents).toHaveBeenCalledWith("second", expect.any(AbortSignal), 0));
+  });
+  it("passes the explicit house selector to the server on incident navigation", async () => {
+    window.history.replaceState(null, "", `/?house=wrong&incident=${incident.id}`);
+    const client = apiWith();
+    vi.mocked(client.incident).mockRejectedValue(error(403));
+    render(<App client={client} />);
+    await screen.findByText("Нет доступа к этому дому");
+    expect(client.incident).toHaveBeenCalledWith(incident.id, expect.any(AbortSignal), "wrong");
+    expect(screen.queryByText(incident.description)).toBeNull();
+  });
+  it("keeps participant count distinct and handles unknown counts", async () => {
+    window.history.replaceState(null, "", `/?incident=${incident.id}`);
+    const client = apiWith([{ ...incident, participant_count: null, report_count: 4 }]);
+    render(<App client={client} />);
+    await screen.findByText("Что делать сейчас");
+    expect(screen.getByText("Участников").nextElementSibling?.textContent).toBe("Нет данных");
+    expect(screen.getByText("Сообщений по проблеме").nextElementSibling?.textContent).toBe("4");
+    expect(screen.queryByRole("button", { name: "Подготовить обращение" })).toBeNull();
+  });
+  it("does not offer report retry when the producer forbids it", async () => {
+    const client = apiWith([]);
+    vi.mocked(client.createReport).mockRejectedValue(error(403));
+    render(<App client={client} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Сообщить" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Описание" }), {
+      target: { value: "Не работает лифт" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить сигнал" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).not.toContain("Попробуйте ещё раз");
+    expect((screen.getByRole("button", { name: "Сохранить сигнал" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByText("PRIVATE")).toBeNull();
   });
   it("keeps manual foundation report and reuses idempotency key after ambiguous failure", async () => {
     const client = apiWith([]);

@@ -4,7 +4,7 @@ import { maxBridge } from "../max/bridge";
 export type Capabilities = components["schemas"]["CapabilitiesResponse"];
 export type Me = components["schemas"]["MeResponse"];
 export type IncidentList = components["schemas"]["IncidentList"];
-// Open string enums at the read boundary: generated C0 remains the producer contract.
+// Tolerate future enum values at the read boundary; fields come from generated schema.
 export type IncidentSummary = Omit<
   components["schemas"]["IncidentSummary"],
   "status" | "category"
@@ -29,15 +29,7 @@ export function problemStatus(error: unknown): number | undefined {
 }
 export function retryable(error: unknown): boolean {
   if (!(error instanceof ApiProblem)) return true;
-  const explicit = (error.problem as Problem & { retryable?: boolean })
-    .retryable;
-  if (typeof explicit === "boolean")
-    return explicit && ![401, 403, 404].includes(error.problem.status);
-  // Documented C0 transport fallback, not an inferred business permission.
-  return (
-    error.problem.status >= 500 ||
-    [408, 429, 409].includes(error.problem.status)
-  );
+  return error.problem.retryable === true && ![401, 403, 404].includes(error.problem.status);
 }
 
 export interface DomSignalApi {
@@ -49,7 +41,7 @@ export interface DomSignalApi {
     signal?: AbortSignal,
     offset?: number,
   ): Promise<IncidentList>;
-  incident(id: string, signal?: AbortSignal): Promise<IncidentDetail>;
+  incident(id: string, signal?: AbortSignal, houseId?: string): Promise<IncidentDetail>;
   createReport(
     payload: ReportCreate,
     idempotencyKey: string,
@@ -92,7 +84,8 @@ export class ApiClient implements DomSignalApi {
         code: "authentication_required",
         title: "Войдите через MAX",
         detail: "Откройте мини-приложение заново в MAX.",
-        request_id: "",
+        trace_id: "",
+        retryable: false,
       });
     }
     if (!signal?.aborted) this.token = session.access_token;
@@ -113,9 +106,9 @@ export class ApiClient implements DomSignalApi {
     );
   }
 
-  incident(id: string, signal?: AbortSignal): Promise<IncidentDetail> {
+  incident(id: string, signal?: AbortSignal, houseId?: string): Promise<IncidentDetail> {
     return this.request<IncidentDetail>(
-      `/api/v1/incidents/${encodeURIComponent(id)}`,
+      `/api/v1/incidents/${encodeURIComponent(id)}${houseId !== undefined ? `?house_id=${encodeURIComponent(houseId)}` : ""}`,
       { signal },
     );
   }
@@ -158,7 +151,8 @@ export class ApiClient implements DomSignalApi {
           status: response.status,
           detail: "Сервис временно недоступен.",
           code: "http_error",
-          request_id: response.headers.get("X-Request-ID") ?? "unknown",
+          trace_id: response.headers.get("X-Request-ID") ?? "unknown",
+          retryable: response.status >= 500 || [408, 429, 409].includes(response.status),
         };
         let problem = fallback;
         try {

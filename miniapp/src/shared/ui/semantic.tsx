@@ -47,26 +47,26 @@ const sourceLabels: Record<string, string> = {
 };
 export function SourceChip({ source }: { source: Source | null | undefined }) {
   if (!source) return null;
-  const known = Object.hasOwn(sourceLabels, source.type);
+  const known = Object.hasOwn(sourceLabels, source.origin ?? "");
   if (!known) warnUnknown("source");
   // Incomplete official records cannot earn an official badge.
   const verified = formatDate(source.verified_at);
   const valid =
     known &&
-    (source.type !== "official" || Boolean(source.source_title && verified));
+    (source.origin !== "official" || Boolean(source.source_title && verified));
   const title = valid
-    ? sourceLabels[source.type]
+    ? sourceLabels[source.origin ?? ""]
     : "Происхождение не подтверждено";
   const url = safeUrl(source.source_url);
   return (
     <details
-      className={`source-chip ${source.type === "demo" ? "source-demo" : ""}`}
+      className={`source-chip ${source.origin === "demo" ? "source-demo" : ""}`}
     >
       <summary>
         <span aria-hidden="true">
-          {source.type === "demo"
+          {source.origin === "demo"
             ? "◇"
-            : source.type === "user_reported"
+            : source.origin === "user_reported"
               ? "◌"
               : "ⓘ"}
         </span>{" "}
@@ -79,7 +79,7 @@ export function SourceChip({ source }: { source: Source | null | undefined }) {
           </Typography.Text>
         )}
         {source.note && <p className="full-text">{source.note}</p>}
-        {source.type === "user_reported" && (
+        {source.origin === "user_reported" && (
           <p>Внешней системой не подтверждено.</p>
         )}
         {verified && <p>Проверено: {verified}</p>}
@@ -196,7 +196,7 @@ export function NextAction({
   const id = useId();
   // A known label is not an implemented endpoint. Only supplied handlers may expose a CTA.
   const available = knownActions(actions).filter(
-    (action) => action.code !== "view" && handlers[action.code],
+    (action) => handlers[action.code],
   );
   return (
     <Panel className="next-action" aria-labelledby={id}>

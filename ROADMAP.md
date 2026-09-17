@@ -61,7 +61,7 @@ DEV-B; интегратор не обходит review или protection `main`.
 | Developer | Сейчас / следующий шаг | Настоящая зависимость и снимающий контракт |
 |---|---|---|
 | DEV-A | Сохранить review/handoff FND-01; затем A-03/AI: baseline extraction/risk detector + evaluation, без обязательного provider. | DEV-B задаёт разрешённый input scope и public application boundary; A возвращает typed analysis fixture и не ждёт реализации всего product backend. |
-| DEV-B | **Следующая ОДНА задача — A-01:** сверка/минимальная C0/B-00 convergence с tenant/house/access contract context. B-02 PARTIAL; последующие A-15 и повторный binding B-02 здесь не начинаются. | Один набор Pydantic producer → OpenAPI → TS consumer → tests снимает блокер; это не ожидание общего backend от DEV-A. |
+| DEV-B | **A-01 PASS / IMPLEMENTED IN BRANCH** (18.09.2026); B-02 binding повторно проверен и DONE в ветке. Рекомендуемый следующий отдельный срез — A-15; не начат. | Evidence: [dev-b](docs/status/dev-b.md), producer/OpenAPI/TS, PostgreSQL и browser reload. Live MAX NOT VERIFIED; merge A-01 в main не выполнен. |
 
 ### Встраивание ARCH-PLATFORM-v1 в существующий план
 
@@ -164,6 +164,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 ## 6. Исторические A-ID — явные текущие Owners
 
 ### A-01 — минимальная C0/B-00 convergence и контекст C1
+- **State / evidence (18.09.2026): PASS · IMPLEMENTED IN BRANCH.** C0.1 + B-02 rebind, context/isolation, error/legacy-receipt regression; [команды и результаты](docs/status/dev-b.md). Не MERGED TO MAIN и не LIVE VERIFIED.
 - **Owner:** DEV-B. **P0 · M · Depends:** FND-01; B-00. **Allowed paths:** `src/domsignal/contracts/`, `src/domsignal/api/`, затронутые product read-model services/repositories, `docs/CONTRACTS.md`, `docs/openapi.json`, `miniapp/src/shared/api/` (включая generated schema), затронутые C0 consumers и связанные producer/consumer tests. Без tenant migration или новых бизнес-действий.
 - **Сделать сейчас:** минимальный C0/B-00 convergence для B-02: structured `allowed_actions`; provenance отдельно от verification freshness; согласованные capabilities; `message_count`/`report_count` отдельно от unique `participant_count`; нужные read-model поля; единый error contract; generated types и producer/consumer checks. Неподдержанные действия не публикуются. Зафиксировать минимальный tenant/house/access read-model context и совместимость old/new producer без фиктивных tenant/roles. Дальнейшие safety/route/draft/filing C1 реализуются предметными A-03/Product и A-04, не этой convergence.
 - **Acceptance:** B-02 читает один generated contract без adapter-догадок; enum/nullable/401/403/404/409/422 задокументированы; опасные поля нельзя принять как verified от клиента; OpenAPI/TS воспроизводимы. Не требуется реализовать все будущие business actions или mock endpoints.
@@ -292,7 +293,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Owner:** DEV-B. **P0 · M · Depends:** FND-01/C0; B-00; A-01 convergence для обновлённого binding; A-15 для нового tenant/access context. Полная платформа/кабинет/Ticket не входят в B-02. **Allowed paths:** `miniapp/src/app/`, `shared/`, `features/incidents/`, frontend/browser tests.
 - **Сделать:** consistent tokens/типографика/отступы; House board, Incident detail, ясные badges, source chip, responsive lists, loading/empty/error/access states; MAX Bridge wrapper с capability detection.
 - **Acceptance:** реальные API данные и reload; действия доступны по allowed_actions; тема/контраст/фокус/клавиатура; на web нет обязательного mobile-only Bridge метода. Длинный адрес/текст/неизвестный enum не ломают layout.
-- **Текущий блокер:** board/detail на C0 работают, но B-02 не DONE до A-01 convergence по actions/provenance/capabilities/counts/read model/errors и повторной consumer-проверки. Это следующий backend-срез DEV-B, не ожидание DEV-A.
+- **State / evidence (18.09.2026): DONE · IMPLEMENTED IN BRANCH** для текущего board/detail/manual C0.1 binding после A-01 и повторных frontend/PostgreSQL/browser checks ([dev-b](docs/status/dev-b.md)). Producer blocker снят. Будущий tenant binding после A-15 остаётся отдельной проверкой; live MAX NOT VERIFIED, merge A-01 в main не выполнен.
 - **Не нужно:** Storybook/platform для компонентов, если достаточно лёгкой dev-страницы и component tests.
 - **ARCH target / сохранение evidence:** одна Mini App всех домов; пять экранов B-00 и реальный C0 manual report не заменяются новым scaffold. После A-15 проверить явный выбор разрешённого дома/утрату scope (MT-11/18), generated fields/actions и прежние C-сценарии; live MAX web/mobile фиксируется отдельно от браузерной эмуляции. `c4492dd` и существующие результаты сохраняются.
 

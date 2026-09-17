@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domsignal.db.models import Incident, Report
+from domsignal.db.models import House, Incident, Report
 
 
 class IncidentRepository:
@@ -69,6 +69,19 @@ class IncidentRepository:
 
     async def incident(self, incident_id: UUID) -> Incident | None:
         return await self.session.get(Incident, incident_id)
+
+    async def house_is_demo(self, house_id: UUID) -> bool:
+        return bool(await self.session.scalar(select(House.is_demo).where(House.id == house_id)))
+
+    async def counts(self, incident_ids: list[UUID]) -> dict[UUID, tuple[int, int]]:
+        if not incident_ids:
+            return {}
+        rows = await self.session.execute(
+            select(Report.incident_id, func.count(), func.count(func.distinct(Report.author_id)))
+            .where(Report.incident_id.in_(incident_ids))
+            .group_by(Report.incident_id)
+        )
+        return {incident_id: (reports, participants) for incident_id, reports, participants in rows}
 
     async def reports(self, incident_id: UUID) -> list[Report]:
         return list(

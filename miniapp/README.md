@@ -36,25 +36,25 @@ Source links сохраняют обычный browser fallback. Native sharing 
 версии 0.5.0. Наследуем официальный `--font`, поскольку корневой стиль этой
 версии ссылается на отсутствующий `--family-base`.
 
-## C0 / B-00 — блокер полного acceptance
+## A-01 / C0.1 binding
 
-`view` — единственный серверный action. `NextAction` поддерживает известные
-object descriptors, но CTA требует также реального handler. Component tests
-действий обращения не означают готовности их endpoints. Неизвестные действия
-игнорируются, permissions никогда не вычисляются из status.
+Producer/OpenAPI/generated TS сведены в `dev/b-experience` (18.09.2026).
+B-02 повторно проверена на реальном HTTP/PostgreSQL и reload. `allowed_actions`
+теперь descriptors; текущий producer отдаёт `[]`. Открытие карточки — обычная
+навигация, доступ повторно проверяет API. Неизвестные actions игнорируются;
+неподдержанные handlers не создают CTA или planned disabled buttons.
 
-`rule.verification_status` не равен provenance B-00. Только `demo` имеет
-однозначное соответствие; остальные C0 rules нейтральны. Четыре origin types
-поддержаны semantic-компонентом, но producer их не возвращает. Будущие статусы
-проверены как входы UI, а не как реализованные lifecycle transitions.
+SourceChip читает `origin` напрямую, отдельно от verification. Counts разделены:
+сообщения/report_count и уникальные авторы/participant_count (nullable). Место,
+обновление и срок остаются неизвестными при null. Route/appeal/lifecycle events
+не выдумываются; отображаются реальные reports. reported label по-прежнему
+означает только пользовательскую отметку, endpoint filing ещё отсутствует.
 
-Нет данных для location, affected/participant count, responsible organisation,
-полного route/filing/appeal. `report_count` не подменяет число жителей.
-Фильтры и отсутствующие mutation endpoints не добавлены. C0 без `retryable`
-допускает transport retry при network/408/429/5xx и refresh при 409;
-explicit `retryable=false` учитывается.
-Expected/actual/impact: [handoff](../docs/status/dev-b.md),
-[контракт](../docs/CONTRACTS.md). Backend DTO/OpenAPI/БД в B-02 не изменены.
+House selector передаётся в detail API; при нескольких домах пользователь
+выбирает явно. Capabilities включает пять B-00 flags; miniapp=false скрывает
+экраны. Errors читают retryable/trace_id/field_errors, без legacy body fields.
+Полный контракт и ограничения: [CONTRACTS](../docs/CONTRACTS.md).
+Live MAX Web/iOS/Android остаётся NOT VERIFIED.
 
 ## Проверки
 

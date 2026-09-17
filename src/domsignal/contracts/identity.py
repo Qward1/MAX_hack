@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import Field
 
+from domsignal.contracts.capabilities import CapabilityFlags
 from domsignal.contracts.common import ContractModel
 
 
@@ -21,6 +22,7 @@ class MeResponse(ContractModel):
     id: UUID
     display_name: str
     houses: list[HouseAccess]
+    capabilities: CapabilityFlags
 
 
 class TestSessionRequest(ContractModel):

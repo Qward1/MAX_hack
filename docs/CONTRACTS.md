@@ -2,19 +2,16 @@
 
 ## Статус
 
-Это **target contract**, владельцем и writer которого является DEV-B. Он не
-объявляет перечисленные endpoints доступными. Фактическая доступность
-определяется OpenAPI и contract tests, а не этим документом. На
-проверенном baseline `origin/main = dev/b-experience@3d4a095` (fetch 17.09.2026)
-FND-01/C0 и B-02 уже MERGED TO MAIN; B-02 остаётся PARTIAL.
-Реализованная граница C0 сохранена ниже отдельно от target v0.1.
+B-00 ниже сохраняет TARGET будущих workflows. **A-01 / C0.1 IMPLEMENTED IN
+BRANCH `dev/b-experience`, 18.09.2026**: producer, consumer, OpenAPI и TS сведены
+одним срезом. B-02 board/detail binding повторно проверен и DONE в ветке.
+Baseline до среза: `804f198`; MERGED TO MAIN для A-01 не заявляется.
+Live MAX Web/iOS/Android — NOT VERIFIED.
 
-Сверка исходного FND-01 `c939ccf` и текущего кода/OpenAPI на `3d4a095`:
-C0 реализует auth/test boundaries, `GET /api/v1/capabilities`, `GET /api/v1/me`,
-`POST /api/v1/reports`, house incidents list, incident detail и test MAX replay;
-live webhook честно отвечает `503`. Appeals, drafts, analyze, activity, join и
-admin API отсутствуют. Перечисленные ниже расхождения с target B-00
-интеграционным merge не устранены; новая tenant-модель в C0 отсутствует.
+Опубликованы прежние C0 auth/me/capabilities/reports/incident endpoints и
+диагностический replay. Analyze, appeals, join, feedback, admin, routes и
+filing endpoints остаются TARGET. Перечень ошибок/полей C0.1 ниже отделён от
+исторического C0 и полного B-00 target. Новых таблиц/миграций в A-01 нет.
 
 Backend является source of truth для incident status, matching, route,
 provenance, capabilities и `allowed_actions`. DEV-B отвечает за public DTO,
@@ -61,15 +58,15 @@ Target codes: `prepare_appeal`, `edit_draft`, `join`, `copy_draft`,
 
 ### Provenance
 
-Общий value object: `type`, `source_title?`, `source_url?`, `verified_at?`,
+Общий value object: `origin` (nullable, если неизвестно), `source_title?`, `source_url?`, `verified_at?`,
 `recorded_at?`, `note?`. Backend соблюдает ограничения и UI-семантику:
 
-| `type` | Обязательные данные | Смысл |
+| `origin` | Обязательные данные | Смысл |
 |---|---|---|
 | `official` | `source_title`, `verified_at`; URL при наличии | «Официальный источник · проверено <date>». |
 | `product_derived` | `note` и provenance использованных правил | «Рассчитано ДомСигналом на основе указанных правил». |
 | `user_reported` | `recorded_at` | «Указано пользователем · внешней системой не подтверждено». |
-| `demo` | явный `type=demo` | «Демонстрационные данные»; не может сериализоваться как official. |
+| `demo` | явный `origin=demo` | «Демонстрационные данные»; не может сериализоваться как official. |
 
 Источник, дата проверки и demo-state передаются вместе с данными, когда влияют
 на решение. Неизвестный срок остаётся `null`, а не вычисляется UI.
@@ -181,29 +178,88 @@ Validation errors дополнительно содержат `field_errors` к�
 idempotency conflict, `422` validation. Sensitive auth details не попадают в
 `detail`, URL или логи.
 
-## Contract conflicts / decisions required
+## A-01 / C0.1 — implemented producer contract
 
-Исходная сверка FND-01 `c939ccf` подтверждена по коду/OpenAPI `3d4a095`:
-C0 уже в main, но расхождения target/producer остаются:
+| DTO / field | Реальный результат |
+|---|---|
+| `ActionDescriptor` | `{code, enabled, reason}`; vocabulary выше, `reason` required nullable. Incident producer всегда возвращает `[]`: domain endpoints ещё нет. Read/navigation не action. Unknown codes consumer игнорирует. |
+| `CapabilityFlags` | `group_mode=false`, `miniapp=true`, `photo_analysis=false`, `voice=false`, `admin=false`. C0 flags сохранены: report_create/incident_board/incident_detail true; max_live/routes/appeals/reminders/media false; test_auth только по settings local/test. |
+| `MeResponse.capabilities` | Та же модель/значения, что `/capabilities.features`, версия `c0.1`. Role `admin` старого house membership не включает несуществующий admin product. Capabilities не предоставляют resource access. |
+| `IncidentSummary` | Сохранены id/house_id/category/title/description/status/created_at; добавлены nullable `updated_at`, `due_at`, structured `location` (entrance/floor/label), `participant_count`, `is_demo`, `provenance`; исправлен фактический report_count. |
+| `IncidentDetail` | Summary + реальные reports (id/description/created_at) + существующий DemoRule с отдельным origin/verified_at. Route/responsible/explanation/appeal/history не опубликованы: движок маршрута и lifecycle events отсутствуют. Reports — сообщения, не история смены статусов. |
+| Missing data | location/updated_at/due_at = null: нет соответствующего persistence. Не извлекаем место из description и не выдаём created_at за updated_at. |
+| Counts | Board: batched `COUNT(*)`, `COUNT(DISTINCT Report.author_id)` по incident; detail: длина reports и множество author_id. Report.author_id — non-null FK. Это уникальные авторы сообщений, не подтверждённые жители; несколько reports одного actor не увеличивают participant_count. Nullable participant_count сохранён для будущего источника без identity. |
+| Provenance | `origin` отдельно от `verification_status` и `verified_at`. C0 создаёт incident только по manual report authenticated actor: user_reported; дом is_demo даёт demo. DemoRule всегда origin=demo независимо от verification_status. verified_at=null, проверка не выдумана. Unknown origin допускает null; official не выводится из verified. |
+| Status | Только существующие open/resolved/dismissed. Будущий reported остаётся исключительно отметкой пользователя о самостоятельной отправке; filing endpoint не добавлен. |
 
-- C0 создаёт report через `POST /api/v1/reports` с `house_id` в body; target
-  использует house-scoped analyze + create. DEV-B должен выбрать совместимую
-  миграцию/alias и отразить её в OpenAPI.
-- C0 возвращает capabilities отдельным endpoint и с другим набором flags;
-  target требует пять UX capabilities в `UserContext`.
-- C0 поддерживает только `open/resolved/dismissed`; target lifecycle требует
-  ещё `detected/reported/overdue/escalated` с указанной семантикой `reported`.
-- C0 `allowed_actions` — строки (`view`); target — объекты
-  `{code, enabled, reason}` и перечисленные action codes.
-- C0 `RuleProvenance.verification_status` использует
-  `verified/needs_verification/demo`; target требует отдельный origin type
-  `official/product_derived/user_reported/demo`. Нужно сохранить понятие
-  verification freshness, не смешивая его с происхождением.
-- C0 problem body использует `request_id` и `errors`; target требует
-  `retryable`, `trace_id` и validation `field_errors`. Нужен согласованный
-  backward-compatible переход или единое обновление producer/consumer/tests.
-- Appeals, activity, analyze, join, houses list и admin target routes в C0
-  отсутствуют. Это ожидаемые будущие endpoints; B-00 не добавляет заглушки.
+`POST /api/v1/reports` с body.house_id сохранён; новый house-scoped alias и
+analyze не нужны для convergence. Idempotency receipts старого C0 читаются по
+сохранённым report/incident IDs, доступ проверяется снова, ответ сериализуется
+текущим read model (с актуальными counts). Domain effect/IDs сохраняются;
+legacy actions из сохранённого JSON не выходят наружу. Изменённый payload с
+прежним ключом по-прежнему даёт 409 без повторного эффекта.
+
+### Server-resolved OperationContext
+
+`AuthenticatedUser` остаётся проверенной bearer identity. Существующий
+`MembershipService.require_house` теперь возвращает внутренний immutable
+`OperationContext`; второго параллельного authorization resolver нет.
+Services проверяют membership перед scoped read/create, включая повтор POST;
+repositories получают house/actor из проверенного контекста.
+
+- `actor_user_id`, `house_id` — известные UUID из identity/resource + membership;
+  `source` — внутренний api/max_replay, не поле публичного payload;
+  roles — существующая house membership; permissions — только текущие
+  incident.read/report.create, без tenant/admin полномочий.
+- tenant_id/management_id — `ScopeValue(UNKNOWN, null)`: связей пока нет.
+- chat_binding_id/source_chat_id/binding_version —
+  `ScopeValue(NOT_APPLICABLE, null)` для текущего личного API и diagnostic
+  replay без настоящего chat context. Нельзя трактовать это как проверку чата.
+- `ScopeValue(KNOWN, value)` требует значение; UNKNOWN/NOT_APPLICABLE его
+  запрещают. Actor и house required: неразрешённый operation не создаётся.
+
+Selectors не authority. Detail принимает optional `house_id` query: проверяет
+membership этого дома и равенство incident.house_id. Несовпадение в доступном
+доме → 404, недоступный дом → 403. Без selector дом однозначно определяется
+самим incident, затем проверяется membership; ID не обходит доступ. House
+list/create требуют явный ID; resolver с house=None fail closed, без первого
+или default membership. Miniapp при нескольких домах требует выбора.
+
+Неизвестные query metadata tenant/chat/start_param не участвуют в авторизации;
+такие поля в report body отклоняются (extra=forbid). `/max/replay` проверяет,
+что external_user_id совпадает с bearer actor, и membership до записи inbox.
+Worker повторно проверяет identity/membership при исполнении.
+
+TARGET A-15/A-07: verified MAX chat_id → active ChatBinding → house_id → active
+HouseManagement → tenant_id; отдельно identity → membership/assignment →
+permissions; только затем authorized operation context → application/domain
+service → NLP при необходимости. Client, deep link, message text и LLM не
+источник прав. Tenant isolation, смена УК, assignments и binding version
+validation **NOT IMPLEMENTABLE UNTIL A-15** (chat lifecycle также A-07).
+UNKNOWN не разрешает tenant-dependent операцию. Это явный target decision,
+а не реализованная проверка двух организаций.
+
+### Ошибки C0.1 и migration
+
+Единый `application/problem+json`: type/title/status/code/detail/retryable/
+trace_id, nullable field_errors; для 422 список `{field, code, message}`.
+Сохраняются lower_snake_case codes: authentication_required,
+house_access_denied, resource_not_found, idempotency_conflict,
+validation_error, feature_unavailable, invalid_init_data, internal_error.
+Framework 404/405 нормализуются в http_404/http_405; 500 — безопасный generic.
+Все реально выдаваемые error responses описаны problem+json в OpenAPI.
+
+Миграция producer+consumer атомарная: request_id/errors удалены из body;
+X-Request-ID header сохранён и равен trace_id, генерируется сервером. Клиентский
+X-Request-ID не отражается. Validation не отдаёт input/body/ctx/stack/SQL,
+не отражает даже имя неизвестного extra field. C0 service errors retryable=false
+(включая не реализованную функцию и конфликт idempotency); internal_error=true.
+Consumer читает retryable/trace_id и сохраняет ввод. Только неполный proxy/non-JSON
+ответ получает локальный transport fallback; это не business permission.
+
+Producer и miniapp выпускаются вместе; поддержка старого JS bundle не обещается.
+Generated source: `docs/openapi.json` и `miniapp/src/shared/api/schema.ts`,
+только штатными export/api:generate + `scripts/check.py --scope contracts`.
 
 ## ARCH-PLATFORM-v1 — компактный target delta
 
@@ -229,37 +285,9 @@ producer: какие данные уже подтверждены C0, какие
 подключения — A-07, кабинет — A-10/B-09, Ticket — A-16/B-14. Новые переходы
 публикуются только вместе с реализацией и generated contract tests.
 
-## A-01 — следующий convergence-срез DEV-B
-
-B-02 остаётся PARTIAL. Расхождения выше закрывает существующая A-01 с Owner
-DEV-B; отдельная дублирующая карточка не создаётся. Минимальный следующий срез:
-
-- перевести `allowed_actions` на структурированный `ActionDescriptor`; read
-  access подтверждается scoped endpoint, а неподдержанные команды не
-  публикуются как enabled и не подменяются mock endpoint;
-- разделить происхождение данных (`official`, `product_derived`,
-  `user_reported`, `demo`) и актуальность/дату проверки;
-- согласовать пять UX capabilities и единый источник их выдачи;
-- зафиксировать `message_count`/`report_count` отдельно от уникального
-  `participant_count`; число сообщений не выдаётся за число жителей;
-- добавить нужные B-02 read-model поля с честными nullable/unknown значениями:
-  structured location, `updated_at`, отдельные counts, route/recipient/source
-  и filing/appeal summary только когда соответствующие данные существуют;
-- свести error contract к согласованным `retryable`, `trace_id` и
-  `field_errors`, сохранив безопасные 401/403/404/409/422 semantics;
-- одним diff обновить Pydantic producer, OpenAPI, generated TypeScript,
-  frontend binding и producer/consumer/negative contract tests.
-
-Этот срез не обязан реализовывать analyze, join, appeals, feedback, admin или
-другие будущие business actions. До появления реального endpoint и доменного
-правила соответствующий action отсутствует. Target statuses, endpoints и DTO
-выше сохраняются как план последующих срезов, а не как обещание текущего API.
-
----
-
 ## Foundation C0 — implemented reference, merged to main at 3d4a095
 
-The following C0 reference is preserved from FND-01 and verified in main at `3d4a095`. Target v0.1 and ARCH-PLATFORM-v1 are not implemented by this documentation patch. Conflicts above remain open; LIVE MAX remains NOT VERIFIED.
+The following section is a HISTORICAL C0 reference at main `3d4a095`, not the current branch contract. A-01/C0.1 above supersedes its actions, counts, capabilities and error format. Other target workflows remain unimplemented; LIVE MAX remains NOT VERIFIED.
 
 # ДомСигнал — контракты C0
 

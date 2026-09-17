@@ -17,8 +17,15 @@ const fixture = {
   status: "future-status",
   report_count: 9999,
   created_at: "2026-09-17T12:00:00Z",
-  allowed_actions: ["view", { code: "future-action", enabled: true }],
+  allowed_actions: [{ code: "future-action", enabled: true, reason: null }],
+  participant_count: 1,
+  provenance: null,
+  updated_at: null,
+  due_at: null,
+  location: null,
+  is_demo: true,
   rule: {
+    origin: null,
     verification_status: "future-source",
     source_title: longSource,
     source_url: "https://example.org/rules",
@@ -134,18 +141,18 @@ test("real API → PostgreSQL → board → detail → reload; web keyboard and 
     path: "test-results/real-detail.png",
     fullPage: true,
   });
-  await expect(page.locator(".source-chip summary")).toContainText(
+  await expect(page.locator(".source-chip summary").last()).toContainText(
     "Демонстрационные данные",
   );
   await expect(
     page.getByRole("button", { name: "Подготовить обращение" }),
   ).toHaveCount(0);
-  const summary = page.locator(".source-chip summary");
+  const summary = page.locator(".source-chip summary").last();
   await summary.focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator(".source-chip")).toHaveAttribute("open", "");
+  await expect(page.locator(".source-chip").last()).toHaveAttribute("open", "");
   await page.keyboard.press("Space");
-  await expect(page.locator(".source-chip")).not.toHaveAttribute("open", "");
+  await expect(page.locator(".source-chip").last()).not.toHaveAttribute("open", "");
   await page.getByRole("button", { name: /К доске дома/ }).focus();
   await page.keyboard.press("Space");
   await expect(
@@ -155,7 +162,7 @@ test("real API → PostgreSQL → board → detail → reload; web keyboard and 
   await expect(
     page.getByRole("heading", { name: "Что делать сейчас" }),
   ).toBeVisible();
-  await page.route(`**/api/v1/incidents/${id}`, (route) => route.abort(), {
+  await page.route(`**/api/v1/incidents/${id}*`, (route) => route.abort(), {
     times: 1,
   });
   await page.getByRole("button", { name: "Обновить", exact: true }).click();
@@ -174,7 +181,7 @@ test("real API → PostgreSQL → board → detail → reload; web keyboard and 
     data: { actor: "outsider" },
   });
   const token = (await session.json()).access_token;
-  await page.route(`**/api/v1/incidents/${id}`, (route) =>
+  await page.route(`**/api/v1/incidents/${id}*`, (route) =>
     route.continue({
       headers: {
         ...route.request().headers(),
@@ -233,7 +240,7 @@ for (const width of [320, 430, 1280])
       await expect(
         page.getByRole("button", { name: /future-action/ }),
       ).toHaveCount(0);
-      await page.locator(".source-chip summary").focus();
+      await page.locator(".source-chip summary").last().focus();
       await page.keyboard.press("Enter");
       await expect(page.getByText(longSource, { exact: true })).toBeVisible();
       await noOverflow(page);
@@ -273,7 +280,7 @@ test("missing source, empty list, loading, initial errors and retry", async ({
   );
   await page.goto(`/?incident=${incidentId}`);
   await expect(page.getByText("Что делать сейчас")).toBeVisible();
-  await expect(page.locator(".source-chip")).toHaveCount(0);
+  await expect(page.locator(".source-chip").last()).toHaveCount(0);
   for (const [status, title] of [
     [401, "Войдите через MAX"],
     [403, "Нет доступа к этому дому"],

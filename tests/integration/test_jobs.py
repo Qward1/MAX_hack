@@ -12,7 +12,7 @@ from domsignal.contracts.jobs import NormalizedInboundEvent
 from domsignal.db.models import InboxReceipt, Job, Report
 from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.settings import Settings
-from domsignal.tools.seed_demo import DEMO_HOUSE_ID
+from domsignal.tools.seed_demo import DEMO_HOUSE_ID, DEMO_USER_ID
 from domsignal.worker.runner import WorkerRunner
 
 
@@ -31,9 +31,9 @@ async def test_replay_is_deduplicated_and_processed_by_real_service(
         occurred_at=datetime.now(UTC),
     )
     async with container.session_factory() as session:
-        first = await InboundService().accept(session, event=event)
+        first = await InboundService().accept(session, event=event, actor_id=DEMO_USER_ID)
     async with container.session_factory() as session:
-        duplicate = await InboundService().accept(session, event=event)
+        duplicate = await InboundService().accept(session, event=event, actor_id=DEMO_USER_ID)
     assert first.job_id is not None
     assert duplicate.duplicate and duplicate.job_id is None
 
@@ -107,7 +107,7 @@ async def test_failed_transaction_never_records_inbox_success(
     )
     async with container.session_factory() as session:
         with pytest.raises(RuntimeError, match="before commit"):
-            await InboundService().accept(session, event=event)
+            await InboundService().accept(session, event=event, actor_id=DEMO_USER_ID)
     async with container.session_factory() as session:
         assert await session.get(InboxReceipt, "rollback-event") is None
     await container.engine.dispose()

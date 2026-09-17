@@ -7,7 +7,6 @@ import { IncidentCard } from "../../features/incidents/IncidentCard";
 import {
   categoryLabel,
   knownActions,
-  ruleSource,
   statusLabels,
 } from "../../features/incidents/presentation";
 import { incident } from "../../test/fixtures";
@@ -36,7 +35,7 @@ describe("semantic presentation", () => {
       render(
         <SourceChip
           source={{
-            type,
+            origin: type,
             source_title: "Источник",
             source_url: "https://example.org/rule",
             verified_at: "2026-01-01T12:00:00Z",
@@ -60,17 +59,16 @@ describe("semantic presentation", () => {
     expect(container.textContent).toBe("");
     rerender(
       <SourceChip
-        source={{ type: "official", source_url: "javascript:alert(1)" }}
+        source={{ origin: "official", source_url: "javascript:alert(1)" }}
       />,
     );
     expect(screen.getByText("Происхождение не подтверждено")).toBeTruthy();
     expect(screen.queryByRole("link", { hidden: true })).toBeNull();
   });
-  it("never maps verified C0 rules to official provenance", () => {
-    expect(
-      ruleSource({ ...incident.rule, verification_status: "verified" })?.type,
-    ).toBe("unknown");
-    expect(ruleSource(null)).toBeNull();
+  it("verification does not determine origin", () => {
+    render(<SourceChip source={{ ...incident.rule, origin: null, verified_at: "2026-01-01T12:00:00Z" }} />);
+    expect(screen.queryByText("Официальный источник")).toBeNull();
+    expect(screen.getByText("Происхождение не подтверждено")).toBeTruthy();
   });
   it("unknown category uses a generic name", () => {
     expect(categoryLabel("future")).toBe("Другая проблема дома");
@@ -99,7 +97,7 @@ describe("semantic presentation", () => {
     );
     expect(screen.getByText(description)).toBeTruthy();
   });
-  it("does not show view action when permission is absent", () => {
+  it("opens a returned resource even with no domain actions", () => {
     render(
       <IncidentCard
         incident={{ ...incident, allowed_actions: [] }}
@@ -107,7 +105,7 @@ describe("semantic presentation", () => {
         onNavigate={vi.fn()}
       />,
     );
-    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByRole("link")).toBeTruthy();
   });
   it("uses explicit permissions, disables with reason and ignores unknown actions", () => {
     const handler = vi.fn();
@@ -149,10 +147,8 @@ describe("semantic presentation", () => {
     );
     expect(screen.queryByRole("button")).toBeNull();
   });
-  it("only legacy view string grants permission", () => {
-    expect(knownActions(["prepare_appeal", "__proto__", "view"])).toEqual([
-      { code: "view", enabled: true, reason: null },
-    ]);
+  it("legacy strings grant no domain permission", () => {
+    expect(knownActions(["prepare_appeal", "__proto__", "view"])).toEqual([]);
   });
   it("passes axe semantic smoke checks", async () => {
     const { container } = render(

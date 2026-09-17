@@ -1,7 +1,7 @@
 import { Button, Flex, Panel, Typography } from "@maxhub/max-ui";
 import type { IncidentSummary } from "../../shared/api/client";
-import { StatusBadge } from "../../shared/ui/semantic";
-import { canView, categoryLabel } from "./presentation";
+import { SourceChip, StatusBadge } from "../../shared/ui/semantic";
+import { categoryLabel } from "./presentation";
 
 export function IncidentCard({
   incident,
@@ -31,6 +31,8 @@ export function IncidentCard({
       {incident.status === "reported" && (
         <p className="muted">Внешняя регистрация не подтверждена.</p>
       )}
+      <SourceChip source={incident.provenance} />
+      <p className="muted">Участников: {incident.participant_count ?? "нет данных"}</p>
       <Flex
         className="card-footer"
         align="center"
@@ -41,7 +43,7 @@ export function IncidentCard({
         <Typography.Text variant="detail">
           Сообщений: {incident.report_count ?? "нет данных"}
         </Typography.Text>
-        {detailAvailable && canView(incident) && (
+        {detailAvailable && (
           <Button asChild size="small" variant="secondary">
             <a
               href={href}

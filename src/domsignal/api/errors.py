@@ -4,13 +4,13 @@ import uuid
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request
-from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from domsignal.contracts.common import Problem
+from domsignal.contracts.common import FieldError, Problem
 from domsignal.services.errors import ServiceError
 
 
@@ -18,8 +18,8 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
-        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
-        request.state.request_id = request_id[:100]
+        # Correlation IDs are server generated; never echo arbitrary client/auth text.
+        request.state.request_id = str(uuid.uuid4())
         response = await call_next(request)
         response.headers["X-Request-ID"] = request.state.request_id
         return response
@@ -34,7 +34,8 @@ def install_error_handlers(app: FastAPI) -> None:
             status=exc.status,
             detail=exc.detail,
             code=exc.code,
-            request_id=_request_id(request),
+            trace_id=_request_id(request),
+            retryable=False,
         )
         return _problem_response(problem)
 
@@ -48,8 +49,20 @@ def install_error_handlers(app: FastAPI) -> None:
             status=422,
             detail="One or more request fields are invalid",
             code="validation_error",
-            request_id=_request_id(request),
-            errors=jsonable_encoder(exc.errors()),
+            trace_id=_request_id(request),
+            retryable=False,
+            field_errors=[
+                FieldError(
+                    field=(
+                        "request"
+                        if item["type"] == "extra_forbidden"
+                        else ".".join(str(part) for part in item["loc"])
+                    ),
+                    code=item["type"],
+                    message="Invalid value",
+                )
+                for item in exc.errors()
+            ],
         )
         return _problem_response(problem)
 
@@ -62,16 +75,32 @@ def install_error_handlers(app: FastAPI) -> None:
             status=500,
             detail="The request could not be completed",
             code="internal_error",
-            request_id=_request_id(request),
+            trace_id=_request_id(request),
+            retryable=True,
         )
         return _problem_response(problem)
+
+    @app.exception_handler(HTTPException)
+    async def http_error_handler(request: Request, exc: HTTPException) -> JSONResponse:
+        return _problem_response(
+            Problem(
+                type="about:blank",
+                title="Request could not be completed",
+                status=exc.status_code,
+                code=f"http_{exc.status_code}",
+                detail="The requested resource or method is unavailable",
+                retryable=exc.status_code in {408, 429} or exc.status_code >= 500,
+                trace_id=_request_id(request),
+            )
+        )
 
 
 def _problem_response(problem: Problem) -> JSONResponse:
     return JSONResponse(
         status_code=problem.status,
-        content=problem.model_dump(mode="json", exclude_none=True),
+        content=problem.model_dump(mode="json"),
         media_type="application/problem+json",
+        headers={"X-Request-ID": problem.trace_id},
     )
 
 
