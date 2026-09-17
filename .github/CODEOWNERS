@@ -1,0 +1,12 @@
+# CODEOWNERS is intentionally inactive until DEV_A_GITHUB and DEV_B_GITHUB are known.
+# Do not replace these logical labels with guessed accounts. No automatic review request is active yet.
+#
+# DEV-A: /app/core/ /app/services/ /app/contracts/ /app/db/ /app/api/ /app/nlp/
+#        /app/worker/ /app/bootstrap.py /app/settings.py /migrations/ /regions/
+#        /pyproject.toml /uv.lock /Dockerfile /compose*.yaml /deploy/ and backend/core tests.
+# DEV-B: /app/bot/ /miniapp/ browser tests, MAX scenario fixtures and user-facing copy.
+# BOTH:  root rules, ROADMAP.md, .github/workflows/, docs/CONTRACTS.md and shared scenario specs.
+# STATUS: /docs/status/dev-a.md belongs to DEV-A; /docs/status/dev-b.md belongs to DEV-B.
+#
+# Once both valid usernames are confirmed, replace this comment-only map with active path rules.
+# CODEOWNERS routes review; it is not a per-branch write ACL.

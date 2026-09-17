@@ -1,0 +1,76 @@
+name: Repository quality gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, dev/a-core, dev/b-experience]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository-sanity:
+    name: repository-sanity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out tested ref
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Verify bootstrap repository
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required=(
+            AGENTS.md
+            AGENT_INSTRUCTIOM.md
+            IMPLEMENTATION_CONTEXT.md
+            ROADMAP.md
+            docs/WORKFLOW.md
+            docs/ARCHITECTURE.md
+            docs/CONTRACTS.md
+            docs/product/domsignal_plan.md
+            docs/status/dev-a.md
+            docs/status/dev-b.md
+          )
+
+          for path in "${required[@]}"; do
+            test -f "$path" || { echo "Missing required file: $path"; exit 1; }
+          done
+
+          grep -Fq 'AGENT_INSTRUCTIOM.md' AGENTS.md
+          grep -Fq 'IMPLEMENTATION_CONTEXT.md' AGENT_INSTRUCTIOM.md
+          grep -Fq 'ROADMAP.md' AGENT_INSTRUCTIOM.md
+          grep -Fq 'docs/WORKFLOW.md' AGENT_INSTRUCTIOM.md
+          grep -Fq 'docs/ARCHITECTURE.md' AGENT_INSTRUCTIOM.md
+          grep -Fq 'docs/CONTRACTS.md' AGENT_INSTRUCTIOM.md
+          grep -Fq 'docs/product/domsignal_plan.md' AGENT_INSTRUCTIOM.md
+
+          if git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- .; then
+            echo 'Conflict marker found.'
+            exit 1
+          fi
+
+  quality-gate:
+    name: quality-gate
+    if: always()
+    needs: [repository-sanity]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all mandatory jobs
+        env:
+          REPOSITORY_SANITY_RESULT: ${{ needs.repository-sanity.result }}
+        shell: bash
+        run: |
+          if [ "$REPOSITORY_SANITY_RESULT" != "success" ]; then
+            echo "repository-sanity result: $REPOSITORY_SANITY_RESULT"
+            exit 1
+          fi
