@@ -45,5 +45,6 @@ uploads/
 # Local agent scratch and worktrees
 .agent-scratch/
 .codex/
+.playwright-cli/
 .worktrees/
 worktrees/
