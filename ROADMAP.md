@@ -1,6 +1,7 @@
 # ДомСигнал — ROADMAP для двух разработчиков и кодовых агентов
 
-> План реализации, **не отчёт о выполнении**. Все задачи первоначально TODO; фактический статус хранится в handoff владельца и PR.
+> План реализации, **не отчёт о выполнении**. Фактический статус и evidence — в handoff владельца, проверенном implementation context и PR; завершённые foundation/B-00 не возвращаются в TODO.
+> Согласованная цель: [ARCH-PLATFORM-v1](docs/PRODUCT_ARCHITECTURE.md), TARGET от 17.09.2026. Этот roadmap остаётся единственным действующим планом.
 > Основа: `domsignal_plan.md`, §§ 5–8, 15–16. Адаптация от 17.09.2026: два разработчика, ранняя mini app, активное использование агентов, больше законченных сценариев на одном ядре.
 > Даты онлайн-этапа и контрольных точек ниже взяты из исходного плана команды; точное время сдачи и условия проверки требуется подтвердить у организаторов.
 
@@ -15,12 +16,12 @@
 | Уровень | Смысл | Что относится |
 |---|---|---|
 | **P0 — обязательный законченный продукт** | Без этого релиз не принимается | Личный путь + реальная MAX-интеграция + mini app с доской/карточкой/редактором + проверяемые маршруты + источник статуса + сохранение/ошибки/права + воспроизводимая поставка |
-| **P1 — целевой сильный релиз** | Планируем и реализуем параллельно, не откладываем по умолчанию «на потом» | Групповые инциденты, контекст между тремя пространствами, соседи, история/напоминания/эскалация, QR/sharing, настройки администратора, второй регион, больше проверенных категорий, полезная NLP-подсказка |
+| **P1 — целевой сильный релиз** | Берём ограниченными срезами с проверкой; ARCH-PLATFORM-v1 расширяет цель, но не гарантирует весь объём к прежним датам | Групповые инциденты, контекст между тремя пространствами, соседи, история/напоминания/эскалация, QR/sharing, проверяемые подключения, веб-кабинет УК, назначения/очередь Ticket, второй регион, больше проверенных категорий, полезная NLP-подсказка |
 | **P2 — усиление после готовности P0/P1** | Берём только при наличии ресурса проверки | Вложения, голос → редактируемая расшифровка, ограниченная подсказка по фото, дополнительные представления/язык |
 
 **Увеличиваем количество законченных путей, а не количество экранов-заглушек.** P1 включается в релиз только с backend, UX, тестами и честной маркировкой ограничений. Из P0 нельзя удалить ошибку/права ради ещё одной «kill-фичи».
 
-Не обещаем официальную регистрацию: без внешнего подтверждения написано **«Житель отметил подачу»**. Не превращаем проект в CRM ремонтных бригад. Сохранение исходного обоснования не означает, что его статистика, правовые примеры и ограничения конкурентов повторно проверены: это отдельная исследовательская работа.
+Не обещаем официальную регистрацию: без внешнего подтверждения написано **«Житель отметил подачу»**. Добавляем согласованный ограниченный рабочий контур УК: tenant, назначения, подключения, отдельный веб-кабинет и Ticket; полноценная CRM ремонтных бригад и биллинг остаются вне scope. Сохранение исходного обоснования не означает, что его статистика, правовые примеры и ограничения конкурентов повторно проверены: это отдельная исследовательская работа.
 
 ## 2. Владельцы и параллельность
 
@@ -42,14 +43,14 @@ DEV-B; интегратор не обходит review или protection `main`.
 | Область | Writer | Реальные пути / точная граница | Карточки и handoff |
 |---|---|---|---|
 | AI/NLP/ML modules | DEV-A | Целевые выделенные `src/domsignal/ai/`, `src/domsignal/nlp/`, `datasets/`, `evaluation/`, `model_artifacts/` и точные `tests/ai/`, `tests/nlp/`. В проверенных refs этих каталогов ещё нет; они создаются только нужной задачей. | A-03/AI, A-06/AI, A-08, A-11/AI, A-14/AI. A отдаёт типизированный анализ, uncertainty/fallback и evidence качества. |
-| Product backend | DEV-B | Существующие `src/domsignal/core/`, `services/`, `api/`, `contracts/`, `db/`, `tools/`, `main.py`; `/tests/` по умолчанию. Точный AI test path ниже/уже широкого правила принадлежит A. | A-01, A-02, A-03/Product, A-04, A-05, A-06/Product, A-07, A-09, A-10, A-11/Product, A-12, A-13, A-14/Product и backend-срезы B-задач. B применяет AI-результат и делает транзакцию. |
-| MAX, bot и frontend | DEV-B | `src/domsignal/bot/`, `miniapp/`, browser tests и MAX fixtures/scenarios. | B-01…B-13; business rules вызываются через services/core, а не копируются в React/handlers. |
+| Product backend | DEV-B | Существующие `src/domsignal/core/`, `services/`, `api/`, `contracts/`, `db/`, `tools/`, `main.py`; `/tests/` по умолчанию. Точный AI test path ниже/уже широкого правила принадлежит A. | A-01, A-02, A-03/Product, A-04, A-05, A-06/Product, A-07, A-09, A-10, A-11/Product, A-12, A-13, A-14/Product, A-15, A-16 и backend-срезы B-задач. B применяет AI-результат и делает транзакцию. |
+| MAX, bot и frontend | DEV-B | `src/domsignal/bot/`, `miniapp/`, browser tests и MAX fixtures/scenarios. | B-01…B-14; business rules вызываются через services/core, а не копируются в React/handlers. |
 | Public contract | DEV-B | `src/domsignal/contracts/`, API routes/errors, `docs/openapi.json`, `miniapp/src/shared/api/schema.ts`, `docs/CONTRACTS.md`. | Один producer+consumer+generated types+tests diff. AI-specific внутренний contract пишет A; совместимую границу review оба. |
 | Persistence | DEV-B | `src/domsignal/db/`, `migrations/`, persistence/integration tests. | Один writer models/migrations; A не пишет model schema ради AI feature. |
 | Jobs и delivery | DEV-B по умолчанию; DEV-A только выделенный AI handler | `src/domsignal/worker/`, общая queue/leases/retries/outbox/delivery и wiring — B. AI handler живёт в точном AI-модуле A и возвращает typed result. | A-05 — B; AI-specific execution в A-03/A-08. Регистрацию handler/settings согласует B коротким diff. |
 | Rules, regions и product data | DEV-B | `regions/`, нормативные справочники, route/deadline logic и tests. | A-02/A-10/A-11/Product. Model datasets принадлежат A и не заменяют проверенные нормы. |
 | Wiring, dependencies и delivery platform | DEV-B | `bootstrap.py`, `settings.py`, `pyproject.toml`, `uv.lock`, `miniapp/package*.json`, `Dockerfile`, `compose*.yaml`, `deploy/`, `.github/workflows/`, общие scripts. | Один writer каждого общего файла; dependency/lock/deploy меняются целым проверяемым срезом. |
-| Общий context и status | DEV-B — `IMPLEMENTATION_CONTEXT.md`; каждый — только свой status | `IMPLEMENTATION_CONTEXT.md`, `docs/status/dev-a.md`, `docs/status/dev-b.md`. | Context обновляется после значимого принятого merge; branch progress остаётся в status. Разовая правка обоих status разрешена только этим решением о ролях. |
+| Общий context и status | DEV-B — `IMPLEMENTATION_CONTEXT.md`; каждый — только свой status | `IMPLEMENTATION_CONTEXT.md`, `docs/status/dev-a.md`, `docs/status/dev-b.md`. | Context обновляется после значимого принятого merge; branch progress остаётся в status. Историческое разовое разрешение правки обоих status относилось только к решению о ролях; этот архитектурный patch меняет только status DEV-B. |
 
 Широкое владение DEV-B каталогами `src/domsignal/` и `tests/` не перекрывает
 точные AI/NLP paths DEV-A. Для общих файлов нужен короткий согласованный diff,
@@ -60,7 +61,30 @@ DEV-B; интегратор не обходит review или protection `main`.
 | Developer | Сейчас / следующий шаг | Настоящая зависимость и снимающий контракт |
 |---|---|---|
 | DEV-A | Сохранить review/handoff FND-01; затем A-03/AI: baseline extraction/risk detector + evaluation, без обязательного provider. | DEV-B задаёт разрешённый input scope и public application boundary; A возвращает typed analysis fixture и не ждёт реализации всего product backend. |
-| DEV-B | B-02 остаётся PARTIAL; следующим backend-срезом выполнить A-01 C0/B-00 convergence и затем привязать B-02 к generated contract. | Один набор Pydantic producer → OpenAPI → TS consumer → tests снимает блокер; это не ожидание общего backend от DEV-A. |
+| DEV-B | **Следующая ОДНА задача — A-01:** сверка/минимальная C0/B-00 convergence с tenant/house/access contract context. B-02 PARTIAL; последующие A-15 и повторный binding B-02 здесь не начинаются. | Один набор Pydantic producer → OpenAPI → TS consumer → tests снимает блокер; это не ожидание общего backend от DEV-A. |
+
+### Встраивание ARCH-PLATFORM-v1 в существующий план
+
+| Раздел 14 архитектуры | Действующая карточка / изменение |
+|---|---|
+| C0/B-00/C1 | A-01: ограниченная convergence и минимальный контекст; B-02: сохранить C0 UI/evidence, затем повторный binding |
+| Tenant/access | **Новая A-15**: отсутствующая основа двух УК, HouseManagement и назначения; не повтор FND-01 |
+| Проверенная установка | A-07 + B-03/B-07, feasibility B-01; установка больше не зависит от matching A-06 |
+| Кабинет/заявки УК/лимиты | A-10 + B-09: обычный web вместо Admin Mode, общая backend-логика |
+| Инциденты/рабочая очередь | A-02/A-04/A-06 сохраняют границы; **новые A-16 + B-14** только для отсутствующих Ticket core и рабочего UI |
+| Jobs/эксплуатация | A-05/A-09/A-12: актуальный tenant/access scope перед выполнением и доставкой |
+| AI | A-03/AI, A-06/AI, A-08, A-11/AI: разрешённый typed input, независимый manual путь; без зависимости всей платформы от DEV-A |
+
+Порядок новых срезов: документационная фиксация → **A-01** (отдельное следующее
+обсуждение) → A-15 → повторная проверка/binding B-02 → A-07 и A-10/B-09 →
+A-16/B-14 → MT-проверки B-11/A-12. Содержательные зависимости личного пути
+A-02…A-06 сохранены. B-01 допускается параллельно; live-блокеры не мешают
+документам, но запрещают LIVE VERIFIED. A-03/AI не ждёт всю платформу.
+FND-01 и B-00 не выполняются заново, B-02 не закрыта этим patch.
+
+Новые A-15/A-16/B-14 — TARGET / TODO без execution evidence. Старый календарь
+ниже остаётся ориентиром: расширенный scope требует переоценки перед взятием
+каждого среза, а не обещания выполнить всю платформу к прежнему freeze.
 
 ### Как использовать агентов с выигрышем
 
@@ -80,10 +104,10 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 | Пакет | Когда / writer | Минимум данных | Что разблокируется |
 |---|---|---|---|
 | **C0 — skeleton** | FND-01; реализовал DEV-A, дальнейший public writer DEV-B | Me, House, Incident summary/detail, Report input, Error, capabilities | Board/detail/form, состояния ошибок и доступа |
-| **C1 — основной путь** | A-01/A-04; writer DEV-B | IntakeResult с уточнениями, RouteResult, source/deadline, AppealDraft, structured `allowed_actions` | Личный диалог, карточка маршрута, редактор обращения; A-01 convergence завершает блок B-02 |
+| **C1 — основной путь** | A-01 convergence, A-04 предметное развитие; writer DEV-B | IntakeResult с уточнениями, RouteResult, source/deadline, AppealDraft, structured `allowed_actions` | Личный диалог, карточка маршрута, редактор обращения; A-01 convergence завершает блок B-02 |
 | **AI analysis boundary** | A-03/A-08; internal writer DEV-A, product boundary review DEV-B | Категория/поля/candidates, uncertainty, questions, execution/fallback state | Product orchestration может использовать model/rules одинаково и сохраняет manual путь |
 | **C2 — совместная проблема** | A-06/A-07; public writer DEV-B | Participant count, message count, ChatBinding, IncidentEvent, Feedback, conflict state; semantic scores A — только input решения | Групповые карточки, история, подтверждения/возражения |
-| **C3 — сопровождение/admin** | A-09/A-10; writer DEV-B | Reminders, escalation preview, настройки дома, aggregate summary | Мои обращения, администрирование, фильтры/сводки |
+| **C3 — сопровождение/admin** | A-09/A-10; writer DEV-B | Reminders, escalation preview, настройки/агрегаты; A-10 добавляет onboarding УК, лимиты и назначения для web-кабинета | Мои обращения, администрирование, фильтры/сводки |
 
 Контрактный PR может определять ещё не подключённый DTO и валидируемые fixtures, но **не публикует несуществующий endpoint с фиктивным успешным ответом**. На UI допустим MSW для разработки; в сборке релиза он выключен и не подменяет сбой настоящего API.
 
@@ -139,17 +163,19 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 
 ## 6. Исторические A-ID — явные текущие Owners
 
-### A-01 — договорённость о полном golden-path контракте
-- **Owner:** DEV-B. **P0 · S · Depends:** FND-01; B-00. **Allowed paths:** `src/domsignal/contracts/`, `src/domsignal/api/`, `docs/CONTRACTS.md`, `docs/openapi.json`, generated `miniapp/src/shared/api/schema.ts`, связанные producer/consumer tests.
-- **Сделать сейчас:** минимальный C0/B-00 convergence для B-02: structured `allowed_actions`; provenance отдельно от verification freshness; согласованные capabilities; `message_count`/`report_count` отдельно от unique `participant_count`; нужные read-model поля; единый error contract; generated types и producer/consumer checks. Неподдержанные действия не публикуются. Затем развивать C1: safety/clarify/matches/incident, RouteResult, source/deadline, draft/filed marker.
+### A-01 — минимальная C0/B-00 convergence и контекст C1
+- **Owner:** DEV-B. **P0 · M · Depends:** FND-01; B-00. **Allowed paths:** `src/domsignal/contracts/`, `src/domsignal/api/`, затронутые product read-model services/repositories, `docs/CONTRACTS.md`, `docs/openapi.json`, `miniapp/src/shared/api/` (включая generated schema), затронутые C0 consumers и связанные producer/consumer tests. Без tenant migration или новых бизнес-действий.
+- **Сделать сейчас:** минимальный C0/B-00 convergence для B-02: structured `allowed_actions`; provenance отдельно от verification freshness; согласованные capabilities; `message_count`/`report_count` отдельно от unique `participant_count`; нужные read-model поля; единый error contract; generated types и producer/consumer checks. Неподдержанные действия не публикуются. Зафиксировать минимальный tenant/house/access read-model context и совместимость old/new producer без фиктивных tenant/roles. Дальнейшие safety/route/draft/filing C1 реализуются предметными A-03/Product и A-04, не этой convergence.
 - **Acceptance:** B-02 читает один generated contract без adapter-догадок; enum/nullable/401/403/404/409/422 задокументированы; опасные поля нельзя принять как verified от клиента; OpenAPI/TS воспроизводимы. Не требуется реализовать все будущие business actions или mock endpoints.
 - **Handoff:** маленький contract+producer+consumer+tests PR; DEV-A review границы AI и общих invariants, но не является ожидаемым writer product backend.
+- **Граница / проверка:** tenant persistence, назначения и проверка двух УК — A-15; onboarding/кабинет/Ticket исключены. Проверить текущий C0, negative contract cases и генерацию OpenAPI/TS; отсутствующие поля явно unknown/unsupported, не access grant. Реальное B-02 binding перепроверяется отдельно, без автоматического DONE.
 
 ### A-02 — движок маршрута, пакеты и сроки
 - **Owner:** DEV-B. **P0 · L · Depends:** A-01. **Allowed paths:** product `core/services`, `regions/`, API/contracts при необходимости, rule tests.
 - **Сделать:** федеральный/региональный/домовой слои; валидация и provenance; первые четыре категории; applicability и clarification вместо выдуманной ответственности; deadline kind/anchor/calendar. Начать со схемы и одного полного маршрута, затем расширять.
 - **Acceptance:** для каждого принятого правила есть источник и фактический статус проверки; неизвестный исполнитель или срок возвращает безопасную неопределённость. На тестовом календаре проверены выходные, переход месяца/года и timezone. Пример из источника не превращён автоматически в норму.
 - **Handoff внутри DEV-B:** RouteResult и fixtures нормального/неполного/неприменимого маршрута для bot/UI; дата источника и причина отсутствия due_at. DEV-A использует только стабильные category codes как вход AI evaluation.
+- **ARCH target / зависит для tenant-среза от A-15:** правила внешнего адресата и сроки не равны routing рабочей очереди (A-16). Resolver ограничен tenant/домом/периодом управления; неизвестный маршрут остаётся неопределённым. Проверка: одинаковая категория в двух УК не заимствует чужую конфигурацию/источник.
 
 ### A-03 — intake, NLP baseline и safety-off-ramp
 - **Parent ID сохранён; P0 · M · Depends:** A-03/Product зависит от A-01 public boundary; A-03/AI может начать параллельно по короткому согласованному internal fixture/category codes. Реализация делится на два независимых среза с одним Owner каждый.
@@ -163,12 +189,14 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Сделать:** create/edit draft, минимальная полнота, сохранение версии, safe official handoff, self_reported filing с необязательным номером, history event. Один и тот же service вызывается bot и REST.
 - **Acceptance:** исправления сохраняются; двойное нажатие не создаёт дубликат; конфликт версии не теряет текст; другой житель не редактирует чужой draft. Открытая ссылка не считается подачей; ручной номер не считается проверенной регистрацией. Собственное обращение доступно, даже когда сосед уже отметил подачу.
 - **Handoff:** рабочие C1 endpoints, generated client, contract/integration tests и примеры conflict/retry для bot/miniapp в том же направлении DEV-B.
+- **ARCH target / зависит для tenant-среза от A-15:** AppealDraft/ExternalAppeal отделены от Report, Incident и Ticket. Проверка: чужой tenant не читает draft/ручной номер; смена УК не переписывает владельца старого обращения; ручной filing не повышается до verified (MT-14/16).
 
 ### A-05 — durable execution и доставка без ложного успеха
 - **Owner:** DEV-B. **P0 · M · Depends:** FND-01 и transport port из C0. B-03 — интеграция того же направления, не условие начала. **Allowed paths:** `src/domsignal/worker/`, services/scheduling, DB/outbox, tests.
 - **Сделать:** довести skeleton jobs до real operations: commit-before-ack, event dedup, приоритеты, backoff, recovery leases, последний актуальный render карточки, взаимодействие с MaxTransport B. DB транзакция не держится во время сети.
 - **Acceptance:** crash в ключевых точках воспроизводим в тесте; stale lease не завершает чужое задание; повтор не дублирует доменное действие; один отправитель регулирует запросы. Отдельно документирована неопределённость внешнего send при потере ответа — без обещания exactly-once.
 - **Handoff:** sender interface, delivery states, retry policy и тестовый RecordingTransport для B-03. AI-specific handler DEV-A подключается к этой инфраструктуре через отдельный typed boundary и не владеет leases/retries/delivery.
+- **ARCH target / tenant-этап после A-15, connection-этап после A-07:** scope в job/outbox и повторная проверка текущих прав/привязки/версии перед побочным действием; отзыв/приостановка не обходятся старым payload. Проверка: restart, повтор и устаревший job двух УК (MT-10/12/17). Базовый sender не ждёт эти расширения; Redis/новый брокер не добавлять.
 
 ### A-06 — общий инцидент, соседи и наблюдения
 - **Parent ID сохранён; P1 · L · Depends:** A-06/Product — A-03/Product, A-04, A-05; A-06/AI — A-03/AI и согласованный candidate fixture от DEV-B. Реализация делится по ответственности.
@@ -176,12 +204,14 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **A-06/Product — Owner DEV-B. Allowed paths:** core/matching/incidents, services, public API/contracts, DB/migrations, scenario/integration tests. **Сделать:** отбор кандидатов по дому/месту/правам, окончательное create/join/merge решение, участники, отдельные message/report/participant counts, feedback, persistence и concurrency.
 - **Acceptance:** semantic score не даёт право merge; разные дома/подъезды/объекты не склеиваются; неизвестное место при двух кандидатах уточняется; гонка двух сигналов не создаёт две активные карточки. Счётчик сообщений ≠ уникальные участники. Противоречащие наблюдения видны; посторонний не удаляет инцидент.
 - **Handoff:** A возвращает typed ranked candidates; B публикует C2, позитивные/conflict fixtures и явный источник каждого статуса.
+- **ARCH target для A-06/Product / Depends дополнительно A-15:** кандидаты ограничены tenant/домом/объектом до AI; приватные Report не копируются между чатами дома. Incident и его статусы не заменяются Ticket. Проверка: два tenant/два чата, race, чужие ID и сохранение исходных сообщений (MT-09/12/16).
 
 ### A-07 — подключение дома и разрешения группового режима
-- **Owner:** DEV-B. **P1 · M · Depends:** FND-01; B-01; A-06/Product. **Allowed paths:** membership/chat binding services, API/admin, settings, DB, tests.
-- **Сделать:** verified binding чат→дом; разрешения, opt-in, режимы explicit/group-auto/off; политика доступа по ссылкам; state lost_permissions/disabled. `bot_added` только начинает binding.
+- **Owner:** DEV-B. **P1 · M · Depends:** FND-01, A-01, A-15; B-01 и B-03 для реального MAX. Matching A-06 не prerequisite; полный web UI A-10/B-09 не нужен для проверки service boundary. **Allowed paths:** membership/chat binding services, API/admin, settings, DB, tests.
+- **Сделать:** ConnectionRequest на tenant/дом с TTL/одноразовостью; разрешение УК → действие администратора чата → проверка текущих MAX-прав человека и бота → подтверждение дома УК → атомарная активация/лимит. Реестр установок и аудит; режимы explicit/group-auto/off, отзыв/смена чата. Дом допускает несколько чатов, активный групповой чат MVP — один дом. `bot_added` только начинает ожидание, не выдаёт роль.
 - **Acceptance:** чужая ссылка не выдаёт доступ; админ одного дома не админ всех домов; удаление/отключение бота прекращает обработку группы. Для public synthetic demo доступ задан отдельной явной политикой. При отсутствии group entitlement доступны DM/QR/sharing.
 - **Handoff:** C2 binding/settings, разрешённые действия и capability/error codes для bot/miniapp; все части остаются в product направлении DEV-B.
+- **Граница / проверка:** три независимых основания — управление домом, назначение УК, MAX-права. Неуспешная проверка оставляет pending; название/URL/start_param не доказательства. Лимит активных домов/резерв защищён от race, повторное добавление требует проверки; каналы не принимаются как группы. MT-02…MT-10/17: API/PG negative+concurrency, transport fixtures и отдельно live MAX; fixtures не LIVE VERIFIED.
 
 ### A-08 — полезная LLM и evaluation, без зависимости основного пути
 - **Owner:** DEV-A. **P1 conditional · M · Depends:** A-03/AI; разрешение/ключ провайдера либо законный локальный доступ. **Allowed paths:** выделенные AI/NLP providers/prompts/validation, evaluation, dataset cards, AI regression tests.
@@ -194,12 +224,14 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Сделать:** персональные/обоснованные нормативные напоминания, отмена/перенос, мои обращения, «нет ответа» → следующий допустимый маршрут/черновик с источником, история. Уведомлять только пользователя, которому разрешено отправлять DM.
 - **Acceptance:** overdue не считается от произвольной даты чата; при неизвестном anchor нет ложного срока. После закрытия/смены версии лишнее напоминание не отправляется. Deadline тестируется fake clock, не ожиданием суток в CI. Эскалация — подготовка, а не автоматическая внешняя жалоба.
 - **Handoff:** C3, reminder reason/time/source и states канала доставки для bot/miniapp того же product направления.
+- **ARCH target / Depends дополнительно A-15:** адресаты и записи tenant-scoped; актуальные полномочия/доступ/канал проверяются перед отправкой, не только при создании reminder. Проверка fake clock + отозванный сотрудник/приостановленная УК: доставки чужих данных нет, история/собственные обращения не удалены (MT-10/16).
 
-### A-10 — администрация и второй контекст
-- **Owner:** DEV-B. **P1 · M · Depends:** A-06/Product, A-07, A-02. **Allowed paths:** admin API/services, summary queries, DB, `regions/`, tests.
-- **Сделать:** настройки антиспама/тихих часов, категории/режим, ограниченная модерация, сводка разрешённых домов, второй пакет региона. В исходном source есть RU-TA/RU-BA — сохраняем эти контексты с честным происхождением.
+### A-10 — backend веб-кабинета, заявки УК, лимиты и назначения
+- **Owner:** DEV-B. **P1 · M · Depends:** A-15, A-02; A-07 для live состояния подключений, A-06/Product только для расширенных incident aggregates. Onboarding/settings не ждут matching. **Allowed paths:** admin API/services, summary queries, DB, `regions/`, tests.
+- **Сделать:** два последовательных ограниченных этапа: (1) приглашения/web-auth, отзыв сессий и MFA привилегированных ролей, заявка УК → ручное решение Superadmin с основанием; (2) лимиты активных домов/резервы, назначения сотрудников на несколько домов, готовность дома, anti-spam/тихие часы, категории/режим, ограниченная модерация, сводка разрешённых домов и второй пакет региона. В исходном source есть RU-TA/RU-BA — сохраняем эти контексты с честным происхождением.
 - **Acceptance:** агрегаты вычисляются из событий/БД, не чисел модели; у второго дома иной config без fork кода; ограничения адаптации показаны. Неудачный новый pack не ломает уже загруженную проверенную конфигурацию. Полная переписка не появляется в admin summary.
 - **Handoff:** C3 settings+aggregates и два воспроизводимых demo fixtures для admin UI.
+- **Граница / проверка:** отдельный web entry point использует существующие services/API; auth-механизм согласовать в этом срезе, не выдумывать MAX OAuth. Ticket mutations — A-16. API/PG tests: неутверждённая УК не получает дом, chat admin без org assignment не админ УК, лимит/смена назначения идемпотентны, агрегаты не раскрывают чужой tenant (MT-02/03/10/12/16). Каждый этап сдаётся отдельным проверяемым diff; не единый срез всей платформы.
 
 ### A-11 — расширение полезных маршрутов
 - **Parent ID сохранён; P1 · M · Depends:** A-11/Product — A-02, A-03/Product и проверка данных; A-11/AI — A-03/AI и стабильные category codes от Product-среза. Реализация разделена.
@@ -213,6 +245,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Сделать:** ранний HTTPS-стенд; отдельные local/test/prod credentials; logging sans secrets; health/readiness/version; backup/restore; миграции и безопасное повторное развёртывание; isolation/load sanity, защита демо-сброса. Не ждать 26.09 для первого deploy.
 - **Acceptance:** свой image hash; нет автоизменения общего webhook при локальном старте; production не принимает test-login; restart сохраняет данные/jobs; restore проверен на отдельной БД. Порты API/DB не открыты в обход принятой политики. Нет обещания полного compliance одним расположением сервера.
 - **Handoff:** стабильный URL, проверочные роли/дома безопасным каналом и список реально включённых функций для B-11/B-12; DEV-A получает только необходимые provider config/observability hooks без секретов.
+- **ARCH target / MT-этап после A-15/A-07, очередь после A-16:** tenant scope в файлах, jobs, кешах, аналитике/экспорте; restore сохраняет историю и реестр установок. Проверка двух УК, отзыва, смены управления и restart (MT-10/12/16/17); ранний HTTPS/P0 не блокируется будущим Ticket. Без измерений нет обещания ёмкости или нового брокера.
 
 ### A-13 — воспроизводимая техническая сдача
 - **Owner:** DEV-B. **P0 · M · Depends:** P0 и принятые P1; B-11. **Allowed paths:** README technical sections, OpenAPI/DATA-API, CI/release, deploy/runbook.
@@ -225,6 +258,20 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **A-14/Product — Owner DEV-B. Allowed paths:** attachment service, private storage, public API/contracts, DB/access/retention, tests. **Сделать:** upload/read/delete, limits MIME/size, access, metadata policy и текстовый fallback.
 - **A-14/AI — Owner DEV-A; Depends:** A-14/Product attachment boundary и реальный provider, только при согласованном roadmap. **Allowed paths:** ASR/vision provider adapters, prompts/structured validation, evaluation/tests. **Сделать:** вернуть редактируемую расшифровку/описание как предложение; timeout/failure не блокирует текст.
 - **Acceptance:** bytes/storage/access реальны и изолированы; фото не считается диагнозом. Расшифровка редактируется до сохранения. Нет автопубликации личных фото или внешней отправки без основания. Недоступный provider даёт честный fallback, не synthetic production success.
+
+### A-15 — минимальная tenant/access-основа
+- **Owner:** DEV-B. **P0 foundation нового scope · M · State:** TARGET / TODO. **Depends:** FND-01, A-01. **Allowed paths:** product core/services/contracts/API/DB, migrations, access tests; generated types одним согласованным diff.
+- **Результат:** Tenant, HouseManagement с основанием/периодом, минимальные OrganizationMembership/HouseAssignment и resident basis; один сотрудник имеет несколько назначений. Объектная изоляция двух УК и отзыв прав, без повторного каркаса FND-01.
+- **Границы:** минимальные подтверждаемые административные service-команды/seed fixtures для проверок; полноценный onboarding/web-auth/UI — A-10/B-09, MAX binding — A-07, Ticket — A-16. Нет IAM-конструктора и автоматического права из указанного адреса. Миграция сохраняет текущие C0 данные/личный путь, старый tenant истории не переписывает.
+- **Acceptance / проверка:** API+PostgreSQL migration/restart и negative tests с двумя УК/домами, несколькими назначениями, чужими ID, отзывом и новым периодом управления; MT-01 (изоляция в локальном API, без claim LIVE MAX), MT-10/11/12/16/18. Read-model и allowed_actions отражают серверное основание доступа; old/new contract совместимы, OpenAPI/TS воспроизводимы.
+- **Handoff:** проверенный access boundary и ограничения для B-02/A-07/A-10; будущие MT ещё не PASS, B-02 не закрывается автоматически.
+
+### A-16 — Ticket: ограниченная очередь УК и проверка результата
+- **Owner:** DEV-B. **P1 · M · State:** TARGET / TODO. **Depends:** A-15, A-06/Product, A-10 (назначения/настройки), A-05. **Allowed paths:** product core/services/contracts/API/DB, migrations, worker wiring, contract/integration tests.
+- **Результат:** Ticket поверх Incident с сохранением Report и отдельного ExternalAppeal; очередь по дому/категории/назначению, один текущий владелец, резервная очередь tenant при неизвестной категории/нет исполнителя. Рабочие переходы и WorkReport с отдельным подтверждением/возражением жителя для конкретной попытки выполнения.
+- **Границы:** lifecycle и DTO согласуются с Incident без замены его статусов; overdue только по применимому сроку. Нет биллинга, отраслевой CRM, автоматической внешней подачи и автоматического подтверждения по молчанию/голосованию. UI — B-14.
+- **Acceptance / проверка:** PG/API tests MT-13/14/15 плюс MT-10/12/16/17: race при принятии в работу даёт одного владельца, повторы идемпотентны, fallback queue не теряет заявку, отзыв проверяется перед mutation/job. Отчёт исполнителя и возражение сохранены раздельно; внутренний номер/ручной внешний номер не verified registration.
+- **Handoff:** реальные Ticket DTO/actions, generated schema, позитивные/negative fixtures и evidence для B-14; не placeholder success.
 
 ## 7. Исторические B-ID — Owner DEV-B
 
@@ -239,19 +286,22 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Сделать:** сверить официальные docs; права добавления/чтения группы; DM events, deep link, mini app on mobile/web; получить реальный пример initData для локального безопасного теста; проверить sharing capability. Не хранить raw initData/token в Git.
 - **Acceptance:** таблица LIVE VERIFIED / NOT VERIFIED / BLOCKED; разрешение group доказано фактическим событием, не предположением из SDK. При отсутствии доступа выбран fallback. Подписка общего токена не перенастроена чужим окружением.
 - **Handoff:** нормализованные обезличенные forms/events и утверждённые configuration requirements для product backend; AI receives only explicitly allowed content if a later feature needs it.
+- **ARCH target / проверка:** текущие методы admins/member/me, реальные sender/chat context, bot_added/removal и права; документальные источники M1–M12 отдельно от токена/live evidence. Условия linking/сервисных уведомлений и пределы подтверждаются до использования; неполученные доступы не блокируют docs/A-01 и не дают LIVE VERIFIED.
 
 ### B-02 — визуальная система и рабочая mini app
-- **Owner:** DEV-B. **P0 · M · Depends:** FND-01/C0; B-00; A-01 convergence для полного target binding. **Allowed paths:** `miniapp/src/app/`, `shared/`, `features/incidents/`, frontend/browser tests.
+- **Owner:** DEV-B. **P0 · M · Depends:** FND-01/C0; B-00; A-01 convergence для обновлённого binding; A-15 для нового tenant/access context. Полная платформа/кабинет/Ticket не входят в B-02. **Allowed paths:** `miniapp/src/app/`, `shared/`, `features/incidents/`, frontend/browser tests.
 - **Сделать:** consistent tokens/типографика/отступы; House board, Incident detail, ясные badges, source chip, responsive lists, loading/empty/error/access states; MAX Bridge wrapper с capability detection.
 - **Acceptance:** реальные API данные и reload; действия доступны по allowed_actions; тема/контраст/фокус/клавиатура; на web нет обязательного mobile-only Bridge метода. Длинный адрес/текст/неизвестный enum не ломают layout.
 - **Текущий блокер:** board/detail на C0 работают, но B-02 не DONE до A-01 convergence по actions/provenance/capabilities/counts/read model/errors и повторной consumer-проверки. Это следующий backend-срез DEV-B, не ожидание DEV-A.
 - **Не нужно:** Storybook/platform для компонентов, если достаточно лёгкой dev-страницы и component tests.
+- **ARCH target / сохранение evidence:** одна Mini App всех домов; пять экранов B-00 и реальный C0 manual report не заменяются новым scaffold. После A-15 проверить явный выбор разрешённого дома/утрату scope (MT-11/18), generated fields/actions и прежние C-сценарии; live MAX web/mobile фиксируется отдельно от браузерной эмуляции. `c4492dd` и существующие результаты сохраняются.
 
 ### B-03 — MAX transport, ingress и отправка
 - **Owner:** DEV-B. **P0 · L · Depends:** FND-01 и transport port из C0; B-01 для LIVE проверки. A-05 — интеграция общей delivery-инфраструктуры, не условие начала. **Allowed paths:** `src/domsignal/bot/`, MAX API/ingress adapters, bot tests, MAX scenario fixtures.
 - **Сделать:** HTTPX client ограниченных проверенных методов; send/edit/callback answer; webhook normalization и типы событий; корректные ID/время; links; 429/5xx/network errors; recording adapter используется только тестово/off.
 - **Acceptance:** настоящее сообщение и изменение карточки в MAX; bot-loop отбрасывается; подпись/secret ошибки rejected; повтор/редактирование не смешиваются; разрешённая библиотека/корни сертификатов, TLS verification не отключён. Невыясненная доставка не называется подтверждённой.
 - **Handoff:** конкретный transport/handler и product-level wiring выполняет DEV-B одним срезом; DEV-A не ожидается для общего composition root.
+- **ARCH target:** normalized события установки/отзыва и реальные sender/chat IDs передаются в A-07 без выдачи роли от bot_added; transport сам не активирует дом. Проверка recording/contract и отдельно live события с выданным токеном; повтор/сбой MAX не становятся успешным подключением (MT-04/08/17).
 
 ### B-04 — личный бот как законченный продукт
 - **Owner:** DEV-B. **P0 · L · Depends:** A-01, A-02, A-03/Product, A-04, B-03. A-03/AI подключается как optional enhancement, не блокирует manual path.
@@ -279,6 +329,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Сделать:** group→DM→mini app на том же инциденте; нативный sharing проверенным методом MAX; короткий opaque deep link; QR дома/подъезда и текстовая ссылка как web fallback.
 - **Acceptance:** второй пользователь проходит доступ и присоединяется; ссылка не раскрывает private данные/не выдаёт membership сама. На web fallback реально работает; QR даёт контекст, а не auth. Payload соблюдает проверенные ограничения платформы.
 - **Бонус:** это кандидат на +0,15, а не гарантированное начисление; показывается путь от действия до результата двух людей.
+- **ARCH target:** мастер подтверждения ConnectionRequest по A-07, подписанная идентичность подключающего и явный дом; приглашённый admin чата не получает кабинет/роль УК. Проверка MT-05/06/07/11/19: чужой/replayed/expired контекст отклонён, Mini App вне чата и web fallback не угадывают дом. Нет копирования приватного текста между чатами.
 
 ### B-08 — история, результаты и следующий шаг
 - **Owner:** DEV-B. **P1 · M · Depends:** A-06/Product, A-09; B-02/B-04.
@@ -286,12 +337,13 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Сделать:** timeline, «решено/осталось», расхождение наблюдений, новый связанный случай, reminder settings, «нет ответа» → проверяемый следующий маршрут/preview.
 - **Acceptance:** статус не скрывает источник; старое «решено» не переносится на новый случай; ручная отметка filing не выглядит ответом УК; пустой/неприменимый нормативный срок не заменяется случайным отсчётом. Напоминание открывает актуальный экран и правильный incident.
 
-### B-09 — полезный кабинет администратора
+### B-09 — отдельный веб-кабинет: подключение и готовность дома
 - **Owner:** DEV-B. **P1 · M · Depends:** A-07/A-10; B-02.
-- **Allowed paths:** `miniapp/src/features/admin/`, product admin API client, component/e2e tests.
-- **Сделать:** подключение/проверка дома, режим группы, quiet hours/лимиты, moderation queue, обзор инцидентов нескольких разрешённых домов, filters с реальными counts.
+- **Allowed paths:** отдельный web entry point в текущем frontend toolchain (точный путь выбрать по foundation), shared product API client, component/e2e tests; docs/UX. Не создавать вторую backend-платформу или конкурирующий scaffold.
+- **Сделать:** обычный браузерный кабинет без Bridge: Superadmin рассматривает заявки УК/лимиты/споры; администратор УК ведёт дома/сотрудников/назначения; ответственный видит свои дома. Готовность дома, состояние проверенного чата, режим/quiet hours, реальные aggregates и допустимая модерация. Очередь и карточка Ticket — отдельная B-14.
 - **Acceptance:** одной настройкой отключается auto-react; последствия понятны; ошибка сохранения не показывается как успех. Нет чужих домов/личных текстов/общей выгрузки чата. Role-switcher не подменяет серверную авторизацию.
 - **Не нужно:** большая CRM с персоналом/нарядами, универсальный конструктор дашбордов.
+- **Проверка:** browser E2E с реальным A-10/A-07 API и двумя tenant, без window.WebApp; loading/empty/error/401/403/409, клавиатура, отзыв назначения и отсутствие чужих домов. C39–C41, MT-02/03/10/12/19; UI не имитирует неподключённый backend. Авторизованный админ чата видит только мастер подключения, если нет org role.
 
 ### B-10 — UX/UI polish без новых бизнес-зависимостей
 - **Owner:** DEV-B. **P1 · M · Depends:** основные экраны B-02/B-05; выполняется частями до freeze.
@@ -304,6 +356,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Allowed paths:** `miniapp/tests/`, product scenarios, короткий release evidence. Bug fix делает владелец соответствующей зоны; AI defect возвращается DEV-A.
 - **Сделать:** автоматизировать продуктовые сценарии раздела 9; negative cases раздела 10; запуск на реальном API/PG; реальные MAX mobile/web smoke с двумя ролями. Независимый участник проходит README без подсказок.
 - **Acceptance:** проверены не только happy screenshots; flaky тесты разобраны, не отключены. Синтетический replay не маркируется LIVE MAX. Сеть/provider и неизвестный адрес дают понятный следующий шаг. Итоги записаны с датой, commit и ограничениями, без выдуманного количества тестировщиков.
+- **ARCH target:** MT-01…MT-20 в существующей acceptance matrix; предусловия, роли, ошибки и evidence фиксируются по мере готовности соответствующих A-15/A-07/A-10/A-16/B-09/B-14. Непрогнанные проверки остаются NOT RUN, локальный API/browser прогон не выдаётся за LIVE MAX.
 
 ### B-12 — демонстрация и продуктовый комплект сдачи
 - **Owner:** DEV-B. **P0 · M · Depends:** B-11; A-13 того же направления.
@@ -316,6 +369,13 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Allowed paths:** miniapp media UI, bot attachment normalization, product API integration, tests.
 - **Сделать:** прикрепление/превью/удаление изображения; при реальном ASR — запись или разрешённое вложение → редактируемый текст. Progress/cancel/retry, лимиты и доступность.
 - **Acceptance:** photo upload и transcript provider не имитируются. При сбое пользователь вводит текст, черновик сохраняется. Распознавание не публикует вывод без подтверждения; недоступный микрофон не ломает страницу.
+
+### B-14 — рабочая очередь и карточка Ticket в веб-кабинете
+- **Owner:** DEV-B. **P1 · M · State:** TARGET / TODO. **Depends:** A-16, B-09. **Allowed paths:** web queue/ticket features в выбранном B-09 entry point, shared API client, UX и browser/component tests.
+- **Результат:** разрешённая очередь, фильтры/владелец следующего шага, принятие заявки, комментарий и отчёт исполнителя; отдельное наблюдение/возражение жителя в существующем Incident Detail. Все mutations идут через реальные actions A-16.
+- **Границы:** не дублировать B-02 board/detail, B-08 историю/напоминания и B-09 onboarding/settings. Не выводить рабочие права из Incident.status; не показывать Ticket как внешнюю регистрацию. Нет фальшивого приёма при неактивной УК/очереди.
+- **Acceptance / проверка:** browser → реальный API/PG, MT-13/14/15/19/20 плюс чужой scope MT-12; работник видит только назначения, конфликт принятия обновляет владельца, неподдержанное действие отсутствует, отчёт и возражение раздельны. Кабинет работает без Bridge; resident result проверяется отдельно в MAX web/mobile, отсутствие live записывается NOT VERIFIED.
+- **Handoff:** evidence queue→work report→resident response с ref/ролями и ограничениями, без автоматического закрытия прежних B-задач.
 
 ## 8. Kill-фичи и их минимальные доказательства
 
@@ -343,7 +403,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 | **SC-05 / P1** | Сосед получает ссылку/QR → контекст → разрешённый вход → присоединение к инциденту | DEV-B: A-07, B-07 | Mobile/web, чужая ссылка не даёт private access |
 | **SC-06 / P1** | Пользователь отметил подачу → настроил напоминание → нет ответа → подготовил следующий шаг | DEV-B: A-09, B-08 | Fake clock для автоматизации + настоящее уведомление в MAX |
 | **SC-07 / P1** | Житель сообщил об устранении → сосед возразил → видна необходимость проверки; новый случай связан со старым | DEV-B: A-06/Product, B-08 | Наблюдения/версии сохранены, спор не решён большинством голосов |
-| **SC-08 / P1** | Администратор подключил дом → настроил режим/тишину → просмотрел реальные агрегаты → отключил бота | DEV-B: A-07/A-10, B-09 | Scoped admin E2E и остановка group processing |
+| **SC-08 / P1** | УК разрешила подключение → администратор чата подтвердил права → дом активирован → сотрудник настроил режим/тишину в web-кабинете → отключил бота | DEV-B: A-07/A-10, B-09 | Scoped admin E2E и остановка group processing |
 | **SC-09 / P1** | Тот же тип проблемы в другом demo-регионе → иной source/config → корректный путь без изменения кода | DEV-B: A-10/A-11 Product, B-05/B-09; DEV-A: A-11/AI evaluation | Параметризованный тест двух пакетов; происхождение данных видно |
 | **SC-10 / P1** | Неполное/разговорное сообщение → уточнение → пользователь исправил распознавание → нормальный путь | DEV-A: A-03/AI, optional A-08; DEV-B: A-03/Product, B-04/B-05 | Rules/manual и optional provider проходят один boundary, неизвестность не скрывается |
 | **SC-11 / P2** | Пользователь приложил фото → просмотрел/удалил → отправил выбранный материал с сигналом | DEV-B: A-14/Product, B-13 | Настоящие bytes/storage/access; нет автоматической публикации в группу |
@@ -436,7 +496,7 @@ Roadmap — спецификация и зависимости. Текущая �
 | B-02 расходится с producer C0 | DEV-B сначала делает минимальный A-01 producer+consumer convergence; DEV-A review, но не становится writer общего backend |
 | P0 не проходит на 21.09 | DEV-B останавливает P2 и неготовые P1; команда парно проверяет критический путь и AI fallback |
 | DEV-A исчерпал полезные AI-задачи | Не добавлять RAG/vector DB/сложное обучение; усилить evaluation/regression/latency-cost evidence или помочь review без смены ownership |
-| DEV-B перегружен product/fullstack/MAX | Порядок срезов: A-01 convergence → personal golden path → reliability/release → group/history/admin → P2; агенты делят UI/bot/backend только по непересекающимся paths |
+| DEV-B перегружен product/fullstack/MAX | Порядок срезов: A-01 convergence → A-15 access → B-02 binding/personal golden path → проверенное подключение/кабинет → A-16/B-14 очередь → reliability/release; P2 после принятых P1; агенты делят UI/bot/backend только по непересекающимся paths |
 | Все P0/P1 зелёные до freeze, есть ресурс review | Взять A-14/Product и B-13 сначала attachments; ASR/vision — только после настоящей provider проверки A-14/AI |
 
 ## 13. Что не входит даже при быстрых агентах
@@ -444,6 +504,8 @@ Roadmap — спецификация и зависимости. Текущая �
 Подача от имени гражданина в ГИС ЖКХ без официального доступа; фальшивые external IDs; оплата/счётчики/ОСС; полноценная диспетчерская CRM; хранение всех чатов; автоматическая диагностика аварий; универсальный юридический советчик; инфраструктура «на будущее»; статистика из синтетических интервью под видом real research; автоматический ночной push или изменение стенда проверки.
 
 ## 14. Связь с материалами
+
+- [docs/PRODUCT_ARCHITECTURE.md](docs/PRODUCT_ARCHITECTURE.md) — единственная согласованная продуктовая/системная цель ARCH-PLATFORM-v1; TARGET, не отчёт.
 
 - `docs/product/domsignal_plan.md` — исходное обоснование; в выданном комплекте это `source/domsignal_plan.md`.
 - `01_CODEX_REPOSITORY_BOOTSTRAP.md` — промпт настройки repo; после выполнения постоянные правила находятся в root/WORKFLOW, не нужно перечитывать bootstrap.

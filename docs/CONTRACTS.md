@@ -4,17 +4,17 @@
 
 Это **target contract**, владельцем и writer которого является DEV-B. Он не
 объявляет перечисленные endpoints доступными. Фактическая доступность
-определяется OpenAPI и contract tests, а не этим документом. Для B-02 в
-`dev/b-experience` с явного разрешения пользователя объединён локальный
-FND-01/C0. Реализованная граница C0 сохранена ниже отдельно от target v0.1;
-это не утверждение о принятии FND-01 в `main`.
+определяется OpenAPI и contract tests, а не этим документом. На
+проверенном baseline `origin/main = dev/b-experience@3d4a095` (fetch 17.09.2026)
+FND-01/C0 и B-02 уже MERGED TO MAIN; B-02 остаётся PARTIAL.
+Реализованная граница C0 сохранена ниже отдельно от target v0.1.
 
-Read-only наблюдение параллельного FND-01 на локальном `dev/a-core@c939ccf`:
+Сверка исходного FND-01 `c939ccf` и текущего кода/OpenAPI на `3d4a095`:
 C0 реализует auth/test boundaries, `GET /api/v1/capabilities`, `GET /api/v1/me`,
 `POST /api/v1/reports`, house incidents list, incident detail и test MAX replay;
 live webhook честно отвечает `503`. Appeals, drafts, analyze, activity, join и
-admin API там отсутствуют. Commit включён в DEV-B для B-02; перечисленные ниже
-расхождения с target B-00 этим объединением не устранены.
+admin API отсутствуют. Перечисленные ниже расхождения с target B-00
+интеграционным merge не устранены; новая tenant-модель в C0 отсутствует.
 
 Backend является source of truth для incident status, matching, route,
 provenance, capabilities и `allowed_actions`. DEV-B отвечает за public DTO,
@@ -183,8 +183,8 @@ idempotency conflict, `422` validation. Sensitive auth details не попада
 
 ## Contract conflicts / decisions required
 
-Read-only сверка локальной параллельной ветки `dev/a-core` на commit `c939ccf`
-описывает исходный C0, теперь включённый в DEV-B для B-02, а не состояние `main`:
+Исходная сверка FND-01 `c939ccf` подтверждена по коду/OpenAPI `3d4a095`:
+C0 уже в main, но расхождения target/producer остаются:
 
 - C0 создаёт report через `POST /api/v1/reports` с `house_id` в body; target
   использует house-scoped analyze + create. DEV-B должен выбрать совместимую
@@ -204,6 +204,30 @@ Read-only сверка локальной параллельной ветки `d
   backward-compatible переход или единое обновление producer/consumer/tests.
 - Appeals, activity, analyze, join, houses list и admin target routes в C0
   отсутствуют. Это ожидаемые будущие endpoints; B-00 не добавляет заглушки.
+
+## ARCH-PLATFORM-v1 — компактный target delta
+
+Основание: [продуктовая архитектура](PRODUCT_ARCHITECTURE.md), §§ 4–12.
+Следующие понятия — TARGET, не опубликованные DTO, enums или endpoints.
+Существующие C0 и C1/B-00 сохраняются; точная форма, nullable-поля, версии и
+совместимость принимаются в A-01, затем соответствующем предметном срезе.
+
+| Область | Требуемая семантика / граница |
+|---|---|
+| Tenant/house context | Tenant определяется сервером через действующую HouseManagement с периодом; house ID не даёт доступ. Старые объекты сохраняют исходную организацию при смене УК. C0 house membership не означает готовую tenant isolation. |
+| Assignments / access basis | Несколько назначений пользователя; отдельные organization role, house assignment и resident basis с источником, актуальностью и отзывом. Админ чата не становится админом УК; указанный адрес не открывает чужую доску. |
+| Connection lifecycle | Разрешение УК → действие администратора чата → проверка MAX → подтверждение дома → атомарная активация. Состояние, причина, время проверки, лимит/резерв и допустимое следующее действие; сбой проверки оставляет pending. Строковые коды и TTL ещё не приняты. |
+| Report / Incident / Ticket / ExternalAppeal | Сообщение, общая проблема, рабочая заявка и внешнее обращение — разные объекты и scope. Ticket несёт очередь/владельца/рабочие переходы; отчёт о выполнении связан с попыткой, наблюдения жителя отдельны. Нельзя заменить Incident.status lifecycle заявки. |
+| Provenance | Происхождение отдельно от актуальности/проверки и demo-маркера. Ручной номер/filing не становится external verified registration; WorkReport не становится resident confirmation. |
+| allowed_actions / capabilities | Backend вычисляет действия по актуальному scope; endpoint проверяет права повторно. Backend capability означает реализованную функцию, Bridge capability — клиентский метод. Ни одна не заменяет object permission; неподдержанные действия не публикуются активными. |
+| Ошибки | Различать отказ доступа, истёкшее/отозванное назначение, конфликт привязки/лимита/версии, истёкший/replayed контекст и временную недоступность проверки MAX. Не раскрывать чужой tenant/объект; коды и HTTP mapping принимаются с negative tests, не объявляются поддержанными здесь. |
+
+A-01 фиксирует минимальный совместимый контекст read-model и стратегию old/new
+producer: какие данные уже подтверждены C0, какие отсутствуют и не выдают доступ.
+Он не создаёт tenant из query, не заполняет фиктивные tenant ID и не выдаёт
+непроверенную роль как действующую. Persistence/authorization двух УК — A-15;
+подключения — A-07, кабинет — A-10/B-09, Ticket — A-16/B-14. Новые переходы
+публикуются только вместе с реализацией и generated contract tests.
 
 ## A-01 — следующий convergence-срез DEV-B
 
@@ -233,9 +257,9 @@ DEV-B; отдельная дублирующая карточка не созд�
 
 ---
 
-## Foundation C0 — implemented reference in DEV-B branch
+## Foundation C0 — implemented reference, merged to main at 3d4a095
 
-The following C0 reference is preserved from FND-01, merged locally for B-02 with explicit user authorization. It does not imply that target v0.1 is implemented or that main contains FND-01. Conflicts above remain open.
+The following C0 reference is preserved from FND-01 and verified in main at `3d4a095`. Target v0.1 and ARCH-PLATFORM-v1 are not implemented by this documentation patch. Conflicts above remain open; LIVE MAX remains NOT VERIFIED.
 
 # ДомСигнал — контракты C0
 

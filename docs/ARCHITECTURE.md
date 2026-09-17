@@ -2,12 +2,29 @@
 
 ## Статус
 
-Walking skeleton реализован в доступном `dev/a-core@c939ccf`; до merge это не
-описание состояния `origin/main@a70df01`. Тот же foundation включён в
-`origin/dev/b-experience@c4492dd`, где B-02 остаётся частичным. Реальный slice:
-test session → membership → manual report → PostgreSQL `Report`/`Incident` →
-REST read → mini app board/detail → повторное чтение после reload. Live MAX,
-routes и appeals не реализованы.
+Проверенный baseline: `origin/main` и `dev/b-experience` на `3d4a095`
+(17.09.2026, после fetch; интеграционный merge `e3ab6b7`). FND-01 (`c939ccf`,
+автор DEV-A), B-00 и B-02 (`c4492dd`, DEV-B) включены в main. B-02 — PARTIAL:
+C0/B-00 convergence не завершена. Реальный slice: test session → membership →
+manual report → PostgreSQL Report/Incident → REST → board/detail → reload.
+Live MAX NOT VERIFIED; routes/appeals и новая платформа не реализованы.
+
+## Согласованное направление — TARGET
+
+Единственный продуктовый baseline — [ARCH-PLATFORM-v1](PRODUCT_ARCHITECTURE.md).
+Эта техническая карта описывает существующие пути, а не повторяет спецификацию.
+
+| Область | Implemented в проверенном ref | Agreed target / ещё отсутствует |
+|---|---|---|
+| Доступ | User, House, HouseMembership, house-scoped API | Tenant, HouseManagement с периодом, назначения и основания resident-access; tenant/object isolation |
+| Поверхности | Одна React/MAX UI mini app, board/detail/manual report | Общий бот и одна Mini App на все дома; отдельный обычный веб-кабинет сотрудников без Bridge |
+| Подключения | Test replay, MAX transport off/recording; live webhook возвращает 503 | Двухсторонний ConnectionRequest, независимая проверка УК/человека/MAX, несколько чатов дома, отзыв и аудит |
+| Работа с проблемой | Report и Incident, C0 open/resolved/dismissed | Ticket с очередью/назначением отдельно от Incident и ExternalAppeal; WorkReport отдельно от наблюдения жителя |
+| Выполнение | PostgreSQL jobs/lease/retry и worker | Tenant scope и повторная проверка прав перед побочным действием; история без передачи старых данных новой УК |
+
+Расширение остаётся внутри модульного монолита API/webhook + worker + PostgreSQL.
+Новые таблицы, auth, frontend entry points и endpoints определяются отдельными
+задачами roadmap; пустые модули и второй scaffold сейчас не создаются.
 
 ## Runtime
 
@@ -63,7 +80,7 @@ scripts/         checks, OpenAPI export, region validation, Docker smoke
 ответственности. `bootstrap.py` явно собирает engine, services, transport и
 worker handlers без DI-framework.
 
-## Граница AI ↔ product backend
+## Граница AI ↔ product backend — TARGET
 
 Это логическая граница внутри текущего backend package, а не новый
 микросервис. Подробный ownership путей и задач задаёт `ROADMAP.md`.

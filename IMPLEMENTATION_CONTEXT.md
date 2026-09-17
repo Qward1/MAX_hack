@@ -4,10 +4,26 @@
 
 Рабочий путь продукта: чат или личное сообщение → инцидент → проверяемый маршрут → редактируемый черновик → официальный канал руками пользователя → отметка жителя и наблюдение результата. Продукт не утверждает, что сам зарегистрировал обращение во внешней системе.
 
+## Утверждённая цель ARCH-PLATFORM-v1
+
+Владелец согласовал [целевую архитектуру](docs/PRODUCT_ARCHITECTURE.md):
+общий бот/одна Mini App, tenant УК и периоды управления домом, независимые
+назначения и проверяемое подключение чатов, отдельный веб-кабинет и ограниченная
+рабочая очередь Ticket. Это TARGET / NOT IMPLEMENTED BY THIS DOCUMENT.
+Report, Incident, Ticket и ExternalAppeal разделены; self-report и отчёт
+исполнителя не подтверждают внешнюю регистрацию и результат жителем.
+Tenant isolation, onboarding, кабинет и Ticket ещё отсутствуют в проверенном
+ref; личный путь и модульный монолит сохраняются. DEV-A — AI, DEV-B — продукт
+и интеграция. Ближайший отдельный срез — A-01, не реализация всей платформы.
+
 ## Проверенное состояние
 
-Состояние сверено 2026-09-17 после интеграционного merge `e3ab6b7` и синхронизации
-`main` с `dev/b-experience`.
+Состояние повторно сверено 2026-09-17 по коду, OpenAPI, существующим тестам
+и refs после fetch: `main`, `origin/main`, `dev/b-experience` и
+`origin/dev/b-experience` = `3d4a095` (интеграционный merge `e3ab6b7`).
+Документационный patch ARCH-PLATFORM-v1 не меняет producer и не является
+новым runtime/live прогоном. Совпадение refs относится к началу этого patch;
+его собственный commit не объявляется MERGED TO MAIN.
 
 - **IMPLEMENTED:** FND-01 даёт исполняемый backend/runtime, PostgreSQL-модель и
   миграцию, C0 API, test-session/demo seed, durable jobs/worker, режимы MAX
@@ -47,7 +63,9 @@
 
 ## Ближайший интеграционный риск
 
-B-02 остаётся PARTIAL: C0 producer расходится с B-00 target по structured `allowed_actions`, provenance/freshness, capabilities, count semantics, read-model полям и errors. Следующий backend-срез **DEV-B** — существующая A-01, минимальная C0/B-00 convergence с producer+consumer+generated types+tests. Это не требует публиковать неподдержанные действия. DEV-A review обязателен; отсутствие convergence не переносит общий backend обратно DEV-A.
+B-02 остаётся PARTIAL: C0 producer расходится с B-00 target по structured `allowed_actions`, provenance/freshness, capabilities, count semantics, read-model полям и errors. Следующий backend-срез **DEV-B** — существующая A-01, минимальная C0/B-00 convergence с producer+consumer+generated types+tests
+и явным решением минимального tenant/house/access context. Реализация tenant
+и изоляции — отдельная A-15, затем повторный binding B-02. Это не требует публиковать неподдержанные действия. DEV-A review обязателен; отсутствие convergence не переносит общий backend обратно DEV-A.
 
 ## Ссылки
 

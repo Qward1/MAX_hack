@@ -102,3 +102,8 @@ OpenAPI/TS contract и UI board/detail. Нормализованный replay �
 
 Семантика API: [docs/CONTRACTS.md](docs/CONTRACTS.md). Фактическая структура:
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+Согласованная цель: [ARCH-PLATFORM-v1](docs/PRODUCT_ARCHITECTURE.md) — tenant УК,
+проверяемые подключения, отдельный web-кабинет и Ticket. Это TARGET; текущие
+возможности и refs — в [IMPLEMENTATION_CONTEXT](IMPLEMENTATION_CONTEXT.md),
+очерёдность — в [ROADMAP](ROADMAP.md).
