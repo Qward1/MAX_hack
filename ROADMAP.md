@@ -24,47 +24,72 @@
 
 ## 2. Владельцы и параллельность
 
-| Кто | Ветка | Основные зоны | Что не делает самостоятельно |
-|---|---|---|---|
-| **DEV-A — Core & Platform** | `dev/a-core` | core, services, contracts, DB/migrations, REST/auth, rules, NLP, jobs, deploy/CI | Не меняет UX-потоки и MAX payload без B; не верстает все экраны вместо B |
-| **DEV-B — MAX & Experience** | `dev/b-experience` | MAX transport/ingress/dialogs/cards, Bridge, mini app, UX/UI, E2E, демонстрация | Не пишет SQL/нормативные правила в обработчиках и React; не меняет DB/schema без A |
+Префиксы `A-`/`B-` и имена постоянных веток исторические. Owner определяется
+только явным полем карточки. DEV-A направляет около 90% усилий на AI/NLP/ML;
+это ориентир специализации, а не основание добавлять ненужную модель, RAG,
+vector DB или мультимодальность.
 
-Оба тестируют свой код и проверяют PR коллеги. «У B интерфейс» не означает отсутствие backend-работы: **весь модуль бота и реальный клиент MAX — его направление**.
-
-### Общие узкие места: один writer, короткое согласование
-
-| Область | Writer по умолчанию | Как не блокировать коллегу |
+| Кто | Ветка | Ответственность |
 |---|---|---|
-| DTO/OpenAPI/enum/status semantics | A | Ранний маленький контрактный PR; B согласует потребности, затем пишет UI по fixtures |
-| Alembic и DB models | A | B отдаёт конкретное изменение DTO/поведения; одна migration head или осознанная merge revision |
-| `app/bootstrap.py`, settings, dependency injection | A | B экспортирует router/handler/transport; A подключает небольшой diff |
-| Python dependencies / uv.lock | A | Зависимость для бота обосновывает B; lock меняется одним writer |
-| `miniapp/package*.json` | B | Совместимость UI kit проверяется до установки; A не обновляет frontend lock «заодно» |
-| Compose / CI / deploy | A | B предоставляет реальные frontend/e2e команды и минимальный патч |
-| Архитектура / общий контекст | A-интегратор | Обновление после значимого merge, не на каждый push |
-| Status каждого направления | Только его владелец | Читать через `origin/dev/...`, не сливать незавершённый код ради статуса |
-| Roadmap / изменение приоритетов | Владелец задачи; межкомандные решения согласуются | Меняются затронутые карточки; ID сохраняются |
+| **DEV-A — AI / NLP / ML** | `dev/a-core` | Нормализация и данные для моделей; category/field extraction; classifiers; LLM providers/prompts/structured output; semantic ranking; AI-specific timeout/fallback/circuit breaker; datasets/evaluation/regression; качество, задержки и стоимость AI; backend-код выделенных AI modules. ASR/vision/RAG — только по принятому roadmap. |
+| **DEV-B — Product / Fullstack / MAX** | `dev/b-experience` | UI/UX, mini app/MAX Bridge, bot/transport; public API/contracts; core/services; incidents/messages/membership/appeals; rules/regions; DB/migrations; auth/security; общие jobs/outbox/delivery; admin/analytics; Docker/CI/deploy/observability/release; E2E и демонстрация. Интегратор по умолчанию. |
+
+Оба тестируют свой код и проверяют PR коллеги. DEV-A обязательно review PR
+DEV-B; интегратор не обходит review или protection `main`.
+
+### Каноническая матрица ownership
+
+| Область | Writer | Реальные пути / точная граница | Карточки и handoff |
+|---|---|---|---|
+| AI/NLP/ML modules | DEV-A | Целевые выделенные `src/domsignal/ai/`, `src/domsignal/nlp/`, `datasets/`, `evaluation/`, `model_artifacts/` и точные `tests/ai/`, `tests/nlp/`. В проверенных refs этих каталогов ещё нет; они создаются только нужной задачей. | A-03/AI, A-06/AI, A-08, A-11/AI, A-14/AI. A отдаёт типизированный анализ, uncertainty/fallback и evidence качества. |
+| Product backend | DEV-B | Существующие `src/domsignal/core/`, `services/`, `api/`, `contracts/`, `db/`, `tools/`, `main.py`; `/tests/` по умолчанию. Точный AI test path ниже/уже широкого правила принадлежит A. | A-01, A-02, A-03/Product, A-04, A-05, A-06/Product, A-07, A-09, A-10, A-11/Product, A-12, A-13, A-14/Product и backend-срезы B-задач. B применяет AI-результат и делает транзакцию. |
+| MAX, bot и frontend | DEV-B | `src/domsignal/bot/`, `miniapp/`, browser tests и MAX fixtures/scenarios. | B-01…B-13; business rules вызываются через services/core, а не копируются в React/handlers. |
+| Public contract | DEV-B | `src/domsignal/contracts/`, API routes/errors, `docs/openapi.json`, `miniapp/src/shared/api/schema.ts`, `docs/CONTRACTS.md`. | Один producer+consumer+generated types+tests diff. AI-specific внутренний contract пишет A; совместимую границу review оба. |
+| Persistence | DEV-B | `src/domsignal/db/`, `migrations/`, persistence/integration tests. | Один writer models/migrations; A не пишет model schema ради AI feature. |
+| Jobs и delivery | DEV-B по умолчанию; DEV-A только выделенный AI handler | `src/domsignal/worker/`, общая queue/leases/retries/outbox/delivery и wiring — B. AI handler живёт в точном AI-модуле A и возвращает typed result. | A-05 — B; AI-specific execution в A-03/A-08. Регистрацию handler/settings согласует B коротким diff. |
+| Rules, regions и product data | DEV-B | `regions/`, нормативные справочники, route/deadline logic и tests. | A-02/A-10/A-11/Product. Model datasets принадлежат A и не заменяют проверенные нормы. |
+| Wiring, dependencies и delivery platform | DEV-B | `bootstrap.py`, `settings.py`, `pyproject.toml`, `uv.lock`, `miniapp/package*.json`, `Dockerfile`, `compose*.yaml`, `deploy/`, `.github/workflows/`, общие scripts. | Один writer каждого общего файла; dependency/lock/deploy меняются целым проверяемым срезом. |
+| Общий context и status | DEV-B — `IMPLEMENTATION_CONTEXT.md`; каждый — только свой status | `IMPLEMENTATION_CONTEXT.md`, `docs/status/dev-a.md`, `docs/status/dev-b.md`. | Context обновляется после значимого принятого merge; branch progress остаётся в status. Разовая правка обоих status разрешена только этим решением о ролях. |
+
+Широкое владение DEV-B каталогами `src/domsignal/` и `tests/` не перекрывает
+точные AI/NLP paths DEV-A. Для общих файлов нужен короткий согласованный diff,
+а не разрешение на каждый шаг внутри своей зоны.
+
+### Текущий следующий срез
+
+| Developer | Сейчас / следующий шаг | Настоящая зависимость и снимающий контракт |
+|---|---|---|
+| DEV-A | Сохранить review/handoff FND-01; затем A-03/AI: baseline extraction/risk detector + evaluation, без обязательного provider. | DEV-B задаёт разрешённый input scope и public application boundary; A возвращает typed analysis fixture и не ждёт реализации всего product backend. |
+| DEV-B | B-02 остаётся PARTIAL; следующим backend-срезом выполнить A-01 C0/B-00 convergence и затем привязать B-02 к generated contract. | Один набор Pydantic producer → OpenAPI → TS consumer → tests снимает блокер; это не ожидание общего backend от DEV-A. |
 
 ### Как использовать агентов с выигрышем
 
-DEV-A может параллельно дать агентам независимые задачи **rules/NLP** и **services/DB**, DEV-B — **bot** и **mini app**, только когда контракты уже согласованы. Каждый writer работает в отдельном worktree. Финальную интеграцию, конфликтующие файлы и review выполняет владелец последовательно.
+Один пишущий агент — один изолированный worktree/checkout. DEV-A может
+параллельно вести независимые provider/evaluation/NLP-срезы; DEV-B — UI, bot и
+backend только при непересекающихся write-paths. Contracts, migrations, locks и
+wiring имеют одного writer. Результаты владелец направления объединяет
+последовательно; read-only review можно вести отдельно.
 
-Обычно активен один интегрируемый срез на ветку. Дополнительный агент полезен для независимого модуля или read-only review, а не для параллельной правки одной миграции. Измерять скорость по прошедшим acceptance criteria и merged PR, не по числу сгенерированных строк.
+Обычно активен один интегрируемый срез на ветку. Измеряем скорость по принятым
+acceptance criteria и merged PR, а не по числу агентов или строк.
 
 ## 3. Первые контракты: чем разблокируем друг друга
 
 Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — смысл. TS types генерируются, а не переписываются вручную.
 
-| Пакет | Когда | Минимум данных | Что B может делать независимо |
+| Пакет | Когда / writer | Минимум данных | Что разблокируется |
 |---|---|---|---|
-| **C0 — skeleton** | FND-01 | Me, House, Incident summary/detail, Report input, Error, capabilities | Board/detail/form, состояния ошибок и доступа |
-| **C1 — основной путь** | A-01, до полного A-04 | IntakeResult с уточнениями, RouteResult, source/deadline, AppealDraft, allowed_actions | Личный диалог, карточка маршрута, редактор обращения |
-| **C2 — совместная проблема** | A-06/A-07 | Participant count, message count, ChatBinding, IncidentEvent, Feedback, conflict state | Групповые карточки, история, подтверждения/возражения |
-| **C3 — сопровождение/admin** | A-09/A-10 | Reminders, escalation preview, настройки дома, aggregate summary | Мои обращения, администрирование, фильтры/сводки |
+| **C0 — skeleton** | FND-01; реализовал DEV-A, дальнейший public writer DEV-B | Me, House, Incident summary/detail, Report input, Error, capabilities | Board/detail/form, состояния ошибок и доступа |
+| **C1 — основной путь** | A-01/A-04; writer DEV-B | IntakeResult с уточнениями, RouteResult, source/deadline, AppealDraft, structured `allowed_actions` | Личный диалог, карточка маршрута, редактор обращения; A-01 convergence завершает блок B-02 |
+| **AI analysis boundary** | A-03/A-08; internal writer DEV-A, product boundary review DEV-B | Категория/поля/candidates, uncertainty, questions, execution/fallback state | Product orchestration может использовать model/rules одинаково и сохраняет manual путь |
+| **C2 — совместная проблема** | A-06/A-07; public writer DEV-B | Participant count, message count, ChatBinding, IncidentEvent, Feedback, conflict state; semantic scores A — только input решения | Групповые карточки, история, подтверждения/возражения |
+| **C3 — сопровождение/admin** | A-09/A-10; writer DEV-B | Reminders, escalation preview, настройки дома, aggregate summary | Мои обращения, администрирование, фильтры/сводки |
 
 Контрактный PR может определять ещё не подключённый DTO и валидируемые fixtures, но **не публикует несуществующий endpoint с фиктивным успешным ответом**. На UI допустим MSW для разработки; в сборке релиза он выключен и не подменяет сбой настоящего API.
 
-Все передачи содержат task ID, готовый PR, семантику изменений и пример ответа/ошибки. «Я закончил бэк» без пути проверки — не handoff.
+Все передачи содержат task ID, Owner, готовый PR, семантику изменений и пример
+ответа/ошибки. «Я закончил бэк» или «модель вернула результат» без пути проверки
+и fallback — не handoff.
 
 ## 4. Контрольные точки и календарь
 
@@ -72,15 +97,15 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 
 | Этап | Цель / дата из плана | DEV-A | DEV-B | Gate |
 |---|---|---|---|---|
-| **S0 — definition + repository** | Первый день, целевой 17.09 | S0-01, BOOT-01 | B-00; B-01 — доступы и MAX feasibility | Продукт/ветки/правила понятны; блокеры внешних доступов записаны |
-| **S1 — foundation** | 17–18.09 | FND-01; ранний C1 | B-00/B-01, review FND; затем B-02/B-03 | Локальный UI → API → PostgreSQL → reload; обе ветки стартуют от проверенного main |
-| **S2 — personal golden path** | 19–21.09 | A-01…A-04, A-05 минимум, A-12 ранний стенд | B-02…B-05 | Вариант B проходит в настоящем MAX и mini app на web/mobile; тег `b-ready` |
-| **S3 — совместный инцидент** | 21–23.09 | A-06/A-07, A-09 | B-06/B-07/B-08 | Группа → личный диалог → доска либо полноценный fallback через ссылки; данные общие |
-| **S4 — сильный релиз** | 23–25.09 | A-08/A-10/A-11 по gates | B-09/B-10; законченные P1 | Напоминания, history, admin, второй регион; работающие фичи, не обещания |
-| **S5 — reliability** | 26–27.09 | A-12, исправления своих зон | B-11, исправления своих зон | Риски доступа, повторов, конфликтов, restart и UI закрыты проверками |
-| **S6 — packaging + rehearsal** | 28.09 | A-13 | B-12; проверка README с чистого клона | Совпадают исходники, образ, API schema, данные, PDF и путь проверки |
-| **S7 — release** | Цель 29.09; дедлайн из источника 30.09 требует уточнения времени | A-13 release/deploy | B-12 demo/evidence, peer review | Зафиксирован commit, доступен MAX, материалы переданы, нет незаметных изменений |
-| **S8 — проверка / подготовка финала** | По подтверждённому регламенту | Дежурство инфраструктуры, сбор фактических ограничений | Реальные интервью/пилотный контакт, UX-обратная связь | Не менять сданный код без разрешённого окна; будущая работа не попадает на стенд проверки |
+| **S0 — definition + repository** | Первый день, целевой 17.09 | Исторический исполнитель S0-01/BOOT-01 | Исторический исполнитель B-00; B-01 — доступы и MAX feasibility | Продукт/ветки/правила понятны; блокеры внешних доступов записаны |
+| **S1 — foundation** | 17–18.09 | Исторический исполнитель FND-01; review product changes | B-00/B-01, review FND; B-02/B-03 | Локальный UI → API → PostgreSQL → reload; обе ветки стартуют от принятого main |
+| **S2 — personal golden path** | 19–21.09 | A-03/AI baseline и evaluation; A-08 только по gate; review C1 | A-01, A-02, A-03/Product, A-04, A-05, A-12 ранний стенд; B-02…B-05 | Golden path работает без LLM; optional AI улучшает, но не блокирует. Настоящий MAX остаётся отдельным gate |
+| **S3 — совместный инцидент** | 21–23.09 | A-06/AI semantic ranking | A-06/Product, A-07, A-09; B-06/B-07/B-08 | Группа → личный диалог → доска либо полноценный fallback через ссылки; merge решает core, не model |
+| **S4 — сильный релиз** | 23–25.09 | A-08 и A-11/AI по gates | A-10/A-11 Product; B-09/B-10; законченные P1 | Напоминания, history, admin, второй регион; model coverage имеет отдельное evidence |
+| **S5 — reliability** | 26–27.09 | AI regression, provider failure/latency/cost checks своей зоны | A-12, B-11 и исправления product зон | Риски доступа, повторов, конфликтов, restart, AI fallback и UI закрыты проверками |
+| **S6 — packaging + rehearsal** | 28.09 | Review и evidence AI-компонентов, если они вошли в release | A-13/B-12; проверка README с чистого клона | Совпадают исходники, образ, API schema, данные, PDF и путь проверки |
+| **S7 — release** | Цель 29.09; дедлайн из источника 30.09 требует уточнения времени | Обязательный peer review; проверенные AI limitations | A-13 release/deploy и B-12 demo/evidence | Зафиксирован commit, доступен MAX, материалы переданы, нет незаметных изменений |
+| **S8 — проверка / подготовка финала** | По подтверждённому регламенту | Сбор фактических AI limitations/quality evidence | Дежурство продукта/инфраструктуры, интервью/пилотный контакт и UX feedback | Не менять сданный код без разрешённого окна; будущая работа не попадает на стенд проверки |
 
 **Группа — ранний gate.** B-01 проверяет права и реальное получение событий в первые часы после доступа к токену. При отсутствии разрешения к контрольной точке 18.09 (или в первые сутки фактического старта) активируем личный путь + sharing/QR. Неподтверждённые групповые функции остаются выключены и не заявляются работающими.
 
@@ -90,213 +115,218 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 
 Для ориентира: два человека × 6–8 активных часов × 11–12 рабочих дней дают **132–192 человеко-часа**. Это модель при таких допущениях, не сведения о доступности команды. Резервировать порядка четверти времени на review, интеграцию, реальные устройства, доступы и выпуск; оценивать заново после FND-01.
 
-Оценки карточек ниже — относительная сложность: S — локальный срез, M — несколько связанных частей, L — рискованная/интеграционная работа. L делится на PR по acceptance criteria; это не команда ждать единого большого merge. В конце S1 и S2 сравниваем реальную скорость с остатком работ. Если A перегружен, B может взять **целую** независимую карточку/подзадачу по explicit reassignment; не вводим скрытое соавторство одного файла.
+Оценки карточек ниже — относительная сложность: S — локальный срез, M — несколько связанных частей, L — рискованная/интеграционная работа. L делится на PR по acceptance criteria; это не команда ждать единого большого merge. В конце S1 и S2 сравниваем реальную скорость с остатком работ. DEV-B теперь является вероятным bottleneck: сначала C1/golden path, затем group/history/admin, P2 — последним. Дополнительные агенты не устраняют review, contract, migration, live MAX и release gates; при перегрузе режем срезы по этому порядку, а не возвращаем общий backend DEV-A скрытым соавторством.
 
 ## 5. Стартовые задачи
 
 ### S0-01 — решения и зависимости
-- **Owner:** A; B проверяет пользовательские пути. **Priority:** P0. **Size:** S. **Depends:** нет.
+- **Owner / authorship:** DEV-A; DEV-B проверяет пользовательские пути. **Priority:** P0. **Size:** S. **Depends:** нет. Последующая смена ролей не меняет автора выполненного решения.
 - **Результат:** принято новое разделение на двух разработчиков; выбран набор P0; записаны вопросы про group rights, внешние LLM, API/схему DATA-API, тестовые токены, дедлайн, режим стенда. Не придумывать ответы организаторов.
 - **Пути:** `docs/decisions.md`, `ROADMAP.md`, после bootstrap — общий контекст.
 - **Acceptance:** для каждого блокера есть владелец, следующая проверка и fallback; scope не зависит от неполученного ответа. Факты из исходного исследования не помечены повторно проверенными.
 
 ### BOOT-01 — репозиторий и совместная работа
-- **Owner:** A; B — reviewer и проверка clone. **Priority:** P0. **Size:** S. **Depends:** S0-01 в объёме названий/ролей.
+- **Owner / authorship:** DEV-A; DEV-B — reviewer и проверка clone. **Priority:** P0. **Size:** S. **Depends:** S0-01 в объёме названий/ролей. Сопровождение workflow и интеграция новых правил теперь у DEV-B.
 - **Результат:** выполнен промпт №1; `main`/`dev/a-core`/`dev/b-experience`, инструкции, handoff, repository-sanity CI, подтверждённые права GitHub.
 - **Acceptance:** оба имеют рабочие клоны и свои ветки; `AGENTS.md` ведёт к `AGENT_INSTRUCTIOM.md`; отсутствие серверной защиты честно указано, если тариф её не даёт. Продукт ещё не объявлен готовым.
 
 ### FND-01 — архитектурный walking skeleton
-- **Owner:** A, единственный writer каркаса; B — review и UX acceptance. **Priority:** P0. **Size:** L. **Depends:** BOOT-01.
+- **Owner / authorship:** DEV-A, единственный writer реализованного каркаса; DEV-B — review и UX acceptance. **Maintenance owner после принятого merge:** DEV-B. **Priority:** P0. **Size:** L. **Depends:** BOOT-01.
 - **Результат:** выполнен промпт №2: минимальный сквозной slice, PostgreSQL, auth boundary, jobs basis, DTO/types, UI shell, Compose, реальные тесты.
 - **Пути:** только необходимый skeleton согласно архитектуре; не реализация всех последующих задач.
 - **Acceptance:** local test user создаёт инцидент, видит его после reload/restart; чужой дом недоступен; main после PR воспроизводим. Внешний MAX остаётся NOT VERIFIED до реального B-01/B-03.
-- **Handoff:** C0, настоящие команды запуска/checks, `MaxTransport` port и normalized event; разблокированы A-01…A-04 и B-02…B-05.
+- **Handoff:** C0, настоящие команды запуска/checks, `MaxTransport` port и normalized event. FND-01 не реализуется повторно: DEV-B принимает product backend и делает A-01 convergence; DEV-A использует выделенную AI-границу A-03/A-08.
 
-## 6. Направление DEV-A — Core & Platform
+## 6. Исторические A-ID — явные текущие Owners
 
 ### A-01 — договорённость о полном golden-path контракте
-- **P0 · S · Depends:** FND-01; B-00. **Пути:** contracts, OpenAPI generation, `docs/CONTRACTS.md`, contract tests.
-- **Сделать:** C1: исход safety/clarify/matches/incident, RouteResult, source/deadline, draft/filed marker, typed errors, capabilities. Уточнить разделение incident/appeal/delivery и действия пользователя.
-- **Acceptance:** B может написать bot/UI по валидным fixtures; enum/nullable/401/403/409/422 задокументированы; потенциально опасные поля нельзя принять как verified от клиента. Генерация TS даёт воспроизводимый diff.
-- **Передать B:** контрактным PR до завершения всех сервисов. Никаких успешных mock endpoint в production.
+- **Owner:** DEV-B. **P0 · S · Depends:** FND-01; B-00. **Allowed paths:** `src/domsignal/contracts/`, `src/domsignal/api/`, `docs/CONTRACTS.md`, `docs/openapi.json`, generated `miniapp/src/shared/api/schema.ts`, связанные producer/consumer tests.
+- **Сделать сейчас:** минимальный C0/B-00 convergence для B-02: structured `allowed_actions`; provenance отдельно от verification freshness; согласованные capabilities; `message_count`/`report_count` отдельно от unique `participant_count`; нужные read-model поля; единый error contract; generated types и producer/consumer checks. Неподдержанные действия не публикуются. Затем развивать C1: safety/clarify/matches/incident, RouteResult, source/deadline, draft/filed marker.
+- **Acceptance:** B-02 читает один generated contract без adapter-догадок; enum/nullable/401/403/404/409/422 задокументированы; опасные поля нельзя принять как verified от клиента; OpenAPI/TS воспроизводимы. Не требуется реализовать все будущие business actions или mock endpoints.
+- **Handoff:** маленький contract+producer+consumer+tests PR; DEV-A review границы AI и общих invariants, но не является ожидаемым writer product backend.
 
 ### A-02 — движок маршрута, пакеты и сроки
-- **P0 · L · Depends:** A-01. **Пути:** core/rules/routing/deadlines, regions, rule tests.
+- **Owner:** DEV-B. **P0 · L · Depends:** A-01. **Allowed paths:** product `core/services`, `regions/`, API/contracts при необходимости, rule tests.
 - **Сделать:** федеральный/региональный/домовой слои; валидация и provenance; первые четыре категории; applicability и clarification вместо выдуманной ответственности; deadline kind/anchor/calendar. Начать со схемы и одного полного маршрута, затем расширять.
 - **Acceptance:** для каждого принятого правила есть источник и фактический статус проверки; неизвестный исполнитель или срок возвращает безопасную неопределённость. На тестовом календаре проверены выходные, переход месяца/года и timezone. Пример из источника не превращён автоматически в норму.
-- **Передать B:** RouteResult и fixtures нормального/неполного/неприменимого маршрута; дата источника и причина отсутствия due_at.
+- **Handoff внутри DEV-B:** RouteResult и fixtures нормального/неполного/неприменимого маршрута для bot/UI; дата источника и причина отсутствия due_at. DEV-A использует только стабильные category codes как вход AI evaluation.
 
 ### A-03 — intake, NLP baseline и safety-off-ramp
-- **P0 · M · Depends:** A-01. **Пути:** nlp, normalised intake service, scenario fixtures.
-- **Сделать:** локальная нормализация/маскирование; предварительное выявление риска; базовое определение категории/места; ручной выбор/уточнение при неопределённости. Базовый путь не зависит от облачной LLM.
-- **Acceptance:** шум не превращается в инцидент; отрицания/исторические упоминания и «отключили газ» не равны автоматически «пахнет газом». Сигнал возможной опасности не ждёт LLM или обычной очереди; пользователь видит проверенную безопасную инструкцию, а не обещание диагностики. Качество на synthetic и real выборках разделено.
-- **Передать B:** состояния needs_clarification/safety/normal, required slots, candidates. Не выдавать самоуверенность модели за откалиброванную вероятность.
+- **Parent ID сохранён; P0 · M · Depends:** A-03/Product зависит от A-01 public boundary; A-03/AI может начать параллельно по короткому согласованному internal fixture/category codes. Реализация делится на два независимых среза с одним Owner каждый.
+- **A-03/AI — Owner DEV-A. Allowed paths:** выделенные AI/NLP modules, model fixtures/datasets/evaluation и их точные tests. **Сделать:** нормализация текста для анализа, извлечение категории/места/полей, предварительный detector признаков риска, uncertainty/candidates и regression evaluation. Облачная LLM не обязательна.
+- **A-03/Product — Owner DEV-B. Allowed paths:** intake application service, core safety policy, public contracts/API, scenario tests. **Сделать:** access/scope, orchestration, deterministic/manual выбор и уточнение, немедленный safe off-ramp с проверенным текстом, валидация AI-result и только затем запись.
+- **Acceptance:** шум не превращается в инцидент; отрицания/исторические упоминания и «отключили газ» не равны автоматически «пахнет газом». Возможная опасность не ждёт LLM или обычную очередь. Пользователь видит проверенную безопасную инструкцию, а не диагноз модели. Synthetic и real quality разделены; AI failure сохраняет manual/rules path.
+- **Handoff A → B:** typed category/fields/candidates/uncertainty/questions/execution state fixture. DEV-B решает product action; model confidence не выдаётся за откалиброванную вероятность без evidence.
 
 ### A-04 — обращение от черновика до отметки пользователя
-- **P0 · L · Depends:** A-01/A-02; FND-01. **Пути:** services/appeals, API, DB/migrations, tests.
+- **Owner:** DEV-B. **P0 · L · Depends:** A-01/A-02; FND-01. **Allowed paths:** `src/domsignal/services/`, product core/API/contracts/DB, `migrations/`, tests.
 - **Сделать:** create/edit draft, минимальная полнота, сохранение версии, safe official handoff, self_reported filing с необязательным номером, history event. Один и тот же service вызывается bot и REST.
 - **Acceptance:** исправления сохраняются; двойное нажатие не создаёт дубликат; конфликт версии не теряет текст; другой житель не редактирует чужой draft. Открытая ссылка не считается подачей; ручной номер не считается проверенной регистрацией. Собственное обращение доступно, даже когда сосед уже отметил подачу.
-- **Передать B:** рабочие C1 endpoints, contract/integration tests, примеры conflict/retry.
+- **Handoff:** рабочие C1 endpoints, generated client, contract/integration tests и примеры conflict/retry для bot/miniapp в том же направлении DEV-B.
 
 ### A-05 — durable execution и доставка без ложного успеха
-- **P0 · M · Depends:** FND-01 и transport port из C0. B-03 — парная интеграция, не условие начала. **Пути:** worker, services/scheduling, DB/outbox, tests.
+- **Owner:** DEV-B. **P0 · M · Depends:** FND-01 и transport port из C0. B-03 — интеграция того же направления, не условие начала. **Allowed paths:** `src/domsignal/worker/`, services/scheduling, DB/outbox, tests.
 - **Сделать:** довести skeleton jobs до real operations: commit-before-ack, event dedup, приоритеты, backoff, recovery leases, последний актуальный render карточки, взаимодействие с MaxTransport B. DB транзакция не держится во время сети.
 - **Acceptance:** crash в ключевых точках воспроизводим в тесте; stale lease не завершает чужое задание; повтор не дублирует доменное действие; один отправитель регулирует запросы. Отдельно документирована неопределённость внешнего send при потере ответа — без обещания exactly-once.
-- **Передать B:** sender interface, delivery states, retry policy и тестовый RecordingTransport.
+- **Handoff:** sender interface, delivery states, retry policy и тестовый RecordingTransport для B-03. AI-specific handler DEV-A подключается к этой инфраструктуре через отдельный typed boundary и не владеет leases/retries/delivery.
 
 ### A-06 — общий инцидент, соседи и наблюдения
-- **P1 · L · Depends:** A-03/A-04/A-05. **Пути:** core/matching/incidents, services, API, DB, scenario tests.
-- **Сделать:** поиск совместимого инцидента, контролируемое объединение, участники, counts, feedback, связанные повторные случаи. Сообщения остаются отдельными объектами.
-- **Acceptance:** разные дома/подъезды/объекты не склеиваются; неизвестное место при двух кандидатах уточняется; гонка двух сигналов не создаёт две активные карточки одного случая. Счётчик сообщений ≠ уникальные участники. Противоречащие наблюдения видны; «не проблема» не даёт постороннему удалить инцидент.
-- **Передать B:** C2, позитивные и конфликтующие fixtures; явный источник каждого статуса.
+- **Parent ID сохранён; P1 · L · Depends:** A-06/Product — A-03/Product, A-04, A-05; A-06/AI — A-03/AI и согласованный candidate fixture от DEV-B. Реализация делится по ответственности.
+- **A-06/AI — Owner DEV-A. Allowed paths:** AI semantic matching/ranking module, evaluation fixtures/tests. **Сделать:** оценить только переданный DEV-B допустимый набор кандидатов и вернуть ranking/scores, uncertainty и признаки для уточнения.
+- **A-06/Product — Owner DEV-B. Allowed paths:** core/matching/incidents, services, public API/contracts, DB/migrations, scenario/integration tests. **Сделать:** отбор кандидатов по дому/месту/правам, окончательное create/join/merge решение, участники, отдельные message/report/participant counts, feedback, persistence и concurrency.
+- **Acceptance:** semantic score не даёт право merge; разные дома/подъезды/объекты не склеиваются; неизвестное место при двух кандидатах уточняется; гонка двух сигналов не создаёт две активные карточки. Счётчик сообщений ≠ уникальные участники. Противоречащие наблюдения видны; посторонний не удаляет инцидент.
+- **Handoff:** A возвращает typed ranked candidates; B публикует C2, позитивные/conflict fixtures и явный источник каждого статуса.
 
 ### A-07 — подключение дома и разрешения группового режима
-- **P1 · M · Depends:** FND-01; B-01; A-06. **Пути:** membership/chat binding services, API/admin, settings, tests.
+- **Owner:** DEV-B. **P1 · M · Depends:** FND-01; B-01; A-06/Product. **Allowed paths:** membership/chat binding services, API/admin, settings, DB, tests.
 - **Сделать:** verified binding чат→дом; разрешения, opt-in, режимы explicit/group-auto/off; политика доступа по ссылкам; state lost_permissions/disabled. `bot_added` только начинает binding.
 - **Acceptance:** чужая ссылка не выдаёт доступ; админ одного дома не админ всех домов; удаление/отключение бота прекращает обработку группы. Для public synthetic demo доступ задан отдельной явной политикой. При отсутствии group entitlement доступны DM/QR/sharing.
-- **Передать B:** C2 binding/settings, разрешённые действия, capability/error codes.
+- **Handoff:** C2 binding/settings, разрешённые действия и capability/error codes для bot/miniapp; все части остаются в product направлении DEV-B.
 
 ### A-08 — полезная LLM и evaluation, без зависимости основного пути
-- **P1 conditional · M · Depends:** A-03; разрешение/ключ провайдера либо законный локальный доступ. **Пути:** nlp/providers, evaluation, dataset cards.
+- **Owner:** DEV-A. **P1 conditional · M · Depends:** A-03/AI; разрешение/ключ провайдера либо законный локальный доступ. **Allowed paths:** выделенные AI/NLP providers/prompts/validation, evaluation, dataset cards, AI regression tests.
 - **Сделать:** structured slot extraction, ограниченное семантическое ранжирование кандидатов, один controlled repair, timeout/circuit breaker. Модель не определяет законный срок/адресата и не вызывает инструменты.
 - **Acceptance:** invalid JSON, prompt injection, недоступный provider и расхождение методов дают clarification/rules fallback. Ни одна неподтверждённая деталь не попадает в готовый текст без пользователя. Evaluation фиксирует размер/происхождение набора и ошибки; при отсутствии real holdout так и написано.
 - **Ограничение:** сначала один полезный AI-шаг. Training сложной модели, vector DB и универсальный RAG не часть этой задачи.
 
 ### A-09 — сопровождение: reminders, escalation, мои действия
-- **P1 · M · Depends:** A-04/A-05/A-06. **Пути:** services/scheduling/appeals, API, jobs, tests.
+- **Owner:** DEV-B. **P1 · M · Depends:** A-04/A-05/A-06/Product. **Allowed paths:** services/scheduling/appeals, API/contracts, общие jobs/outbox, DB, tests.
 - **Сделать:** персональные/обоснованные нормативные напоминания, отмена/перенос, мои обращения, «нет ответа» → следующий допустимый маршрут/черновик с источником, история. Уведомлять только пользователя, которому разрешено отправлять DM.
 - **Acceptance:** overdue не считается от произвольной даты чата; при неизвестном anchor нет ложного срока. После закрытия/смены версии лишнее напоминание не отправляется. Deadline тестируется fake clock, не ожиданием суток в CI. Эскалация — подготовка, а не автоматическая внешняя жалоба.
-- **Передать B:** C3, reminder reason/time/source и states канала доставки.
+- **Handoff:** C3, reminder reason/time/source и states канала доставки для bot/miniapp того же product направления.
 
 ### A-10 — администрация и второй контекст
-- **P1 · M · Depends:** A-06/A-07; A-02. **Пути:** admin API, summary queries, regions/RU-BA, tests.
+- **Owner:** DEV-B. **P1 · M · Depends:** A-06/Product, A-07, A-02. **Allowed paths:** admin API/services, summary queries, DB, `regions/`, tests.
 - **Сделать:** настройки антиспама/тихих часов, категории/режим, ограниченная модерация, сводка разрешённых домов, второй пакет региона. В исходном source есть RU-TA/RU-BA — сохраняем эти контексты с честным происхождением.
 - **Acceptance:** агрегаты вычисляются из событий/БД, не чисел модели; у второго дома иной config без fork кода; ограничения адаптации показаны. Неудачный новый pack не ломает уже загруженную проверенную конфигурацию. Полная переписка не появляется в admin summary.
-- **Передать B:** C3 settings+aggregates; два воспроизводимых demo fixtures.
+- **Handoff:** C3 settings+aggregates и два воспроизводимых demo fixtures для admin UI.
 
 ### A-11 — расширение полезных маршрутов
-- **P1 · M · Depends:** A-02/A-03, проверка данных. **Пути:** regions, таксономия, fixtures/tests.
-- **Сделать:** расширить четыре начальных пути до восьми полноценных категорий. Для остальных категорий исходной таксономии — распознавание/уточнение или явное отсутствие проверенного маршрута, не универсальная «напишите в УК».
-- **Acceptance:** у каждой активной категории есть input slots, normal path, риск/неизвестность, основание, draft и тест. Нет проверенного источника → needs_verification и safe fallback. Число категорий в enum не называется числом работающих пользовательских сценариев.
-- **Передать B:** generated enums/labels+schema, короткие изменения вопросов, source cards.
+- **Parent ID сохранён; P1 · M · Depends:** A-11/Product — A-02, A-03/Product и проверка данных; A-11/AI — A-03/AI и стабильные category codes от Product-среза. Реализация разделена.
+- **A-11/Product — Owner DEV-B. Allowed paths:** `regions/`, product taxonomy/routing/contracts, fixtures/tests. **Сделать:** расширить четыре начальных проверенных маршрута до восьми, вести slots, applicability, source/provenance, safe unknown path, drafts и generated enums/labels.
+- **A-11/AI — Owner DEV-A. Allowed paths:** category model support, datasets/evaluation/regression tests. **Сделать:** поддержать согласованные category codes и вопросы в extraction/classification; измерить ошибки отдельно от полноты нормативного маршрута.
+- **Acceptance:** у каждой активной категории есть input slots, normal path, риск/неизвестность, основание, draft и тест. Нет проверенного источника → needs_verification и safe fallback. Model coverage или enum count не называется числом работающих сценариев.
+- **Handoff:** B публикует стабильные codes/schema/source cards; A возвращает per-category evaluation и uncertainty. Маршрут и норматив остаются решением product backend.
 
 ### A-12 — production readiness и восстановление
-- **P0 · L · Depends:** FND-01; B-03 для LIVE части; затем результаты A-05…A-10. **Пути:** deploy, Compose, CI, auth/security tests, runbook.
+- **Owner:** DEV-B. **P0 · L · Depends:** FND-01; B-03 для LIVE части; принятые P0 product-срезы. AI observability включается только для реально shipped AI. **Allowed paths:** `deploy/`, Compose, CI, settings/bootstrap, auth/security tests, runbook.
 - **Сделать:** ранний HTTPS-стенд; отдельные local/test/prod credentials; logging sans secrets; health/readiness/version; backup/restore; миграции и безопасное повторное развёртывание; isolation/load sanity, защита демо-сброса. Не ждать 26.09 для первого deploy.
 - **Acceptance:** свой image hash; нет автоизменения общего webhook при локальном старте; production не принимает test-login; restart сохраняет данные/jobs; restore проверен на отдельной БД. Порты API/DB не открыты в обход принятой политики. Нет обещания полного compliance одним расположением сервера.
-- **Передать B:** стабильный URL, проверочные роли/дома безопасным каналом, список реально включённых функций.
+- **Handoff:** стабильный URL, проверочные роли/дома безопасным каналом и список реально включённых функций для B-11/B-12; DEV-A получает только необходимые provider config/observability hooks без секретов.
 
 ### A-13 — воспроизводимая техническая сдача
-- **P0 · M · Depends:** P0 и принятые P1; B-11. **Пути:** README technical sections, OpenAPI/DATA-API, CI/release, deploy/runbook.
+- **Owner:** DEV-B. **P0 · M · Depends:** P0 и принятые P1; B-11. **Allowed paths:** README technical sections, OpenAPI/DATA-API, CI/release, deploy/runbook.
 - **Сделать:** lockfiles/licenses/secret scan, API bundle по подтверждённой схеме организаторов, тестовые роли без админского bypass, frozen release, измерение Docker build, release evidence, SHA/образ/стенд.
 - **Acceptance:** чистый клон запускается по README; один head миграций или объяснённое слияние; применённые миграции не переписаны; build measurement отделяет загрузку base images; shipped metadata совпадает. Неизвестный DATA-API формат помечен блокером, не выдан за официальный.
-- **Handoff:** доказательства проверок B для demo/слайдов, реальные ограничения. Не публиковать PDF с рабочими секретами в Git.
+- **Handoff:** единый release evidence для demo/слайдов, включая отдельные AI quality/latency/cost limitations от DEV-A, если AI вошёл в release. Не публиковать PDF с рабочими секретами в Git.
 
 ### A-14 — медиа как реальное расширение
-- **P2 · M/L · Depends:** A-12; готовность основных P1; парная B-13. **Пути:** attachment service, private storage, media provider ports, tests.
-- **Сделать:** сначала прикрепление изображения к сигналу; затем только при наличии проверенного provider — ASR/описание изображения как предложение. Ограничения размера/MIME/доступа/retention; удалить чувствительные метаданные по правилам продукта.
-- **Acceptance:** загрузка/чтение/удаление реальны и изолированы; фото не считается доказательством диагноза. Расшифровка редактируется до сохранения. Provider failure не мешает тексту. Нет автопубликации личных фото в общем чате и внешней отправки без принятого основания.
+- **Parent ID сохранён; P2 · M/L · Depends:** A-12 и готовность основных P1. B-13 — consumer/парный UX-срез, не prerequisite. Мультимодальность не обязательна ради загрузки DEV-A.
+- **A-14/Product — Owner DEV-B. Allowed paths:** attachment service, private storage, public API/contracts, DB/access/retention, tests. **Сделать:** upload/read/delete, limits MIME/size, access, metadata policy и текстовый fallback.
+- **A-14/AI — Owner DEV-A; Depends:** A-14/Product attachment boundary и реальный provider, только при согласованном roadmap. **Allowed paths:** ASR/vision provider adapters, prompts/structured validation, evaluation/tests. **Сделать:** вернуть редактируемую расшифровку/описание как предложение; timeout/failure не блокирует текст.
+- **Acceptance:** bytes/storage/access реальны и изолированы; фото не считается диагнозом. Расшифровка редактируется до сохранения. Нет автопубликации личных фото или внешней отправки без основания. Недоступный provider даёт честный fallback, не synthetic production success.
 
-## 7. Направление DEV-B — MAX & Experience
+## 7. Исторические B-ID — Owner DEV-B
 
 ### B-00 — UX-контракт и acceptance-сценарии до каркаса
-- **P0 · S · Depends:** S0-01; начать параллельно BOOT-01/FND-01. **Пути:** `docs/UX.md`, `scenarios/acceptance.md`.
+- **Owner / authorship:** DEV-B. **P0 · S · Depends:** S0-01; начать параллельно BOOT-01/FND-01. **Allowed paths:** `docs/UX.md`, `scenarios/acceptance.md`. Завершённое evidence сохраняется в status DEV-B.
 - **Сделать:** 5 основных экранов, пути и тексты source/status/ошибок; согласовать потребности C1; матрица сценариев раздела 9. До merge FND-01 не создавать конкурирующий scaffold miniapp.
 - **Acceptance:** личный сценарий понятен без группового доступа; черновик редактируется; кнопка «подал» не выдаёт внешнюю регистрацию; определены mobile/web/loading/empty/error/unauthorized. Зависимые страницы не обещают несуществующий endpoint.
-- **Передать A:** краткие требования DTO/allowed_actions, не длинный дизайн-документ.
+- **Handoff:** краткие требования DTO/allowed_actions в A-01 product contract; DEV-B теперь writer producer и consumer, DEV-A review AI boundary/invariants.
 
 ### B-01 — MAX feasibility и реальное окружение
-- **P0 · S/M · Depends:** доступ к разрешённому боту/организаторам; часть можно до FND-01. **Пути:** `docs/decisions.md` согласованным diff, короткие integration evidence.
+- **Owner:** DEV-B. **P0 · S/M · Depends:** доступ к разрешённому боту/организаторам; часть можно до FND-01. **Allowed paths:** `docs/decisions.md` согласованным diff, короткие integration evidence.
 - **Сделать:** сверить официальные docs; права добавления/чтения группы; DM events, deep link, mini app on mobile/web; получить реальный пример initData для локального безопасного теста; проверить sharing capability. Не хранить raw initData/token в Git.
 - **Acceptance:** таблица LIVE VERIFIED / NOT VERIFIED / BLOCKED; разрешение group доказано фактическим событием, не предположением из SDK. При отсутствии доступа выбран fallback. Подписка общего токена не перенастроена чужим окружением.
-- **Передать A:** нормализованные обезличенные формы events и утверждённые конфигурационные требования.
+- **Handoff:** нормализованные обезличенные forms/events и утверждённые configuration requirements для product backend; AI receives only explicitly allowed content if a later feature needs it.
 
 ### B-02 — визуальная система и рабочая mini app
-- **P0 · M · Depends:** FND-01/C0; B-00. **Пути:** miniapp/app/shared/features/incidents; frontend tests.
+- **Owner:** DEV-B. **P0 · M · Depends:** FND-01/C0; B-00; A-01 convergence для полного target binding. **Allowed paths:** `miniapp/src/app/`, `shared/`, `features/incidents/`, frontend/browser tests.
 - **Сделать:** consistent tokens/типографика/отступы; House board, Incident detail, ясные badges, source chip, responsive lists, loading/empty/error/access states; MAX Bridge wrapper с capability detection.
 - **Acceptance:** реальные API данные и reload; действия доступны по allowed_actions; тема/контраст/фокус/клавиатура; на web нет обязательного mobile-only Bridge метода. Длинный адрес/текст/неизвестный enum не ломают layout.
+- **Текущий блокер:** board/detail на C0 работают, но B-02 не DONE до A-01 convergence по actions/provenance/capabilities/counts/read model/errors и повторной consumer-проверки. Это следующий backend-срез DEV-B, не ожидание DEV-A.
 - **Не нужно:** Storybook/platform для компонентов, если достаточно лёгкой dev-страницы и component tests.
 
 ### B-03 — MAX transport, ingress и отправка
-- **P0 · L · Depends:** FND-01 и transport port из C0; B-01 для LIVE проверки. A-05 — парная интеграция, не условие начала. **Пути:** app/bot/transport/ingress, bot tests, scenarios MAX fixtures.
+- **Owner:** DEV-B. **P0 · L · Depends:** FND-01 и transport port из C0; B-01 для LIVE проверки. A-05 — интеграция общей delivery-инфраструктуры, не условие начала. **Allowed paths:** `src/domsignal/bot/`, MAX API/ingress adapters, bot tests, MAX scenario fixtures.
 - **Сделать:** HTTPX client ограниченных проверенных методов; send/edit/callback answer; webhook normalization и типы событий; корректные ID/время; links; 429/5xx/network errors; recording adapter используется только тестово/off.
 - **Acceptance:** настоящее сообщение и изменение карточки в MAX; bot-loop отбрасывается; подпись/secret ошибки rejected; повтор/редактирование не смешиваются; разрешённая библиотека/корни сертификатов, TLS verification не отключён. Невыясненная доставка не называется подтверждённой.
-- **Передать A:** конкретный transport/handler с экспортом для composition root; A вносит маленькую wiring-правку.
+- **Handoff:** конкретный transport/handler и product-level wiring выполняет DEV-B одним срезом; DEV-A не ожидается для общего composition root.
 
 ### B-04 — личный бот как законченный продукт
-- **P0 · L · Depends:** A-01; A-02…A-04 для интеграции; B-03.
-- **Пути:** app/bot/dialogs/cards/links, bot scenario tests.
+- **Owner:** DEV-B. **P0 · L · Depends:** A-01, A-02, A-03/Product, A-04, B-03. A-03/AI подключается как optional enhancement, не блокирует manual path.
+- **Allowed paths:** `src/domsignal/bot/`, product services/API clients, bot scenario tests.
 - **Сделать:** /start, выбор дома/контекста, свободный текст или категория, safety-off-ramp, максимум полезных уточнений, маршрут+источник, draft preview, clipboard/link, «житель отметил подачу», возврат к текущему шагу, /help и версия для проверки.
 - **Acceptance:** путь заканчивается сохранённым состоянием и понятным следующим действием; restart/timeout не заставляет повторять всё; deep link сохраняет контекст, но не даёт права. Работает без LLM и группы. Нажатие «открыть официальный сервис» не отправляет автоматически текст третьей стороне.
 - **Проверка:** real MAX web+mobile, synthetic fixture data явны; без реального внешнего обращения пользователя тестируется только handoff и self-report, не выдуманная регистрация.
 
 ### B-05 — редактор обращения и мои действия
-- **P0 · M · Depends:** A-01/A-04; B-02.
-- **Пути:** miniapp/features/appeals/onboarding, API client, UI/e2e tests.
+- **Owner:** DEV-B. **P0 · M · Depends:** A-01/A-04; B-02.
+- **Allowed paths:** `miniapp/src/features/appeals/`, onboarding/shared API client, UI/e2e tests.
 - **Сделать:** route panel, объяснение источника/ограничения, draft edit с autosave/debounce, preview, copy/open external, возвращение из MAX, self-reported number/date, мои черновики/действия. Autosave и submit не создают гонку потери текста.
 - **Acceptance:** изменения переживают reload; 409 предлагает восстановить/сопоставить, не стирает текст; отсутствие due_at понятно; пользователь редактирует только своё. Внешний переход виден и инициируется человеком; test markers читаемы, но не загромождают каждый экран.
 
 ### B-06 — «одна карточка вместо шума»
-- **P1 · M · Depends:** B-03/A-06/A-07; реальный group gate B-01.
-- **Пути:** app/bot/cards/group handlers, scenario tests.
+- **Owner:** DEV-B. **P1 · M · Depends:** B-03, A-06/Product, A-07; реальный group gate B-01. A-06/AI ranking optional и не принимает merge decision.
+- **Allowed paths:** `src/domsignal/bot/`, product services/cards/group handlers, scenario tests.
 - **Сделать:** карточка общего инцидента; edit вместо повторного постинга; меня касается/не проблема; допустимое уточнение; anti-spam/quiet-hours и права; реакция на removal/edit.
 - **Acceptance:** два пользователя видят одну историю; counts правильные; устаревшая кнопка не портит состояние; отключение auto-mode работает. После ручного удаления карточки не начинать бесконечный repost против намерения администратора. При снятии прав нет бесконечных retry.
 - **Fallback:** если group blocked, усиливать B-07/B-08 вместо ложного «работает за флагом».
 
 ### B-07 — контекст между MAX-пространствами, sharing и QR
-- **P1 · M · Depends:** B-02/B-04; A-07; B-01 capabilities.
-- **Пути:** app/bot/links, miniapp/shared/max, onboarding/share, tests.
+- **Owner:** DEV-B. **P1 · M · Depends:** B-02/B-04; A-07; B-01 capabilities.
+- **Allowed paths:** bot links, `miniapp/src/shared/max/`, onboarding/share, product access services/tests.
 - **Сделать:** group→DM→mini app на том же инциденте; нативный sharing проверенным методом MAX; короткий opaque deep link; QR дома/подъезда и текстовая ссылка как web fallback.
 - **Acceptance:** второй пользователь проходит доступ и присоединяется; ссылка не раскрывает private данные/не выдаёт membership сама. На web fallback реально работает; QR даёт контекст, а не auth. Payload соблюдает проверенные ограничения платформы.
 - **Бонус:** это кандидат на +0,15, а не гарантированное начисление; показывается путь от действия до результата двух людей.
 
 ### B-08 — история, результаты и следующий шаг
-- **P1 · M · Depends:** A-06/A-09; B-02/B-04.
-- **Пути:** miniapp/features/incidents/appeals, bot reminder/feedback cards.
+- **Owner:** DEV-B. **P1 · M · Depends:** A-06/Product, A-09; B-02/B-04.
+- **Allowed paths:** miniapp incident/appeal features, bot reminder/feedback cards, product API integration.
 - **Сделать:** timeline, «решено/осталось», расхождение наблюдений, новый связанный случай, reminder settings, «нет ответа» → проверяемый следующий маршрут/preview.
 - **Acceptance:** статус не скрывает источник; старое «решено» не переносится на новый случай; ручная отметка filing не выглядит ответом УК; пустой/неприменимый нормативный срок не заменяется случайным отсчётом. Напоминание открывает актуальный экран и правильный incident.
 
 ### B-09 — полезный кабинет администратора
-- **P1 · M · Depends:** A-07/A-10; B-02.
-- **Пути:** miniapp/features/admin, component/e2e tests.
+- **Owner:** DEV-B. **P1 · M · Depends:** A-07/A-10; B-02.
+- **Allowed paths:** `miniapp/src/features/admin/`, product admin API client, component/e2e tests.
 - **Сделать:** подключение/проверка дома, режим группы, quiet hours/лимиты, moderation queue, обзор инцидентов нескольких разрешённых домов, filters с реальными counts.
 - **Acceptance:** одной настройкой отключается auto-react; последствия понятны; ошибка сохранения не показывается как успех. Нет чужих домов/личных текстов/общей выгрузки чата. Role-switcher не подменяет серверную авторизацию.
 - **Не нужно:** большая CRM с персоналом/нарядами, универсальный конструктор дашбордов.
 
 ### B-10 — UX/UI polish без новых бизнес-зависимостей
-- **P1 · M · Depends:** основные экраны B-02/B-05; выполняется частями до freeze.
-- **Пути:** miniapp/shared/styles/ui, affected features, UX tests.
+- **Owner:** DEV-B. **P1 · M · Depends:** основные экраны B-02/B-05; выполняется частями до freeze.
+- **Allowed paths:** `miniapp/src/shared/styles/`, shared UI, affected features, UX tests.
 - **Сделать:** читаемая мобильная композиция, visual hierarchy, skeletons, сохранение фильтра/позиции, feedback кнопки, return/back, длинные тексты, empty states с действием. Убрать лишние запросы и мигание, измерив поведение.
 - **Acceptance:** основной путь проходит без объяснений; focus/контраст/клавиатура проверены; layout не зависит от одного размера телефона; нет обязательных анимаций/blur, мешающих доступности. Фотографии/скриншоты теста отделены от реальных исследовательских данных.
 
 ### B-11 — сквозной bug bash и проверки клиентов
-- **P0 · L · Depends:** первые end-to-end части S2; продолжать до S6.
-- **Пути:** miniapp/tests/e2e, scenarios, короткий release evidence. Product bug fixes — владелец соответствующего кода.
+- **Owner:** DEV-B. **P0 · L · Depends:** первые end-to-end части S2; продолжать до S6.
+- **Allowed paths:** `miniapp/tests/`, product scenarios, короткий release evidence. Bug fix делает владелец соответствующей зоны; AI defect возвращается DEV-A.
 - **Сделать:** автоматизировать продуктовые сценарии раздела 9; negative cases раздела 10; запуск на реальном API/PG; реальные MAX mobile/web smoke с двумя ролями. Независимый участник проходит README без подсказок.
 - **Acceptance:** проверены не только happy screenshots; flaky тесты разобраны, не отключены. Синтетический replay не маркируется LIVE MAX. Сеть/provider и неизвестный адрес дают понятный следующий шаг. Итоги записаны с датой, commit и ограничениями, без выдуманного количества тестировщиков.
 
 ### B-12 — демонстрация и продуктовый комплект сдачи
-- **P0 · M · Depends:** B-11; A-13 параллельно.
-- **Пути:** README user sections, demo/runbook, материалы презентации согласно правилам доступа.
+- **Owner:** DEV-B. **P0 · M · Depends:** B-11; A-13 того же направления.
+- **Allowed paths:** README user sections, demo/runbook, материалы презентации согласно правилам доступа.
 - **Сделать:** сценарий 2–3 минуты, два пользователя, резервное видео того же release, инструкция reset только своего demo scope, evidence matrix real/test/planned. Слайды продукта и польза MAX; согласовать факты с источниками/исследователем.
 - **Acceptance:** видео показывает существующие функции; на слайде не говорится «официально подано», если был только self-report. Technical slide с рабочими доступами не публикуется в Git. Все URL/hash/ограничения согласованы с A-13.
 
 ### B-13 — UX для фото и голоса
-- **P2 · M · Depends:** A-14; B-10; основные P1 проходят.
-- **Пути:** miniapp/media UI, bot attachment normalization, tests.
+- **Owner:** DEV-B. **P2 · M · Depends:** A-14/Product; B-10; основные P1 проходят. A-14/AI нужен только для реально принятого ASR/vision enhancement.
+- **Allowed paths:** miniapp media UI, bot attachment normalization, product API integration, tests.
 - **Сделать:** прикрепление/превью/удаление изображения; при реальном ASR — запись или разрешённое вложение → редактируемый текст. Progress/cancel/retry, лимиты и доступность.
 - **Acceptance:** photo upload и transcript provider не имитируются. При сбое пользователь вводит текст, черновик сохраняется. Распознавание не публикует вывод без подтверждения; недоступный микрофон не ломает страницу.
 
 ## 8. Kill-фичи и их минимальные доказательства
 
-| Фича | Почему полезна | Задачи A / B | Что показывает завершённость |
+| Фича | Почему полезна | Task slices / Owner | Что показывает завершённость |
 |---|---|---|---|
-| **Общая проблема без спама** | Соседи перестают заново собирать историю | A-06/A-07 + B-06 | Два независимых сигнала → одна актуальная карточка, отдельные сообщения сохранены |
-| **Маршрут с объяснением + готовый редактируемый текст** | Не нужно угадывать адресата и писать с нуля | A-02/A-04 + B-04/B-05 | Неполное описание → уточнение → основание → сохранённый draft → handoff |
-| **Тот же инцидент в чате, DM и mini app** | Нет повторного ввода и потери контекста | A-07 + B-07 | Переходы с реальным доступом и вторым пользователем в MAX |
-| **Не «закрыто», а история наблюдений и следующий шаг** | Становится видно, что известно и что нужно проверить | A-06/A-09 + B-08 | Self-report, reminder, противоречие, recurrence без подмены статуса |
-| **Новый дом/регион без fork кода** | Видно, как переносится продукт | A-10/A-11 + B-09 | Два config набора, один код и различающиеся реальные данные/явная синтетика |
-| **Голос/фото → черновик** | Дополнительный простой вход | A-14 + B-13, P2 | Настоящий provider/attachment, редактирование и понятный fallback |
+| **Общая проблема без спама** | Соседи перестают заново собирать историю | DEV-B: A-06/Product, A-07, B-06; DEV-A: optional A-06/AI ranking | Два независимых сигнала → одна актуальная карточка, отдельные сообщения сохранены |
+| **Маршрут с объяснением + готовый редактируемый текст** | Не нужно угадывать адресата и писать с нуля | DEV-B: A-02, A-04, B-04/B-05 | Неполное описание → уточнение → основание → сохранённый draft → handoff |
+| **Тот же инцидент в чате, DM и mini app** | Нет повторного ввода и потери контекста | DEV-B: A-07, B-07 | Переходы с реальным доступом и вторым пользователем в MAX |
+| **Не «закрыто», а история наблюдений и следующий шаг** | Становится видно, что известно и что нужно проверить | DEV-B: A-06/Product, A-09, B-08 | Self-report, reminder, противоречие, recurrence без подмены статуса |
+| **Новый дом/регион без fork кода** | Видно, как переносится продукт | DEV-B: A-10, A-11/Product, B-09; DEV-A: A-11/AI evaluation | Два config набора, один код и различающиеся реальные данные/явная синтетика |
+| **Голос/фото → черновик** | Дополнительный простой вход | DEV-B: A-14/Product, B-13; DEV-A: A-14/AI только с provider, P2 | Настоящий provider/attachment, редактирование и понятный fallback |
 
 Последняя строка не должна вытеснить первые четыре. Групповое автообнаружение возможно только при реальных правах и согласованном процессе; иначе остаётся осмысленный «поделиться и присоединиться».
 
@@ -304,26 +334,26 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 
 **Десять основных кандидатов + два условных расширения.** Это цели acceptance, не сообщение о количестве уже реализованных функций. Технические ошибки следующего раздела не прибавляем к числу продуктовых сценариев.
 
-| ID / приоритет | START → полезный результат | Ответственные задачи | Доказательство / тест |
+| ID / приоритет | START → полезный результат | Ответственные задачи / Owner | Доказательство / тест |
 |---|---|---|---|
-| **SC-01 / P0** | Житель пишет в DM → уточнение → источник адресата → отредактированный draft → handoff → сохранённая отметка | A-02/A-03/A-04, B-03/B-04/B-05 | Реальный MAX + запись API/PG; reload показывает ту же историю |
-| **SC-02 / P0** | Житель открывает mini app → находит нужную проблему → видит актуальный маршрут/свои действия | FND-01, A-04, B-02/B-05 | E2E против настоящего backend; forbidden house negative |
-| **SC-03 / P0** | Возможный риск в сообщении → немедленный безопасный off-ramp без ожидания LLM | A-03/A-05, B-04 | Safety fixtures + проверка задержки/порядка действий; без обещания устранения аварии |
-| **SC-04 / P1 group gate** | Два соседа сообщают в группе об одном объекте → одна карточка + корректные counts | A-06/A-07, B-06 | Два пользователя; race и разные подъезды отдельно |
-| **SC-05 / P1** | Сосед получает ссылку/QR → контекст → разрешённый вход → присоединение к инциденту | A-07, B-07 | Mobile/web, чужая ссылка не даёт private access |
-| **SC-06 / P1** | Пользователь отметил подачу → настроил напоминание → нет ответа → подготовил следующий шаг | A-09, B-08 | Fake clock для автоматизации + настоящее уведомление в MAX |
-| **SC-07 / P1** | Житель сообщил об устранении → сосед возразил → видна необходимость проверки; новый случай связан со старым | A-06, B-08 | Наблюдения/версии сохранены, спор не решён большинством голосов |
-| **SC-08 / P1** | Администратор подключил дом → настроил режим/тишину → просмотрел реальные агрегаты → отключил бота | A-07/A-10, B-09 | Scoped admin E2E и остановка group processing |
-| **SC-09 / P1** | Тот же тип проблемы в другом demo-регионе → иной source/config → корректный путь без изменения кода | A-10/A-11, B-05/B-09 | Параметризованный тест двух пакетов; происхождение данных видно |
-| **SC-10 / P1** | Неполное/разговорное сообщение → уточнение → пользователь исправил распознавание → нормальный путь | A-03/A-08, B-04/B-05 | Rules и optional provider проходят один contract, неизвестность не скрывается |
-| **SC-11 / P2** | Пользователь приложил фото → просмотрел/удалил → отправил выбранный материал с сигналом | A-14, B-13 | Настоящие bytes/storage/access; нет автоматической публикации в группу |
-| **SC-12 / P2** | Голос → настоящая расшифровка → исправление → draft/сигнал | A-14, B-13 | Live provider evidence; текстовый fallback при отказе |
+| **SC-01 / P0** | Житель пишет в DM → уточнение → источник адресата → отредактированный draft → handoff → сохранённая отметка | DEV-B: A-02, A-03/Product, A-04, B-03/B-04/B-05; DEV-A: A-03/AI enhancement | Реальный MAX + запись API/PG; reload показывает ту же историю |
+| **SC-02 / P0** | Житель открывает mini app → находит нужную проблему → видит актуальный маршрут/свои действия | DEV-B maintenance: FND-01, A-04, B-02/B-05 | E2E против настоящего backend; forbidden house negative |
+| **SC-03 / P0** | Возможный риск в сообщении → немедленный безопасный off-ramp без ожидания LLM | DEV-A: A-03/AI risk signal; DEV-B: A-03/Product, A-05, B-04 safety priority | Safety fixtures + проверка задержки/порядка действий; без обещания устранения аварии |
+| **SC-04 / P1 group gate** | Два соседа сообщают в группе об одном объекте → одна карточка + корректные counts | DEV-B: A-06/Product, A-07, B-06; DEV-A: optional A-06/AI | Два пользователя; race и разные подъезды отдельно |
+| **SC-05 / P1** | Сосед получает ссылку/QR → контекст → разрешённый вход → присоединение к инциденту | DEV-B: A-07, B-07 | Mobile/web, чужая ссылка не даёт private access |
+| **SC-06 / P1** | Пользователь отметил подачу → настроил напоминание → нет ответа → подготовил следующий шаг | DEV-B: A-09, B-08 | Fake clock для автоматизации + настоящее уведомление в MAX |
+| **SC-07 / P1** | Житель сообщил об устранении → сосед возразил → видна необходимость проверки; новый случай связан со старым | DEV-B: A-06/Product, B-08 | Наблюдения/версии сохранены, спор не решён большинством голосов |
+| **SC-08 / P1** | Администратор подключил дом → настроил режим/тишину → просмотрел реальные агрегаты → отключил бота | DEV-B: A-07/A-10, B-09 | Scoped admin E2E и остановка group processing |
+| **SC-09 / P1** | Тот же тип проблемы в другом demo-регионе → иной source/config → корректный путь без изменения кода | DEV-B: A-10/A-11 Product, B-05/B-09; DEV-A: A-11/AI evaluation | Параметризованный тест двух пакетов; происхождение данных видно |
+| **SC-10 / P1** | Неполное/разговорное сообщение → уточнение → пользователь исправил распознавание → нормальный путь | DEV-A: A-03/AI, optional A-08; DEV-B: A-03/Product, B-04/B-05 | Rules/manual и optional provider проходят один boundary, неизвестность не скрывается |
+| **SC-11 / P2** | Пользователь приложил фото → просмотрел/удалил → отправил выбранный материал с сигналом | DEV-B: A-14/Product, B-13 | Настоящие bytes/storage/access; нет автоматической публикации в группу |
+| **SC-12 / P2** | Голос → настоящая расшифровка → исправление → draft/сигнал | DEV-A: A-14/AI provider; DEV-B: A-14/Product, B-13 | Live provider evidence; текстовый fallback при отказе |
 
 ### Покрытие категорий — отдельная ось
 
 Исходная таксономия из § 6.4 сохраняется как каталог: лифт, стояк, крыша, горячая вода, отопление, канализация, мусоропровод, ТКО, освещение, уборка, двор, сосульки, домофон, шум, газ, другое. Это **не шестнадцать гарантированно проверенных правовых маршрутов**.
 
-Для P0 планируем четыре полноценных неэкстренных пути: лифт без признаков угрозы людям, освещение без признаков электрической опасности, уборка подъезда, отсутствие горячей воды. Для P1 целимся в восемь: добавить ТКО, протечку крыши, домофон и дефект дворовой территории — только с вопросами о применимости и проверенными данными. Риски в любом пути переводят в safety-off-ramp. Выбор первых четырёх можно изменить после интервью; task IDs не меняются.
+Для P0 планируем четыре полноценных неэкстренных пути: лифт без признаков угрозы людям, освещение без признаков электрической опасности, уборка подъезда, отсутствие горячей воды. Для P1 целимся в восемь: добавить ТКО, протечку крыши, домофон и дефект дворовой территории — только с вопросами о применимости и проверенными данными. DEV-B владеет маршрутами/пакетами и safety policy; DEV-A — model support/evaluation категорий. Риски в любом пути переводят в safety-off-ramp. Выбор первых четырёх можно изменить после интервью; task IDs не меняются.
 
 «Маршрут готов» означает: распознавание/ручной выбор, недостающие поля, граница ответственности, основание/неопределённость, draft, handoff, сохранение, тест позитивной и проблемной ветки. Одного нового enum недостаточно.
 
@@ -333,26 +363,26 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 
 | ID | Ситуация | Обязательное поведение | Основной owner |
 |---|---|---|---|
-| N-01 | Неизвестный дом | Черновик/следующий шаг; нет случайной УК | A-02/B-04 |
-| N-02 | Невалидный initData / повтор ключей / истёкший срок | Отказ без утечки деталей и безопасный повтор входа | FND-01/A-12 |
-| N-03 | Публичный deep link на чужой дом | Навигация не выдаёт членство | A-07/B-07 |
-| N-04 | Повтор webhook / callback | Один доменный эффект | A-05/B-03 |
-| N-05 | DB сбой до commit входящего события | Нет ложного accepted, можно повторить | A-05 |
-| N-06 | Два сигнала одновременно | Предсказуемый matching без двух конфликтующих карточек | A-06 |
-| N-07 | У двух лифтов неизвестен подъезд | Уточнение, а не merge разных объектов | A-06/B-06 |
-| N-08 | Нажатие старой кнопки/версия draft | 409/актуализация, текст не теряется | A-04/B-05 |
-| N-09 | MAX 429/5xx/timeout | Retry/очередь, доменный статус не подделывается | A-05/B-03 |
-| N-10 | Ответ send потерян | Не обещать exactly-once; зафиксировать неопределённость/политику retry | A-05/B-03 |
-| N-11 | Worker умер после claim | Lease recovery, устаревший worker не коммитит чужую задачу | A-05 |
-| N-12 | LLM не отвечает / invalid JSON / injection | Без tools; rules/manual; без ложных нормативов | A-08/B-04 |
-| N-13 | Источник/срок не проверен | needs_verification, due_at отсутствует, причина видна | A-02/B-05 |
-| N-14 | Бота удалили/сняли права | Остановка группы и ошибочных повторов; DM fallback | A-07/B-06 |
-| N-15 | Пользователь прервал ввод | Минимальное session state восстановлено | A-04/B-04/B-05 |
-| N-16 | «Решено» и «не решено» одновременно | Видимое расхождение, аудит, не автоистина | A-06/B-08 |
-| N-17 | Перезапуск/повторная миграция/seed | Данные не исчезают; нет повторного создания справочников | A-12 |
-| N-18 | Критичная возможность Bridge отсутствует | Рабочий web-compatible путь | B-02/B-07 |
-| N-19 | Demo reset другого пользователя | Нет доступа к чужим данным/текущей проверке | A-12/B-12 |
-| N-20 | Фото oversized/private или ASR fail | Валидация/403, текстовый fallback, draft сохранён | A-14/B-13 |
+| N-01 | Неизвестный дом | Черновик/следующий шаг; нет случайной УК | DEV-B — A-02/B-04 |
+| N-02 | Невалидный initData / повтор ключей / истёкший срок | Отказ без утечки деталей и безопасный повтор входа | DEV-B — FND maintenance/A-12 |
+| N-03 | Публичный deep link на чужой дом | Навигация не выдаёт членство | DEV-B — A-07/B-07 |
+| N-04 | Повтор webhook / callback | Один доменный эффект | DEV-B — A-05/B-03 |
+| N-05 | DB сбой до commit входящего события | Нет ложного accepted, можно повторить | DEV-B — A-05 |
+| N-06 | Два сигнала одновременно | Предсказуемый matching без двух конфликтующих карточек | DEV-B — A-06/Product; DEV-A только candidate ranking |
+| N-07 | У двух лифтов неизвестен подъезд | Уточнение, а не merge разных объектов | DEV-B — A-06/Product/B-06; DEV-A возвращает uncertainty |
+| N-08 | Нажатие старой кнопки/версия draft | 409/актуализация, текст не теряется | DEV-B — A-04/B-05 |
+| N-09 | MAX 429/5xx/timeout | Retry/очередь, доменный статус не подделывается | DEV-B — A-05/B-03 |
+| N-10 | Ответ send потерян | Не обещать exactly-once; зафиксировать неопределённость/политику retry | DEV-B — A-05/B-03 |
+| N-11 | Worker умер после claim | Lease recovery, устаревший worker не коммитит чужую задачу | DEV-B — A-05 |
+| N-12 | LLM не отвечает / invalid JSON / injection | Без tools; rules/manual; без ложных нормативов | DEV-A — A-08 provider/fallback signal; DEV-B — product fallback/B-04 |
+| N-13 | Источник/срок не проверен | needs_verification, due_at отсутствует, причина видна | DEV-B — A-02/B-05 |
+| N-14 | Бота удалили/сняли права | Остановка группы и ошибочных повторов; DM fallback | DEV-B — A-07/B-06 |
+| N-15 | Пользователь прервал ввод | Минимальное session state восстановлено | DEV-B — A-04/B-04/B-05 |
+| N-16 | «Решено» и «не решено» одновременно | Видимое расхождение, аудит, не автоистина | DEV-B — A-06/Product/B-08 |
+| N-17 | Перезапуск/повторная миграция/seed | Данные не исчезают; нет повторного создания справочников | DEV-B — A-12 |
+| N-18 | Критичная возможность Bridge отсутствует | Рабочий web-compatible путь | DEV-B — B-02/B-07 |
+| N-19 | Demo reset другого пользователя | Нет доступа к чужим данным/текущей проверке | DEV-B — A-12/B-12 |
+| N-20 | Фото oversized/private или ASR fail | Валидация/403, текстовый fallback, draft сохранён | DEV-B — storage/access/UI; DEV-A — optional ASR/vision provider failure |
 
 ## 11. Definition of Done и правила интеграции
 
@@ -363,10 +393,11 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 Проверки по риску:
 - Локальная функция → targeted unit; bug → regression.
 - DTO/route → producer+consumer+contract; генерируемые types должны совпасть.
+- AI internal contract → invalid/timeout/fallback + evaluation regression; product validation и transaction проверяются отдельно владельцем DEV-B.
 - DB/matching/job/auth → настоящие PostgreSQL integration и отрицательные ветки, не замена SQLite.
 - UI → component + связанный E2E/браузер; не только build.
 - MAX → recording contract tests и отдельный LIVE smoke; не считать первый заменой второго.
-- Main → актуальный merge-result CI и review второго разработчика; после двух связанных merge — общий smoke.
+- Main → актуальный merge-result CI и review второго разработчика; DEV-A обязательно review PR DEV-B, а интегратор DEV-B не обходит protection; после двух связанных merge — общий smoke.
 
 В готовый PR не попадает незавершённая следующая фича из постоянной ветки. Параллельную работу держим локально отдельно. Не создавать новую обязательную ветку для каждого сценария и не переводить команду на сложный Gitflow.
 
@@ -381,13 +412,13 @@ Roadmap — спецификация и зависимости. Текущая �
 2. Для owner change записать прежнего и нового владельца в короткое решение, сообщить коллеге.
 3. Если меняется общий контракт, сначала маленький согласованный PR и fixtures; совместимые additions предпочтительнее удаления полей.
 4. Для отмены отметить DEFERRED в handoff/решении с причиной, не удалять доказательства уже выполненной части.
-5. Интегратор обновляет общий контекст только когда это меняет общую картину, без отчёта на каждую строку кода.
+5. Интегратор DEV-B обновляет общий контекст только когда это меняет общую картину, по проверенному main/ref и без отчёта на каждую строку кода.
 
 Шаблон новой карточки:
 
 ```markdown
-### <A/B>-<новый ID> — пользовательский результат
-- Priority / size / owner:
+### <исторический префикс>-<новый ID> — пользовательский результат
+- Priority / size / explicit Owner:
 - Depends:
 - Allowed paths:
 - Сделать:
@@ -399,14 +430,14 @@ Roadmap — спецификация и зависимости. Текущая �
 
 | Триггер | Действие |
 |---|---|
-| Нет group rights | Не ждать неделями: B-06 auto-group deferred; A-07/B-07 доступ и sharing остаются; P0 не меняется |
-| Нет разрешённой LLM/реальной выборки | Rules/manual release; не заявлять measured ML quality на выдуманных real данных |
-| Не проверены нормы части категорий | Сократить активные маршруты, сохранить явный unknown path; не подставлять универсальную УК/10 дней |
-| P0 не проходит на 21.09 | Остановить новые P2 и неготовые P1; парное исправление критического пути |
-| A задерживает интерфейсный контракт | Сразу маленький C1/C2 PR; B продолжает по валидным fixtures, не пишет второй backend |
-| У A перегруз по deploy+NLP | Упростить AI baseline; передать B отдельные fixtures/evaluation/UI задачи по карточке, не общие миграции |
-| У B перегруз по bot+UI | Разделить его агентов по app/bot и miniapp; заморозить новые визуальные разделы, сохранить качество существующих |
-| Все P0/P1 зелёные до freeze, есть ресурс review | Взять A-14/B-13 сначала attachments; голос/vision только после настоящей provider проверки |
+| Нет group rights | Не ждать неделями: DEV-B откладывает B-06 auto-group; A-07/B-07 access/sharing остаются; P0 не меняется |
+| Нет разрешённой LLM/реальной выборки | DEV-A поставляет только проверяемый baseline/fixtures; release идёт rules/manual, без выдуманной measured ML quality |
+| Не проверены нормы части категорий | DEV-B сокращает активные маршруты, сохраняет explicit unknown path; не подставляет универсальную УК/10 дней |
+| B-02 расходится с producer C0 | DEV-B сначала делает минимальный A-01 producer+consumer convergence; DEV-A review, но не становится writer общего backend |
+| P0 не проходит на 21.09 | DEV-B останавливает P2 и неготовые P1; команда парно проверяет критический путь и AI fallback |
+| DEV-A исчерпал полезные AI-задачи | Не добавлять RAG/vector DB/сложное обучение; усилить evaluation/regression/latency-cost evidence или помочь review без смены ownership |
+| DEV-B перегружен product/fullstack/MAX | Порядок срезов: A-01 convergence → personal golden path → reliability/release → group/history/admin → P2; агенты делят UI/bot/backend только по непересекающимся paths |
+| Все P0/P1 зелёные до freeze, есть ресурс review | Взять A-14/Product и B-13 сначала attachments; ASR/vision — только после настоящей provider проверки A-14/AI |
 
 ## 13. Что не входит даже при быстрых агентах
 

@@ -1,0 +1,376 @@
+/* MAX UI owns fonts, surfaces, controls and platform/theme tokens. */
+:root {
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+.app-shell {
+  --ds-line: color-mix(in srgb, var(--text-primary) 15%, transparent);
+  --ds-accent: var(--text-themed);
+  width: min(100%, 980px);
+  min-height: 100dvh;
+  margin-inline: auto;
+  padding: 12px 24px max(32px, env(safe-area-inset-bottom));
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+  font-family: var(--font);
+}
+.detail-shell {
+  max-width: 720px;
+}
+.app-shell :where(h1, h2, h3, p, dl) {
+  margin: 0;
+}
+.app-shell :where(h1, h2, h3) {
+  text-wrap: pretty;
+}
+.app-shell :where(a) {
+  color: var(--text-primary);
+  text-underline-offset: 4px;
+}
+.app-shell :where(button, a, summary, input, select, textarea):focus-visible {
+  outline: 3px solid var(--text-themed);
+  outline-offset: 3px;
+}
+.app-shell :where(button, a, summary) {
+  touch-action: manipulation;
+}
+.app-shell :where(button) {
+  white-space: normal;
+  height: auto;
+  min-height: 44px;
+  max-width: 100%;
+}
+.app-shell :where(button, a) > span {
+  white-space: normal;
+}
+.app-shell :where(select, textarea) {
+  width: 100%;
+  min-width: 0;
+}
+.toolbar {
+  padding-block: 4px 16px;
+  border-bottom: 1px solid var(--ds-line);
+}
+.page-header {
+  display: grid;
+  gap: 16px;
+  padding-block: 28px;
+}
+.page-header h1 {
+  max-width: 44ch;
+  letter-spacing: -0.025em;
+  line-height: 1.18;
+}
+.page-header h1:focus {
+  outline: none;
+}
+.eyebrow {
+  color: var(--text-secondary);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.muted {
+  color: var(--text-secondary);
+}
+.demo-badge,
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.demo-badge {
+  border: 1px dashed var(--ds-line);
+  color: var(--text-secondary);
+}
+.status-badge {
+  color: var(--text-primary);
+  background: var(--background-tertiary);
+}
+.tone-active {
+  border-inline-start: 3px solid var(--icon-themed);
+}
+.tone-calm {
+  border-inline-start: 3px solid var(--icon-positive);
+}
+.tone-attention {
+  border-inline-start: 3px solid var(--icon-negative);
+}
+.tone-neutral {
+  border-inline-start: 3px solid var(--icon-tertiary);
+}
+.board-summary {
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid var(--ds-line);
+  display: grid;
+  gap: 14px;
+}
+.board-summary p {
+  font-size: 14px;
+}
+.board-summary .summary-value {
+  font-size: 40px;
+  font-weight: 650;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.section-heading {
+  margin-block: 28px 16px;
+}
+.incident-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.incident-grid > li {
+  min-width: 0;
+}
+.incident-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--ds-line);
+}
+.incident-card h3 {
+  font-size: 20px;
+  line-height: 1.25;
+}
+.card-description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.5;
+}
+.card-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--ds-line);
+}
+.state-panel {
+  display: grid;
+  gap: 20px;
+  padding: 32px 20px;
+  border-radius: 16px;
+  text-align: center;
+}
+.state-panel h2 {
+  margin-block: 12px;
+}
+.state-symbol {
+  color: var(--text-secondary);
+  font-size: 32px;
+}
+.state-panel p {
+  max-width: 44ch;
+  margin-inline: auto;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.skeleton {
+  height: 80px;
+  width: 100%;
+  background: var(--background-tertiary);
+  border-radius: 12px;
+}
+.next-action,
+.detail-section,
+.honesty-note {
+  padding: 24px;
+  margin-bottom: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--ds-line);
+}
+.next-action {
+  border-inline-start: 4px solid var(--ds-accent);
+}
+.next-action h2 {
+  margin-block: 10px 14px;
+}
+.next-action p {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.detail-section {
+  display: grid;
+  gap: 20px;
+}
+.full-text {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.info-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: 16px;
+  padding-block: 12px;
+  border-top: 1px solid var(--ds-line);
+}
+.info-row dt {
+  color: var(--text-secondary);
+}
+.info-row dd {
+  margin: 0;
+}
+.source-chip {
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+}
+.source-chip summary {
+  padding: 14px;
+  min-height: 48px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.source-demo {
+  border-style: dashed;
+}
+.source-details {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+.source-details a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.timeline {
+  padding: 0 0 0 18px;
+  margin: 0;
+  list-style: none;
+  border-inline-start: 2px solid var(--ds-line);
+}
+.timeline li {
+  display: grid;
+  gap: 8px;
+  padding: 0 0 24px 4px;
+}
+.timeline li:last-child {
+  padding-bottom: 0;
+}
+.timeline time {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.refresh-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--background-secondary);
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+}
+.page-footer {
+  padding-block: 28px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-block: 24px;
+}
+.report-form {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  margin-bottom: 16px;
+  background: var(--background-card);
+  border: 1px solid var(--ds-line);
+  border-radius: 16px;
+}
+.report-form label,
+.house-select {
+  display: grid;
+  gap: 8px;
+}
+.report-form select,
+.house-select select {
+  min-height: 48px;
+  padding: 12px;
+  background: var(--background-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+}
+.report-form textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+.house-select {
+  margin-bottom: 20px;
+}
+.diagnostics {
+  padding-block: 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.diagnostics summary {
+  min-height: 44px;
+  cursor: pointer;
+}
+@media (max-width: 767px) {
+  .incident-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app-shell {
+    padding-inline: 16px;
+  }
+}
+@media (max-width: 479px) {
+  .app-shell {
+    padding-inline: 12px;
+  }
+  .page-header {
+    padding-block: 24px;
+  }
+  .page-header h1 {
+    font-size: 28px;
+  }
+  .incident-card,
+  .detail-section,
+  .next-action,
+  .board-summary {
+    padding: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell *,
+  .app-shell *::before,
+  .app-shell *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
