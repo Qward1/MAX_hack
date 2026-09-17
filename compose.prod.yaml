@@ -1,0 +1,50 @@
+services:
+  db:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+
+  migrate:
+    environment: &production-environment
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+      ALLOW_TEST_SESSION: "false"
+      DEMO_SEED: "false"
+      MAX_TRANSPORT: ${MAX_TRANSPORT:-off}
+      MAX_BOT_TOKEN: ${MAX_BOT_TOKEN:-}
+      MAX_WEBHOOK_SECRET: ${MAX_WEBHOOK_SECRET:-}
+      LLM_PROVIDER: rules
+      PUBLIC_BASE_URL: https://${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN}
+      CORS_ORIGINS: https://${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN}
+
+  seed:
+    environment: *production-environment
+
+  api:
+    environment:
+      <<: *production-environment
+      BUILD_COMMIT: ${BUILD_COMMIT:?set BUILD_COMMIT}
+
+  worker:
+    environment: *production-environment
+
+  caddy:
+    image: caddy:2.10.2-alpine
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:

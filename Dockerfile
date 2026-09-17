@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1.7
+
+FROM node:24.21.0-bookworm-slim AS frontend-build
+WORKDIR /build/miniapp
+COPY miniapp/package.json miniapp/package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci
+COPY miniapp/ ./
+RUN npm run build
+
+FROM python:3.12.11-slim-bookworm AS python-build
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+WORKDIR /app
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir uv==0.12.6
+COPY pyproject.toml uv.lock README.md ./
+COPY src/ ./src/
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-editable
+
+FROM python:3.12.11-slim-bookworm AS runtime
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    STATIC_DIR=/app/miniapp/dist
+WORKDIR /app
+RUN addgroup --system --gid 10001 domsignal \
+    && adduser --system --uid 10001 --ingroup domsignal --home /nonexistent domsignal
+COPY --from=python-build --chown=domsignal:domsignal /app/.venv /app/.venv
+COPY --chown=domsignal:domsignal alembic.ini ./
+COPY --chown=domsignal:domsignal migrations/ ./migrations/
+COPY --chown=domsignal:domsignal regions/ ./regions/
+COPY --from=frontend-build --chown=domsignal:domsignal /build/miniapp/dist ./miniapp/dist/
+USER 10001:10001
+EXPOSE 8000
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
+  CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+CMD ["uvicorn", "domsignal.main:app", "--host", "0.0.0.0", "--port", "8000"]

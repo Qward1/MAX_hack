@@ -1,0 +1,13 @@
+schema_version: 1
+pack_id: demo
+region: RU-DEMO
+version: "1"
+rules:
+  - id: demo-manual-category
+    category: other
+    verification_status: demo
+    source:
+      title: Демонстрационный пакет ДомСигнала
+      url: https://example.invalid/domsignal-demo-source
+    due_at: null
+    note: Правило не проверено; ответственный и нормативный срок не утверждаются.

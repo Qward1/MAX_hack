@@ -23,54 +23,135 @@ jobs:
         uses: actions/checkout@v7
         with:
           persist-credentials: false
-
-      - name: Verify bootstrap repository
+      - name: Verify required files and clean merge
         shell: bash
         run: |
           set -euo pipefail
-
           required=(
-            AGENTS.md
-            AGENT_INSTRUCTIOM.md
-            IMPLEMENTATION_CONTEXT.md
-            ROADMAP.md
-            docs/WORKFLOW.md
-            docs/ARCHITECTURE.md
-            docs/CONTRACTS.md
-            docs/product/domsignal_plan.md
-            docs/status/dev-a.md
-            docs/status/dev-b.md
+            AGENTS.md AGENT_INSTRUCTIOM.md IMPLEMENTATION_CONTEXT.md ROADMAP.md README.md
+            pyproject.toml uv.lock miniapp/package-lock.json compose.yaml Dockerfile
+            docs/WORKFLOW.md docs/ARCHITECTURE.md docs/CONTRACTS.md docs/openapi.json
+            docs/product/domsignal_plan.md docs/status/dev-a.md docs/status/dev-b.md
+            scripts/check.py scripts/docker_smoke.py
           )
-
           for path in "${required[@]}"; do
             test -f "$path" || { echo "Missing required file: $path"; exit 1; }
           done
-
           grep -Fq 'AGENT_INSTRUCTIOM.md' AGENTS.md
-          grep -Fq 'IMPLEMENTATION_CONTEXT.md' AGENT_INSTRUCTIOM.md
-          grep -Fq 'ROADMAP.md' AGENT_INSTRUCTIOM.md
-          grep -Fq 'docs/WORKFLOW.md' AGENT_INSTRUCTIOM.md
-          grep -Fq 'docs/ARCHITECTURE.md' AGENT_INSTRUCTIOM.md
-          grep -Fq 'docs/CONTRACTS.md' AGENT_INSTRUCTIOM.md
-          grep -Fq 'docs/product/domsignal_plan.md' AGENT_INSTRUCTIOM.md
-
           if git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- .; then
             echo 'Conflict marker found.'
             exit 1
           fi
 
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.12.6'
+          enable-cache: true
+      - run: uv sync --frozen --group dev
+      - run: uv run python scripts/check.py --scope backend
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.21.0'
+          cache: npm
+          cache-dependency-path: miniapp/package-lock.json
+      - run: npm ci
+        working-directory: miniapp
+      - run: npm run typecheck && npm run test -- --run && npm run build
+        working-directory: miniapp
+
+  contracts:
+    name: contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.12.6'
+          enable-cache: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.21.0'
+          cache: npm
+          cache-dependency-path: miniapp/package-lock.json
+      - run: uv sync --frozen --group dev
+      - run: npm ci
+        working-directory: miniapp
+      - run: uv run python scripts/check.py --scope contracts
+
+  postgres-and-docker:
+    name: postgres-and-docker
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.10-bookworm
+        env:
+          POSTGRES_DB: domsignal
+          POSTGRES_USER: domsignal
+          POSTGRES_PASSWORD: domsignal
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U domsignal -d domsignal"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql+asyncpg://domsignal:domsignal@127.0.0.1:5432/domsignal
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.12.6'
+          enable-cache: true
+      - run: uv sync --frozen --group dev
+      - run: uv run python scripts/check.py --scope integration
+      - name: Clean-store and restart Docker smoke
+        run: uv run python scripts/docker_smoke.py --project domsignal-ci-${{ github.run_id }}
+
   quality-gate:
     name: quality-gate
     if: always()
-    needs: [repository-sanity]
+    needs: [repository-sanity, backend, frontend, contracts, postgres-and-docker]
     runs-on: ubuntu-latest
     steps:
-      - name: Require all mandatory jobs
+      - name: Require every mandatory job
         env:
-          REPOSITORY_SANITY_RESULT: ${{ needs.repository-sanity.result }}
+          SANITY: ${{ needs.repository-sanity.result }}
+          BACKEND: ${{ needs.backend.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          CONTRACTS: ${{ needs.contracts.result }}
+          INTEGRATION: ${{ needs.postgres-and-docker.result }}
         shell: bash
         run: |
-          if [ "$REPOSITORY_SANITY_RESULT" != "success" ]; then
-            echo "repository-sanity result: $REPOSITORY_SANITY_RESULT"
-            exit 1
-          fi
+          set -euo pipefail
+          for result in "$SANITY" "$BACKEND" "$FRONTEND" "$CONTRACTS" "$INTEGRATION"; do
+            test "$result" = success || exit 1
+          done
