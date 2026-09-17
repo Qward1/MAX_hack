@@ -3,15 +3,18 @@
 ## Статус
 
 Это **target contract**, подготовленный DEV-B для реализации DEV-A. Он не
-объявляет перечисленные endpoints доступными. На текущей базе ветки
-`dev/b-experience` опубликованного API нет; фактическая доступность после merge
-определяется OpenAPI и contract tests, а не этим документом.
+объявляет перечисленные endpoints доступными. Фактическая доступность
+определяется OpenAPI и contract tests, а не этим документом. Для B-02 в
+`dev/b-experience` с явного разрешения пользователя объединён локальный
+FND-01/C0. Реализованная граница C0 сохранена ниже отдельно от target v0.1;
+это не утверждение о принятии FND-01 в `main`.
 
 Read-only наблюдение параллельного FND-01 на локальном `dev/a-core@c939ccf`:
 C0 реализует auth/test boundaries, `GET /api/v1/capabilities`, `GET /api/v1/me`,
 `POST /api/v1/reports`, house incidents list, incident detail и test MAX replay;
 live webhook честно отвечает `503`. Appeals, drafts, analyze, activity, join и
-admin API там отсутствуют. Этот commit не замёржен в текущую ветку или `main`.
+admin API там отсутствуют. Commit включён в DEV-B для B-02; перечисленные ниже
+расхождения с target B-00 этим объединением не устранены.
 
 Backend является source of truth для incident status, matching, route,
 provenance, capabilities и `allowed_actions`. Frontend не вычисляет права и не
@@ -155,7 +158,7 @@ idempotency conflict, `422` validation. Sensitive auth details не попада
 ## Contract conflicts / decisions required
 
 Read-only сверка локальной параллельной ветки `dev/a-core` на commit `c939ccf`
-показывает незамёрженный C0, а не состояние `main`:
+описывает исходный C0, теперь включённый в DEV-B для B-02, а не состояние `main`:
 
 - C0 создаёт report через `POST /api/v1/reports` с `house_id` в body; target
   использует house-scoped analyze + create. DEV-A должен выбрать совместимую

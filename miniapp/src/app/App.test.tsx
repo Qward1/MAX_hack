@@ -54,7 +54,7 @@ describe('house board', () => {
       .mockRejectedValueOnce(new Error('Сеть недоступна'))
       .mockResolvedValueOnce(await clientWith().capabilities());
     render(<App client={client} />);
-    expect(await screen.findByText('Сеть недоступна')).toBeTruthy();
+    expect(await screen.findByText('Доска временно недоступна')).toBeTruthy();
     fireEvent.click(screen.getByText('Попробовать снова'));
     await waitFor(() => expect(screen.getByText('На доске пока пусто')).toBeTruthy());
   });
