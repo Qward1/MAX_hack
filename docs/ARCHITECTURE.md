@@ -2,10 +2,12 @@
 
 ## Статус
 
-Walking skeleton реализован в ветке `dev/a-core`; до merge это не описание
-состояния `main`. Реальный slice: test session → membership → manual report →
-PostgreSQL `Report`/`Incident` → REST read → mini app board/detail → повторное
-чтение после reload. Live MAX, routes и appeals не реализованы.
+Walking skeleton реализован в доступном `dev/a-core@c939ccf`; до merge это не
+описание состояния `origin/main@a70df01`. Тот же foundation включён в
+`origin/dev/b-experience@c4492dd`, где B-02 остаётся частичным. Реальный slice:
+test session → membership → manual report → PostgreSQL `Report`/`Incident` →
+REST read → mini app board/detail → повторное чтение после reload. Live MAX,
+routes и appeals не реализованы.
 
 ## Runtime
 
@@ -61,6 +63,33 @@ scripts/         checks, OpenAPI export, region validation, Docker smoke
 ответственности. `bootstrap.py` явно собирает engine, services, transport и
 worker handlers без DI-framework.
 
+## Граница AI ↔ product backend
+
+Это логическая граница внутри текущего backend package, а не новый
+микросервис. Подробный ownership путей и задач задаёт `ROADMAP.md`.
+
+1. DEV-B принимает запрос, проверяет identity, доступ и допустимый scope текста
+   и кандидатов.
+2. DEV-A анализирует только разрешённые данные и возвращает типизированный
+   результат: категорию, извлечённые поля, ранжированных кандидатов,
+   неопределённость, нужные уточнения и состояние выполнения анализа.
+3. DEV-B валидирует результат, применяет safety и доменные правила, принимает
+   решение, выполняет транзакцию и формирует public API/UI ответ.
+
+AI может предложить похожие инциденты, признаки риска или формулировку, но core
+решает, допустимо ли объединение, кому доступны данные, что сохранить и как
+вести версии/историю. Safety-путь имеет проверенный deterministic приоритет и
+не ждёт модель. LLM не определяет юридическую ответственность, нормативный
+срок, внешнюю регистрацию или факт устранения.
+
+AI-specific provider, prompt, evaluation и изолированный job handler принадлежат
+DEV-A. Общая очередь, leases, retries, outbox, delivery, registration/wiring и
+settings принадлежат DEV-B. Аналогично, dataset модели — зона A, а справочники
+домов, нормативные правила и region packs — B; ASR/vision provider — A, а
+upload/storage/access/UX вложений — B. Целевые каталоги AI/NLP появятся только
+с соответствующей roadmap-задачей; в проверенных refs отдельного AI-модуля пока
+нет.
+
 ## Транзакционные границы
 
 - `POST /reports` проверяет membership, создаёт Report/Incident, outbox и
@@ -95,11 +124,19 @@ HMAC-хеш токена. LIVE-вектор MAX пока не проверен.
 
 Точки подключения:
 
-- A-01…A-04: расширение `contracts` и `services`, не замена C0;
-- A-05: новые job kinds и outbox sender в `worker.handlers.mapping`;
+- A-01: DEV-B согласует C0/B-00 и расширяет public `contracts`/generated types
+  совместимым producer+consumer-срезом, не заменяя C0 фиктивным API;
+- A-02/A-04: DEV-B расширяет rules, services, API и persistence;
+- A-03: DEV-A реализует NLP/извлечение/детектор риска, DEV-B — intake
+  orchestration и применение safety-политики;
+- A-05: DEV-B развивает общие job kinds, outbox sender и delivery в worker;
+- A-06: DEV-A возвращает semantic scores/candidates, DEV-B принимает доменное
+  решение и отвечает за counts, persistence и concurrency;
 - B-02/B-03: реальный MAX transport и payload adapter за `MaxTransport` и
-  normalized ingress;
+  normalized ingress, Owner DEV-B;
 - B-02/B-05: mini app использует generated schema и capability flags;
-- A-02: проверенные region packs по `regions/schema.json`.
+- A-02/A-11: DEV-B ведёт проверенные region packs по `regions/schema.json`;
+- A-14: DEV-B ведёт attachment/storage/API, DEV-A подключает ASR/vision только
+  при согласованном scope и реальном provider.
 
 Неиспользуемые будущие директории и фиктивные endpoints не созданы.

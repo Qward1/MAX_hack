@@ -2,6 +2,10 @@
 
 Команды ниже подходят для Git Bash, macOS и Linux; приведённые команды Git также выполняются в PowerShell без Bash-подстановок. В примерах всегда выбирайте буквальное имя своей ветки.
 
+Имена веток и префиксы task ID исторические. Текущий Owner всегда берётся из
+явного поля карточки `ROADMAP.md`: DEV-A — AI/NLP/ML, DEV-B — product/fullstack/MAX
+и интегратор по умолчанию.
+
 ## START / SYNC
 
 1. Проверь checkout и дерево: `git rev-parse --show-toplevel`, `git branch --show-current`, `git status --short`. Не переключай ветку при чужих или непонятных изменениях.
@@ -26,7 +30,7 @@
 - Выполни fetch, merge актуального `origin/main` в ветку автора и релевантные проверки.
 - Открой PR из своей ветки в `main`; укажи task ID, контракты/миграции, проверки и ручную проверку.
 - Агент-ревьюер ищет дефекты, но не подменяет approval второго разработчика своим аккаунтом.
-- Требуются один approve второго разработчика, resolved conversations и актуальный зелёный `quality-gate`.
+- Требуются один approve второго разработчика, resolved conversations и актуальный зелёный `quality-gate`. DEV-A обязательно проверяет PR DEV-B; роль интегратора DEV-B не позволяет использовать `--admin` или обходить protection.
 - Зафиксируй проверенные head SHA и base SHA. Для CLI: `gh pr merge <PR-number> --merge --match-head-commit <checked-head-sha>` без `--admin` и без удаления постоянной ветки ([W8](https://cli.github.com/manual/gh_pr_merge)).
 - При изменении head/base снова проверь условия; строгая защита `main` должна блокировать устаревший результат.
 - После merge автор делает fetch и обычный merge `origin/main` в свою ветку; коллега подтягивает `main` в следующей сессии.
@@ -55,13 +59,36 @@ END выполняется по команде «заверши день» ил�
 
 ## AGENTS / WORKTREES
 
-Обычно работает один ведущий агент на разработчика. При реальном выигрыше допустимы до двух пишущих агентов в непересекающихся локальных worktree и один read-only reviewer. Число агентов не увеличивает человеческую способность проверить результат.
+Обычно работает один ведущий агент на разработчика. Один пишущий агент всегда
+имеет отдельный worktree/checkout. При реальном выигрыше DEV-A может разделить
+непересекающиеся provider/evaluation/NLP-срезы, а DEV-B — UI, bot и backend с
+непересекающимися write-paths; допустим и отдельный read-only reviewer. Общие
+contracts, migrations, dependency lockfiles и bootstrap/wiring имеют одного
+writer. Число агентов не увеличивает человеческую способность проверить
+результат.
 
 Постоянные remote-ветки только три: `main`, `dev/a-core`, `dev/b-experience`. Для параллельных агентов допустимы временные локальные `agent/a/<task-id>`, `agent/b/<task-id>` или detached worktree с сохранённой ссылкой на commit. Владелец последовательно переносит проверенные commits/патчи в свою ветку; автоматически публиковать task-ветки не нужно.
 
 Одну ветку нельзя одновременно checkout в двух worktree и нельзя обходить ограничение `--force` ([W4](https://git-scm.com/docs/git-worktree)). На разных устройствах также действует один active writer постоянной ветки. Compose project, БД/volumes, порты и ignored local data разделяются; production `.env` не копируется.
 
-Делегированному заданию достаточно: task ID, цель, разрешённые пути, входные DTO, acceptance criteria, команды проверки и запрет правки чужих зон. Полный план продукта в каждый prompt не копируется.
+Делегированному заданию достаточно: task ID, явный Owner, цель, разрешённые
+пути, входные DTO, acceptance criteria, команды проверки и запрет правки чужих
+зон. Результаты своих агентов владелец направления объединяет последовательно.
+Полный план продукта в каждый prompt не копируется.
+
+## WRITERS / INTEGRATION
+
+DEV-B — единственный writer public DTO/OpenAPI/generated TS, DB/migrations,
+bootstrap/settings, общих Python/frontend dependencies и lockfiles,
+Compose/CI/deploy и `IMPLEMENTATION_CONTEXT.md`. DEV-A самостоятельно пишет
+выделенные AI/NLP/ML modules, providers/prompts, datasets/evaluation,
+AI-specific resilience и изолированные AI handlers. Для совместимой границы
+AI ↔ product заранее достаточно короткого typed contract/fixture diff; отдельное
+разрешение на каждый файл внутри своей зоны не требуется.
+
+После значимого принятого merge DEV-B сверяет конкретный main SHA и обновляет
+общий context. Состояния `IMPLEMENTED IN BRANCH`, `MERGED` и `LIVE VERIFIED`
+фиксируются раздельно; branch-specific прогресс остаётся в status владельца.
 
 ## Короткие команды человеку
 

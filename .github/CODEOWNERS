@@ -1,12 +1,31 @@
-# CODEOWNERS is intentionally inactive until DEV_A_GITHUB and DEV_B_GITHUB are known.
-# Do not replace these logical labels with guessed accounts. No automatic review request is active yet.
+# Active CODEOWNERS rules remain intentionally disabled.
+# Verified existing GitHub account: @Qward1 (origin owner/current Git author).
+# The repository does not map @Qward1 to DEV-A or DEV-B and does not record the
+# second developer's username. Do not guess either mapping or invent accounts.
+# Add active rules only after both usernames and roles are confirmed.
 #
-# DEV-A: /app/core/ /app/services/ /app/contracts/ /app/db/ /app/api/ /app/nlp/
-#        /app/worker/ /app/bootstrap.py /app/settings.py /migrations/ /regions/
-#        /pyproject.toml /uv.lock /Dockerfile /compose*.yaml /deploy/ and backend/core tests.
-# DEV-B: /app/bot/ /miniapp/ browser tests, MAX scenario fixtures and user-facing copy.
-# BOTH:  root rules, ROADMAP.md, .github/workflows/, docs/CONTRACTS.md and shared scenario specs.
-# STATUS: /docs/status/dev-a.md belongs to DEV-A; /docs/status/dev-b.md belongs to DEV-B.
+# Canonical path map (ROADMAP.md is the source of truth):
 #
-# Once both valid usernames are confirmed, replace this comment-only map with active path rules.
-# CODEOWNERS routes review; it is not a per-branch write ACL.
+# DEV-B DEFAULTS — these broad product rules must be listed before A overrides:
+# /src/domsignal/                 product backend by default
+# /tests/                         product/backend tests by default
+# /src/domsignal/bot/ /miniapp/  MAX, bot, UI and browser tests
+# /src/domsignal/{api,contracts,core,services,db,tools}/
+# /src/domsignal/{bootstrap.py,settings.py,main.py}
+# /src/domsignal/worker/          common queue/leases/retries/outbox/delivery
+# /migrations/ /regions/ /scripts/ /deploy/
+# /pyproject.toml /uv.lock /miniapp/package*.json
+# /Dockerfile /compose*.yaml /.github/workflows/
+# /IMPLEMENTATION_CONTEXT.md /docs/CONTRACTS.md /docs/ARCHITECTURE.md
+#
+# DEV-A PRECISE OVERRIDES — keep after broad DEV-B rules (last match wins):
+# /src/domsignal/ai/ /src/domsignal/nlp/
+# /datasets/ /evaluation/ /model_artifacts/
+# /tests/ai/ /tests/nlp/
+# These AI paths are target paths and do not exist in the checked refs yet.
+# A future AI-specific job handler belongs under the precise AI path; common
+# worker registration/wiring remains DEV-B.
+#
+# SHARED REVIEW: /AGENTS.md /AGENT_INSTRUCTIOM.md /ROADMAP.md /docs/WORKFLOW.md
+# DEV-A is a required reviewer for DEV-B PRs; CODEOWNERS never grants a write ACL.
+# STATUS: /docs/status/dev-a.md belongs to DEV-A; /docs/status/dev-b.md to DEV-B.

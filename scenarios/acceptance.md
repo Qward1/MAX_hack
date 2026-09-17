@@ -3,8 +3,9 @@
 ## Статус и правила чтения
 
 Это acceptance-контракт целевого UX/API `v0.1`, а не отчёт о реализованных
-возможностях. Упомянутые target endpoints должны быть реализованы DEV-A и
-сверены с OpenAPI; текущая реализация отделена в `docs/CONTRACTS.md`.
+возможностях. Упомянутые target endpoints реализует DEV-B как writer public
+producer+consumer contract и сверяет с OpenAPI; DEV-A review AI boundary.
+Текущая реализация отделена в `docs/CONTRACTS.md`.
 
 Во всех сценариях backend повторно проверяет identity, доступ к дому и
 `allowed_actions`. Deep link передаёт только контекст. Stateful POST-запросы

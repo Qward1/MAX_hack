@@ -2,7 +2,7 @@
 
 ## Статус
 
-Это **target contract**, подготовленный DEV-B для реализации DEV-A. Он не
+Это **target contract**, владельцем и writer которого является DEV-B. Он не
 объявляет перечисленные endpoints доступными. Фактическая доступность
 определяется OpenAPI и contract tests, а не этим документом. Для B-02 в
 `dev/b-experience` с явного разрешения пользователя объединён локальный
@@ -17,14 +17,17 @@ admin API там отсутствуют. Commit включён в DEV-B для B
 расхождения с target B-00 этим объединением не устранены.
 
 Backend является source of truth для incident status, matching, route,
-provenance, capabilities и `allowed_actions`. Frontend не вычисляет права и не
-hardcode региональные правила. Deep link передаёт navigation context, но не
-access grant.
+provenance, capabilities и `allowed_actions`. DEV-B отвечает за public DTO,
+OpenAPI, generated TypeScript, их применение в core/services и транзакции.
+Frontend не вычисляет права и не hardcode региональные правила. Deep link
+передаёт navigation context, но не access grant.
 
 Согласованная foundation boundary сохраняется: Pydantic/FastAPI → OpenAPI →
 generated TypeScript types; внешние MAX identifiers на JSON-границе — строки,
 время — timezone-aware UTC; API и bot вызывают общие services и не отдают ORM;
-контракт меняется совместимо либо одним набором producer + consumer + tests.
+контракт меняется совместимо либо одним набором producer + consumer + generated
+types + tests. AI-specific внутренний контракт пишет DEV-A, а его совместимую
+границу с продуктом DEV-A и DEV-B проверяют вместе.
 
 ## Общие значения
 
@@ -73,7 +76,7 @@ Target codes: `prepare_appeal`, `edit_draft`, `join`, `copy_draft`,
 
 ## Минимальные DTO
 
-Формальная required/nullable-схема должна быть зафиксирована DEV-A в Pydantic →
+Формальная required/nullable-схема должна быть зафиксирована DEV-B в Pydantic →
 OpenAPI; ниже — обязательная семантика, а не параллельная JSON Schema.
 
 | DTO | Минимальные поля v0.1 |
@@ -93,6 +96,29 @@ submit contract. Emergency data overrides the ordinary route in presentation.
 Matching and create-vs-existing decisions remain server-side. UI показывает
 неопределённость по `requires_confirmation`, а не вычисляет свой confidence
 threshold.
+
+### AI ↔ product analysis handoff (target)
+
+Это логическая граница внутри текущего backend package, а не требование нового
+сервиса и не заявление о существующем endpoint сверх OpenAPI.
+
+1. DEV-B аутентифицирует запрос, проверяет house/resource access и формирует
+   допустимый текст и набор кандидатов.
+2. DEV-A возвращает типизированный аналитический результат через согласованную
+   семантику `ProblemAnalysis`: категория, извлечённые поля, candidates,
+   uncertainty/`requires_confirmation`, вопросы и состояние выполнения
+   (`rules`, `model`, `manual` или явная ошибка/fallback).
+3. DEV-B валидирует результат, применяет safety и остальные бизнес-правила,
+   принимает create/join/merge решение, выполняет транзакцию и формирует
+   public response.
+
+Semantic score является предложением, а не разрешением merge. Признак риска не
+заменяет проверенный безопасный текст и не задерживает deterministic off-ramp.
+Предложенная моделью формулировка сохраняется только после продуктовой
+валидации, прав доступа и подтверждения пользователя. Модель не задаёт
+юридическую ответственность, нормативный срок, факт внешней регистрации или
+устранения. При недоступном AI продукт использует честный rules/manual путь, а
+не выдуманный production-ответ.
 
 ## Target endpoints
 
@@ -161,7 +187,7 @@ Read-only сверка локальной параллельной ветки `d
 описывает исходный C0, теперь включённый в DEV-B для B-02, а не состояние `main`:
 
 - C0 создаёт report через `POST /api/v1/reports` с `house_id` в body; target
-  использует house-scoped analyze + create. DEV-A должен выбрать совместимую
+  использует house-scoped analyze + create. DEV-B должен выбрать совместимую
   миграцию/alias и отразить её в OpenAPI.
 - C0 возвращает capabilities отдельным endpoint и с другим набором flags;
   target требует пять UX capabilities в `UserContext`.
@@ -179,16 +205,31 @@ Read-only сверка локальной параллельной ветки `d
 - Appeals, activity, analyze, join, houses list и admin target routes в C0
   отсутствуют. Это ожидаемые будущие endpoints; B-00 не добавляет заглушки.
 
-## DEV-B → DEV-A requirements
+## A-01 — следующий convergence-срез DEV-B
 
-- DTO: `UserContext`, `HouseSummary`, `IncidentSummary`, `IncidentDetail`, `ProblemAnalysis`, `AppealDraft`, `ActivityEvent`, `ActionDescriptor`, `ProblemDetails` с указанными минимальными полями и Pydantic → OpenAPI source of truth.
-- Statuses: `detected`, `open`, `reported`, `overdue`, `escalated`, `resolved`, `dismissed`; `reported` — только self-report пользователя.
-- `allowed_actions`: объекты `{code, enabled, reason}`; codes `prepare_appeal`, `edit_draft`, `join`, `copy_draft`, `open_official_channel`, `mark_filed`, `mark_resolved`, `mark_unresolved`, `escalate`, `report_not_problem`, `retry`.
-- Capabilities в `UserContext`: `group_mode`, `miniapp`, `photo_analysis`, `voice`, `admin`.
-- Target endpoints: `GET /api/v1/me`; `GET /api/v1/houses`; `GET /api/v1/houses/{house_id}/incidents`; `POST /api/v1/houses/{house_id}/reports/analyze`; `POST /api/v1/houses/{house_id}/reports`; `GET /api/v1/incidents/{incident_id}`; `POST /api/v1/incidents/{incident_id}/join`; `POST /api/v1/incidents/{incident_id}/appeal-draft`; `GET /api/v1/appeal-drafts/{draft_id}`; `PATCH /api/v1/appeal-drafts/{draft_id}`; `POST /api/v1/incidents/{incident_id}/appeals/mark-filed`; `POST /api/v1/incidents/{incident_id}/feedback`; `GET /api/v1/me/activity`; `GET /api/v1/admin/houses/{house_id}/summary`; `GET /api/v1/admin/houses/{house_id}/settings`; `PATCH /api/v1/admin/houses/{house_id}/settings`; `POST /api/v1/admin/incidents/{incident_id}/dismiss`.
-- `mark_filed`: idempotent user assertion only; no external confirmation, invented registration or implicit call from copy/open.
-- Provenance: `official`, `product_derived`, `user_reported`, `demo` with required source/date/demo semantics.
-- Errors: `application/problem+json` with `code`, `title`, `status`, `detail`, `retryable`, `trace_id`; validation adds `field_errors`.
+B-02 остаётся PARTIAL. Расхождения выше закрывает существующая A-01 с Owner
+DEV-B; отдельная дублирующая карточка не создаётся. Минимальный следующий срез:
+
+- перевести `allowed_actions` на структурированный `ActionDescriptor`; read
+  access подтверждается scoped endpoint, а неподдержанные команды не
+  публикуются как enabled и не подменяются mock endpoint;
+- разделить происхождение данных (`official`, `product_derived`,
+  `user_reported`, `demo`) и актуальность/дату проверки;
+- согласовать пять UX capabilities и единый источник их выдачи;
+- зафиксировать `message_count`/`report_count` отдельно от уникального
+  `participant_count`; число сообщений не выдаётся за число жителей;
+- добавить нужные B-02 read-model поля с честными nullable/unknown значениями:
+  structured location, `updated_at`, отдельные counts, route/recipient/source
+  и filing/appeal summary только когда соответствующие данные существуют;
+- свести error contract к согласованным `retryable`, `trace_id` и
+  `field_errors`, сохранив безопасные 401/403/404/409/422 semantics;
+- одним diff обновить Pydantic producer, OpenAPI, generated TypeScript,
+  frontend binding и producer/consumer/negative contract tests.
+
+Этот срез не обязан реализовывать analyze, join, appeals, feedback, admin или
+другие будущие business actions. До появления реального endpoint и доменного
+правила соответствующий action отсутствует. Target statuses, endpoints и DTO
+выше сохраняются как план последующих срезов, а не как обещание текущего API.
 
 ---
 
