@@ -6,22 +6,35 @@
 
 ## Проверенное состояние
 
-Состояние сверено 2026-09-17 после одного fetch.
+Состояние сверено 2026-09-17 после интеграционного merge `e3ab6b7` и синхронизации
+`main` с `dev/b-experience`.
 
-- **MERGED:** `origin/main@a70df01` содержит только bootstrap совместной работы и repository-sanity. Runtime, БД, API, bot и mini app в проверенном `main` не реализованы.
-- **IMPLEMENTED IN BRANCH:** foundation находится в доступном `dev/a-core@c939ccf`; `origin/dev/b-experience@c4492dd` содержит включённый foundation и частичный B-02. Это не готовность `main`; детали и проверки хранятся в status владельцев.
-- **LIVE VERIFIED:** реальный MAX, публичный deploy и внешние providers не проверены.
-- Интегратор по умолчанию — **DEV-B**. Он обновляет этот файл после значимого принятого merge/этапа по проверенному main/ref. Наличие кода в dev-ветке само по себе не меняет состояние выше.
+- **IMPLEMENTED:** FND-01 даёт исполняемый backend/runtime, PostgreSQL-модель и
+  миграцию, C0 API, test-session/demo seed, durable jobs/worker, режимы MAX
+  transport `off`/`recording`, OpenAPI и сгенерированные TypeScript-типы.
+- **MERGED TO MAIN:** FND-01, B-00 и реализация B-02 на фактическом C0 API входят
+  в `main`; B-02 остаётся **PARTIAL**, пока producer/consumer не сведены с
+  целевым B-00 contract.
+- **LIVE VERIFIED:** нет. Локальные unit/contract/frontend/PostgreSQL/Docker
+  проверки не являются подтверждением работы в реальном MAX или публичном
+  production-окружении.
+- **NOT LIVE VERIFIED:** реальные MAX web/iOS/Android-клиенты, live initData и
+  webhook, MAX-controlled appearance, публичный TLS deploy и внешние providers.
+- Интегратор по умолчанию — **DEV-B**. Он обновляет этот файл после значимого
+  принятого merge/этапа по проверенному `main`.
 
 ## Возможности в проверенном main
 
 | Возможность / flag | Состояние | Фактический статус |
 |---|---|---|
-| Runtime feature flags | PLANNED | Активных runtime-флагов в `origin/main@a70df01` нет |
-| MAX transport | PLANNED | Локальный режим должен быть `off`; live transport не подтверждён |
-| LLM/NLP, media, group mode, reminders | PLANNED | Не реализованы и не проверены в main |
-| Demo/test data | PLANNED | В main данные и seed отсутствуют |
-| Live MAX validation | PLANNED | Не выполнялась |
+| Backend/runtime foundation | IMPLEMENTED · MERGED TO MAIN | FastAPI, services/core, PostgreSQL, Alembic, worker/jobs, Docker и CI quality gate находятся в `main` |
+| C0 API и контракты | IMPLEMENTED · MERGED TO MAIN | House-scoped auth, reports/incidents, capabilities, OpenAPI и TS schema работают; B-00 convergence ещё не завершена |
+| B-02 mini app | PARTIAL · MERGED TO MAIN | Board/detail/report flow подключён к реальному C0 API; planned actions/read-model/error semantics ещё требуют A-01 convergence |
+| MAX transport | IMPLEMENTED LOCALLY · NOT LIVE VERIFIED | Подпись initData и режимы `off`/`recording` реализованы; live webhook/client compatibility не подтверждены |
+| Demo/test data | IMPLEMENTED · MERGED TO MAIN | Явные local/test session и demo seed присутствуют; это не реальные пользовательские данные |
+| LLM/NLP/ML | NOT IMPLEMENTED | Детерминированный `rules` fallback сохраняет рабочий manual path; AI providers и модели не подключены |
+| Media, group mode, reminders | NOT IMPLEMENTED | Не реализованы и не проверены |
+| Public deploy / Live MAX validation | NOT LIVE VERIFIED | Реальный MAX и публичный TLS-стенд не проверялись |
 
 ## Согласованные границы
 
