@@ -3,7 +3,7 @@ from __future__ import annotations
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
 
-from domsignal.db.models import House, HouseMembership, User
+from domsignal.db.models import House, ResidentMembership, User
 from domsignal.db.session import create_engine, create_session_factory
 from domsignal.main import create_app
 from domsignal.settings import Settings
@@ -23,7 +23,7 @@ async def test_seed_is_idempotent(integration_settings: Settings) -> None:
     async with factory() as session:
         assert await session.scalar(select(func.count()).select_from(User)) == 2
         assert await session.scalar(select(func.count()).select_from(House)) == 2
-        assert await session.scalar(select(func.count()).select_from(HouseMembership)) == 2
+        assert await session.scalar(select(func.count()).select_from(ResidentMembership)) == 2
     await engine.dispose()
 
 
@@ -61,12 +61,12 @@ async def test_report_persists_idempotently_and_is_house_scoped(
         forbidden = await client.get(
             f"/api/v1/houses/{DEMO_HOUSE_ID}/incidents", headers=outsider_auth
         )
-        assert forbidden.status_code == 403
+        assert forbidden.status_code == 404
         query_cannot_grant_access = await client.get(
             f"/api/v1/houses/{OTHER_HOUSE_ID}/incidents?house_id={DEMO_HOUSE_ID}",
             headers=auth,
         )
-        assert query_cannot_grant_access.status_code == 403
+        assert query_cannot_grant_access.status_code == 404
 
     restarted = create_app(integration_settings)
     async with AsyncClient(

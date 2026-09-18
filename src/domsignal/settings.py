@@ -50,6 +50,13 @@ class Settings(BaseSettings):
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
     static_dir: str = "miniapp/dist"
 
+    @field_validator("database_url")
+    @classmethod
+    def require_postgresql(cls, value: str) -> str:
+        if not value.startswith("postgresql+asyncpg://"):
+            raise ValueError("DATABASE_URL must use PostgreSQL with asyncpg")
+        return value
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_origins(cls, value: object) -> object:

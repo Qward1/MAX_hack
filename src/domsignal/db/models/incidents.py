@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, ForeignKeyConstraint, Index, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domsignal.db.base import Base
@@ -11,8 +11,19 @@ from domsignal.db.base import Base
 
 class Incident(Base):
     __tablename__ = "incidents"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["management_id", "house_id"],
+            ["house_managements.id", "house_managements.house_id"],
+            name="fk_incident_management_house",
+            ondelete="RESTRICT",
+        ),
+        Index("ix_incident_house_status", "house_id", "status"),
+        Index("ix_incident_management_status", "management_id", "status"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    management_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     house_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("houses.id", ondelete="CASCADE"), index=True
     )

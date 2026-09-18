@@ -7,7 +7,7 @@ from httpx import ASGITransport, AsyncClient
 from jsonschema import Draft202012Validator
 from sqlalchemy import func, select
 
-from domsignal.db.models import House, HouseMembership, IdempotencyRecord, Job, Report
+from domsignal.db.models import House, IdempotencyRecord, Job, Report, ResidentMembership
 from domsignal.main import create_app
 from domsignal.services.context import ScopeState
 from domsignal.services.errors import AccessDenied
@@ -127,9 +127,9 @@ async def test_house_context_direct_id_and_untrusted_selectors(
             assert "description" not in denied.json()
         assert (
             await client.get(path + f"?house_id={OTHER_HOUSE_ID}", headers=headers)
-        ).status_code == 403
+        ).status_code == 404
         async with container.session_factory() as session, session.begin():
-            session.add(HouseMembership(user_id=DEMO_USER_ID, house_id=OTHER_HOUSE_ID))
+            session.add(ResidentMembership(user_id=DEMO_USER_ID, house_id=OTHER_HOUSE_ID))
         # Even access to both houses does not make a mismatched house selector valid.
         assert (
             await client.get(path + f"?house_id={OTHER_HOUSE_ID}", headers=headers)
@@ -137,7 +137,7 @@ async def test_house_context_direct_id_and_untrusted_selectors(
         assert (
             await client.get(path + f"?house_id={DEMO_HOUSE_ID}", headers=headers)
         ).status_code == 200
-        assert (await client.get(path + f"?house_id={uuid4()}", headers=headers)).status_code == 403
+        assert (await client.get(path + f"?house_id={uuid4()}", headers=headers)).status_code == 404
         for extra in (
             {"tenant_id": str(uuid4())},
             {"roles": ["admin"]},
@@ -161,7 +161,7 @@ async def test_house_context_direct_id_and_untrusted_selectors(
                 session, user_id=DEMO_USER_ID, house_id=DEMO_HOUSE_ID
             )
             assert context.actor_user_id == DEMO_USER_ID and context.house_id == DEMO_HOUSE_ID
-            assert context.tenant_id.state == context.management_id.state == ScopeState.UNKNOWN
+            assert context.tenant_id.state == context.management_id.state == ScopeState.KNOWN
             assert context.chat_binding_id.state == ScopeState.NOT_APPLICABLE
             assert context.source_chat_id.value is context.binding_version.value is None
             assert context.roles == frozenset({"resident"})
@@ -169,16 +169,16 @@ async def test_house_context_direct_id_and_untrusted_selectors(
         # Current membership is rechecked on direct reads and idempotent retries.
         async with container.session_factory() as session, session.begin():
             membership = await session.scalar(
-                select(HouseMembership).where(
-                    HouseMembership.user_id == DEMO_USER_ID,
-                    HouseMembership.house_id == DEMO_HOUSE_ID,
+                select(ResidentMembership).where(
+                    ResidentMembership.user_id == DEMO_USER_ID,
+                    ResidentMembership.house_id == DEMO_HOUSE_ID,
                 )
             )
             await session.delete(membership)
-        assert (await client.get(path, headers=headers)).status_code == 403
+        assert (await client.get(path, headers=headers)).status_code == 404
         assert (
             await client.post("/api/v1/reports", headers=headers, json=payload())
-        ).status_code == 403
+        ).status_code == 404
     await container.engine.dispose()
 
 
@@ -221,7 +221,7 @@ async def test_replay_cannot_impersonate_or_authorize_by_event_metadata(
         }
         assert (await client.post("/max/replay", headers=headers, json=event)).status_code == 403
         event["external_user_id"] = "outsider-max-user"
-        assert (await client.post("/max/replay", headers=headers, json=event)).status_code == 403
+        assert (await client.post("/max/replay", headers=headers, json=event)).status_code == 404
         async with container.session_factory() as session:
             assert await session.scalar(select(func.count()).select_from(Job)) == 0
     await container.engine.dispose()

@@ -190,7 +190,7 @@ test("real API → PostgreSQL → board → detail → reload; web keyboard and 
     }),
   );
   await page.getByRole("button", { name: "Обновить", exact: true }).click();
-  await expect(page.getByText("Нет доступа к этому дому")).toBeVisible();
+  await expect(page.getByText("Проблема не найдена")).toBeVisible();
   await expect(page.getByText(description, { exact: true })).toHaveCount(0);
 });
 

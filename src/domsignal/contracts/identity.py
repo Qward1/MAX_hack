@@ -14,7 +14,7 @@ class HouseAccess(ContractModel):
     id: UUID
     name: str
     address: str
-    role: Literal["resident", "admin"]
+    role: Literal["resident", "admin", "operator", "responsible"]
     is_demo: bool
 
 

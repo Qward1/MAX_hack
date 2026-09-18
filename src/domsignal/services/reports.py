@@ -59,7 +59,9 @@ class ReportService:
                 user_id=actor_id,
                 house_id=payload.house_id,
                 source=provenance,
+                for_write=True,
             )
+            self.memberships.require_permission(context, "report.create")
             existing = await reliability.idempotency_record(
                 actor_id=actor_id, action=action, key=idempotency_key
             )
@@ -82,7 +84,7 @@ class ReportService:
 
             repo = IncidentRepository(session)
             incident = await repo.create_incident(
-                house_id=context.house_id,
+                context=context,
                 category=payload.category.value,
                 title=CATEGORY_TITLES[payload.category],
                 description=payload.description,
@@ -129,7 +131,8 @@ class ReportService:
     ) -> IncidentList:
         context = await self.memberships.require_house(session, user_id=actor_id, house_id=house_id)
         repo = IncidentRepository(session)
-        incidents, total = await repo.list_for_house(context.house_id, limit=limit, offset=offset)
+        self.memberships.require_permission(context, "incident.read")
+        incidents, total = await repo.list_for_house(context, limit=limit, offset=offset)
         counts = await repo.counts([item.id for item in incidents])
         is_demo = await repo.house_is_demo(context.house_id)
         return IncidentList(
@@ -149,16 +152,18 @@ class ReportService:
         house_id: UUID | None = None,
     ) -> IncidentDetail:
         repo = IncidentRepository(session)
-        incident = await repo.incident(incident_id)
-        if incident is None:
-            raise ResourceNotFound("Incident was not found")
+        resolved_house = house_id or await repo.incident_house_id(incident_id)
+        if resolved_house is None:
+            raise ResourceNotFound("Resource was not found")
         context = await self.memberships.require_house(
             session,
             user_id=actor_id,
-            house_id=house_id if house_id is not None else incident.house_id,
+            house_id=resolved_house,
         )
-        if incident.house_id != context.house_id:
-            raise ResourceNotFound("Incident was not found in the selected house")
+        self.memberships.require_permission(context, "incident.read")
+        incident = await repo.incident(incident_id, context=context)
+        if incident is None:
+            raise ResourceNotFound("Resource was not found")
         reports = await repo.reports(incident_id)
         return self._detail(incident, reports, is_demo=await repo.house_is_demo(context.house_id))
 

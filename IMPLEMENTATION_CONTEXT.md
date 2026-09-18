@@ -39,6 +39,16 @@ ref; личный путь и модульный монолит сохраняю
 - Интегратор по умолчанию — **DEV-B**. Он обновляет этот файл после значимого
   принятого merge/этапа по проверенному `main`.
 
+## Сверка интегратора 18.09.2026
+
+`origin/main` по fetch остаётся `3d4a095`; merge A-01/A-15 не выполнен.
+Таблица main ниже намеренно не повышена до состояния ветки. A-01 и A-15
+**IMPLEMENTED IN BRANCH `dev/b-experience`**, проверки и текущие ограничения —
+[DEV-B handoff](docs/status/dev-b.md); новая DB/access реализация описана в
+[ARCHITECTURE](docs/ARCHITECTURE.md) и [CONTRACTS](docs/CONTRACTS.md).
+Следующая интеграционная операция — review/CI и PR, не автоматический merge.
+Live MAX и deployment по-прежнему NOT VERIFIED.
+
 ## Возможности в проверенном main
 
 | Возможность / flag | Состояние | Фактический статус |

@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.dialects.postgresql import insert
 
-from domsignal.db.models import House, HouseMembership, User
+from domsignal.db.models import House, HouseManagement, ManagementCompany, ResidentMembership, User
 from domsignal.db.session import create_engine, create_session_factory
 from domsignal.settings import AppEnvironment, Settings, get_settings
 
 DEMO_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 OUTSIDER_USER_ID = UUID("00000000-0000-0000-0000-000000000002")
 DEMO_HOUSE_ID = UUID("00000000-0000-0000-0000-000000000101")
+DEMO_TENANT_ID = UUID("00000000-0000-0000-0000-000000000301")
 OTHER_HOUSE_ID = UUID("00000000-0000-0000-0000-000000000102")
 
 
@@ -65,27 +67,49 @@ async def seed(settings: Settings | None = None) -> None:
                 .on_conflict_do_nothing(index_elements=[House.id])
             )
             await session.execute(
-                insert(HouseMembership)
+                insert(ManagementCompany)
+                .values(
+                    id=DEMO_TENANT_ID,
+                    name="Demo ManagementCompany",
+                    is_demo=True,
+                )
+                .on_conflict_do_nothing(index_elements=[ManagementCompany.id])
+            )
+            for house_id in (DEMO_HOUSE_ID, OTHER_HOUSE_ID):
+                await session.execute(
+                    insert(HouseManagement)
+                    .values(
+                        id=house_id,
+                        house_id=house_id,
+                        tenant_id=DEMO_TENANT_ID,
+                        valid_from=datetime(2020, 1, 1, tzinfo=UTC),
+                        basis_type="demo",
+                        is_demo=True,
+                    )
+                    .on_conflict_do_nothing(index_elements=[HouseManagement.id])
+                )
+            await session.execute(
+                insert(ResidentMembership)
                 .values(
                     [
                         {
                             "id": UUID("00000000-0000-0000-0000-000000000201"),
                             "user_id": DEMO_USER_ID,
                             "house_id": DEMO_HOUSE_ID,
-                            "role": "resident",
+                            "source": "demo",
                             "evidence_source": "demo_seed",
                         },
                         {
                             "id": UUID("00000000-0000-0000-0000-000000000202"),
                             "user_id": OUTSIDER_USER_ID,
                             "house_id": OTHER_HOUSE_ID,
-                            "role": "resident",
+                            "source": "demo",
                             "evidence_source": "demo_seed",
                         },
                     ]
                 )
                 .on_conflict_do_nothing(
-                    index_elements=[HouseMembership.user_id, HouseMembership.house_id]
+                    index_elements=[ResidentMembership.user_id, ResidentMembership.house_id]
                 )
             )
     finally:

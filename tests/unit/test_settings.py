@@ -1,7 +1,18 @@
 import pytest
 from pydantic import ValidationError
 
+from domsignal.db.session import create_engine
 from domsignal.settings import AppEnvironment, Settings
+
+
+@pytest.mark.parametrize(
+    "url", ["sqlite:///local.db", "sqlite+aiosqlite:///:memory:", "mysql://db/app"]
+)
+def test_runtime_rejects_non_postgresql(url: str) -> None:
+    with pytest.raises(ValidationError, match="PostgreSQL"):
+        Settings(database_url=url, _env_file=None)
+    with pytest.raises(ValueError, match="PostgreSQL"):
+        create_engine(url)
 
 
 def test_local_defaults_use_safe_offline_providers() -> None:

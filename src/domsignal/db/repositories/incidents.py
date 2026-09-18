@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domsignal.db.models import House, Incident, Report
+from domsignal.services.context import OperationContext
 
 
 class IncidentRepository:
@@ -13,10 +15,11 @@ class IncidentRepository:
         self.session = session
 
     async def create_incident(
-        self, *, house_id: UUID, category: str, title: str, description: str
+        self, *, context: OperationContext, category: str, title: str, description: str
     ) -> Incident:
         incident = Incident(
-            house_id=house_id,
+            house_id=context.house_id,
+            management_id=context.management_id.value,
             category=category,
             title=title,
             description=description,
@@ -51,24 +54,48 @@ class IncidentRepository:
         return report
 
     async def list_for_house(
-        self, house_id: UUID, *, limit: int, offset: int
+        self, context: OperationContext, *, limit: int, offset: int
     ) -> tuple[list[Incident], int]:
         items = list(
             await self.session.scalars(
                 select(Incident)
-                .where(Incident.house_id == house_id)
+                .where(
+                    Incident.house_id == context.house_id,
+                    Incident.management_id == context.management_id.value,
+                )
                 .order_by(Incident.created_at.desc())
                 .limit(limit)
                 .offset(offset)
             )
         )
         total = await self.session.scalar(
-            select(func.count()).select_from(Incident).where(Incident.house_id == house_id)
+            select(func.count())
+            .select_from(Incident)
+            .where(
+                Incident.house_id == context.house_id,
+                Incident.management_id == context.management_id.value,
+            )
         )
         return items, int(total or 0)
 
-    async def incident(self, incident_id: UUID) -> Incident | None:
-        return await self.session.get(Incident, incident_id)
+    async def incident_house_id(self, incident_id: UUID) -> UUID | None:
+        # Only routing metadata may be read before resolving access; never content.
+        return cast(
+            UUID | None,
+            await self.session.scalar(select(Incident.house_id).where(Incident.id == incident_id)),
+        )
+
+    async def incident(self, incident_id: UUID, *, context: OperationContext) -> Incident | None:
+        return cast(
+            Incident | None,
+            await self.session.scalar(
+                select(Incident).where(
+                    Incident.id == incident_id,
+                    Incident.house_id == context.house_id,
+                    Incident.management_id == context.management_id.value,
+                )
+            ),
+        )
 
     async def house_is_demo(self, house_id: UUID) -> bool:
         return bool(await self.session.scalar(select(House.is_demo).where(House.id == house_id)))

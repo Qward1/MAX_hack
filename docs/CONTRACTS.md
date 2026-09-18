@@ -199,45 +199,71 @@ analyze не нужны для convergence. Idempotency receipts старого 
 legacy actions из сохранённого JSON не выходят наружу. Изменённый payload с
 прежним ключом по-прежнему даёт 409 без повторного эффекта.
 
-### Server-resolved OperationContext
+### A-15 — server-resolved OperationContext (IMPLEMENTED IN BRANCH)
 
-`AuthenticatedUser` остаётся проверенной bearer identity. Существующий
-`MembershipService.require_house` теперь возвращает внутренний immutable
-`OperationContext`; второго параллельного authorization resolver нет.
-Services проверяют membership перед scoped read/create, включая повтор POST;
-repositories получают house/actor из проверенного контекста.
+18.09.2026, `dev/b-experience`, поверх A-01/C0.1. Не MERGED TO MAIN и не
+LIVE VERIFIED. Формы report/incident/board сохранены. `/me.houses[].role`
+совместимо расширен `operator`/`responsible`; `admin` остаётся public descriptor
+для company_admin, `resident` — для resident access. Полная RBAC модель и
+внутренние tenant/management IDs клиенту не требуются. OpenAPI/TS обновлены.
 
-- `actor_user_id`, `house_id` — известные UUID из identity/resource + membership;
-  `source` — внутренний api/max_replay, не поле публичного payload;
-  roles — существующая house membership; permissions — только текущие
-  incident.read/report.create, без tenant/admin полномочий.
-- tenant_id/management_id — `ScopeValue(UNKNOWN, null)`: связей пока нет.
-- chat_binding_id/source_chat_id/binding_version —
-  `ScopeValue(NOT_APPLICABLE, null)` для текущего личного API и diagnostic
-  replay без настоящего chat context. Нельзя трактовать это как проверку чата.
-- `ScopeValue(KNOWN, value)` требует значение; UNKNOWN/NOT_APPLICABLE его
-  запрещают. Actor и house required: неразрешённый operation не создаётся.
+Единственный resolver — `MembershipService.require_house`:
+authenticated actor → существующий House → текущая active HouseManagement
+(`valid_from <= now < valid_to`, null upper bound) и active ManagementCompany →
+active OrganizationMembership + HouseAssignment + неистёкшая active
+ResidentMembership → `AccessPolicy` → immutable OperationContext.
 
-Selectors не authority. Detail принимает optional `house_id` query: проверяет
-membership этого дома и равенство incident.house_id. Несовпадение в доступном
-доме → 404, недоступный дом → 403. Без selector дом однозначно определяется
-самим incident, затем проверяется membership; ID не обходит доступ. House
-list/create требуют явный ID; resolver с house=None fail closed, без первого
-или default membership. Miniapp при нескольких домах требует выбора.
+- `actor_user_id`, `house_id` известны; `tenant_id` и `management_id` имеют
+  `ScopeValue(KNOWN, UUID)`. При недоступном/отсутствующем текущем scope — 404,
+  контекст с выдуманным или UNKNOWN tenant не создаётся.
+- `organization_role`, `house_assignment_role`, `resident_membership_id` и
+  `resident_access` выводятся из БД; `roles`/`permissions` и `source=api|max_replay`
+  задаёт сервер. Source resident basis не означает право собственности.
+- company_admin видит все текущие management своей УК; operator — только с
+  активным assignment operator/responsible на **этот management**. Assignment
+  без active organization membership не предоставляет сотруднику доступ.
+- Resident basis относится к физическому дому. Active и expires_at проверяются
+  на каждом запросе, независимо от login. Истечение и revoke не требуют
+  перевыпуска bearer session. Независимое действующее resident basis сохраняет
+  доступ при отзыве employee assignment.
+- Platform `superadmin` хранится отдельно и не выдаёт read-all/impersonation.
+- Текущие permissions: `incident.read`, `report.create`. Возможность действия
+  требует и permission, и реализованный endpoint/business capability.
+  `allowed_actions=[]`; будущие Ticket/admin/appeal actions не опубликованы.
+- chat_binding_id/source_chat_id/binding_version остаются
+  `ScopeValue(NOT_APPLICABLE, null)`. MAX ChatBinding — отдельная A-07.
 
-Неизвестные query metadata tenant/chat/start_param не участвуют в авторизации;
-такие поля в report body отклоняются (extra=forbid). `/max/replay` проверяет,
-что external_user_id совпадает с bearer actor, и membership до записи inbox.
-Worker повторно проверяет identity/membership при исполнении.
+Ни query/header tenant/management/chat/start_param/role/permissions, ни deep link
+не authority. Неизвестные query metadata игнорируются, extra body fields
+отклоняются (`extra=forbid`, 422). Optional detail.house_id — только selector,
+он обязан совпасть с разрешённым объектом; multiple houses требуют явного выбора.
 
-TARGET A-15/A-07: verified MAX chat_id → active ChatBinding → house_id → active
-HouseManagement → tenant_id; отдельно identity → membership/assignment →
-permissions; только затем authorized operation context → application/domain
-service → NLP при необходимости. Client, deep link, message text и LLM не
-источник прав. Tenant isolation, смена УК, assignments и binding version
-validation **NOT IMPLEMENTABLE UNTIL A-15** (chat lifecycle также A-07).
-UNKNOWN не разрешает tenant-dependent операцию. Это явный target decision,
-а не реализованная проверка двух организаций.
+Чужой или отсутствующий house/incident → одинаковые 404 `resource_not_found`,
+без раскрытия private content; известный scope без permission конкретного
+действия → 403 `house_access_denied`. Отсутствующий обязательный house context
+во внутреннем вызове — fail closed. `/max/replay` также проверяет совпадение
+external_user_id с bearer actor (подмена actor → 403) и scope до inbox;
+worker повторно разрешает scope перед созданием Report.
+
+Incident queries требуют OperationContext и фильтруют **house + management**
+до чтения content/построения DTO. При detail без selector допускается сначала
+прочитать только incident.house_id как routing metadata, не ORM content.
+Counts/reports читаются лишь для уже разрешённых incidents.
+
+При смене УК старые Incident/Assignment сохраняют исходный management; ничего
+не копируется. Board/detail этого среза показывают только **текущий management**
+(в том числе жителям). Старая история остаётся в БД, отдельный архивный endpoint
+и own-history-after-revoke ещё не реализованы. ResidentMembership сохраняется
+на House; новые reports получают новый management. Повтор старого idempotency
+receipt после switch снова проверяет scope и возвращает 404, не раскрывая старый
+ответ и не создавая второй эффект. A-15 не реализует приватные Ticket/internal
+employee данные; существующие C0.1 reports остаются частью разрешённой доски.
+
+Migration `20260918_0002`: demo houses → явные demo company/management;
+Incident.management_id backfill без смены ID/текстов. Resident basis = demo/manual,
+verification_level=unverified, verified_at=null; legacy role/evidence сохранены
+для lossless C0 rollback, но не участвуют в policy. Non-demo legacy management
+изолирован и suspended/legacy_unverified до проверки; фиктивных активных УК нет.
 
 ### Ошибки C0.1 и migration
 
@@ -264,13 +290,14 @@ Generated source: `docs/openapi.json` и `miniapp/src/shared/api/schema.ts`,
 ## ARCH-PLATFORM-v1 — компактный target delta
 
 Основание: [продуктовая архитектура](PRODUCT_ARCHITECTURE.md), §§ 4–12.
-Следующие понятия — TARGET, не опубликованные DTO, enums или endpoints.
+Connection/Ticket/onboarding ниже — TARGET. Tenant/access foundation уже
+реализован в A-15 выше; остальные возможности не опубликованы.
 Существующие C0 и C1/B-00 сохраняются; точная форма, nullable-поля, версии и
 совместимость принимаются в A-01, затем соответствующем предметном срезе.
 
 | Область | Требуемая семантика / граница |
 |---|---|
-| Tenant/house context | Tenant определяется сервером через действующую HouseManagement с периодом; house ID не даёт доступ. Старые объекты сохраняют исходную организацию при смене УК. C0 house membership не означает готовую tenant isolation. |
+| Tenant/house context | Tenant определяется сервером через действующую HouseManagement с периодом; house ID не даёт доступ. Старые объекты сохраняют исходную организацию при смене УК. A-15 реализует этот foundation; lifecycle подключений остаётся TARGET. |
 | Assignments / access basis | Несколько назначений пользователя; отдельные organization role, house assignment и resident basis с источником, актуальностью и отзывом. Админ чата не становится админом УК; указанный адрес не открывает чужую доску. |
 | Connection lifecycle | Разрешение УК → действие администратора чата → проверка MAX → подтверждение дома → атомарная активация. Состояние, причина, время проверки, лимит/резерв и допустимое следующее действие; сбой проверки оставляет pending. Строковые коды и TTL ещё не приняты. |
 | Report / Incident / Ticket / ExternalAppeal | Сообщение, общая проблема, рабочая заявка и внешнее обращение — разные объекты и scope. Ticket несёт очередь/владельца/рабочие переходы; отчёт о выполнении связан с попыткой, наблюдения жителя отдельны. Нельзя заменить Incident.status lifecycle заявки. |

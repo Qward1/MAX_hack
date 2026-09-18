@@ -9,6 +9,57 @@ C0/B-00 convergence не завершена. Реальный slice: test sessio
 manual report → PostgreSQL Report/Incident → REST → board/detail → reload.
 Live MAX NOT VERIFIED; routes/appeals и новая платформа не реализованы.
 
+## A-15 — IMPLEMENTED IN BRANCH, 18.09.2026
+
+Текущая `dev/b-experience` содержит A-01 и A-15 поверх main baseline выше.
+Это не MERGED TO MAIN и не LIVE VERIFIED; evidence — [DEV-B](status/dev-b.md).
+
+- `db/models/access.py`: ManagementCompany = tenant; House не имеет tenant_id.
+  HouseManagement хранит tenant, house, `[valid_from, valid_to)`, status, basis,
+  created_by, timestamps и demo provenance. OrganizationMembership — active/revoked
+  company_admin/operator; HouseAssignment — active/revoked responsible/operator
+  на management. ResidentMembership (бывшая house_memberships) — на House,
+  источник/verification/expiry/status, без claims о собственности/проживании.
+- `core/access.py` — компактная AccessPolicy; `services/membership.py` расширяет
+  существующий resolver. `/me` и отдельные запросы читают текущие основания,
+  без role cache в session. Staff требует active company и organization membership;
+  operator дополнительно требует assignment. Superadmin не получает private read.
+- `Incident` имеет non-null management_id и house_id, composite FK на
+  `HouseManagement UNIQUE(id, house_id)`. Триггеры запрещают перепривязать
+  incident scope и management tenant/house, сохраняя историческую принадлежность.
+- `services/management.py` — внутренние create/switch в транзакции вызывающего;
+  public admin endpoints/UI отсутствуют. Валидация периода + overlap query;
+  `btree_gist` exclusion по house и `tstzrange(..., '[)') WHERE status='active'`
+  закрывает в том числе конечные/будущие периоды и concurrent inserts. Null верхняя
+  граница — бесконечность; соседние периоды разрешены. DB CHECK запрещает пустой
+  или обратный период. Это один PostgreSQL constraint, без temporal framework.
+- House row lock: management mutation — FOR UPDATE; report creation — FOR SHARE
+  до commit, затем resolver использует текущее время после получения lock.
+  Все будущие management mutations должны соблюдать этот протокол.
+- Incident repository принимает context и фильтрует house + management; content
+  чужого объекта не строит DTO. До resolver допустим только house routing ID.
+  Чужой/отсутствующий scope → одинаковый 404; отсутствующий action permission в
+  известном scope → 403. Query/body tenant/role не источник прав.
+- Смена управления сохраняет старые incidents и assignments; новые операции
+  относятся к новому management. Доска/detail ограничены текущим management,
+  включая жителей. Resident basis переживает switch; архив/own-history endpoint
+  не создан. Новая УК автоматически не получает старую историю.
+- Индексы: management house/tenant и partial active house+valid_from;
+  unique user+tenant, user+management, user+house для оснований;
+  incident house+status, management+status. Partitioning/sharding отсутствуют.
+- `20260918_0002` сохраняет C0.1 ID/тексты/reports/receipt; demo company + management
+  явны. Legacy non-demo получает отдельный suspended/unverified management,
+  без недоказанных production claims. Старый resident role/evidence сохранён,
+  но не предоставляет organization rights. Downgrade C0 backfill проверен;
+  при новых assignments/org memberships/revokes/switch/platform roles rollback
+  запрещён, нужен backup. Это предотвращает потерю новых прав и возврат отозванных.
+
+PostgreSQL + asyncpg — **единственный runtime**, включая local/backend/worker/tests.
+Settings и engine factory отвергают SQLite и другие dialects. Runtime SQLite
+fallback/dependency не было; unrelated ignore patterns сохранены. Deployment,
+private Docker network, pg_dump/restore — [database runbook](../deploy/database.md).
+MAX bindings, Ticket, onboarding и admin UI этим срезом не начаты.
+
 ## Согласованное направление — TARGET
 
 Единственный продуктовый baseline — [ARCH-PLATFORM-v1](PRODUCT_ARCHITECTURE.md).

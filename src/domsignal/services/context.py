@@ -1,7 +1,7 @@
 """Internal context resolved by MembershipService, never deserialized from client data.
 
-C0 has house membership only. Unknown tenant/management cannot authorize a future
-tenant operation. A-15/A-07 must resolve those scopes from active server relations.
+Tenant/management and access bases come from current persisted relations.
+Chat scopes remain NOT_APPLICABLE until the separate connection slice.
 """
 
 from dataclasses import dataclass, field
@@ -37,6 +37,14 @@ class OperationContext:
     permissions: frozenset[str]
     tenant_id: ScopeValue[UUID] = field(default_factory=ScopeValue)
     management_id: ScopeValue[UUID] = field(default_factory=ScopeValue)
+    organization_role: str | None = None
+    house_assignment_role: str | None = None
+    resident_membership_id: UUID | None = None
+
+    @property
+    def resident_access(self) -> bool:
+        return self.resident_membership_id is not None
+
     chat_binding_id: ScopeValue[UUID] = field(
         default_factory=lambda: ScopeValue(ScopeState.NOT_APPLICABLE)
     )

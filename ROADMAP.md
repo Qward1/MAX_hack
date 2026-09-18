@@ -61,7 +61,7 @@ DEV-B; интегратор не обходит review или protection `main`.
 | Developer | Сейчас / следующий шаг | Настоящая зависимость и снимающий контракт |
 |---|---|---|
 | DEV-A | Сохранить review/handoff FND-01; затем A-03/AI: baseline extraction/risk detector + evaluation, без обязательного provider. | DEV-B задаёт разрешённый input scope и public application boundary; A возвращает typed analysis fixture и не ждёт реализации всего product backend. |
-| DEV-B | **A-01 PASS / IMPLEMENTED IN BRANCH** (18.09.2026); B-02 binding повторно проверен и DONE в ветке. Рекомендуемый следующий отдельный срез — A-15; не начат. | Evidence: [dev-b](docs/status/dev-b.md), producer/OpenAPI/TS, PostgreSQL и browser reload. Live MAX NOT VERIFIED; merge A-01 в main не выполнен. |
+| DEV-B | **A-01 и A-15 PASS / IMPLEMENTED IN BRANCH** (18.09.2026); B-02 board/detail/reload повторно проверен. Следующий рекомендуемый отдельный срез — A-07 после review/интеграции; не начат. | Evidence: [dev-b](docs/status/dev-b.md), producer/OpenAPI/TS, PostgreSQL и browser reload. Live MAX NOT VERIFIED; merge A-01 в main не выполнен. |
 
 ### Встраивание ARCH-PLATFORM-v1 в существующий план
 
@@ -82,7 +82,7 @@ A-02…A-06 сохранены. B-01 допускается параллельн
 документам, но запрещают LIVE VERIFIED. A-03/AI не ждёт всю платформу.
 FND-01 и B-00 не выполняются заново, B-02 не закрыта этим patch.
 
-Новые A-15/A-16/B-14 — TARGET / TODO без execution evidence. Старый календарь
+A-15 — PASS / IMPLEMENTED IN BRANCH, evidence в DEV-B handoff; A-16/B-14 остаются TARGET / TODO. Старый календарь
 ниже остаётся ориентиром: расширенный scope требует переоценки перед взятием
 каждого среза, а не обещания выполнить всю платформу к прежнему freeze.
 
@@ -261,11 +261,12 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Acceptance:** bytes/storage/access реальны и изолированы; фото не считается диагнозом. Расшифровка редактируется до сохранения. Нет автопубликации личных фото или внешней отправки без основания. Недоступный provider даёт честный fallback, не synthetic production success.
 
 ### A-15 — минимальная tenant/access-основа
-- **Owner:** DEV-B. **P0 foundation нового scope · M · State:** TARGET / TODO. **Depends:** FND-01, A-01. **Allowed paths:** product core/services/contracts/API/DB, migrations, access tests; generated types одним согласованным diff.
+- **Owner:** DEV-B. **P0 foundation нового scope · M · State:** PASS / IMPLEMENTED IN BRANCH (18.09.2026), не MERGED TO MAIN. **Depends:** FND-01, A-01. **Allowed paths:** product core/services/contracts/API/DB, migrations, access tests; generated types одним согласованным diff.
 - **Результат:** Tenant, HouseManagement с основанием/периодом, минимальные OrganizationMembership/HouseAssignment и resident basis; один сотрудник имеет несколько назначений. Объектная изоляция двух УК и отзыв прав, без повторного каркаса FND-01.
 - **Границы:** минимальные подтверждаемые административные service-команды/seed fixtures для проверок; полноценный onboarding/web-auth/UI — A-10/B-09, MAX binding — A-07, Ticket — A-16. Нет IAM-конструктора и автоматического права из указанного адреса. Миграция сохраняет текущие C0 данные/личный путь, старый tenant истории не переписывает.
 - **Acceptance / проверка:** API+PostgreSQL migration/restart и negative tests с двумя УК/домами, несколькими назначениями, чужими ID, отзывом и новым периодом управления; MT-01 (изоляция в локальном API, без claim LIVE MAX), MT-10/11/12/16/18. Read-model и allowed_actions отражают серверное основание доступа; old/new contract совместимы, OpenAPI/TS воспроизводимы.
 - **Handoff:** проверенный access boundary и ограничения для B-02/A-07/A-10; будущие MT ещё не PASS, B-02 не закрывается автоматически.
+- **A-15 evidence:** [DEV-B](docs/status/dev-b.md), `tests/integration/test_tenant_access.py` (MT-01…MT-10 текущего среза, отдельный namespace от полного ARCH MT), `test_migrations.py`; 27 unit/contract, 26 PostgreSQL integration, 73 frontend, 8 browser; Docker restart и local backup/restore PASS. B-02 binding подтверждён повторным прогоном. Полные target MT/Live MAX остаются NOT RUN/NOT VERIFIED.
 
 ### A-16 — Ticket: ограниченная очередь УК и проверка результата
 - **Owner:** DEV-B. **P1 · M · State:** TARGET / TODO. **Depends:** A-15, A-06/Product, A-10 (назначения/настройки), A-05. **Allowed paths:** product core/services/contracts/API/DB, migrations, worker wiring, contract/integration tests.

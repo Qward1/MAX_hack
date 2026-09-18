@@ -13,7 +13,9 @@ from domsignal.db.base import Base
 
 class IdempotencyRecord(Base):
     __tablename__ = "idempotency_records"
-    __table_args__ = (UniqueConstraint("actor_id", "action", "key"),)
+    __table_args__ = (
+        UniqueConstraint("actor_id", "action", "key", name="uq_idempotency_actor_action_key"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     actor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))

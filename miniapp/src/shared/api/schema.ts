@@ -289,7 +289,7 @@ export interface components {
              * Role
              * @enum {string}
              */
-            role: "resident" | "admin";
+            role: "resident" | "admin" | "operator" | "responsible";
         };
         /** InboundAccepted */
         InboundAccepted: {

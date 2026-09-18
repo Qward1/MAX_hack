@@ -159,3 +159,52 @@ MT-01…MT-20 остаются NOT RUN как полные target-сценари
 C0 house isolation и явного выбора выше — только существующая foundation,
 не замена tenant/lifecycle/connection acceptance. `reported` остаётся self-report;
 filing, feedback, route, appeals и AI/NLP в этом срезе не реализованы.
+
+
+## A-15 / MT-01…MT-10 — фактическая приёмка tenant/access
+
+**PASS / IMPLEMENTED IN BRANCH `dev/b-experience`, 18.09.2026**, parent A-01
+`e66c351`. Не MERGED TO MAIN / LIVE VERIFIED. Здесь ID из задания A-15 имеют
+namespace **A-15/MT**: они не переопределяют прежние ARCH MT-01…MT-20 выше.
+Полные сценарии подключения/кабинета/Ticket не становятся PASS этим прогоном.
+
+Окружение: отдельный PostgreSQL 16 `domsignal-a15-db` (127.0.0.1:55474),
+реальные HTTP/ASGI bearer sessions и SQL, без MAX. Dataset: Alpha/A1/A2,
+Beta/B1; Alice=Alpha company_admin, Bob=Alpha operator + responsible A1,
+Carol=resident A1, Dave=resident B1, Eve=resident A1+B1; operator без назначения,
+Beta admin и platform superadmin. Не один demo tenant.
+
+Команда: `uv run pytest tests/integration/test_tenant_access.py -x -q` и полный
+`scripts/check.py --scope all`; evidence/tests/ограничения — [DEV-B](../docs/status/dev-b.md).
+
+| ID среза | Предусловие/действие | Фактический результат | Test suffix |
+|---|---|---|---|
+| A-15/MT-01 | Alice читает Beta board/detail; /me houses | PASS: 404; только A1/A2 в /me | `mt01_tenant_isolation` |
+| A-15/MT-02 | Bob A1 против A2; operator без assignment | PASS: A1 200, A2 404; без assignment нет домов | `mt02_same_tenant_assignment` |
+| A-15/MT-03 | Carol A1 board/detail и чужой B1 | PASS: A1 200, B1 404 | `mt03_resident` |
+| A-15/MT-04 | Eve A1 → B1 → A1 | PASS: независимые tenant/management context, обе доски/detail 200 | `mt04_multi_house_context` |
+| A-15/MT-05 | Carol знает incident UUID B1 | PASS: 404; body совпадает с отсутствующим ID кроме trace_id, без данных | `mt05_idor` |
+| A-15/MT-06 | Подстановка tenant/management/chat/role/permissions; mismatch selector | PASS: query не выдаёт доступ; body extra 422; mismatch 404 | `mt06_client_context_is_not_authority` |
+| A-15/MT-07 | Alpha → Beta, прежний incident/assignment, новое сообщение Carol | PASS: Beta не видит старое, старый Bob не получает новое; resident basis сохранён, новый incident с новым management; retry старого receipt 404 | `mt07_management_switch` |
+| A-15/MT-08 | Bob assignment active → revoked при той же session | PASS: следующий board/detail 404 без login | `mt08_revoke_without_login` |
+| A-15/MT-09 | Incident A1 + management B1; попытка перепривязки истории | PASS: composite FK/immutable triggers отвергают SQL | `mt09_composite_fk_and_immutable_history` |
+| A-15/MT-10 | Два active периода одного дома, конечный/open и соседние | PASS: service validation + DB exclusion; соседние допустимы, будущая Beta ещё без доступа | `mt10_overlap_domain_and_database` |
+
+Дополнительно PASS: concurrent insert не обходит exclusion; resident revoke/expiry,
+organization revoke, tenant suspend; superadmin без read-all; worker после revoke
+не создаёт report; idempotency после switch не раскрывает старый ответ.
+
+Migration test создаёт настоящую C0.1 DB из revision 0001: сохранены IDs/тексты/
+reports/legacy evidence; demo не повышен до verified; non-demo suspended.
+Upgrade/repeat upgrade/downgrade C0/upgrade/downgrade base/clean upgrade и
+`alembic check` PASS. Нужен CREATEDB только тестовому/migration harness.
+
+B-02: 8 browser tests на настоящем API/PG, board/detail/reload и создание report,
+новый masked 404 очищает cached detail; 73 component/integration tests,
+typecheck/production build, OpenAPI/TS drift PASS. Local restore всех 15 таблиц
+и retention 7 PASS; подробности в [database runbook](../deploy/database.md).
+
+Ограничения: текущие board/detail показывают только текущий management, включая
+жителей; история остаётся в БД, архивный/own-history endpoint не сделан.
+MAX ChatBinding, Ticket, onboarding/admin UI не начаты. Real MAX Web/iOS/Android,
+VPS/TLS, off-site backups, main merge/review — NOT VERIFIED/PENDING.

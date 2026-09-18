@@ -207,7 +207,9 @@
           "role": {
             "enum": [
               "resident",
-              "admin"
+              "admin",
+              "operator",
+              "responsible"
             ],
             "title": "Role",
             "type": "string"
