@@ -225,6 +225,17 @@ upload/storage/access/UX вложений — B. Целевые каталоги
 
 ## Транзакционные границы
 
+**A-16 target (не реализация):** Ticket + история решений/работ + типизированное
+доменное событие/намерение уведомить фиксируются согласованно в одной транзакции
+через существующий PostgreSQL transactional outbox. WorkAttempt хранит отчёт,
+ResultObservation — наблюдение конкретной попытки. A-05/B-03 выполняют сеть
+после commit и ведут отдельный delivery state: сбой MAX не откатывает Ticket,
+неизвестный send не превращается в exactly-once. Нового broker нет.
+Перед отправкой повторно проверяются адресаты и актуальный management/binding/access.
+Типы и факты сроков приходят через контракт A-02/A-11/Product, нормы не
+зашиваются в Ticket state machine. [Семантика A-16 и API DoD](CONTRACTS.md),
+[процесс и №416](PRODUCT_ARCHITECTURE.md#сквозной-max-путь--planned).
+
 - `POST /reports` проверяет membership, создаёт Report/Incident, outbox и
   idempotency record в одной транзакции.
 - Inbox receipt и job создаются в одной короткой транзакции. Ответ `accepted`

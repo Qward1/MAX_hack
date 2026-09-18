@@ -1,4 +1,54 @@
 # DEV-B — current handoff
+Updated: 2026-09-18 (Q&A documentation alignment)
+Branch: dev/b-experience
+Current task: QA-ALIGNMENT-2026-09-18 — документы и план
+State: DOCS UPDATED; runtime readiness unchanged; A-16 TARGET / TODO / NOT STARTED
+
+## Результат документационной правки
+
+[Источник](../decisions.md#qa-alignment-2026-09-18) — заметки владельца после
+Q&A организаторов, не самостоятельно просмотренная запись. Снят только блокер
+общей допустимости LLM; provider/data/license gate сохранён. Собственный API
+готовим для проверок в A-13: HTTPS, OpenAPI, роли/данные, обязательные проверки,
+DATA-API по ещё не полученному официальному шаблону. Веса ТЗ не менялись.
+
+A-16 уточнена: стабильный внутренний номер, исходные Report/заявители/история,
+ответственный/резерв и следующий шаг, WorkAttempt/ResultObservation, позднее
+возражение, четыре смысла срока и атомарные typed events/outbox intents.
+Правило закрытия/reopening ждёт следующего согласования. Delivery остаётся
+A-05/B-03/B-06/B-07/A-09/B-08, UI — B-14, live — B-01/B-11. Все эти Owners —
+DEV-B; AI остаётся DEV-A. QA-01…QA-13 добавлены как PLANNED / NOT RUN.
+
+№416: [таблица пунктов/применимости](../PRODUCT_ARCHITECTURE.md#пп-рф-416--документальная-сверка-18092026)
+по тексту редакции 20.06.2026 из LegalActs/СудАкт; официальная публикация найдена,
+но текст первоисточника получить не удалось. Ограниченная документальная сверка,
+не полный compliance. Нужны официальная повторная сверка/порядок Минстроя,
+роль продукта у партнёра, основания/anchors и раздельная retention policy.
+Контроль жителем не акт приёмки; фото остаётся A-14/Product/B-13.
+
+## Проверки и refs этой правки
+
+- Стартовый HEAD и origin/dev/b-experience: `4628d11` (A-07);
+  origin/main: `3d4a095`; origin/dev/a-core: `a70df01`, handoff прочитан из ref.
+  Fetch успешен; синхронизация собственной ветки/main — already up to date.
+- Repository-sanity по действующему CI: обязательные файлы, agent discovery,
+  отсутствие conflict markers — PASS. Локальные Markdown пути/anchors — PASS.
+  Прежние 100 строк C/MT/CB/A-15 acceptance и веса критериев сохранены.
+- `git diff --check` — PASS; docs-only scope проверен. Архив плана, DEV-A status,
+  runtime OpenAPI/generated TS, код/миграции/dependencies не изменены.
+- Официальные страницы MAX send/edit/subscriptions/Mini App/Bridge и callback
+  прочитаны, это DOC CHECK. Heavy product tests/Docker/live не запускались.
+
+A-07 остаётся IMPLEMENTED IN BRANCH, не MERGED; текущий групповой путь только
+явная `/report`. Live MAX **NOT VERIFIED / PENDING TOKEN**. Нужны разрешённый
+токен, изолированные чаты, HTTPS-стенд и реальные клиенты. Новые evidence A/B
+не подменяют C. Webhook/данные/боевой MAX не тронуты; Git cleanup не выполнялся.
+Финальный SHA и результат push собственной ветки — в итоговом сообщении;
+review/актуальный CI до main остаются обязательными. Остановиться после этой
+правки: реализацию Ticket/UI/уведомлений/LLM и A-16 не начинать.
+
+## Предыдущий handoff A-07 — сохранённое evidence
+
 Updated: 2026-09-18 (A-07)
 Branch: dev/b-experience
 Current task: A-07 — existing MAX chat connection and safe ChatBinding

@@ -22,8 +22,11 @@ mini app получает только локальную тестовую се�
 ```bash
 docker compose down       # остановить, сохранив данные
 docker compose up -d      # повторный запуск с прежними данными
-docker compose down -v    # удалить только volumes этого Compose project
 ```
+
+Сброс — только для явно выбранного собственного тестового окружения после
+проверки Compose project/БД/volumes. Общие/dev/prod данные не сбрасываются
+локальной проверкой; обычная остановка сохраняет volume.
 
 Для параллельной работы используйте разные project names:
 
@@ -97,8 +100,42 @@ OpenAPI/TS contract и UI board/detail. Нормализованный replay �
 
 Не проверены live MAX webhook/initData на реальном клиенте, публичный TLS-стенд
 и правовые правила. Route/appeal endpoints не опубликованы и UI их не обещает.
-Полный API-комплект и формат DATA-API остаются в `ROADMAP.md` до разъяснения
-организаторов.
+Для поставки готовим проверяемый собственный API по A-13. Не хватает официального
+шаблона DATA-API.yaml; решение готовить API и обязательные проверки уже принято
+по [Q&A](docs/decisions.md#qa-alignment-2026-09-18).
+
+## Чеклист технической сдачи — PLANNED / NOT RUN
+
+Owner A-12/A-13/B-11 — DEV-B; AI provider/evaluation evidence — DEV-A.
+Это критерии будущей поставки, не новый PASS текущего документационного commit.
+
+- [ ] Чистый клон выбранного release SHA → документированная конфигурация без
+  секретов в Git → Docker → миграции → изолированные тестовые данные → проверки
+  → restart API/worker без потери истории. Указать версии, команды и результат.
+- [ ] Измеренная сборка не более **5 минут без первоначальной загрузки базовых
+  образов**; приложить время/условия замера. Старый smoke не доказывает этот gate.
+- [ ] HTTPS base URL собственного API доступен на весь период проверки;
+  runtime OpenAPI 3.0/3.1 согласно ТЗ и generated TS соответствуют producer.
+- [ ] Безопасные проверочные учётные записи/доступы нужных ролей и изолированные
+  данные позволяют проверить positive/negative scope без production test-login
+  или админского bypass. Доступы передаются проверяющим безопасным каналом.
+- [ ] Обязательные API-проверки: схема/status/headers/required fields, auth/scope/
+  actions, persistence readback, timeout/repeat/conflict/concurrency и безопасные
+  ошибки по [API DoD](docs/CONTRACTS.md#definition-of-done-продуктовых-api).
+- [ ] DATA-API.yaml по официальной схеме организаторов. **MISSING INPUT:**
+  шаблон не найден; не создавать official schema_version и не объявлять
+  самодельный/архивный формат совместимым с проверяющей платформой.
+- [ ] Раздельное evidence A unit/contract, B HTTP/services/PostgreSQL/worker и
+  C live MAX/LLM. Локальное воспроизведение не требует внешних секретов;
+  `transport=off` не реальная интеграция. Рабочий MAX-стенд с разрешённым ботом,
+  HTTPS, ролями и реальными клиентами проверяется отдельно по
+  [MAX_LIVE_SMOKE](docs/MAX_LIVE_SMOKE.md), сейчас NOT RUN / PENDING TOKEN.
+- [ ] Локальные проверки не меняют общий webhook и не сбрасывают общие данные.
+  [DB runbook](deploy/database.md) требует явно выбранную тестовую БД; перед
+  интеграционными fixtures, которые очищают её, проверить DATABASE_URL.
+- [ ] Партнёр согласовал раздельное хранение переписки, рабочей истории и
+  юридически значимых запросов/ответов по [матрице №416](docs/PRODUCT_ARCHITECTURE.md#пп-рф-416--документальная-сверка-18092026).
+  Короткий TTL переписки не применяется ко всем объектам.
 
 Семантика API: [docs/CONTRACTS.md](docs/CONTRACTS.md). Фактическая структура:
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

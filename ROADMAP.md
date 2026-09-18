@@ -4,6 +4,7 @@
 > Согласованная цель: [ARCH-PLATFORM-v1](docs/PRODUCT_ARCHITECTURE.md), TARGET от 17.09.2026. Этот roadmap остаётся единственным действующим планом.
 > Основа: `domsignal_plan.md`, §§ 5–8, 15–16. Адаптация от 17.09.2026: два разработчика, ранняя mini app, активное использование агентов, больше законченных сценариев на одном ядре.
 > Даты онлайн-этапа и контрольных точек ниже взяты из исходного плана команды; точное время сдачи и условия проверки требуется подтвердить у организаторов.
+> Уточнения по заметкам владельца после Q&A: [QA-ALIGNMENT-2026-09-18](docs/decisions.md#qa-alignment-2026-09-18). Требования, не новый runtime/live evidence; веса ТЗ прежние, направления организаторов — примеры.
 
 ## 1. Что выпускаем
 
@@ -61,7 +62,7 @@ DEV-B; интегратор не обходит review или protection `main`.
 | Developer | Сейчас / следующий шаг | Настоящая зависимость и снимающий контракт |
 |---|---|---|
 | DEV-A | Сохранить review/handoff FND-01; затем A-03/AI: baseline extraction/risk detector + evaluation, без обязательного provider. | DEV-B задаёт разрешённый input scope и public application boundary; A возвращает typed analysis fixture и не ждёт реализации всего product backend. |
-| DEV-B | **A-01 и A-15 PASS / IMPLEMENTED IN BRANCH** (18.09.2026); B-02 board/detail/reload повторно проверен. Следующий рекомендуемый отдельный срез — A-07 после review/интеграции; не начат. | Evidence: [dev-b](docs/status/dev-b.md), producer/OpenAPI/TS, PostgreSQL и browser reload. Live MAX NOT VERIFIED; merge A-01 в main не выполнен. |
+| DEV-B | **A-07 IMPLEMENTED IN BRANCH**, `4628d11`, поверх A-01/A-15; B-02 evidence сохранён. Сейчас — Q&A docs alignment; далее B-01 при доступах и отдельное согласование A-16, без начала реализации. | Evidence: [dev-b](docs/status/dev-b.md), [MAX smoke](docs/MAX_LIVE_SMOKE.md). Live MAX NOT VERIFIED / PENDING TOKEN; не MERGED TO MAIN. Групповой путь — явная `/report`, не анализ переписки. |
 
 ### Встраивание ARCH-PLATFORM-v1 в существующий план
 
@@ -148,6 +149,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Результат:** принято новое разделение на двух разработчиков; выбран набор P0; записаны вопросы про group rights, внешние LLM, API/схему DATA-API, тестовые токены, дедлайн, режим стенда. Не придумывать ответы организаторов.
 - **Пути:** `docs/decisions.md`, `ROADMAP.md`, после bootstrap — общий контекст.
 - **Acceptance:** для каждого блокера есть владелец, следующая проверка и fallback; scope не зависит от неполученного ответа. Факты из исходного исследования не помечены повторно проверенными.
+- **Q&A delta:** LLM разрешено в принципе; provider/data/license gate остаётся. Решение о собственном API принято: готовим к проверкам в A-13; неизвестен шаблон DATA-API, а не необходимость API-проверок.
 
 ### BOOT-01 — репозиторий и совместная работа
 - **Owner / authorship:** DEV-A; DEV-B — reviewer и проверка clone. **Priority:** P0. **Size:** S. **Depends:** S0-01 в объёме названий/ролей. Сопровождение workflow и интеграция новых правил теперь у DEV-B.
@@ -177,6 +179,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Acceptance:** для каждого принятого правила есть источник и фактический статус проверки; неизвестный исполнитель или срок возвращает безопасную неопределённость. На тестовом календаре проверены выходные, переход месяца/года и timezone. Пример из источника не превращён автоматически в норму.
 - **Handoff внутри DEV-B:** RouteResult и fixtures нормального/неполного/неприменимого маршрута для bot/UI; дата источника и причина отсутствия due_at. DEV-A использует только стабильные category codes как вход AI evaluation.
 - **ARCH target / зависит для tenant-среза от A-15:** правила внешнего адресата и сроки не равны routing рабочей очереди (A-16). Resolver ограничен tenant/домом/периодом управления; неизвестный маршрут остаётся неопределённым. Проверка: одинаковая категория в двух УК не заимствует чужую конфигурацию/источник.
+- **Q&A / №416:** вместе с A-11/Product ведёт применимость, источник/редакцию, вид срока, исходное событие и календарь по [матрице №416](docs/PRODUCT_ARCHITECTURE.md#пп-рф-416--документальная-сверка-18092026). Отдельно ответ, согласованная работа, следующее обновление и подтверждённый нормативный срок; A-16 потребляет контракт правил, без универсального смешанного due_at.
 
 ### A-03 — intake, NLP baseline и safety-off-ramp
 - **Parent ID сохранён; P0 · M · Depends:** A-03/Product зависит от A-01 public boundary; A-03/AI может начать параллельно по короткому согласованному internal fixture/category codes. Реализация делится на два независимых среза с одним Owner каждый.
@@ -197,6 +200,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Сделать:** довести skeleton jobs до real operations: commit-before-ack, event dedup, приоритеты, backoff, recovery leases, последний актуальный render карточки, взаимодействие с MaxTransport B. DB транзакция не держится во время сети.
 - **Acceptance:** crash в ключевых точках воспроизводим в тесте; stale lease не завершает чужое задание; повтор не дублирует доменное действие; один отправитель регулирует запросы. Отдельно документирована неопределённость внешнего send при потере ответа — без обещания exactly-once.
 - **Handoff:** sender interface, delivery states, retry policy и тестовый RecordingTransport для B-03. AI-specific handler DEV-A подключается к этой инфраструктуре через отдельный typed boundary и не владеет leases/retries/delivery.
+- **Q&A target:** A-16 передаёт типизированные события/outbox intents; A-05 отвечает за delivery states, повторы и согласование последнего render. Сбой MAX не откатывает Ticket; потеря ответа остаётся неизвестным результатом, не exactly-once. Получатель, management/binding и права перепроверяются перед отправкой.
 - **ARCH target / tenant-этап после A-15, connection-этап после A-07:** scope в job/outbox и повторная проверка текущих прав/привязки/версии перед побочным действием; отзыв/приостановка не обходятся старым payload. Проверка: restart, повтор и устаревший job двух УК (MT-10/12/17). Базовый sender не ждёт эти расширения; Redis/новый брокер не добавлять.
 
 ### A-06 — общий инцидент, соседи и наблюдения
@@ -216,7 +220,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Граница / проверка:** три независимых основания — управление домом, назначение УК, MAX-права. Неуспешная проверка оставляет pending; название/URL/start_param не доказательства. Лимит активных домов/резерв защищён от race, повторное добавление требует проверки; каналы не принимаются как группы. MT-02…MT-10/17: API/PG negative+concurrency, transport fixtures и отдельно live MAX; fixtures не LIVE VERIFIED.
 
 ### A-08 — полезная LLM и evaluation, без зависимости основного пути
-- **Owner:** DEV-A. **P1 conditional · M · Depends:** A-03/AI; разрешение/ключ провайдера либо законный локальный доступ. **Allowed paths:** выделенные AI/NLP providers/prompts/validation, evaluation, dataset cards, AI regression tests.
+- **Owner:** DEV-A. **P1 conditional · M · Depends:** A-03/AI; разрешённый выбранный provider/ключ либо законный локальный доступ, допустимые данные и лицензии. LLM в принципе разрешено по Q&A, этот вопрос больше не блокер. **Allowed paths:** выделенные AI/NLP providers/prompts/validation, evaluation, dataset cards, AI regression tests.
 - **Сделать:** structured slot extraction, ограниченное семантическое ранжирование кандидатов, один controlled repair, timeout/circuit breaker. Модель не определяет законный срок/адресата и не вызывает инструменты.
 - **Acceptance:** invalid JSON, prompt injection, недоступный provider и расхождение методов дают clarification/rules fallback. Ни одна неподтверждённая деталь не попадает в готовый текст без пользователя. Evaluation фиксирует размер/происхождение набора и ошибки; при отсутствии real holdout так и написано.
 - **Ограничение:** сначала один полезный AI-шаг. Training сложной модели, vector DB и универсальный RAG не часть этой задачи.
@@ -226,6 +230,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Сделать:** персональные/обоснованные нормативные напоминания, отмена/перенос, мои обращения, «нет ответа» → следующий допустимый маршрут/черновик с источником, история. Уведомлять только пользователя, которому разрешено отправлять DM.
 - **Acceptance:** overdue не считается от произвольной даты чата; при неизвестном anchor нет ложного срока. После закрытия/смены версии лишнее напоминание не отправляется. Deadline тестируется fake clock, не ожиданием суток в CI. Эскалация — подготовка, а не автоматическая внешняя жалоба.
 - **Handoff:** C3, reminder reason/time/source и states канала доставки для bot/miniapp того же product направления.
+- **Ticket extension / PLANNED:** после A-16 использовать его события/попытку и контракт сроков A-02 для reminders; B-08 открывает актуальную карточку, A-05/B-03 доставляют. Это зависимость расширения, не перенос всех reminders в A-16.
 - **ARCH target / Depends дополнительно A-15:** адресаты и записи tenant-scoped; актуальные полномочия/доступ/канал проверяются перед отправкой, не только при создании reminder. Проверка fake clock + отозванный сотрудник/приостановленная УК: доставки чужих данных нет, история/собственные обращения не удалены (MT-10/16).
 
 ### A-10 — backend веб-кабинета, заявки УК, лимиты и назначения
@@ -247,12 +252,13 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Сделать:** ранний HTTPS-стенд; отдельные local/test/prod credentials; logging sans secrets; health/readiness/version; backup/restore; миграции и безопасное повторное развёртывание; isolation/load sanity, защита демо-сброса. Не ждать 26.09 для первого deploy.
 - **Acceptance:** свой image hash; нет автоизменения общего webhook при локальном старте; production не принимает test-login; restart сохраняет данные/jobs; restore проверен на отдельной БД. Порты API/DB не открыты в обход принятой политики. Нет обещания полного compliance одним расположением сервера.
 - **Handoff:** стабильный URL, проверочные роли/дома безопасным каналом и список реально включённых функций для B-11/B-12; DEV-A получает только необходимые provider config/observability hooks без секретов.
+- **Q&A target:** чистое воспроизведение без внешних секретов отделено от проверочного MAX-стенда. Reset только явно выбранной тестовой БД/Compose scope. С владельцем/партнёром согласовать раздельную retention policy для переписки, рабочей истории и юридически значимых запросов/ответов; общий короткий TTL не применять ко всем объектам (№416 п.38 при применимости).
 - **ARCH target / MT-этап после A-15/A-07, очередь после A-16:** tenant scope в файлах, jobs, кешах, аналитике/экспорте; restore сохраняет историю и реестр установок. Проверка двух УК, отзыва, смены управления и restart (MT-10/12/16/17); ранний HTTPS/P0 не блокируется будущим Ticket. Без измерений нет обещания ёмкости или нового брокера.
 
 ### A-13 — воспроизводимая техническая сдача
 - **Owner:** DEV-B. **P0 · M · Depends:** P0 и принятые P1; B-11. **Allowed paths:** README technical sections, OpenAPI/DATA-API, CI/release, deploy/runbook.
-- **Сделать:** lockfiles/licenses/secret scan, API bundle по подтверждённой схеме организаторов, тестовые роли без админского bypass, frozen release, измерение Docker build, release evidence, SHA/образ/стенд.
-- **Acceptance:** чистый клон запускается по README; один head миграций или объяснённое слияние; применённые миграции не переписаны; build measurement отделяет загрузку base images; shipped metadata совпадает. Неизвестный DATA-API формат помечен блокером, не выдан за официальный.
+- **Сделать:** lockfiles/licenses/secret scan, frozen release и **проверяемый собственный API**: HTTPS base URL на период проверки, runtime OpenAPI 3.0/3.1 согласно ТЗ, безопасные проверочные учётные записи/доступы нужных ролей без админского bypass, изолированные тестовые данные, обязательные API-проверки и DATA-API.yaml по схеме организаторов. Шаблон отсутствует — недостающий вход, не самодельный official schema_version. Зафиксировать SHA/образ/стенд и измерение Docker build.
+- **Acceptance:** [release checklist](README.md#чеклист-технической-сдачи--planned--not-run): чистый клон → документированная конфигурация → Docker → миграции → изолированные тестовые данные → проверки → restart без потери состояния. Один head миграций или объяснённое слияние; применённые миграции не переписаны. Сборка **не более 5 минут без первоначальной загрузки базовых образов**; shipped metadata совпадает. Локальное воспроизведение без секретов и рабочий MAX-стенд имеют отдельное evidence; transport=off не интеграция. Неизвестный DATA-API формат остаётся блокером сдачи этого файла.
 - **Handoff:** единый release evidence для demo/слайдов, включая отдельные AI quality/latency/cost limitations от DEV-A, если AI вошёл в release. Не публиковать PDF с рабочими секретами в Git.
 
 ### A-14 — медиа как реальное расширение
@@ -270,10 +276,12 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **A-15 evidence:** [DEV-B](docs/status/dev-b.md), `tests/integration/test_tenant_access.py` (MT-01…MT-10 текущего среза, отдельный namespace от полного ARCH MT), `test_migrations.py`; 27 unit/contract, 26 PostgreSQL integration, 73 frontend, 8 browser; Docker restart и local backup/restore PASS. B-02 binding подтверждён повторным прогоном. Полные target MT/Live MAX остаются NOT RUN/NOT VERIFIED.
 
 ### A-16 — Ticket: ограниченная очередь УК и проверка результата
-- **Owner:** DEV-B. **P1 · M · State:** TARGET / TODO. **Depends:** A-15, A-06/Product, A-10 (назначения/настройки), A-05. **Allowed paths:** product core/services/contracts/API/DB, migrations, worker wiring, contract/integration tests.
-- **Результат:** Ticket поверх Incident с сохранением Report и отдельного ExternalAppeal; очередь по дому/категории/назначению, один текущий владелец, резервная очередь tenant при неизвестной категории/нет исполнителя. Рабочие переходы и WorkReport с отдельным подтверждением/возражением жителя для конкретной попытки выполнения.
-- **Границы:** lifecycle и DTO согласуются с Incident без замены его статусов; overdue только по применимому сроку. Нет биллинга, отраслевой CRM, автоматической внешней подачи и автоматического подтверждения по молчанию/голосованию. UI — B-14.
-- **Acceptance / проверка:** PG/API tests MT-13/14/15 плюс MT-10/12/16/17: race при принятии в работу даёт одного владельца, повторы идемпотентны, fallback queue не теряет заявку, отзыв проверяется перед mutation/job. Отчёт исполнителя и возражение сохранены раздельно; внутренний номер/ручной внешний номер не verified registration.
+- **Owner:** DEV-B. **P1 · M · State:** TARGET / TODO. **Depends:** A-15, A-06/Product, A-10 (назначения/настройки), A-05, A-02 (контракт применимости/сроков). **Allowed paths:** product core/services/contracts/API/DB, migrations, worker wiring, contract/integration tests.
+- **Результат:** Ticket поверх Incident с сохранением исходных Report, связей с заявителями и их индивидуальной истории; ExternalAppeal отделён. Стабильный внутренний номер/ID (не номер ГИС ЖКХ), создание/источник/management/house, история решений и работ. Для поддерживаемого процесса — ответственный либо резервная очередь и следующий шаг; неизвестная ответственность требует диспетчерской проверки, категория сама по себе не обязательство УК.
+- **Попытки / проектирование:** WorkAttempt хранит конкретный отчёт о выполнении, ResultObservation привязан к конкретной попытке. Выполнение, проверка жителем и закрытие — разные факты. Позднее возражение к последней попытке сохраняется и после подтверждения другим жителем; окончательное правило закрытия/возобновления согласуется в следующей итерации A-16, здесь не выбирается.
+- **События:** типизированные доменные события и notification intents; изменение Ticket + история + намерение уведомить атомарны через существующий transactional outbox. Сетевой send вне транзакции; MAX failure не откатывает работу. Новый broker не нужен; внешнее exactly-once не обещается. Delivery — A-05/B-03, карточки/callbacks/links — B-06/B-07, reminders — A-09/B-08; UI — B-14.
+- **Границы:** lifecycle/DTO не заменяют Incident.status; overdue только по применимому сроку. A-02/A-11/Product дают контракт правил/данных: ответ / согласованная работа / следующее обновление / нормативный срок с основанием, типом и событием отсчёта. A-16 хранит факты; нормы не hardcode в state machine, универсальный due_at и новый SLA-engine не вводятся. Нет биллинга, полной CRM, автоматической внешней подачи/подтверждения по молчанию или голосованию. Фото — A-14/Product/B-13, отметка жителя не акт приёмки.
+- **Acceptance / проверка — PLANNED / NOT RUN:** MT-13/14/15 + MT-10/12/16/17 и [QA-проверки](scenarios/acceptance.md#qa-alignment--planned--not-run): один Incident без дубля активных Ticket; repeat без новой WorkAttempt; чужой scope закрыт; race/stale безопасны; rollback без ложного intent; send failure не теряет Ticket; reload/restart сохраняют историю; resident projection без internal-only; текст/срок/номер не внешнее подтверждение. Эта docs-задача не разрешает реализацию A-16.
 - **Handoff:** реальные Ticket DTO/actions, generated schema, позитивные/negative fixtures и evidence для B-14; не placeholder success.
 
 ## 7. Исторические B-ID — Owner DEV-B
@@ -290,6 +298,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Acceptance:** таблица LIVE VERIFIED / NOT VERIFIED / BLOCKED; разрешение group доказано фактическим событием, не предположением из SDK. При отсутствии доступа выбран fallback. Подписка общего токена не перенастроена чужим окружением.
 - **Handoff:** нормализованные обезличенные forms/events и утверждённые configuration requirements для product backend; AI receives only explicitly allowed content if a later feature needs it.
 - **ARCH target / проверка:** текущие методы admins/member/me, реальные sender/chat context, bot_added/removal и права; документальные источники M1–M12 отдельно от токена/live evidence. Условия linking/сервисных уведомлений и пределы подтверждаются до использования; неполученные доступы не блокируют docs/A-01 и не дают LIVE VERIFIED.
+- **Q&A target:** реальные Web/iOS/Android проверки цепочки Ticket→MAX→Mini App→ResultObservation по [live smoke](docs/MAX_LIVE_SMOKE.md) после готовности A-16/B-14 и delivery; сейчас NOT RUN / PENDING TOKEN.
 
 ### B-02 — визуальная система и рабочая mini app
 - **Owner:** DEV-B. **P0 · M · Depends:** FND-01/C0; B-00; A-01 convergence для обновлённого binding; A-15 для нового tenant/access context. Полная платформа/кабинет/Ticket не входят в B-02. **Allowed paths:** `miniapp/src/app/`, `shared/`, `features/incidents/`, frontend/browser tests.
@@ -304,6 +313,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Сделать:** HTTPX client ограниченных проверенных методов; send/edit/callback answer; webhook normalization и типы событий; корректные ID/время; links; 429/5xx/network errors; recording adapter используется только тестово/off.
 - **Acceptance:** настоящее сообщение и изменение карточки в MAX; bot-loop отбрасывается; подпись/secret ошибки rejected; повтор/редактирование не смешиваются; разрешённая библиотека/корни сертификатов, TLS verification не отключён. Невыясненная доставка не называется подтверждённой.
 - **Handoff:** конкретный transport/handler и product-level wiring выполняет DEV-B одним срезом; DEV-A не ожидается для общего composition root.
+- **Q&A target:** send/edit и callback response сверять по [MAX methods](docs/MAX_LIVE_SMOKE.md#методы-max--документальная-сверка-18092026): лимиты, тело ответа (включая success=false при HTTP 200), неизвестный результат. Принятие API не прочтение человеком; реализацию доставки A-07 не доказывает.
 - **ARCH target:** normalized события установки/отзыва и реальные sender/chat IDs передаются в A-07 без выдачи роли от bot_added; transport сам не активирует дом. Проверка recording/contract и отдельно live события с выданным токеном; повтор/сбой MAX не становятся успешным подключением (MT-04/08/17).
 
 ### B-04 — личный бот как законченный продукт
@@ -325,6 +335,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Сделать:** карточка общего инцидента; edit вместо повторного постинга; меня касается/не проблема; допустимое уточнение; anti-spam/quiet-hours и права; реакция на removal/edit.
 - **Acceptance:** два пользователя видят одну историю; counts правильные; устаревшая кнопка не портит состояние; отключение auto-mode работает. После ручного удаления карточки не начинать бесконечный repost против намерения администратора. При снятии прав нет бесконечных retry.
 - **Fallback:** если group blocked, усиливать B-07/B-08 вместо ложного «работает за флагом».
+- **Ticket extension / PLANNED:** после A-16 — актуальная общая карточка и callbacks с повторной проверкой actor/scope/попытки. Приватные комментарии/контакты в группу не попадают. Текущий A-07 принимает только явную `/report`; auto-анализ переписки этим планом не разрешается.
 
 ### B-07 — контекст между MAX-пространствами, sharing и QR
 - **Owner:** DEV-B. **P1 · M · Depends:** B-02/B-04; A-07; B-01 capabilities.
@@ -332,6 +343,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Сделать:** group→DM→mini app на том же инциденте; нативный sharing проверенным методом MAX; короткий opaque deep link; QR дома/подъезда и текстовая ссылка как web fallback.
 - **Acceptance:** второй пользователь проходит доступ и присоединяется; ссылка не раскрывает private данные/не выдаёт membership сама. На web fallback реально работает; QR даёт контекст, а не auth. Payload соблюдает проверенные ограничения платформы.
 - **Бонус:** это кандидат на +0,15, а не гарантированное начисление; показывается путь от действия до результата двух людей.
+- **Ticket extension / PLANNED:** после A-16/B-14 — ссылка на соответствующую карточку, свежий API read при открытии; ссылка не grant и не mutation. Sharing cancel не отправка, mobile-only методы имеют рабочую ссылку/копирование как fallback.
 - **ARCH target:** мастер подтверждения ConnectionRequest по A-07, подписанная идентичность подключающего и явный дом; приглашённый admin чата не получает кабинет/роль УК. Проверка MT-05/06/07/11/19: чужой/replayed/expired контекст отклонён, Mini App вне чата и web fallback не угадывают дом. Нет копирования приватного текста между чатами.
 
 ### B-08 — история, результаты и следующий шаг
@@ -374,11 +386,12 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Acceptance:** photo upload и transcript provider не имитируются. При сбое пользователь вводит текст, черновик сохраняется. Распознавание не публикует вывод без подтверждения; недоступный микрофон не ломает страницу.
 
 ### B-14 — рабочая очередь и карточка Ticket в веб-кабинете
-- **Owner:** DEV-B. **P1 · M · State:** TARGET / TODO. **Depends:** A-16, B-09. **Allowed paths:** web queue/ticket features в выбранном B-09 entry point, shared API client, UX и browser/component tests.
+- **Owner:** DEV-B. **P1 · M · State:** TARGET / TODO. **Depends:** A-16, B-09; B-02 для resident projection. **Allowed paths:** web queue/ticket features в выбранном B-09 entry point, resident Incident Detail, shared API client, UX и browser/component tests.
 - **Результат:** разрешённая очередь, фильтры/владелец следующего шага, принятие заявки, комментарий и отчёт исполнителя; отдельное наблюдение/возражение жителя в существующем Incident Detail. Все mutations идут через реальные actions A-16.
 - **Границы:** не дублировать B-02 board/detail, B-08 историю/напоминания и B-09 onboarding/settings. Не выводить рабочие права из Incident.status; не показывать Ticket как внешнюю регистрацию. Нет фальшивого приёма при неактивной УК/очереди.
 - **Acceptance / проверка:** browser → реальный API/PG, MT-13/14/15/19/20 плюс чужой scope MT-12; работник видит только назначения, конфликт принятия обновляет владельца, неподдержанное действие отсутствует, отчёт и возражение раздельны. Кабинет работает без Bridge; resident result проверяется отдельно в MAX web/mobile, отсутствие live записывается NOT VERIFIED.
 - **Handoff:** evidence queue→work report→resident response с ref/ролями и ограничениями, без автоматического закрытия прежних B-задач.
+- **Q&A target:** рабочий и пользовательский UI различают WorkAttempt, ResultObservation, закрытие и delivery state, показывают виды/основания сроков. Позднее возражение не теряется из-за чужого подтверждения. [Сквозной MAX-путь](docs/PRODUCT_ARCHITECTURE.md#сквозной-max-путь--planned) зависит также от A-05/B-03/B-06/B-07/A-09/B-08 и live gate B-01; delivery не входит целиком в A-16/B-14.
 
 ## 8. Kill-фичи и их минимальные доказательства
 
@@ -451,6 +464,8 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 
 Карточка считается **реализованной в ветке**, когда acceptance выполнены и прошли соответствующие тесты. **MERGED** — только после PR в актуальный main. **LIVE VERIFIED** — после настоящего внешнего прогона с указанным commit/клиентом. Эти три состояния нельзя смешивать.
 
+Для каждого продуктового API обязателен [общий DoD](docs/CONTRACTS.md#definition-of-done-продуктовых-api): runtime OpenAPI/generated TS, auth/scope/actions, чтение сохранённого результата, idempotency/timeout/conflict, concurrency/stale и безопасные Problem Details. Evidence разделяется на A (unit/contract), B (реальный HTTP/PG/services/worker) и C (live MAX/LLM); A/B не заменяют C. Новые требования Q&A — PLANNED / NOT RUN, прежние PASS не повышаются. Для docs-only diff достаточно diff/ссылок/repository-sanity без тяжёлого продуктового прогона; перед main обязательный CI сохраняется.
+
 Для готового PR достаточно шести коротких блоков: task IDs; изменение; contracts/migrations; проверки; manual path; ограничения. Скриншот для UX-изменения — полезное доказательство, но не требуется для правки чистого domain helper.
 
 Проверки по риску:
@@ -494,7 +509,7 @@ Roadmap — спецификация и зависимости. Текущая �
 | Триггер | Действие |
 |---|---|
 | Нет group rights | Не ждать неделями: DEV-B откладывает B-06 auto-group; A-07/B-07 access/sharing остаются; P0 не меняется |
-| Нет разрешённой LLM/реальной выборки | DEV-A поставляет только проверяемый baseline/fixtures; release идёт rules/manual, без выдуманной measured ML quality |
+| Нет доступа к выбранному допустимому provider/реальной выборки | LLM в принципе разрешено по Q&A. DEV-A поставляет проверяемый baseline/fixtures; release идёт rules/manual, без выдуманной measured ML quality |
 | Не проверены нормы части категорий | DEV-B сокращает активные маршруты, сохраняет explicit unknown path; не подставляет универсальную УК/10 дней |
 | B-02 расходится с producer C0 | DEV-B сначала делает минимальный A-01 producer+consumer convergence; DEV-A review, но не становится writer общего backend |
 | P0 не проходит на 21.09 | DEV-B останавливает P2 и неготовые P1; команда парно проверяет критический путь и AI fallback |

@@ -2,6 +2,42 @@
 
 ## Статус и правила чтения
 
+Q&A уточнения — [журнал решений](../docs/decisions.md#qa-alignment-2026-09-18).
+Новая матрица ниже PLANNED / NOT RUN; прежние C/MT/CB IDs и результаты сохранены.
+
+## QA alignment — PLANNED / NOT RUN
+
+Уровни evidence: **A** unit/contract с тестовыми адаптерами/записанными входами;
+**B** integration с настоящим HTTP, services, PostgreSQL и worker;
+**C** live MAX с реальными провайдером/клиентами и отдельно live LLM для принятой
+AI-функции. HTTPX MockTransport/ASGI in-process сам по себе не доказывает внешний
+HTTP/live. A/B не заменяют C. Нет токена — NOT RUN / PENDING TOKEN, даже если
+transport=off/recording и локальный стек прошли проверки.
+
+Для A-16 предусловия: реализованный согласованный срез, две УК/два дома,
+сотрудник с назначением, два разрешённых жителя, чужой actor и конкретные
+Incident/Ticket/WorkAttempt. До его реализации все строки остаются NOT RUN.
+При выполнении фиксировать ref, роли/scope, данные, ожидаемый/фактический результат,
+команду и уровень evidence. Таблица уточняет существующие задачи, не создаёт новые.
+
+| ID | Задачи / Owner | Шаг и ожидаемый результат | Evidence | Статус |
+|---|---|---|---|---|
+| QA-01 | A-13/B-11, все product API / DEV-B | Проверить runtime OpenAPI requests/responses/status/headers/required fields, generated TS без drift; auth/tenant/house/allowed_actions, действующие Problem Details без private/secrets. Успешную запись подтвердить отдельным API read. | A + B | PLANNED / NOT RUN |
+| QA-02 | A-16/A-06/Product / DEV-B | Два сообщения одного дефекта и race создания работы на одном Incident → нет дубля активных Ticket; исходные Report/заявители/индивидуальная история сохранены. | A + B, counts и API read | PLANNED / NOT RUN |
+| QA-03 | A-16 / DEV-B | Повторить команду после timeout с тем же key/body → та же WorkAttempt без нового эффекта; тот же key с другим содержимым → определённый конфликт без молчаливой другой операции. | A + B | PLANNED / NOT RUN |
+| QA-04 | A-16/B-14 / DEV-B | Чужой tenant/дом читает/меняет Ticket по прямому ID → безопасный отказ; resident projection не содержит internal-only, приватных контактов/комментариев. | A + B + browser | PLANNED / NOT RUN |
+| QA-05 | A-16/B-06/B-14 / DEV-B | Конкурентное принятие/обновление и stale attempt/callback → определённый конфликт/актуальный read, без потери истории и переноса наблюдения на новую попытку; проверены actor/scope/actions. | A + B | PLANNED / NOT RUN |
+| QA-06 | A-16/A-05 / DEV-B | Искусственный rollback Ticket mutation → ни ложной истории, ни notification intent; успешный commit сохраняет все три согласованно. | B, PG transaction + worker | PLANNED / NOT RUN |
+| QA-07 | A-05/B-03/A-16 / DEV-B | Сбой send, потерянный ответ, 200+success=false у поддерживающего это метода → Ticket сохранён, delivery error/unknown отдельно; retry без повторной работы, без exactly-once claim. | A fault fixtures + B HTTP/PG/worker; C отдельно | PLANNED / NOT RUN |
+| QA-08 | A-16/A-12/B-14 / DEV-B | Reload и restart API/worker → те же Ticket, попытки, наблюдения и история; номер/текст/срок не выдаются за внешнее подтверждение. | B + browser | PLANNED / NOT RUN |
+| QA-09 | A-16/B-14 / DEV-B | Первый житель подтвердил последнюю попытку, второй позже возразил → оба наблюдения сохранены и расхождение видно, включая отсутствие ответа/повтор. Закрытие/reopening проверять только после отдельного согласования правила A-16. | A + B + browser; правило перехода PENDING DECISION | PLANNED / NOT RUN |
+| QA-10 | A-16/B-14/A-05/B-03/B-06/B-07/A-09/B-08; B-01/B-11 / DEV-B | Report→Incident→Ticket→WorkAttempt→outbox→MAX→нужная Mini App карточка→явная проверка→ResultObservation→обновление. Ссылка только контекст, свежий API read; API accepted не read receipt. Sharing cancel/fallback, group privacy, отзыв и смена management/binding до send/open/callback проверены. | A/B + отдельно C по [live smoke](../docs/MAX_LIVE_SMOKE.md) | PLANNED / NOT RUN / PENDING TOKEN |
+| QA-11 | A-02/A-11/Product/A-16/A-09 / DEV-B | Проверить четыре вида срока, основание/редакцию/applicability и исходное событие; неизвестные ответственность/anchor → диспетчерская проверка/неопределённость без выдуманного due_at. Модель не определяет нормы. | A fake clock/rules + B | PLANNED / NOT RUN |
+| QA-12 | A-12/A-13/B-11 / DEV-B | Чистый клон→документированная конфигурация→Docker→миграции→изолированные данные→проверки→restart без потерь; сборка ≤5 минут без первоначальной загрузки base images. Отдельно собственный HTTPS API, роли/данные, обязательные проверки и DATA-API по полученному официальному шаблону. | B + release evidence; MAX стенд C отдельно | PLANNED / NOT RUN |
+| QA-13 | A-08 / DEV-A; A-03/Product / DEV-B | Для принятого provider: invalid schema/timeout/uncertainty → validation/clarification/manual fallback без частичной записи; стабильный контракт, а не одинаковый текст. Provider/data/license gate отдельно от общего разрешения LLM. | A + B; C LLM отдельно при доступе | PLANNED / NOT RUN |
+
+## Исходная матрица и evidence
+
 Это acceptance-контракт целевого UX/API `v0.1`, а не отчёт о реализованных
 возможностях. Упомянутые target endpoints реализует DEV-B как writer public
 producer+consumer contract и сверяет с OpenAPI; DEV-A review AI boundary.
