@@ -32,6 +32,7 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(200))
     demo_alias: Mapped[str | None] = mapped_column(String(50), unique=True)
     max_user_id: Mapped[str | None] = mapped_column(String(200), unique=True)
+    max_identity_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     platform_role: Mapped[str | None] = mapped_column(String(30))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

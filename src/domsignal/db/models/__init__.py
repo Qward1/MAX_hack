@@ -9,6 +9,7 @@ from domsignal.db.models.access import (
 )
 from domsignal.db.models.chat_connections import ChatBinding, ConnectionRequest, MAXChat
 from domsignal.db.models.incidents import Incident, Report
+from domsignal.db.models.notifications import MaxDestinationLimit, NotificationDelivery
 from domsignal.db.models.reliability import IdempotencyRecord, InboxReceipt, Job, OutboxMessage
 from domsignal.db.models.sessions import AppSession
 from domsignal.db.models.tickets import (
@@ -20,6 +21,8 @@ from domsignal.db.models.tickets import (
 )
 
 __all__ = [
+    "MaxDestinationLimit",
+    "NotificationDelivery",
     "Ticket",
     "WorkAttempt",
     "ResultObservation",

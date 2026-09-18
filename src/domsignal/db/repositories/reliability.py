@@ -172,3 +172,12 @@ class ReliabilityRepository:
         job.lease_token = None
         job.last_error_code = error_code[:100]
         return True
+
+    async def defer_job(self, *, job_id: UUID, lease_token: UUID, until: datetime) -> None:
+        job = await self.session.scalar(select(Job).where(Job.id == job_id).with_for_update())
+        if job is not None and job.lease_token == lease_token and job.status == "leased":
+            job.status = "pending"
+            job.next_attempt_at = until
+            job.attempts = max(0, job.attempts - 1)
+            job.lease_until = None
+            job.lease_token = None

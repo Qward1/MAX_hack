@@ -434,7 +434,9 @@ class TicketService:
         payload: ObservationCreate,
         idempotency_key: str,
     ) -> ObservationRecorded:
-        async with session.begin():
+        # Callback orchestration may supply an outer transaction so its receipt/job
+        # and this SAME A-16 mutation commit together. HTTP keeps its original boundary.
+        async with session.begin_nested() if session.in_transaction() else session.begin():
             ticket_id = await self._attempt_ticket(session, attempt_id)
             ticket, context = await self._context(
                 session,

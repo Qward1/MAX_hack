@@ -102,6 +102,8 @@ async def test_tk26_populated_a07_migration_retains_all_history(integration_sett
                 expr = (
                     "to_jsonb(t) - 'ticket_intake_enabled'"
                     if table == "house_managements"
+                    else "to_jsonb(t) - 'max_identity_verified_at'"
+                    if table == "users"
                     else "row_to_json(t)"
                 )
                 assert (await conn.execute(text(f"SELECT {expr} FROM {table} t"))).all() == before[

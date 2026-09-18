@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     max_webhook_secret: str | None = Field(default=None, repr=False)
     max_api_base_url: str = "https://platform-api2.max.ru"
     max_api_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
+    max_bot_username: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_]{1,100}$")
     max_required_permissions: frozenset[str] = frozenset({"read_all_messages"})
     chat_connection_ttl_seconds: int = Field(default=900, ge=60, le=3600)
     llm_provider: LlmProvider = LlmProvider.RULES
@@ -53,6 +54,11 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:8000"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
     static_dir: str = "miniapp/dist"
+
+    @field_validator("max_bot_username", mode="before")
+    @classmethod
+    def empty_bot_username(cls, value: object) -> object:
+        return None if value == "" else value
 
     @field_validator("max_api_base_url")
     @classmethod

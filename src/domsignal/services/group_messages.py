@@ -33,7 +33,13 @@ class MaxWebhookService:
                 )
             )
             job_id = None
-            if event.kind == "bot_started" and event.token and event.actor:
+            if event.kind == "message_callback" and event.callback:
+                job = await reliability.add_job(
+                    kind="max.ticket.callback", payload=event.callback.model_dump(mode="json"),
+                    priority=20,
+                )
+                job_id = job.id
+            elif event.kind == "bot_started" and event.token and event.actor:
                 await self.connections.claim(
                     session, token=event.token, connector=event.actor, occurred_at=event.occurred_at
                 )

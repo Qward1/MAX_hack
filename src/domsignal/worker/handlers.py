@@ -16,6 +16,7 @@ from domsignal.core.chat_connections import TERMINAL
 from domsignal.db.repositories.access import AccessRepository
 from domsignal.services.chat_connections import ChatConnectionError, ChatConnectionService
 from domsignal.services.errors import AccessDenied, ResourceNotFound
+from domsignal.services.notifications import TicketNotificationHandler
 from domsignal.services.reports import ReportService
 
 JobHandler = Callable[[dict[str, Any]], Awaitable[None]]
@@ -29,21 +30,27 @@ class WorkerHandlers:
         report_service: ReportService,
         transport: MaxTransport,
         chat_connections: ChatConnectionService | None = None,
+        notifications: TicketNotificationHandler | None = None,
     ) -> None:
         self.session_factory = session_factory
         self.report_service = report_service
         self.transport = transport
         self.chat_connections = chat_connections
+        self.notifications = notifications
 
     @property
     def mapping(self) -> dict[str, JobHandler]:
-        return {
+        handlers: dict[str, JobHandler] = {
             "diagnostic.record": self.diagnostic_record,
             "inbound.report": self.inbound_report,
             "max.connection.verify": self.verify_connection,
             "max.binding.health": self.verify_binding_health,
             "max.group.report": self.group_report,
         }
+        if self.notifications:
+            handlers["max.ticket.callback"] = self.notifications.callback
+            handlers["max.ticket.answer"] = self.notifications.answer
+        return handlers
 
     async def verify_connection(self, payload: dict[str, Any]) -> None:
         assert self.chat_connections is not None

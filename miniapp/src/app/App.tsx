@@ -8,6 +8,7 @@ import {
   type IncidentDetail,
   type IncidentList,
   type Me,
+  type NotificationLaunch,
   problemStatus,
   retryable,
 } from "../shared/api/client";
@@ -34,6 +35,7 @@ import {
 } from "../features/incidents/presentation";
 
 type Loaded = {
+  notificationLaunch?: NotificationLaunch;
   capabilities: Capabilities;
   me: Me;
   house?: Me["houses"][number];
@@ -55,6 +57,9 @@ function routeUrl(house?: string, incident?: string, offset = 0) {
 export function App({ client = apiClient }: { client?: DomSignalApi }) {
   const [location, setLocation] = useState(() => window.location.href);
   const [reportOpen, setReportOpen] = useState(false);
+  const [launchPending, setLaunchPending] = useState(true);
+  const [launchNotice, setLaunchNotice] = useState(false);
+  const [launchAttempt, setLaunchAttempt] = useState<string | null>(null);
   const route = new URL(location);
   const houseId = route.searchParams.get("house");
   const incidentId = route.searchParams.get("incident");
@@ -65,11 +70,14 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       Number.parseInt(route.searchParams.get("offset") ?? "0") || 0,
     ),
   );
-  const key = JSON.stringify([houseId, incidentId, offset]);
+  const key = JSON.stringify([houseId, incidentId, offset, launchPending]);
   const navigate = useCallback((href: string) => {
     window.history.pushState(null, "", href);
     setLocation(window.location.href);
     setReportOpen(false);
+    setLaunchPending(false);
+    setLaunchNotice(false);
+    setLaunchAttempt(null);
     window.scrollTo?.(0, 0);
   }, []);
   useEffect(() => {
@@ -85,6 +93,15 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       const capabilities = await client.capabilities(signal);
       await client.authenticate(capabilities, signal);
       const me = await client.me(signal);
+      const testRef = capabilities.environment !== "production" && capabilities.features.test_auth
+        ? new URLSearchParams(window.location.search).get("test_start_param") : null;
+      const launchRef = launchPending ? (maxBridge.startParam ?? testRef) : null;
+      if (launchRef && capabilities.features.miniapp && capabilities.features.incident_detail) {
+        const target = await client.notificationLaunch(launchRef, signal);
+        const incident = await client.incident(target.incident_id, signal, target.house_id);
+        return { capabilities, me, incident, notificationLaunch: target,
+          house: me.houses.find((house) => house.id === target.house_id) };
+      }
       if (
         !capabilities.features.miniapp ||
         !(incidentId
@@ -123,10 +140,19 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       const incidents = await client.incidents(house.id, signal, offset);
       return { capabilities, me, house, incidents };
     },
-    [client, houseId, incidentId, offset],
+    [client, houseId, incidentId, offset, launchPending],
   );
   const resource = useResource(key, load);
   const data = resource.data;
+  useEffect(() => {
+    const target = data?.notificationLaunch;
+    if (!target || !launchPending) return;
+    setLaunchPending(false);
+    setLaunchNotice(target.stale);
+    setLaunchAttempt(target.work_attempt_id);
+    window.history.replaceState(null, "", routeUrl(target.house_id, target.incident_id));
+    setLocation(window.location.href);
+  }, [data?.notificationLaunch, launchPending]);
   const back = useCallback(
     () => navigate(routeUrl(data?.incident?.house_id ?? houseId ?? undefined)),
     [navigate, data?.incident?.house_id, houseId],
@@ -271,7 +297,11 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
           </Flex>
         </PageHeader>
         {notice}
+        {launchNotice && <p role="status" className="refresh-notice">
+          Работа обновилась. Показываем актуальный результат.
+        </p>}
         <ResidentWorkProgress key={incident.id} client={client} incidentId={incident.id}
+          launchAttempt={launchAttempt}
           revision={resource.updatedAt} parentBusy={resource.loading || Boolean(resource.error) || resource.stale} />
         {incident.status === "reported" && (
           <Panel className="honesty-note">

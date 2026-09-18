@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -7,8 +8,12 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from domsignal.bot.messaging import MessagingError
 from domsignal.db.repositories.reliability import ReliabilityRepository
+from domsignal.services.notifications import DeferredNotification, TicketNotificationHandler
 from domsignal.worker.handlers import JobHandler
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -28,11 +33,13 @@ class WorkerRunner:
         handlers: dict[str, JobHandler],
         lease_seconds: int = 30,
         max_attempts: int = 5,
+        notifications: TicketNotificationHandler | None = None,
     ) -> None:
         self.session_factory = session_factory
         self.handlers = handlers
         self.lease_seconds = lease_seconds
         self.max_attempts = max_attempts
+        self.notifications = notifications
 
     async def claim(self, *, now: datetime | None = None) -> ClaimedJob | None:
         claimed_at = now or datetime.now(UTC)
@@ -59,20 +66,34 @@ class WorkerRunner:
         except Exception as exc:
             async with self.session_factory() as session, session.begin():
                 repo = ReliabilityRepository(session)
-                if job.attempts >= self.max_attempts:
+                code = exc.code if isinstance(exc, MessagingError) else type(exc).__name__
+                if isinstance(exc, DeferredNotification):
+                    await repo.defer_job(
+                        job_id=job.id,
+                        lease_token=job.lease_token,
+                        until=exc.until,
+                    )
+                elif job.attempts >= self.max_attempts or (
+                    isinstance(exc, MessagingError) and exc.kind == "permanent"
+                ):
                     await repo.fail_job(
                         job_id=job.id,
                         lease_token=job.lease_token,
                         now=datetime.now(UTC),
-                        error_code=type(exc).__name__,
+                        error_code=code,
                     )
                 else:
                     await repo.retry_job(
                         job_id=job.id,
                         lease_token=job.lease_token,
                         now=datetime.now(UTC),
-                        error_code=type(exc).__name__,
-                        retry_seconds=min(60, 2**job.attempts),
+                        error_code=code,
+                        retry_seconds=max(
+                            min(60, 2**job.attempts),
+                            int(
+                                (exc.retry_after or 0) if isinstance(exc, MessagingError) else 0,
+                            ),
+                        ),
                     )
             return False
         async with self.session_factory() as session, session.begin():
@@ -83,8 +104,17 @@ class WorkerRunner:
             )
 
     async def run_once(self) -> bool:
+        handled = False
+        if self.notifications:
+            try:
+                handled = await self.notifications.consume_once()
+                handled = await self.notifications.deliver_once() or handled
+            except Exception as exc:
+                # A rolled-back consumer or leased operation remains recoverable. Do not
+                # leak SQL parameters/upstream content, or stop unrelated durable jobs.
+                logger.error("notification_worker_error", extra={"error_type": type(exc).__name__})
         job = await self.claim()
         if job is None:
-            return False
+            return handled
         await self.process(job)
         return True

@@ -12,6 +12,7 @@ async def run() -> None:
     runner = WorkerRunner(
         session_factory=container.session_factory,
         handlers=container.worker_handlers.mapping,
+        notifications=container.notifications,
     )
     try:
         while True:

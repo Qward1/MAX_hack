@@ -65,6 +65,14 @@ ConnectionRequest, ChatBinding, проверка provider/approval и верси
 
 ## Возможности в проверенном main
 
+Delivery integrator note, 18.09.2026: actual START `dev/b-experience=95a6c24`;
+`origin/main=3d4a095` remains the accepted main reference. A-05/B-03 and personal
+parts of B-06/B-07/B-08 now connect existing A-16 outbox to verified-recipient MAX
+delivery, callbacks, Mini App launch and reconciliation. This is IMPLEMENTED IN
+BRANCH / DETERMINISTIC TESTED, not a new main capability or live verification.
+A-09 reminders, full group/sharing/QR scope and A-10 are unchanged. Current evidence,
+commands and pending live boundary: [DEV-B handoff](docs/status/dev-b.md).
+
 Сверка интегратора B-14, 18.09.2026: START/END fetch подтверждают прежний
 `origin/main=3d4a095`; принятых новых merge нет, таблица main ниже не повышена.
 На `dev/b-experience` A-16 (`194d91a`) дополнена B-14: один Vite-проект с

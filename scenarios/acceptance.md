@@ -90,6 +90,59 @@ evidence — [DEV-B](../docs/status/dev-b.md).
 MAX Web/iOS/Android, новая delivery, B-14 UI, нормативная применимость,
 внешняя регистрация/прочтение — NOT RUN / NOT IMPLEMENTED, не переименованы в PASS.
 
+## ND — personal MAX delivery
+
+IMPLEMENTED IN BRANCH, deterministic tests only, 18.09.2026. NOT MERGED / NOT LIVE
+VERIFIED. Backend evidence: `tests/integration/test_notifications.py`; provider:
+`tests/contract/test_max_messaging.py`; migration: `test_notification_migration.py`.
+ND numbers map to assertions, not a count of separate test functions.
+
+| ID | Evidence / checked behavior | Result |
+|---|---|---|
+| ND-01 | A-16 work event has one logical outbox intent | PASS |
+| ND-02 | Distinct own-Report authors produce individual deliveries | PASS |
+| ND-03 | Legacy/unconfirmed MAX identity → skipped | PASS |
+| ND-04 | Foreign tenant and injected foreign Report author get no send | PASS |
+| ND-05 | Revoked resident access after fan-out prevents send | PASS |
+| ND-06 | Current attempt has open_app and resolved/unresolved buttons | PASS |
+| ND-07 | Old unsent attempt → superseded, no provider side effect | PASS |
+| ND-08 | Concurrent fan-out/workers preserve logical uniqueness | PASS |
+| ND-09 | 429/connect rejection use persisted bounded retry | PASS |
+| ND-10 | Permanent failure terminal; transient retry budget five calls | PASS |
+| ND-11 | Validated provider mid and accepted_at persist | PASS |
+| ND-12 | Authenticated opaque ref selects correct incident/attempt | PASS |
+| ND-13 | Copied ref under foreign/same-house unintended identity → masked 404 | PASS |
+| ND-14 | Resolved callback invokes A-16 and closes | PASS |
+| ND-15 | Unresolved callback/HTTP reopen same Ticket via A-16 | PASS |
+| ND-16 | Duplicate webhook dedup; replay IDs do not duplicate own observation | PASS |
+| ND-17 | First historical callback records old observation without changing newer attempt | PASS |
+| ND-18 | Wrong MAX actor or unsent/foreign mid cannot mutate | PASS |
+| ND-19 | Current render removes callbacks after observation | PASS |
+| ND-20 | Durable edit/answer failures leave committed observation/Ticket intact | PASS |
+| ND-21 | HTTP 200 success=false/non-boolean for edit/answer is failure | PASS |
+| ND-22 | Shared per-destination gate, two independent dialogs, 500ms boundary | PASS |
+| ND-23 | New engine/worker preserves retry/accepted; expired send lease → unknown | PASS |
+| ND-24 | Production composition never selects a fake provider | PASS |
+| ND-25 | Timeout/malformed/5xx send remains unknown, no automatic resend | PASS |
+| ND-26 | Individual refs/mids; no other resident identity/private Report in messages | PASS |
+| ND-27 | Management switch between fan-out/send suppresses old delivery | PASS |
+| ND-28 | Kill-test: attempt #1 superseded, #2 actionable, fake old callback inert | PASS |
+| ND-29 | Mini App HTTP observation eventually edits original provider message | PASS |
+| ND-30 | Replay after own response/button removal does not recreate action | PASS |
+
+Vertical real sockets: `scripts/notification_smoke.py` starts separate API, worker
+and loopback recording HTTP provider over PostgreSQL, with test-only injection.
+Report → A-16 → #1 card → authorized Mini App resolver/HTTP unresolved → same Ticket
+→ edit → #2 card → secret-authenticated resolved callback → closed → edit → actual
+API/worker restart → API + SQL read-back (two attempts, two observations, unique
+deliveries and persisted provider IDs). PASS; this is not a live MAX provider.
+
+Browser: `miniapp/tests/browser/notifications.spec.ts` verifies gated start_param
+through the real authenticated resolver, current Incident Detail/WorkAttempt,
+resident observation and durable reconciliation, reload and foreign-identity denial.
+Existing B-02/B-14 browser tests run against the same isolated runtime. Actual final
+counts/commands and migration/Docker results are in [DEV-B](../docs/status/dev-b.md).
+
 ## Исходная матрица и evidence
 
 Это acceptance-контракт целевого UX/API `v0.1`, а не отчёт о реализованных

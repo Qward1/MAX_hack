@@ -14,6 +14,7 @@ const house = {
 
 function clientWith(items: IncidentDetail[] = []): DomSignalApi {
   return {
+    notificationLaunch: vi.fn(),
     capabilities: vi.fn().mockResolvedValue({
       contract_version: 'c0.1',
       environment: 'test',

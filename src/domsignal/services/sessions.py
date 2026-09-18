@@ -46,6 +46,8 @@ class SessionService:
             user = await repo.user_by_max_id(max_user_id)
             if user is None:
                 user = await repo.create_max_user(max_user_id, display_name)
+            # Called only after the existing /auth/max signature/age validation.
+            user.max_identity_verified_at = datetime.now(UTC)
             return self._issue(session, user=user, source="max")
 
     async def authenticate(self, session: AsyncSession, *, token: str) -> AuthenticatedUser:

@@ -6,11 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from domsignal.bot.chat_provider import HttpMaxChatProvider
 from domsignal.bot.ingress import InboundService
+from domsignal.bot.messaging import HttpMaxMessagingProvider
 from domsignal.bot.transport import MaxTransport, OffTransport, RecordingTransport
 from domsignal.db.session import create_engine, create_session_factory
 from domsignal.services.chat_connections import ChatConnectionService
 from domsignal.services.group_messages import MaxWebhookService
 from domsignal.services.membership import MembershipService
+from domsignal.services.notifications import TicketNotificationHandler
 from domsignal.services.reports import DemoRule, ReportService
 from domsignal.services.sessions import SessionService
 from domsignal.services.tickets import TicketService
@@ -32,6 +34,7 @@ class Container:
     worker_handlers: WorkerHandlers
     chat_connections: ChatConnectionService
     max_webhook: MaxWebhookService
+    notifications: TicketNotificationHandler
 
 
 def build_container(settings: Settings) -> Container:
@@ -51,23 +54,34 @@ def build_container(settings: Settings) -> Container:
             note="Правило не проверено; нормативный срок не рассчитан.",
         )
     )
+    chat_provider = HttpMaxChatProvider(
+        base_url=settings.max_api_base_url,
+        # Off/recording must never cause outbound MAX calls, even if a token is present.
+        token=settings.max_bot_token
+        if settings.max_transport == MaxTransportMode.WEBHOOK
+        else None,
+        timeout=settings.max_api_timeout_seconds,
+    )
     chat_connections = ChatConnectionService(
-        HttpMaxChatProvider(
-            base_url=settings.max_api_base_url,
-            # Off/recording must never cause outbound MAX calls, even if a token is present.
-            token=settings.max_bot_token
-            if settings.max_transport == MaxTransportMode.WEBHOOK
-            else None,
-            timeout=settings.max_api_timeout_seconds,
-        ),
+        chat_provider,
         ttl_seconds=settings.chat_connection_ttl_seconds,
         required_permissions=settings.max_required_permissions,
+    )
+    ticket_service = TicketService()
+    notifications = TicketNotificationHandler(
+        session_factory=session_factory,
+        tickets=ticket_service,
+        provider=HttpMaxMessagingProvider(
+            chat_provider.client, bot_username=settings.max_bot_username
+        ),
+        enabled=settings.max_transport == MaxTransportMode.WEBHOOK,
     )
     worker_handlers = WorkerHandlers(
         session_factory=session_factory,
         report_service=report_service,
         transport=transport,
         chat_connections=chat_connections,
+        notifications=notifications,
     )
     return Container(
         settings=settings,
@@ -80,9 +94,10 @@ def build_container(settings: Settings) -> Container:
         membership_service=MembershipService(),
         report_service=report_service,
         inbound_service=InboundService(),
-        ticket_service=TicketService(),
+        ticket_service=ticket_service,
         transport=transport,
         worker_handlers=worker_handlers,
         chat_connections=chat_connections,
         max_webhook=MaxWebhookService(chat_connections),
+        notifications=notifications,
     )

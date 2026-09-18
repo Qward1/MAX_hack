@@ -1,5 +1,166 @@
 # DEV-B — current handoff
 
+Updated: 2026-09-18 (personal MAX Delivery Loop)
+Branch: dev/b-experience
+Current task: existing A-16 outbox → personal MAX delivery → resident observation
+State: PASS / IMPLEMENTED IN BRANCH / DETERMINISTIC TESTED; NOT MERGED TO MAIN
+Real MAX: NOT LIVE VERIFIED / PENDING TOKEN
+
+## Delivery result and roadmap mapping
+
+START HEAD/origin/dev/b-experience `95a6c24`, origin/main `3d4a095`; clean tree.
+START fetch, own fast-forward and main sync completed, already up to date. DEV-A
+status read from origin/dev/a-core; no writes/push there. Final commit/push evidence
+belongs in the session report, without a follow-up hash-only commit. Main requires
+the existing second-developer review and current CI; this task does not merge it.
+END fetch confirms unchanged main and own remote refs. Required documentation,
+local links, conflict markers and final diff whitespace checks pass.
+
+| Existing task | Implemented part; remaining boundary |
+|---|---|
+| A-05 | A-16 intent consumer, durable per-recipient delivery, leases/recovery/retry/unknown and dialog throttling |
+| B-03 | Production send/edit/answer provider and authenticated callback ingress; live acceptance pending |
+| B-06 | Personal work-card reconciliation and safe callbacks; group cards/quiet hours remain outside slice |
+| B-07 | Opaque personal open_app/start_param and existing Mini App routing; QR/sharing/group transition remain outside slice |
+| B-08 | Existing work result/observation connected to personal messages; remaining history/reminder/escalation scope unchanged |
+| A-09 | Reused delivery access/staleness safeguards only; reminder scheduler and escalation remain PLANNED |
+
+No new epic, broker, business outbox, lifecycle, admin screen, A-10 or AI work.
+
+## Durable delivery and authorization
+
+WorkerRunner consumes existing `ticket.notification_intent.v1`: SKIP LOCKED claim,
+typed payload + stored TicketEvent validation, unique fan-out, reconcile marks and
+outbox processed commit together. Candidates are distinct authors of own Reports
+for the Incident, then MembershipService/AccessPolicy resident access, current
+management, same Ticket and confirmed numeric MAX identity are checked. No house
+broadcast/subscriber model is invented. Legacy max_user_id alone does not qualify:
+additive max_identity_verified_at is set only by existing validated initData auth.
+
+NotificationDelivery uniquely identifies (outbox, recipient, channel); it stores
+Ticket/attempt, random ref, destination, provider mid, desired/applied version,
+attempt/retry counters, timestamps, sanitized error and fenced lease. States:
+pending, processing, accepted, retry_wait, unknown, failed, superseded, skipped.
+`accepted` means validated MAX API response with a persisted mid, never read/push.
+
+Fresh authorization/render runs again after the durable claim immediately before
+send/edit/answer, with no domain lock or DB transaction held during HTTP. Changed
+management/identity or revoked access suppresses delivery. An old unsent work
+attempt becomes superseded. No global User revocation field exists in A-15;
+resident access/current management are the available revocation boundary. A change
+after the final check cannot atomically retract an in-flight external request.
+
+Only accepted and work_reported produce new personal messages. Other A-16 intents
+reconcile already accepted work cards against current ResidentWorkStatus. Renderer
+uses controlled category, explicitly public work description and own observation;
+never private Report/location, internal cancellation reason or other users' data.
+Work verification includes «Открыть и проверить», «Исправлено», «Проблема осталась».
+After observation/rework/new attempt, callbacks disappear from rendered cards.
+
+Opaque random `w_…` ref has no embedded IDs or authority. GET
+`/api/v1/notification-launch/{ref}` requires an authenticated intended recipient,
+current access/management/identity and own Report. Other actors receive masked 404.
+Bridge reads start_param, resolver selects the existing Incident Detail/current
+WorkAttempt, stale launch shows current work with a notice and focus. Test URL
+override requires non-production + server test_auth. No new UI lifecycle.
+
+Webhook secret verification and bounded parser precede durable callback inbox/job.
+Callback actor, original provider mid and accepted delivery must match; then the
+same A-16 observe service and lock order create ResultObservation. Same event is
+deduplicated; another callback ID after one's answer cannot overwrite it. First
+historical answer may be recorded with applied_to_current=false, preserving A-16;
+it cannot change the newer attempt. Unresolved reopens the same Ticket. Corrections
+remain possible through existing Mini App actions. Observation + durable answer
+job commit together; provider edit/answer failure cannot roll back business state.
+Existing A-16 intents reconcile messages after callback AND Mini App observations.
+
+Production HttpMaxMessagingProvider reuses A-07 MaxHttpClient and existing
+base URL/token/timeout/TLS boundary. MAX_BOT_USERNAME is additive configuration,
+passed through production Compose; missing value is a terminal configuration
+failure, not a fake successful send. POST /messages validates recipient and mid;
+PUT /messages and POST /answers require strict boolean success=true. Recording
+providers live in tests and require explicit injection; no production fake mode.
+
+Transient rejected sends (429/connect failure) and edit/answer errors use durable
+backoff 2/4/8/16 seconds, max five calls per operation/version; Retry-After is
+respected up to one hour. Permanent errors stop. Ambiguous POST timeout/5xx/invalid
+response or expired send lease becomes unknown and is never blindly resent.
+Known mids are retained on edit failure. PostgreSQL destination gate covers all
+three operations, with 500ms minimum gap and 90s leases; dialogs are independent.
+No exactly-once external send guarantee is asserted.
+
+## Delivery verification actually executed
+
+Dedicated own PostgreSQL 16 container `domsignal-nd-db`, loopback 55478, databases
+`domsignal` (integration) and `nd_smoke` (HTTP/browser); existing test containers and
+production data untouched. Test-only HTTP provider uses a loopback port and a
+synthetic credential; no real MAX token/webhook was used. No dependency changes.
+
+| Command actually executed | Result |
+|---|---|
+| `uv run ruff format` on explicit changed files; `uv run ruff check src tests scripts migrations`; `uv run mypy src/domsignal` | PASS, 76 source files; final targeted rerun after defensive renderer/ref checks |
+| `uv run python scripts/export_openapi.py`; `npm --prefix miniapp run api:generate` | PASS, additive resolver producer/OpenAPI/TS synchronized |
+| `uv run python scripts/check.py --scope all` with isolated DATABASE_URL | PASS: 75 unit/contract, 89 frontend unit/component, 119 real PG integration (228.62s), ruff/mypy, TS/typecheck/build and generated drift checks, migration upgrade |
+| `uv run pytest tests/contract/test_max_messaging.py -q` | PASS, 22 provider tests: exact wire, strict success, errors/unknown, real composition |
+| `uv run pytest tests/integration/test_notifications.py -q` | PASS, 20 integration tests, also included in full gate; rerun after final defensive backend changes |
+| `uv run python scripts/notification_smoke.py --browser` with APP_ENV=test, ND_FIXTURES=1, separate migrated nd_smoke DB | PASS HTTP + PG + separate worker/provider processes + actual restart; all 28 browser tests (8 B-02, 19 B-14, 1 ND), 1.2m |
+| `uv run python scripts/notification_smoke.py` after readiness/answer assertions | PASS, callback answer observed; same Ticket, two attempts, two observations, two unique mids persist after API/worker restart |
+| `uv run python scripts/docker_smoke.py --project domsignal-smoke-nd --api-port 18090` | PASS, clean build/migration/API+worker, Incident persisted after API restart; own smoke project and volume removed |
+| `git diff --check` | PASS, no whitespace errors |
+
+ND-01…ND-30 are PASS assertions, not thirty separate test functions: full mapping
+is in [acceptance](../../scenarios/acceptance.md#nd--personal-max-delivery).
+Kill-test proves unsent #1 superseded, #2 actionable and fabricated old callback
+inert; an accepted historical callback is separately checked against newer work.
+Two concurrent consumers/delivery workers preserve unique logical fan-out. Access
+revocation is also injected between claim and final preflight; no send follows.
+Provider failure tests acquire Incident NOWAIT from another connection during HTTP
+to verify no domain lock is retained, and exercise the five-call retry bound.
+
+Migration `2aea407269aa` upgrades populated A-16 `20260918_0004` and preserves
+Incident/Ticket/attempt/observation/event/outbox history; legacy identity stays
+unconfirmed and no fake delivery is backfilled. Empty-slice downgrade/upgrade
+passes; populated delivery/verified identity downgrade is explicitly guarded:
+restore a pre-delivery backup rather than discard durable external state.
+
+Latest HTTP restart evidence: Ticket `00eefcd0-90be-40f1-a7ba-d64d849e1c34`,
+Incident `3e3f438f-8b5f-42f2-8bad-4dd2a4c8879b`, two attempts/two observations,
+two mids prefixed `mid.fixture-c7b861625bd447c29a1c0ec91f3232ef-`, with accepted
+intent superseded before send. Browser screenshot reviewed at
+`miniapp/test-results/nd-resident.png` (ignored local artifact): existing detail,
+public work result, own unresolved feedback and current state; no overflow.
+
+Early test runs exposed fixture settings shared across tests and an older migration
+snapshot treating the new null identity field as old data; isolated settings and
+explicit additive-column exclusion corrected those issues. Smoke retries exposed
+reused fake mids and Windows subprocess redirection; per-run mids and direct base
+interpreter handles made restart deterministic. Final runs above pass; no tests
+disabled to obtain a green result. Existing dependency warnings remain unchanged.
+
+## Official MAX boundary and handoff
+
+Official API checked on 18.09.2026: [send](https://dev.max.ru/docs-api/methods/POST/messages),
+[edit](https://dev.max.ru/docs-api/methods/PUT/messages),
+[answer](https://dev.max.ru/docs-api/methods/POST/answers),
+[Mini Apps](https://dev.max.ru/docs/webapps/introduction),
+[Bridge](https://dev.max.ru/docs/webapps/bridge). Current open_app uses web_app +
+payload; attached app/client behavior still needs live validation. Current answers
+schema exposes message, not a notification field. success=false at HTTP 200 is
+failure. Personal dialog guidance is at most two operations/second. Keyboard DM
+edits have no documented age limit; other messages have seven days. No documented
+POST idempotency guarantee, so uncertain send is unknown. Actual push/read and
+mobile/web behavior cannot be inferred from provider acceptance.
+
+Production code is IMPLEMENTED, deterministic integration VERIFIED; real MAX is
+NOT LIVE VERIFIED / PENDING TOKEN. Updated unchecked live list is
+[MAX_LIVE_SMOKE](../MAX_LIVE_SMOKE.md).
+Main/review/CI policy unchanged; no A-10 or next-task work started.
+
+Exactly one recommended next DEV-B task: **B-01 — execute the updated live MAX
+delivery checklist with an explicitly allowed token and attached Mini App.**
+
+## Historical B-14 handoff
+
 Updated: 2026-09-18 (B-14)
 Branch: dev/b-experience
 Current task: B-14 — employee Ticket UI + resident verification

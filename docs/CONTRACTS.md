@@ -218,7 +218,8 @@ unique dedupe_key `ticket-event:<UUID>`. Typed payload TicketNotificationIntent:
 schema_version=1, event/kind, ticket/incident/attempt, house/management/tenant,
 ticket_version, audience staff/participants, optional исходные binding ID/version.
 Нет текста комментария, причины, auth/initData/token или списка всех чатов.
-Это intent, не SENT/READ; consumer не зарегистрирован и MAX sender его не берёт.
+Это intent, не SENT/READ; consumer A-05/B-03 материализует delivery согласно
+контракту personal MAX delivery ниже.
 
 Handoff A-05/B-03/B-06/B-07: перед отправкой заново проверить получателя и его
 права, management/tenant, канал и для групп конкретные binding ID/version.
@@ -255,6 +256,51 @@ Report / Incident / Ticket / ExternalAppeal остаются отдельным�
 Новые проверки — [acceptance QA](../scenarios/acceptance.md#qa-alignment--planned--not-run), все PLANNED / NOT RUN.
 
 ## A-07 connection contract — IMPLEMENTED IN BRANCH
+
+### Personal MAX delivery contract — IMPLEMENTED IN BRANCH
+
+- Existing A-16 outbox kind and payload are unchanged. Unique logical delivery:
+  `(outbox_message_id, recipient_user_id, channel)`, channel=max, purposes
+  ticket_accepted/work_verification. Consumer `processed` means durable fan-out
+  or classified no-delivery, not provider success. `accepted` requires validated
+  provider message ID; it means API acceptance, never read/push/resident approval.
+- Policy: accepted is informational; work_reported requests verification of one
+  current attempt. started/clarify/wait/cancel do not send private reasons or new
+  notifications. Subsequent events reconcile accepted work cards. Unsent stale
+  work becomes superseded. Only controlled category and public work result render.
+- `GET /api/v1/notification-launch/{ref}` requires existing bearer auth. Ref is
+  `w_` plus 32 random URL-safe characters (192 bits), unique, no authority.
+  Intended resident, confirmed MAX mapping, participant, current house/management
+  and AccessPolicy are rechecked. Missing/foreign/revoked targets share 404 masking.
+  Response: incident_id, house_id, latest work_attempt_id|null, stale. Historical
+  attempts navigate to the current work; no tenant/permissions/private metadata.
+- Inline keyboard: open_app uses documented web_app=bot username and payload=ref;
+  equivalent Mini App deep link is `https://max.ru/<bot>?startapp=<ref>`. Callback
+  payload is `<ref>:resolved|unresolved`, below the documented 1024-character limit.
+  Launch payload is below the 512-character A-Z/a-z/0-9/_/- limit.
+- Existing secret-authenticated `/max/webhook` bounds input, maps message_callback
+  to TicketCallback, deduplicates by callback ID, commits inbox+job before 200.
+  Actor must match intended recipient and saved provider mid; forged/group/deleted
+  message callbacks cannot mutate. A-16 observer checks prohibit self-verification.
+  A first historical observation follows A-16 applied_to_current=false semantics.
+  An existing own response makes quick-button replay inert; corrections/late
+  objections remain available through the canonical authorized Mini App path.
+- Callback observation and answer-job enqueue commit atomically. POST /answers
+  updates the current card through its documented `message` field; no unsupported
+  `notification` field is invented. Independent PUT reconciliation covers all
+  affected cards, including observations submitted via resident HTTP.
+- Retryable 429/connect rejection: exponential 2/4/8/16-second delays, maximum five
+  calls; numeric Retry-After, if supplied, can lengthen delay up to one hour.
+  401/403/invalid destination are terminal sanitized failures. Send read/write/total
+  timeout, malformed success or 5xx is unknown (no documented exactly-once/POST
+  idempotency guarantee); there is no automatic resend. Edit/answer boolean false,
+  malformed/5xx/timeouts retry boundedly. Job/delivery state survives restart.
+- MAX_TRANSPORT=off/recording never sends production notifications. Missing
+  MAX_BOT_USERNAME in webhook mode is an explicit MAX_APP_NOT_CONFIGURED failure,
+  not a fake success. Identity-less resident is skipped without Ticket failure.
+
+OpenAPI/generated TS carry only the launch addition; A-16 DTO/actions are unchanged.
+Provider contract tests are deterministic and are not live MAX evidence.
 
 18.09.2026, on A-15. No main merge or live MAX claim. Public external IDs remain
 strings; timestamps are UTC. Pydantic → OpenAPI → generated TS remain canonical.

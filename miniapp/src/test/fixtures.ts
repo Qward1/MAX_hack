@@ -66,6 +66,7 @@ export const incident: IncidentDetail = {
 };
 export function apiWith(items: IncidentDetail[] = [incident]): DomSignalApi {
   return {
+    notificationLaunch: vi.fn(),
     capabilities: vi.fn().mockResolvedValue(capabilities),
     authenticate: vi.fn().mockResolvedValue(undefined),
     me: vi

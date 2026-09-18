@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import type {
   Observation,
   ResidentTicketApi,
@@ -17,11 +17,13 @@ export function ResidentWorkProgress({
   incidentId,
   revision,
   parentBusy = false,
+  launchAttempt = null,
 }: {
   client: ResidentTicketApi;
   incidentId: string;
   revision?: number;
   parentBusy?: boolean;
+  launchAttempt?: string | null;
 }) {
   const load = useCallback(
     (signal: AbortSignal) => client.workStatus(incidentId, signal),
@@ -30,6 +32,10 @@ export function ResidentWorkProgress({
   const resource = useResource(`${incidentId}:${revision}`, load);
   const mutation = useTicketMutation<Observation, WorkStatus>();
   const data = resource.data;
+  useEffect(() => {
+    if (launchAttempt && data?.latest_attempt)
+      document.getElementById("notification-work-attempt")?.focus({ preventScroll: false });
+  }, [launchAttempt, data?.latest_attempt?.id]);
   if (!data)
     return (
       <section className="ticket-panel">
@@ -107,7 +113,10 @@ export function ResidentWorkProgress({
         </p>
       )}
       {attempt && (
-        <article className="work-attempt current-attempt">
+        <article className="work-attempt current-attempt" id="notification-work-attempt" tabIndex={-1}>
+          {launchAttempt && <p className="muted">
+            {launchAttempt === attempt.id ? "Результат из уведомления" : staleAttemptMessage}
+          </p>}
           <h3>Исполнитель сообщил о выполнении</h3>
           <p className="muted">
             Попытка №{attempt.number} ·{" "}

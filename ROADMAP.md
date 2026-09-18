@@ -196,6 +196,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **ARCH target / зависит для tenant-среза от A-15:** AppealDraft/ExternalAppeal отделены от Report, Incident и Ticket. Проверка: чужой tenant не читает draft/ручной номер; смена УК не переписывает владельца старого обращения; ручной filing не повышается до verified (MT-14/16).
 
 ### A-05 — durable execution и доставка без ложного успеха
+- **Delivery slice 18.09.2026:** IMPLEMENTED IN BRANCH / deterministic evidence [ND](scenarios/acceptance.md#nd--personal-max-delivery): existing A-16 outbox fan-out, durable recipient delivery, reconciliation, leases, bounded retry/unknown and per-dialog gate. Broader task is not promoted to DONE; main/live unchanged.
 - **Owner:** DEV-B. **P0 · M · Depends:** FND-01 и transport port из C0. B-03 — интеграция того же направления, не условие начала. **Allowed paths:** `src/domsignal/worker/`, services/scheduling, DB/outbox, tests.
 - **Сделать:** довести skeleton jobs до real operations: commit-before-ack, event dedup, приоритеты, backoff, recovery leases, последний актуальный render карточки, взаимодействие с MaxTransport B. DB транзакция не держится во время сети.
 - **Acceptance:** crash в ключевых точках воспроизводим в тесте; stale lease не завершает чужое задание; повтор не дублирует доменное действие; один отправитель регулирует запросы. Отдельно документирована неопределённость внешнего send при потере ответа — без обещания exactly-once.
@@ -226,6 +227,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Ограничение:** сначала один полезный AI-шаг. Training сложной модели, vector DB и универсальный RAG не часть этой задачи.
 
 ### A-09 — сопровождение: reminders, escalation, мои действия
+- **Delivery slice 18.09.2026:** reusable current-access/staleness delivery safeguards verified through A-05. No deadline reminder, scheduler or escalation implemented; A-09 reminder requirements remain PLANNED.
 - **Owner:** DEV-B. **P1 · M · Depends:** A-04/A-05/A-06/Product. **Allowed paths:** services/scheduling/appeals, API/contracts, общие jobs/outbox, DB, tests.
 - **Сделать:** персональные/обоснованные нормативные напоминания, отмена/перенос, мои обращения, «нет ответа» → следующий допустимый маршрут/черновик с источником, история. Уведомлять только пользователя, которому разрешено отправлять DM.
 - **Acceptance:** overdue не считается от произвольной даты чата; при неизвестном anchor нет ложного срока. После закрытия/смены версии лишнее напоминание не отправляется. Deadline тестируется fake clock, не ожиданием суток в CI. Эскалация — подготовка, а не автоматическая внешняя жалоба.
@@ -311,6 +313,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **ARCH target / сохранение evidence:** одна Mini App всех домов; пять экранов B-00 и реальный C0 manual report не заменяются новым scaffold. После A-15 проверить явный выбор разрешённого дома/утрату scope (MT-11/18), generated fields/actions и прежние C-сценарии; live MAX web/mobile фиксируется отдельно от браузерной эмуляции. `c4492dd` и существующие результаты сохраняются.
 
 ### B-03 — MAX transport, ingress и отправка
+- **Delivery slice 18.09.2026:** production personal send/edit/answer adapter, strict documented responses and authenticated callback inbox are IMPLEMENTED IN BRANCH / deterministic tested. Real MAX remains NOT LIVE VERIFIED / PENDING TOKEN; no full DONE claim.
 - **Owner:** DEV-B. **P0 · L · Depends:** FND-01 и transport port из C0; B-01 для LIVE проверки. A-05 — интеграция общей delivery-инфраструктуры, не условие начала. **Allowed paths:** `src/domsignal/bot/`, MAX API/ingress adapters, bot tests, MAX scenario fixtures.
 - **Сделать:** HTTPX client ограниченных проверенных методов; send/edit/callback answer; webhook normalization и типы событий; корректные ID/время; links; 429/5xx/network errors; recording adapter используется только тестово/off.
 - **Acceptance:** настоящее сообщение и изменение карточки в MAX; bot-loop отбрасывается; подпись/secret ошибки rejected; повтор/редактирование не смешиваются; разрешённая библиотека/корни сертификатов, TLS verification не отключён. Невыясненная доставка не называется подтверждённой.
@@ -332,6 +335,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Acceptance:** изменения переживают reload; 409 предлагает восстановить/сопоставить, не стирает текст; отсутствие due_at понятно; пользователь редактирует только своё. Внешний переход виден и инициируется человеком; test markers читаемы, но не загромождают каждый экран.
 
 ### B-06 — «одна карточка вместо шума»
+- **Delivery slice 18.09.2026:** personal work card reconciliation and safe callbacks IMPLEMENTED IN BRANCH. Group cards, quiet-hours, shared counts/removal behavior remain outside this slice; B-06 remains PARTIAL.
 - **Owner:** DEV-B. **P1 · M · Depends:** B-03, A-06/Product, A-07; реальный group gate B-01. A-06/AI ranking optional и не принимает merge decision.
 - **Allowed paths:** `src/domsignal/bot/`, product services/cards/group handlers, scenario tests.
 - **Сделать:** карточка общего инцидента; edit вместо повторного постинга; меня касается/не проблема; допустимое уточнение; anti-spam/quiet-hours и права; реакция на removal/edit.
@@ -340,6 +344,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Ticket extension / PLANNED:** после A-16 — актуальная общая карточка и callbacks с повторной проверкой actor/scope/попытки. Приватные комментарии/контакты в группу не попадают. Текущий A-07 принимает только явную `/report`; auto-анализ переписки этим планом не разрешается.
 
 ### B-07 — контекст между MAX-пространствами, sharing и QR
+- **Delivery slice 18.09.2026:** opaque personal open_app/start_param → authenticated resolver → existing Incident Detail/current WorkAttempt IMPLEMENTED IN BRANCH / deterministic tested. QR, sharing/group transitions and real-client behavior remain unclosed; B-07 PARTIAL.
 - **Owner:** DEV-B. **P1 · M · Depends:** B-02/B-04; A-07; B-01 capabilities.
 - **Allowed paths:** bot links, `miniapp/src/shared/max/`, onboarding/share, product access services/tests.
 - **Сделать:** group→DM→mini app на том же инциденте; нативный sharing проверенным методом MAX; короткий opaque deep link; QR дома/подъезда и текстовая ссылка как web fallback.
@@ -349,6 +354,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **ARCH target:** мастер подтверждения ConnectionRequest по A-07, подписанная идентичность подключающего и явный дом; приглашённый admin чата не получает кабинет/роль УК. Проверка MT-05/06/07/11/19: чужой/replayed/expired контекст отклонён, Mini App вне чата и web fallback не угадывают дом. Нет копирования приватного текста между чатами.
 
 ### B-08 — история, результаты и следующий шаг
+- **Delivery slice 18.09.2026:** personal notification opens B-14 work result; callback/Mini App observation reuses A-16 and reconciles MAX card. IMPLEMENTED IN BRANCH; reminder settings, escalation and remaining history scope are not DONE.
 - **Owner:** DEV-B. **P1 · M · Depends:** A-06/Product, A-09; B-02/B-04.
 - **Allowed paths:** miniapp incident/appeal features, bot reminder/feedback cards, product API integration.
 - **Сделать:** timeline, «решено/осталось», расхождение наблюдений, новый связанный случай, reminder settings, «нет ответа» → проверяемый следующий маршрут/preview.

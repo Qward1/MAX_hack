@@ -144,6 +144,47 @@ MAX bindings, Ticket, onboarding и admin UI этим срезом не нача
 
 ## Runtime
 
+### Personal MAX delivery — IMPLEMENTED IN BRANCH, 18.09.2026
+
+A-05/B-03 consume the existing A-16 `ticket.notification_intent.v1` outbox.
+One short transaction claims an intent with SKIP LOCKED, validates its stored
+TicketEvent, materializes unique per-author NotificationDelivery rows and marks
+existing work cards for reconciliation. Only then is the intent processed.
+There is no second business outbox, scheduler or broker. The same WorkerRunner
+advances delivery and existing jobs; off mode consumes intents but makes no MAX calls.
+
+NotificationDelivery stores recipient, Ticket/WorkAttempt, random unique launch ref,
+personal destination, provider mid, desired/applied Ticket versions, attempts,
+lease, retry time and sanitized error. Pending/processing/accepted/retry_wait/
+unknown/failed/superseded/skipped are delivery states, never Ticket states.
+Before send/edit/answer, fresh MembershipService/AccessPolicy, own Report,
+current management and verified MAX identity are required. Old unsent attempts
+are superseded; accepted work cards render current ResidentWorkStatus and edit.
+Network runs outside every Ticket/house lock and DB transaction. A revocation
+committed after the final check cannot retract an already in-flight HTTP request;
+subsequent actions and retries recheck access. No atomic DB+MAX guarantee is claimed.
+
+MAX identity confirmation is additive `User.max_identity_verified_at`, written
+by the existing validated initData session path. Legacy IDs are not backfilled.
+There is no global User revocation model in A-15; active resident access and current
+management remain the authoritative revocation boundary. No subscription model
+exists: candidates are distinct Report authors only. No house/group broadcast.
+
+All three messaging methods share A-07 MaxHttpClient/settings and a PostgreSQL
+per-destination gate (minimum 500 ms between operations; independent dialogs).
+90-second leases exceed the bounded total HTTP timeout. Send lease expiry or
+ambiguous response becomes unknown with no automatic resend. Rejected 429/connect
+failures retry up to five attempts with exponential backoff; edit/answer retries
+are durable. A-16 callback observation and the existing answer Job commit together;
+failure of MAX cannot roll back an observation. Mini App mutations use the same
+A-16 path and trigger edits through outbox reconciliation.
+
+Migration `2aea407269aa` is additive, creates no accepted deliveries or verified
+identities, and guards downgrade when delivery/identity history exists. Deterministic
+recording/HTTP fixture providers live only in tests and require explicit injection;
+production composition always selects HttpMaxMessagingProvider, including safe off.
+Evidence and limits: [DEV-B](status/dev-b.md), [ND matrix](../scenarios/acceptance.md#nd--personal-max-delivery).
+
 Один Python-пакет `domsignal` и один backend image запускаются в трёх ролях:
 
 - `api`: FastAPI, C0 REST, auth и модуль `/max`;
@@ -253,8 +294,8 @@ PostgreSQL advisory transaction lock в ReliabilityRepository; process-local
 locks и второй механизм receipts не добавлены. Приватные данные не хранятся
 в receipt Ticket — только IDs/версия эффекта; replay строит свежую проекцию.
 
-Outbox использует существующую таблицу с nullable unique dedupe_key, никаких
-delivery jobs для нового kind не создаётся. Жизненный цикл и permissions не
+Outbox использует существующую таблицу с nullable unique dedupe_key; новый
+consumer описан выше. Жизненный цикл и permissions не
 меняют Incident.status, capabilities/действия существующей Mini App и AI.
 
 - `POST /reports` проверяет membership, создаёт Report/Incident, outbox и

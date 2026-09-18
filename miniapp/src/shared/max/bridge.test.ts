@@ -2,6 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { createMaxBridge, safeUrl } from "./bridge";
 
 describe("MAX boundary", () => {
+  it("reads a bounded opaque start_param as a selector", () => {
+    const ref = "w_" + "a".repeat(32);
+    expect(createMaxBridge(() => ({ initData: `start_param=${ref}` })).startParam).toBe(ref);
+    expect(createMaxBridge(() => ({ initData: "start_param=tenant-permissions" })).startParam).toBeNull();
+    expect(createMaxBridge(() => undefined).startParam).toBeNull();
+  });
   it("works outside MAX without global access errors", () => {
     const bridge = createMaxBridge(() => undefined);
     expect(bridge.platform).toBe("browser");

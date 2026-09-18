@@ -7,6 +7,8 @@ from typing import Any, Literal, Protocol
 import httpx
 from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, ValidationError
 
+from domsignal.bot.http_client import MaxHttpClient
+
 
 @dataclass(frozen=True)
 class ChatInfo:
@@ -81,29 +83,19 @@ class HttpMaxChatProvider:
         timeout: float,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
-        self.base_url = base_url.rstrip("/")
-        self._token = token
-        self.timeout = timeout
-        self._transport = transport
+        self.client = MaxHttpClient(
+            base_url=base_url, token=token, timeout=timeout, transport=transport,
+        )
 
     async def _get(self, chat_id: str, suffix: str = "") -> Any:
         # External IDs cannot inject URL paths or query strings.
         if not re.fullmatch(r"-?\d{1,20}", chat_id) or str(int(chat_id)) != chat_id:
             raise MaxProviderError("max_invalid_chat_id")
-        if not self._token:
+        if not self.client.configured:
             raise MaxProviderError("max_not_configured", temporary=True)
         try:
-            async with httpx.AsyncClient(
-                base_url=self.base_url,
-                timeout=self.timeout,
-                follow_redirects=False,
-                transport=self._transport,
-            ) as client:
-                response = await client.get(
-                    f"/chats/{chat_id}{suffix}",
-                    headers={"Authorization": self._token},
-                )
-        except httpx.RequestError:
+            response = await self.client.request("GET", f"/chats/{chat_id}{suffix}")
+        except (httpx.RequestError, TimeoutError):
             raise MaxProviderError("max_temporarily_unavailable", temporary=True) from None
         if response.status_code == 429 or response.status_code >= 500:
             raise MaxProviderError("max_temporarily_unavailable", temporary=True)

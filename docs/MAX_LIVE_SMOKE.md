@@ -103,7 +103,54 @@ docs перед реализацией, обрабатывает 429/5xx/timeout
 Не придумывать API read receipts, push-подтверждения или права получателя.
 Метод получения сообщения сам по себе не доказательство, что его прочёл человек.
 
-## Ticket → MAX → Mini App — PLANNED / NOT RUN
+## Ticket → MAX → Mini App — LIVE PENDING
+
+Delivery code is now IMPLEMENTED IN BRANCH (A-05/B-03/personal B-06/B-07/B-08).
+Deterministic HTTP+PG+worker/browser evidence is in [DEV-B](status/dev-b.md).
+All live items below remain **NOT LIVE VERIFIED / PENDING TOKEN**.
+
+Official documentation rechecked before implementation on 18 September 2026:
+[send](https://dev.max.ru/docs-api/methods/POST/messages),
+[edit](https://dev.max.ru/docs-api/methods/PUT/messages),
+[answer](https://dev.max.ru/docs-api/methods/POST/answers),
+[Update](https://dev.max.ru/docs-api/objects/Update),
+[keyboard / NewMessageBody](https://dev.max.ru/docs-api/objects/NewMessageBody),
+[Mini App links](https://dev.max.ru/docs/webapps/introduction),
+[Bridge](https://dev.max.ru/docs/webapps/bridge),
+[API changelog](https://dev.max.ru/docs-api/changelog-api).
+The client-rendered official schema confirms OpenAppButton `web_app` (bot username
+or bot link), optional contact_id and payload; payload is passed to initData.
+CallbackUpdate has callback.user/callback_id/payload and nullable original message.
+The current CallbackAnswer schema lists `message`, not a standalone notification
+field. Therefore answer updates the current card. These shapes are tested locally.
+The documented limits remain two send/edit/answer operations per second per
+destination; our shared gate conservatively limits their combined rate to two.
+No POST idempotency key/guarantee is documented. Send 5xx therefore stays unknown.
+
+Additional live delivery checklist — all PENDING:
+
+- [ ] Configure the approved bot username and attached Mini App; use the existing
+  token/Authorization/configuration boundary and current platform-api2.max.ru TLS trust.
+- [ ] Genuine validated initData confirms the intended User's MAX ID; legacy/demo
+  MAX IDs do not automatically become confirmed production identities.
+- [ ] Personal POST /messages to one allowed resident returns and persists a real mid.
+- [ ] Inline keyboard has open_app plus the two short verification callbacks.
+- [ ] open_app opens the attached Mini App; payload arrives as start_param and
+  resolves the exact authorized Incident/current WorkAttempt server-side.
+- [ ] Copied launch ref under another identity reveals no target data.
+- [ ] Real resolved callback closes via A-16; unresolved reopens the same Ticket.
+- [ ] Replay after button removal has no new effect; historical attempt stays historical.
+- [ ] PUT /messages updates the original card and removes verification callbacks.
+- [ ] POST /answers returns success=true and current feedback; false is recorded as failure.
+- [ ] Mini App observation eventually edits the existing message without another POST.
+- [ ] Observe push behavior separately; API acceptance alone is not push/read evidence.
+- [ ] Two real dialogs progress independently; check conservative per-dialog rate behavior.
+- [ ] Exercise allowed rate-limit/retry behavior safely, without stressing the shared bot.
+- [ ] Mobile MAX and Web MAX each exercise open_app/start_param/callback/edit.
+- [ ] Actual webhook secret rejects an invalid request before parsing/business work.
+- [ ] If safely reproducible, API/worker restart retains retries and accepted provider IDs.
+- [ ] Check older inline-keyboard message edit on the real client (documented DM
+  keyboard messages have no age limit; non-keyboard messages have a seven-day limit).
 
 Зависимости: A-16 — Ticket/WorkAttempt/ResultObservation/events/outbox intents;
 B-14 — рабочий и resident UI; A-05/B-03 — доставка/повторы; B-06/B-07 —

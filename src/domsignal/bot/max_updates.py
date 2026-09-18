@@ -2,12 +2,14 @@
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from pydantic import BaseModel, Field, StrictBool, StrictInt, ValidationError
 
+from domsignal.contracts.notifications import TicketCallback
 from domsignal.services.errors import ServiceError
 
 
@@ -53,6 +55,18 @@ class _Created(_Update):
     message: _Message
 
 
+class _Callback(BaseModel):
+    timestamp: StrictInt
+    callback_id: str = Field(min_length=1, max_length=200)
+    payload: str | None = Field(default=None, max_length=1024)
+    user: _User
+
+
+class _CallbackUpdate(_Update):
+    callback: _Callback
+    message: _Message | None
+
+
 @dataclass(frozen=True)
 class MaxEvent:
     event_id: str
@@ -63,6 +77,7 @@ class MaxEvent:
     is_channel: bool = False
     token: str | None = None
     text: str | None = None
+    callback: TicketCallback | None = None
 
 
 def parse_update(payload: dict[str, Any]) -> MaxEvent:
@@ -102,6 +117,38 @@ def parse_update(payload: dict[str, Any]) -> MaxEvent:
                 and not message.sender.is_bot
                 else None,
             )
+        elif header.update_type == "message_callback":
+            value = _CallbackUpdate.model_validate(payload)
+            callback = value.callback
+            identity = [header.update_type, callback.callback_id]
+            fields = {}
+            match = re.fullmatch(
+                r"(w_[A-Za-z0-9_-]{32}):(resolved|unresolved)", callback.payload or ""
+            )
+            callback_message = value.message
+            if (
+                match
+                and not callback.user.is_bot
+                and callback_message
+                and callback_message.body
+                and callback_message.recipient.chat_type == "dialog"
+            ):
+                callback_event_id = (
+                    "max:"
+                    + hashlib.sha256(
+                        json.dumps(identity, separators=(",", ":")).encode()
+                    ).hexdigest()
+                )
+                fields = dict(
+                    callback=TicketCallback(
+                        event_id=callback_event_id,
+                        callback_id=callback.callback_id,
+                        actor=str(callback.user.user_id),
+                        message_id=callback_message.body.mid,
+                        launch_ref=match[1],
+                        outcome=match[2],
+                    )
+                )
         else:
             fields = {}
         digest = hashlib.sha256(json.dumps(identity, separators=(",", ":")).encode()).hexdigest()

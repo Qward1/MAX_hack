@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Header, Query
 
 from domsignal.api.dependencies import ContainerDep, CurrentUserDep, DbDep
+from domsignal.contracts.notifications import NotificationLaunch
 from domsignal.contracts.tickets import (
     AssignCommand,
     AssigneeList,
@@ -29,6 +30,13 @@ router = APIRouter(prefix="/api/v1", tags=["tickets"])
 Key = Annotated[str, Header(alias="Idempotency-Key", min_length=8, max_length=200)]
 Limit = Annotated[int, Query(ge=1, le=100)]
 Offset = Annotated[int, Query(ge=0, le=100000)]
+
+
+@router.get("/notification-launch/{ref}", response_model=NotificationLaunch)
+async def notification_launch(
+    ref: str, current_user: CurrentUserDep, session: DbDep, container: ContainerDep,
+) -> NotificationLaunch:
+    return await container.notifications.launch(session, actor_id=current_user.id, ref=ref)
 
 
 @router.get("/tickets", response_model=TicketList)

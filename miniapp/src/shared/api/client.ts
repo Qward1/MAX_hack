@@ -15,6 +15,7 @@ export type IncidentDetail = Omit<
 > & { status: string; category: string };
 export type ReportCreate = components["schemas"]["ReportCreate"];
 export type Problem = components["schemas"]["Problem"];
+export type NotificationLaunch = components["schemas"]["NotificationLaunch"];
 
 type Session = components["schemas"]["SessionResponse"];
 
@@ -33,6 +34,7 @@ export function retryable(error: unknown): boolean {
 }
 
 export interface DomSignalApi extends ResidentTicketApi {
+  notificationLaunch(ref: string, signal?: AbortSignal): Promise<NotificationLaunch>;
   capabilities(signal?: AbortSignal): Promise<Capabilities>;
   authenticate(capabilities: Capabilities, signal?: AbortSignal): Promise<void>;
   me(signal?: AbortSignal): Promise<Me>;
@@ -53,6 +55,10 @@ export class ApiClient implements DomSignalApi {
   constructor(private readonly surface: "resident" | "employee" = "resident") {}
 
   useSession(token: string) { this.token = token.trim() || null; }
+
+  notificationLaunch(ref: string, signal?: AbortSignal): Promise<NotificationLaunch> {
+    return this.request(`/api/v1/notification-launch/${encodeURIComponent(ref)}`, { signal });
+  }
 
   async capabilities(signal?: AbortSignal): Promise<Capabilities> {
     return this.request<Capabilities>("/api/v1/capabilities", { signal });
