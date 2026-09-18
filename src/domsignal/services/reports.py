@@ -23,7 +23,7 @@ from domsignal.core.incidents import CATEGORY_TITLES, IncidentStatus, ReportCate
 from domsignal.db.models import Incident, Report
 from domsignal.db.repositories.incidents import IncidentRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
-from domsignal.services.context import OperationSource
+from domsignal.services.context import OperationContext, OperationSource
 from domsignal.services.errors import IdempotencyConflict, ResourceNotFound
 from domsignal.services.membership import MembershipService
 
@@ -50,10 +50,7 @@ class ReportService:
         idempotency_key: str,
         provenance: OperationSource = "api",
     ) -> ReportCreated:
-        request_hash = _stable_hash(payload.model_dump(mode="json"))
-        action = "report.create"
         async with session.begin():
-            reliability = ReliabilityRepository(session)
             context = await self.memberships.require_house(
                 session,
                 user_id=actor_id,
@@ -61,63 +58,93 @@ class ReportService:
                 source=provenance,
                 for_write=True,
             )
-            self.memberships.require_permission(context, "report.create")
-            existing = await reliability.idempotency_record(
-                actor_id=actor_id, action=action, key=idempotency_key
-            )
-            if existing is not None:
-                if existing.request_hash != request_hash:
-                    raise IdempotencyConflict(
-                        "This Idempotency-Key was already used with a different request body"
-                    )
-                # Stored C0 receipts contain the old read DTO. Preserve the effect/IDs,
-                # but publish the current authorized representation on every replay.
-                return ReportCreated(
-                    report_id=UUID(existing.response_body["report_id"]),
-                    incident=await self.detail(
-                        session,
-                        actor_id=context.actor_user_id,
-                        incident_id=UUID(existing.response_body["incident"]["id"]),
-                        house_id=context.house_id,
-                    ),
-                )
-
-            repo = IncidentRepository(session)
-            incident = await repo.create_incident(
+            return await self.create_in_context(
+                session,
                 context=context,
-                category=payload.category.value,
-                title=CATEGORY_TITLES[payload.category],
-                description=payload.description,
+                payload=payload,
+                idempotency_key=idempotency_key,
             )
-            report = await repo.create_report(
-                incident_id=incident.id,
-                house_id=context.house_id,
-                author_id=context.actor_user_id,
-                category=payload.category.value,
-                description=payload.description,
-                classification_mode=payload.classification_mode.value,
-                provenance=context.source,
-            )
-            response = ReportCreated(
-                report_id=report.id,
-                incident=self._detail(
-                    incident, [report], is_demo=await repo.house_is_demo(context.house_id)
+
+    async def create_in_context(
+        self,
+        session: AsyncSession,
+        *,
+        context: OperationContext,
+        payload: ReportCreate,
+        idempotency_key: str,
+    ) -> ReportCreated:
+        """Internal entry point; caller resolves/locks context in this transaction."""
+        if payload.house_id != context.house_id:
+            raise ResourceNotFound("Resource was not found")
+        actor_id = context.actor_user_id
+        request_hash = _stable_hash(payload.model_dump(mode="json"))
+        action = "report.create"
+        reliability = ReliabilityRepository(session)
+        self.memberships.require_permission(context, "report.create")
+        existing = await reliability.idempotency_record(
+            actor_id=actor_id, action=action, key=idempotency_key
+        )
+        if existing is not None:
+            if existing.request_hash != request_hash:
+                raise IdempotencyConflict(
+                    "This Idempotency-Key was already used with a different request body"
+                )
+            # Stored C0 receipts contain the old read DTO. Preserve the effect/IDs,
+            # but publish the current authorized representation on every replay.
+            return ReportCreated(
+                report_id=UUID(existing.response_body["report_id"]),
+                incident=await self.detail(
+                    session,
+                    actor_id=context.actor_user_id,
+                    incident_id=UUID(existing.response_body["incident"]["id"]),
+                    house_id=context.house_id,
                 ),
             )
-            response_body = response.model_dump(mode="json")
-            reliability.add_idempotency(
-                actor_id=actor_id,
-                action=action,
-                key=idempotency_key,
-                request_hash=request_hash,
-                response_status=201,
-                response_body=response_body,
-            )
-            reliability.add_outbox(
-                kind="incident.created",
-                aggregate_id=incident.id,
-                payload={"incident_id": str(incident.id), "house_id": str(incident.house_id)},
-            )
+
+        repo = IncidentRepository(session)
+        incident = await repo.create_incident(
+            context=context,
+            category=payload.category.value,
+            title=CATEGORY_TITLES[payload.category],
+            description=payload.description,
+        )
+        report = await repo.create_report(
+            incident_id=incident.id,
+            house_id=context.house_id,
+            author_id=context.actor_user_id,
+            category=payload.category.value,
+            description=payload.description,
+            classification_mode=payload.classification_mode.value,
+            provenance=context.source,
+        )
+        response = ReportCreated(
+            report_id=report.id,
+            incident=self._detail(
+                incident, [report], is_demo=await repo.house_is_demo(context.house_id)
+            ),
+        )
+        response_body = response.model_dump(mode="json")
+        reliability.add_idempotency(
+            actor_id=actor_id,
+            action=action,
+            key=idempotency_key,
+            request_hash=request_hash,
+            response_status=201,
+            response_body=response_body,
+        )
+        reliability.add_outbox(
+            kind="incident.created",
+            aggregate_id=incident.id,
+            payload={
+                "incident_id": str(incident.id),
+                "house_id": str(incident.house_id),
+                "chat_binding_id": str(context.chat_binding_id.value)
+                if context.chat_binding_id.value
+                else None,
+                "binding_version": context.binding_version.value,
+                "entrance": context.entrance,
+            },
+        )
         return response
 
     async def list_for_house(

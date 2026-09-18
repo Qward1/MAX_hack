@@ -4,9 +4,12 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from domsignal.bot.chat_provider import HttpMaxChatProvider
 from domsignal.bot.ingress import InboundService
 from domsignal.bot.transport import MaxTransport, OffTransport, RecordingTransport
 from domsignal.db.session import create_engine, create_session_factory
+from domsignal.services.chat_connections import ChatConnectionService
+from domsignal.services.group_messages import MaxWebhookService
 from domsignal.services.membership import MembershipService
 from domsignal.services.reports import DemoRule, ReportService
 from domsignal.services.sessions import SessionService
@@ -25,6 +28,8 @@ class Container:
     inbound_service: InboundService
     transport: MaxTransport
     worker_handlers: WorkerHandlers
+    chat_connections: ChatConnectionService
+    max_webhook: MaxWebhookService
 
 
 def build_container(settings: Settings) -> Container:
@@ -44,10 +49,23 @@ def build_container(settings: Settings) -> Container:
             note="Правило не проверено; нормативный срок не рассчитан.",
         )
     )
+    chat_connections = ChatConnectionService(
+        HttpMaxChatProvider(
+            base_url=settings.max_api_base_url,
+            # Off/recording must never cause outbound MAX calls, even if a token is present.
+            token=settings.max_bot_token
+            if settings.max_transport == MaxTransportMode.WEBHOOK
+            else None,
+            timeout=settings.max_api_timeout_seconds,
+        ),
+        ttl_seconds=settings.chat_connection_ttl_seconds,
+        required_permissions=settings.max_required_permissions,
+    )
     worker_handlers = WorkerHandlers(
         session_factory=session_factory,
         report_service=report_service,
         transport=transport,
+        chat_connections=chat_connections,
     )
     return Container(
         settings=settings,
@@ -62,4 +80,6 @@ def build_container(settings: Settings) -> Container:
         inbound_service=InboundService(),
         transport=transport,
         worker_handlers=worker_handlers,
+        chat_connections=chat_connections,
+        max_webhook=MaxWebhookService(chat_connections),
     )

@@ -49,6 +49,12 @@ ref; личный путь и модульный монолит сохраняю
 Следующая интеграционная операция — review/CI и PR, не автоматический merge.
 Live MAX и deployment по-прежнему NOT VERIFIED.
 
+A-07 добавлена в той же ветке поверх A-15 (`ffd9b84`): MAXChat,
+ConnectionRequest, ChatBinding, проверка provider/approval и версия queued context.
+Это IMPLEMENTED IN BRANCH, не состояние main. CB и regression evidence —
+[DEV-B handoff](docs/status/dev-b.md). Live MAX: NOT VERIFIED / PENDING TOKEN;
+[checklist](docs/MAX_LIVE_SMOKE.md). Ticket/full admin UI/AI не начаты.
+
 ## Возможности в проверенном main
 
 | Возможность / flag | Состояние | Фактический статус |

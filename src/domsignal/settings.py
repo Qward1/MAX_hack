@@ -42,13 +42,40 @@ class Settings(BaseSettings):
     allow_test_session: bool = True
     demo_seed: bool = True
     max_transport: MaxTransportMode = MaxTransportMode.OFF
-    max_bot_token: str | None = None
-    max_webhook_secret: str | None = None
+    max_bot_token: str | None = Field(default=None, repr=False)
+    max_webhook_secret: str | None = Field(default=None, repr=False)
+    max_api_base_url: str = "https://platform-api2.max.ru"
+    max_api_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
+    max_required_permissions: frozenset[str] = frozenset({"read_all_messages"})
+    chat_connection_ttl_seconds: int = Field(default=900, ge=60, le=3600)
     llm_provider: LlmProvider = LlmProvider.RULES
     build_commit: str = "dev"
     public_base_url: str = "http://localhost:8000"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
     static_dir: str = "miniapp/dist"
+
+    @field_validator("max_api_base_url")
+    @classmethod
+    def validate_max_api_base(cls, value: str) -> str:
+        parsed = urlparse(value)
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+            or parsed.query
+            or parsed.fragment
+            or parsed.path not in {"", "/"}
+        ):
+            raise ValueError("MAX API base must be an HTTPS origin without credentials")
+        return value.rstrip("/")
+
+    @field_validator("max_required_permissions")
+    @classmethod
+    def require_message_permission(cls, value: frozenset[str]) -> frozenset[str]:
+        if "read_all_messages" not in value:
+            raise ValueError("Group mode requires read_all_messages")
+        return value
 
     @field_validator("database_url")
     @classmethod

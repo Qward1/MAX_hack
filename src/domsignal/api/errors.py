@@ -35,7 +35,7 @@ def install_error_handlers(app: FastAPI) -> None:
             detail=exc.detail,
             code=exc.code,
             trace_id=_request_id(request),
-            retryable=False,
+            retryable=getattr(exc, "retryable", False),
         )
         return _problem_response(problem)
 

@@ -11,7 +11,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
 
 from domsignal.api.errors import RequestIdMiddleware, install_error_handlers
-from domsignal.api.routes import auth, incidents, max_ingress, me, system
+from domsignal.api.routes import auth, chat_connections, incidents, max_ingress, me, system
 from domsignal.bootstrap import build_container
 from domsignal.contracts.common import Problem
 from domsignal.settings import Settings, get_settings
@@ -49,6 +49,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(me.router)
     app.include_router(incidents.router)
     app.include_router(max_ingress.router)
+    app.include_router(chat_connections.router)
 
     def problem_openapi() -> dict[str, Any]:
         if app.openapi_schema is None:

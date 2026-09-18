@@ -26,6 +26,62 @@ generated TypeScript types; внешние MAX identifiers на JSON-грани�
 types + tests. AI-specific внутренний контракт пишет DEV-A, а его совместимую
 границу с продуктом DEV-A и DEV-B проверяют вместе.
 
+## A-07 connection contract — IMPLEMENTED IN BRANCH
+
+18.09.2026, on A-15. No main merge or live MAX claim. Public external IDs remain
+strings; timestamps are UTC. Pydantic → OpenAPI → generated TS remain canonical.
+
+| Endpoint | Authority / result |
+|---|---|
+| `POST /api/v1/houses/{house_id}/chat-connections` | Existing session + `chat.connect`; body `scope_type=house`/null or `entrance`/nonempty `scope_value`; derives current management/tenant; 201 ConnectionView |
+| `GET /api/v1/chat-connections/{id}` | Current authorized employee of the same management; ConnectionView, no token replay |
+| `POST /api/v1/chat-connections/{id}/approve` | Body `confirm: true`; fresh AccessPolicy + MAX verification; 200 BindingView; duplicate returns same active binding |
+| `POST /api/v1/chat-connections/{id}/reject` | Authorized employee; terminal rejected ConnectionView |
+| `POST /api/v1/chat-connections/{id}/cancel` | Authorized employee; terminal cancelled ConnectionView |
+| `POST /max/webhook` | Explicit webhook mode + constant-time `X-Max-Bot-Api-Secret`; committed InboundAccepted, HTTP 200; off gives 503 |
+
+ConnectionView includes id/house/status/expiry/candidate external chat/scope/error,
+optional completed binding ID/version. `correlation_token` is present only on first
+creation. Repeated initiation of the same open employee+management+scope returns
+that request with token null; cancel/recreate if the one-time response was lost.
+No public tenant, management, role or client chat override fields are accepted.
+A deep link is not synthesized without a known real bot identity; caller receives
+the opaque correlation payload. No management addresses/titles of foreign bindings
+are returned in conflict errors.
+
+Request states: created → connector_claimed → chat_detected → max_verified →
+awaiting_approval → completed. A connector with the same persisted MAX identity
+and current company authority may confirm directly from max_verified. External
+connector waits for the target company; no mandatory Superadmin step. All paths
+still require explicit approval. expired/cancelled/rejected are terminal.
+Binding states: pending → active → suspended/revoked, suspended → revoked.
+Reactivation always creates a new request/binding and increases chat-wide version.
+Revoke is currently an internal authorized service, not a full administration API.
+
+Problem Details uses existing lowercase machine codes: connection_expired,
+connection_not_detected, connection_not_verified, connection_invalid_transition,
+connection_changed_retry, connector_not_chat_admin, bot_permission_missing,
+chat_already_bound, management_not_active, tenant_suspended, binding_not_active,
+stale_binding_version; sanitized max_* codes identify provider failures.
+Foreign scope is masked 404; visible scope without action is 403; conflict is 409;
+provider unavailability during approval is 503/retryable. Verification failures
+remain pending/error with no active binding. Failed verification/expiry persists.
+No raw upstream responses or secrets appear in errors.
+
+The internal provider returns ChatInfo/ChatMember, never raw MAX JSON to core.
+The worker registers max.connection.verify, max.binding.health, max.group.report.
+The report job contains chat ID, binding ID/version, user identity, event time and
+explicit command text. Resolve/access/version validation precedes product core.
+A-07 group command is `/report <elevator|water|lighting|waste|other> <description>`
+(5–2000 characters); it reuses manual ReportCreate semantics. Ordinary conversation
+is ignored; auto-group NLP is a separate task. `group_mode` capability is not
+promoted to a live-ready automatic feature. Personal/manual APIs stay unchanged.
+
+Mini App signed chat/start_param do not grant access or create ResidentMembership;
+this version keeps the existing explicit authorized house flow. No participant sync.
+More implementation/limits: [architecture](ARCHITECTURE.md) and
+[real MAX checklist](MAX_LIVE_SMOKE.md).
+
 ## Общие значения
 
 ### Capabilities
@@ -356,7 +412,7 @@ Bearer token хранится mini app только в памяти. Внешн�
 | `GET /api/v1/houses/{id}/incidents` | House-scoped board, `limit/offset/total` |
 | `GET /api/v1/incidents/{id}` | Карточка, reports и demo rule provenance |
 | `POST /max/replay` | Local/test normalized diagnostic event → durable inbox/job |
-| `POST /max/webhook` | Честный `503`: live payload adapter пока не реализован |
+| `POST /max/webhook` | A-07 branch: secret-validated Update → committed receipt/state/job; off = 503; live NOT VERIFIED |
 
 Routes, appeals, participants, feedback, admin, reminders и media отсутствуют в
 OpenAPI. Capability flags для них `false`; успешных placeholder responses нет.

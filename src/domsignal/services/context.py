@@ -1,7 +1,7 @@
 """Internal context resolved by MembershipService, never deserialized from client data.
 
 Tenant/management and access bases come from current persisted relations.
-Chat scopes remain NOT_APPLICABLE until the separate connection slice.
+Chat scopes are KNOWN only after server-side binding and access resolution.
 """
 
 from dataclasses import dataclass, field
@@ -9,7 +9,7 @@ from enum import StrEnum
 from typing import Literal
 from uuid import UUID
 
-OperationSource = Literal["api", "max_replay"]
+OperationSource = Literal["api", "max_replay", "max_group"]
 
 
 class ScopeState(StrEnum):
@@ -40,6 +40,7 @@ class OperationContext:
     organization_role: str | None = None
     house_assignment_role: str | None = None
     resident_membership_id: UUID | None = None
+    entrance: str | None = None
 
     @property
     def resident_access(self) -> bool:

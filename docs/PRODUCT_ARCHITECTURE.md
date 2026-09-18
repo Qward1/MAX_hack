@@ -382,3 +382,13 @@ Tenant scope проходит через запросы, выборки, фай�
 Исходный `domsignal_plan.md` и прежний ROADMAP — история и основа развития. В части назначения DEV-A/DEV-B, ограниченного рабочего контура УК и отдельного веб-кабинета применяются новые согласованные решения, без переписывания старых отчётов задним числом.
 
 **Итог:** Superadmin → УК → Дом → Ответственный/очередь → проверенный MAX Chat ↔ общий Bot ↔ одна Mini App → Житель → Сообщение/инцидент → Рабочая заявка → Исполнитель → Проверка результата.
+
+## A-07 implementation reference — 18.09.2026
+
+The agreed model above remains TARGET. The bounded existing-chat connection slice
+is IMPLEMENTED IN BRANCH dev/b-experience: [architecture](ARCHITECTURE.md),
+[contract](CONTRACTS.md), [DEV-B evidence](status/dev-b.md). No group creation,
+participant import, multi-house NLP routing, quota, Ticket or full admin UI was
+added. MAXChat identity is the external chat ID; ChatBinding pins a management
+period, and a new confirmation/version is required for the next management.
+Live MAX remains NOT VERIFIED / PENDING TOKEN, independently of deterministic CB tests.

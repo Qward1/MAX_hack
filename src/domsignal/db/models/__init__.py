@@ -7,11 +7,15 @@ from domsignal.db.models.access import (
     ResidentMembership,
     User,
 )
+from domsignal.db.models.chat_connections import ChatBinding, ConnectionRequest, MAXChat
 from domsignal.db.models.incidents import Incident, Report
 from domsignal.db.models.reliability import IdempotencyRecord, InboxReceipt, Job, OutboxMessage
 from domsignal.db.models.sessions import AppSession
 
 __all__ = [
+    "MAXChat",
+    "ChatBinding",
+    "ConnectionRequest",
     "AppSession",
     "House",
     "HouseAssignment",

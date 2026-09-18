@@ -12,6 +12,9 @@ class AccessPolicy:
         employee = organization_role == "company_admin" or (
             organization_role == "operator" and assignment_role in {"responsible", "operator"}
         )
-        if resident or employee:
-            return frozenset({"incident.read", "report.create"})
-        return frozenset()
+        permissions = {"incident.read", "report.create"} if resident or employee else set()
+        if organization_role == "company_admin" or (
+            organization_role == "operator" and assignment_role == "responsible"
+        ):
+            permissions.add("chat.connect")
+        return frozenset(permissions)

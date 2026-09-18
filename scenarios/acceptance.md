@@ -208,3 +208,48 @@ typecheck/production build, OpenAPI/TS drift PASS. Local restore всех 15 т�
 жителей; история остаётся в БД, архивный/own-history endpoint не сделан.
 MAX ChatBinding, Ticket, onboarding/admin UI не начаты. Real MAX Web/iOS/Android,
 VPS/TLS, off-site backups, main merge/review — NOT VERIFIED/PENDING.
+
+## A-07 CB acceptance — IMPLEMENTED IN BRANCH, 18.09.2026
+
+All outcomes below are deterministic PostgreSQL tests in
+`tests/integration/test_chat_bindings.py`, with an explicit test-only MAX adapter.
+They are not live MAX evidence. Two synthetic companies/houses, independent
+employees, a dual-house resident and outsider are created per test. No fixtures
+are installed as production bindings. Group product messages use the existing
+manual `/report category description` path; ordinary conversation/NLP is outside A-07.
+
+| ID | Result checked | Evidence function | Outcome |
+|---|---|---|---|
+| CB-01 | existing chat binds to A1 with explicit confirmation | `test_cb01_existing_chat_binds_with_explicit_confirmation` | PASS |
+| CB-02 | unbound messages never enter Core; raw text not retained | `test_cb02_unbound_message_never_enters_core_or_retains_text` | PASS |
+| CB-03 | same command/mid in two chats has separate management/house results | `test_cb03_same_message_different_house_results` | PASS |
+| CB-04 | Alpha chat never resolves Beta; foreign actor has no effect | `test_cb04_alpha_chat_never_resolves_beta` | PASS |
+| CB-05 | connector admin status rechecked at approval | `test_cb05_connector_must_still_be_admin_at_approval` | PASS |
+| CB-06 | bot admin + read_all_messages mandatory | `test_cb06_required_bot_permissions` | PASS |
+| CB-07 | expired request cannot activate and persists expired | `test_cb07_expired_cannot_activate` | PASS |
+| CB-08 | duplicate bot_added does not duplicate chat/request/job | `test_cb08_duplicate_bot_added_idempotent` | PASS |
+| CB-09 | one chat cannot bind two houses; conflict hides owner | `test_cb09_chat_cannot_bind_two_houses` | PASS |
+| CB-10 | one house can have multiple active chats | `test_cb10_house_has_multiple_chats` | PASS |
+| CB-11 | bot_removed suspends once and retains history | `test_cb11_removed_suspends_idempotently_and_retains_history` | PASS |
+| CB-12 | health suspends on permission/admin loss, missing chat or timeout | `test_cb12_health_permission_or_access_loss` | PASS |
+| CB-13 | management switch suspends without transfer or queued effect | `test_cb13_management_switch_suspends_without_transfer` | PASS |
+| CB-14 | old job and stale version fail closed after revoke/rebind | `test_cb14_stale_job_after_revoke_and_rebind` | PASS |
+| CB-15 | valid signed Mini App chat/start_param do not grant access | `test_cb15_signed_miniapp_chat_and_start_do_not_grant_access` | PASS |
+| CB-16 | title changes snapshot only | `test_cb16_chat_title_changes_only_snapshot` | PASS |
+| CB-17 | concurrent webhook delivery has one product effect | `test_cb17_concurrent_duplicate_delivery_has_one_effect` | PASS |
+| CB-18 | timeout/429/5xx leave chat_detected, retry pending, no binding | `test_cb18_max_temporary_failure_is_pending_with_durable_retry` | PASS |
+| CB-19 | token cannot activate alone or change claimed identity | `test_cb19_token_not_authority_and_cannot_be_stolen` | PASS |
+| CB-20 | five concurrent approvals return one binding | `test_cb20_concurrent_approvals_one_binding` | PASS |
+| CB-21 | external/Beta connector requires Alpha employee approval | `test_cb21_external_connector_requires_target_company_approval` | PASS |
+| CB-22 | entrance hint preserved; text never changes house/binding | `test_cb22_entrance_context_preserves_house` | PASS |
+
+Additional PostgreSQL negatives cover wrong webhook secret/malformed update, raw
+token non-retention, repeated initiation/claim, cancel/reject, unauthorized fields
+and explicit confirmation, two-house concurrent approval, direct DB uniqueness /
+composite FK / immutable-version rejection, access revocation, suspended tenant,
+management end, channels/unrelated add and delayed pre-activation messages.
+A-07 suite: 38 cases; full integration suite including A-15, jobs and migration
+harnesses: 65 PASS. Unit/provider tests independently exercise fake configurations,
+production selection, timeout/HTTP failures and documented response mapping.
+See [DEV-B](../docs/status/dev-b.md) for exact commands and regression results, and
+[MAX live checklist](../docs/MAX_LIVE_SMOKE.md) for pending real-token verification.

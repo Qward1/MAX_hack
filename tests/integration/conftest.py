@@ -33,7 +33,8 @@ async def reset_database(integration_settings: Settings) -> None:
     async with factory() as session, session.begin():
         await session.execute(
             text(
-                "TRUNCATE outbox_messages, jobs, inbox_receipts, idempotency_records, "
+                "TRUNCATE chat_bindings, chat_connection_requests, max_chats, "
+                "outbox_messages, jobs, inbox_receipts, idempotency_records, "
                 "app_sessions, reports, incidents, resident_memberships, "
                 "house_assignments, organization_memberships, "
                 "house_managements, management_companies, houses, users CASCADE"

@@ -1,132 +1,195 @@
 # DEV-B — current handoff
-Updated: 2026-09-18 (A-15)
+Updated: 2026-09-18 (A-07)
 Branch: dev/b-experience
-Current task: A-15 — tenant/access foundation
-State: PASS / IMPLEMENTED IN BRANCH; B-02 current binding PASS
+Current task: A-07 — existing MAX chat connection and safe ChatBinding
+State: PASS / IMPLEMENTED IN BRANCH; MAX NOT LIVE VERIFIED / PENDING TOKEN
 
 ## Delivery boundary
 
 | Slice | State | Evidence |
 |---|---|---|
-| A-01 / C0.1 | PASS / IMPLEMENTED IN BRANCH | Parent `e66c351`, producer/OpenAPI/TS; existing regressions rerun |
-| A-15 | PASS / IMPLEMENTED IN BRANCH | Migration 0002, access policy/resolver/scoped reads; A-15 MT-01…MT-10 all PASS |
-| B-02 | PASS / IMPLEMENTED IN BRANCH | Real API/PG board/detail/create/reload and masked 404 cache clearing |
-| A-07 / A-16 / admin UI | NOT STARTED | No ChatBinding/MAX onboarding/Ticket/admin endpoints or UI |
+| A-01 / C0.1 | PASS / IMPLEMENTED IN BRANCH | Parent e66c351; producer/consumer regressions and OpenAPI/TS drift rerun |
+| A-15 | PASS / IMPLEMENTED IN BRANCH | Parent ffd9b84; all 16 existing isolation/access tests rerun |
+| A-07 | PASS / IMPLEMENTED IN BRANCH | Migration 0003, provider/state/approval/context/worker; CB-01…CB-22 PASS, 38 PG cases |
+| B-02 | PASS / IMPLEMENTED IN BRANCH | 8 browser tests, real API/PG create/board/detail/reload plus existing 73 frontend tests |
+| Real MAX | IMPLEMENTED / NOT LIVE VERIFIED | Read-only production provider + webhook; no real token/chat calls; PENDING TOKEN |
+| Ticket / full admin UI / AI | NOT STARTED | Explicitly excluded from this task |
 
-Start after fetch: own branch/remote `e66c351`, main `3d4a095`. START own
-fast-forward/main merge already up to date; colleague handoff read from
-origin/dev/a-core without modifying that branch. Main approval/merge not performed.
-IMPLEMENTATION_CONTEXT retains verified main baseline with a branch pointer,
-not a false MERGED label. Final commit SHA is delivered in the final report.
+Start and END refs after fetch: own branch/remote ffd9b84, origin/main 3d4a095.
+Own fast-forward/main synchronization was already up to date. Colleague handoff
+read from origin/dev/a-core; no writes/push to that branch. Main is unchanged:
+second-developer review/current CI/merge remain pending. IMPLEMENTATION_CONTEXT
+retains the verified main table and a separate branch pointer. Final commit SHA
+is provided in the final response, not a follow-up hash-only commit.
 
-## Implementation and important limits
+## Implemented flow and invariants
 
-ManagementCompany is tenant; House has no permanent tenant_id. HouseManagement
-stores temporal `[from,to)` tenant/house association, basis, actor/timestamps and
-is_demo. PostgreSQL btree_gist exclusion prevents intersecting active periods
-(including finite/future/concurrent inserts), plus application overlap validation.
-Adjacent periods work. Internal ManagementService uses caller-owned transactions;
-no public maintenance/admin API. House row locks serialize switch/report creation.
+MAXChat is a technical snapshot of an already existing chat: UUID, unique string
+max_chat_id, type/title/channel/owner, bot_present, last_seen/lifecycle timestamps
+and a monotonic binding counter. Title/text/LLM/client parameters never select a
+house or tenant. No API creates groups or imports participant lists.
 
-OrganizationMembership company_admin/operator is active/revoked. Company admin
-has all current houses of its active company; operator needs active
-HouseAssignment operator/responsible on that management. Assignments are never
-copied on switch. ResidentMembership is house-bound, active/revoked/expired with
-source/verification/expiry; it proves product access only. Legacy role/evidence
-are retained solely for rollback, never used as employee rights. Separate nullable
-User.platform_role=superadmin deliberately has no private read-all grant.
+ConnectionRequest stores management+house, initiator, connector MAX identity,
+SHA-256 digest of a random 256-bit opaque token, expiry, scope, candidate chat,
+verification/completion/cancellation/rejection times and sanitized error code.
+TTL defaults to 900 seconds. The raw token is returned once; it is absent from
+DB receipts/jobs/outbox. Repeated open initiation returns the same request with
+null token; cancel/recreate recovers a lost first response.
 
-Incident.management_id is non-null alongside house_id. Composite FK references
-UNIQUE(management.id, house_id); triggers protect incident scope and management
-tenant/house from rewriting. Indexes cover tenant/house/current management,
-unique membership/assignment lookup, incident house/status and management/status.
+State transitions are centralized in core/chat_connections.py and applied by the
+application service: created → connector_claimed → chat_detected → max_verified
+→ awaiting_approval → completed; expired/cancelled/rejected terminal. Same-company
+connector with the same persisted MAX identity and current chat.connect permission
+can confirm from max_verified. External connector waits for target-company approval.
+Neither path needs mandatory Superadmin approval, and both require explicit confirm.
 
-Existing MembershipService resolves immutable OperationContext on every request:
-identity → active management/company → organization/assignment/resident basis →
-AccessPolicy. Tenant/management are KNOWN; chat fields NOT_APPLICABLE. Permissions
-are incident.read/report.create only. Revocation/expiry applies without login;
-worker also re-resolves before report creation. Client tenant/management/role/chat
-metadata never grants rights. Body extras 422. Missing/foreign scope 404 with the
-same problem content; visible scope without action permission 403.
+ChatBinding pins management+house and house/entrance scope; states pending → active
+→ suspended/revoked, suspended → revoked. Reactivation/reassignment always uses a
+new request/binding. The chat counter increments across bindings (1 → 2), old
+binding scope/version is immutable, and histories are retained. Revoke is an
+internal authorized service; no full administration endpoints/UI were introduced.
 
-Incident content queries require context and constrain house+management. Optional
-house selector must match. Without selector only house routing ID is read before
-scope resolution. No DTO is built from unauthorized content. Board/detail expose
-current management only, including residents. Historical rows remain immutable,
-but archive/own-history-after-revoke endpoints are NOT implemented. New Beta does
-not see old Alpha incidents. Resident basis survives switch; new reports use new
-management; old receipt retry is checked again and returns 404, no duplicate effect.
+DB constraints: unique MAXChat external ID/token digest/request binding; composite
+FK (management_id,house_id) for request and binding using the A-15 pattern; typed
+scope/status/version CHECKs; unique (chat,version) and partial unique active chat;
+immutable binding scope/version trigger. No house uniqueness prevents multiple
+chats per house. An A-15 management status/end trigger suspends old active bindings
+with MANAGEMENT_ENDED; natural period expiry is checked by health/access resolution.
+No binding or old Incident history transfers automatically to a successor company.
 
-Migration preserves C0.1/demo IDs/text/reports; demo company/management retain
-provenance. Resident source=demo/manual, verification=unverified, verified_at=null.
-Non-demo legacy houses get isolated suspended/legacy_unverified management, no
-invented active production ownership. Pristine C0 backfill downgrade is supported;
-new assignments/org grants/revokes/switches/platform roles fail closed and require
-pre-A15 backup for rollback. Existing ORM idempotency constraint name aligned with
-published 0001 for alembic check; no change to its uniqueness or original revision.
+`chat.connect` extends existing AccessPolicy: active company_admin, or active
+organization operator with responsible assignment. Resident/operator alone cannot
+connect. Backend derives current management/tenant. Existing OperationContext and
+MembershipService remain the only access/context mechanism.
 
-API paths/report/incident DTO unchanged; /me.houses.role adds operator/responsible,
-admin remains the public company_admin descriptor. Generated OpenAPI/TS regenerated.
-Capabilities unchanged, allowed_actions=[]: no unimplemented role-derived actions.
-PostgreSQL-only is enforced in Settings and engine factory; no SQLite fallback or
-runtime dependency existed. Ignore patterns are unrelated tooling and retained.
+bot_started claims a valid unexpired token to the webhook's sender MAX identity;
+same actor replay is idempotent, another actor cannot steal the request. A connector
+may have only one open request; ambiguous bot_added is not guessed. bot_added
+matches that connector's prior claim and records candidate chat, then enqueues
+verification. Unrelated/duplicate add never activates a binding. Lifecycle event
+timestamps stop an older add/remove from reversing newer installation state.
+
+Verification reads current ChatInfo, bot membership/admin+mandatory permissions
+(default read_all_messages), and current connector admin/owner from the provider.
+No bot_added.user or token is permanent authority. Timeout/429/5xx keeps a new
+connection chat_detected with verified_at null and uses durable job retry. Approval
+rechecks MAX even after earlier success. Invalid/missing/unsupported responses fail
+closed. Approval confirms current employee/management/company again after network
+calls, rejects foreign active-chat conflict generically, creates binding/outbox and
+completes request atomically. Lock order: house shared → chat advisory → request row;
+DB uniqueness independently rejects concurrent activation. Request detection racing
+its routing read fails closed for retry instead of reversing lock order.
+
+Webhook authenticates configured secret before payload parsing (bounded 64 KiB).
+Only explicit webhook mode accepts live payloads. Mapping lives in bot/max_updates;
+application receives typed events. Concurrent duplicate delivery serializes on a
+stable inbox identity. Receipt/state/jobs commit before HTTP 200. Inbox holds no
+raw token or ordinary/unbound message text. Unknown events are acknowledged without
+product effects; malformed identity gets sanitized Problem Details.
+
+Group product intake is deliberately explicit `/report <category> <description>`
+through existing manual ReportService core; no AI/NLP or B-06 auto-group introduced.
+The author must already have authorized resident/employee access. Unbound chats,
+ordinary conversation, channels and unauthorized actors create no Report/Incident
+and invoke no NLP. There is no fallback demo/first house or membership grant.
+
+For eligible messages, receipt captures chat_binding_id, binding_version and event
+time. Worker checks binding health, then resolves chat → ACTIVE binding → pinned
+current management → tenant/house → existing AccessPolicy → OperationContext in the
+write transaction. Wrong/old ID/version, pre-activation events, management changes
+and revoked access are ignored as terminal stale context. Outbox carries binding
+ID/version and verified entrance hint; text cannot reassign it. No outbound group
+sender/broadcast is added. Future senders must use the same guard before effects.
+
+bot_removed sets bot_present false and suspends once with BOT_REMOVED. Health service
+is worker-callable as max.binding.health and runs before each group report; missing
+admin/permissions, inaccessible chat or unknown MAX state suspend. No periodic cron
+was added. Recovery requires new confirmation/version, not automatic resumption.
+Signed Mini App chat/start_param remain selectors only in the target architecture;
+this version ignores them as access authority and keeps the existing explicit
+house flow. No automatic ResidentMembership or live Mini App claim.
+
+## API, provider and migration
+
+Added API (existing session/Problem Details style):
+- POST /api/v1/houses/{house_id}/chat-connections
+- GET /api/v1/chat-connections/{request_id}
+- POST /api/v1/chat-connections/{request_id}/approve with confirm:true
+- POST /api/v1/chat-connections/{request_id}/reject
+- POST /api/v1/chat-connections/{request_id}/cancel
+- POST /max/webhook now implements authenticated mapping when explicitly enabled;
+  off still gives 503. Existing test replay/manual endpoints remain independent.
+
+OpenAPI and generated TS updated together. Foreign scopes are masked 404; visible
+scope without permission 403; conflicts 409; provider failure 503/retryable.
+Error codes include connection_expired, connector_not_chat_admin,
+bot_permission_missing, chat_already_bound, management_not_active, tenant_suspended,
+binding_not_active, stale_binding_version and sanitized max_* errors. No foreign
+owner/title, raw upstream JSON or secrets appear in responses.
+
+Production HttpMaxChatProvider is the sole read HTTP boundary, using configured
+HTTPS origin (current official default platform-api2.max.ru), token from Settings
+in Authorization, timeout, no redirects and strict response mapping. 401/403/404/
+429/5xx/network/malformed responses have safe typed errors. It uses only documented
+GET chat, members/me and members/admins. Unexpected admin pagination is explicitly
+unsupported, not guessed. TLS is not disabled. HTTPX moved from dev to runtime.
+Off/recording composition withholds token from the provider, preventing live calls.
+The deterministic adapter exists only in tests/fakes and must be explicitly injected.
+It covers metadata/admin/non-admin/permissions/timeout/429/5xx/missing chat.
+Production selection and response mapping are independently tested.
+
+Migration 20260918_0003 is additive, produces no active/demo bindings and preserves
+existing A-15 grants/history. Clean upgrade and upgrade from populated C0.1/A-15
+are tested. Empty A-07 downgrade works through base and back to head. Nonempty
+chat/request/job history blocks destructive downgrade and requires a pre-A07 backup.
+Alembic check reports no drift. Existing private PostgreSQL + worker/outbox are reused.
 
 ## Actual commands and evidence
 
-Windows / Python 3.12.14, Node 24.19.0 in runner PATH (npm launcher 10.9.7),
-Docker build Node 24.21.0; PostgreSQL 16.10 in dedicated domsignal-a15-db,
-loopback 55474. Browser API 8019, Chrome channel, MAX_TRANSPORT=off.
-No shared DB/session reset, live MAX network/subscription operation or VPS deploy.
+Dedicated local PostgreSQL container domsignal-a07-db, loopback 55475; existing
+shared DBs untouched. Python 3.12.14; Node 24.21.0 in child process PATH, existing
+npm launcher; browser Chrome against own API 8020 with MAX_TRANSPORT=off. Docker
+smoke uses its own project/volume/API 18086 and removes that smoke volume afterward.
+No real MAX token, shared webhook mutation, polling or VPS deployment was performed.
 
 | Command actually executed | Result |
 |---|---|
-| `uv run ruff check src tests scripts migrations --fix` / final without `--fix` | PASS after initial import/line-length corrections |
-| `uv run ruff format <explicit changed Python files>` | Applied only to this slice |
-| `uv run mypy src/domsignal` | PASS, 53 source files; initial repository Any returns corrected |
-| `uv run pytest tests/unit tests/contract` | PASS, 27 |
-| `uv run alembic upgrade head` | PASS on clean PostgreSQL, 0001 → 0002 |
-| `uv run pytest tests/integration -x -q` | PASS, existing 9 before adding A-15 tests |
-| `uv run pytest tests/integration/test_tenant_access.py -x -q` | PASS, initial 15; final 16 incl. concurrent exclusion in full suite |
-| `uv run pytest tests/integration/test_migrations.py -x -q` | PASS, one harness test; initial old ORM constraint-name mismatch corrected |
-| Harness: `python -m alembic upgrade 20260917_0001`, `upgrade head` twice, `check`, `downgrade 20260917_0001`, `upgrade head`, `downgrade base`, `upgrade head`, `check` | PASS in uniquely named temporary PostgreSQL DB, preserved legacy/demo/non-demo records |
-| `uv run python scripts/export_openapi.py` | PASS, generated |
-| `npm --prefix miniapp run api:generate` | PASS, generated |
-| `uv run python scripts/check.py --scope all` | PASS: backend + frontend + contracts + PostgreSQL integration |
-| Expanded: `npm run typecheck`, `npm run test -- --run`, `npm run build` in miniapp | PASS, 73 frontend tests and production build |
-| Expanded: `uv run python scripts/export_openapi.py --check`, `uv run python scripts/validate_region_pack.py`, `npm exec openapi-typescript -- ../docs/openapi.json -o <temp>/schema.ts` | PASS, OpenAPI/TS/region drift |
-| Expanded: `uv run pytest tests/integration` | PASS, 26 tests including migration harness and all MT tests |
-| `uv run python scripts/docker_smoke.py --project domsignal-smoke-a15 --api-port 18085` | PASS, clean Compose DB/migration/seed/API+worker/restart; dedicated smoke volume removed |
-| `docker compose -f compose.yaml -f compose.prod.yaml config --format json` with synthetic config-only env | PASS, no db published ports, db/api/worker/caddy share default network |
-| `uv run pytest tests/integration/test_tenant_access.py::test_mt07_management_switch -q` | PASS; prepares meaningful switch dataset for restore check |
-| `uv run python scripts/backup_postgres.py --container domsignal-a15-db --directory <temp>/domsignal-a15/backups` + seven calls to same backup function | PASS, 8 pg_dump successes, last 7 retained |
-| `docker exec domsignal-a15-db createdb -U domsignal a15_restore_verification`; `docker cp <dump> ...:/tmp/a15-restore.dump`; `pg_restore -U domsignal -d a15_restore_verification --exit-on-error --no-owner --no-acl /tmp/a15-restore.dump` via docker exec | PASS, all 15 table counts/full-row hashes identical; temporary restore DB dropped |
-| `uv run uvicorn domsignal.main:create_app --factory --host 127.0.0.1 --port 8019` with test/off env | Real browser API started |
-| `npm --prefix miniapp run test:browser` with PLAYWRIGHT_BASE_URL=8019, PLAYWRIGHT_CHANNEL=chrome (explicit Node 24 npm-cli) | PASS, 8; initial default headless shell missing, rerun using installed Chrome |
-| `uv run pytest tests/integration/test_tenant_access.py::test_mt03_resident -q` | PASS, final extra assertion: foreign report create 404 and no data mutation |
-| `git diff --check` | PASS |
+| uv run ruff check src tests scripts migrations --fix; final without --fix | PASS; initial import/line-length issues fixed |
+| uv run ruff format <explicit changed Python paths> | Formatting confined to this task |
+| uv run mypy src/domsignal | PASS, 62 files; initial redundant cast corrected |
+| uv run pytest tests/unit tests/contract -q / same via check.py backend | Final PASS, 51; initial tests package import collection issue fixed |
+| uv run alembic upgrade head | PASS, clean 0001 → 0002 → 0003; initial multi-statement asyncpg DDL corrected before success |
+| uv run alembic revision --autogenerate -m 'verified MAX chat connections' --rev-id 20260918_0003 | Generated additive draft, then reviewed and hardened |
+| uv run pytest tests/integration/test_chat_bindings.py -x -q | PASS first 28 cases; final expanded suite 38 |
+| uv run python scripts/check.py --scope backend | Final PASS: ruff, mypy, 51 unit/contract |
+| uv run python scripts/check.py --scope integration | PASS: upgrade head + 65 integration tests (A-07 38, A-15 16, other regressions/migrations 11) |
+| Migration harness subprocesses: python -m alembic upgrade 20260917_0001 / 20260918_0002; upgrade head; check; downgrade 20260917_0001/base; upgrade head | PASS in two uniquely named temporary PostgreSQL DBs; grants/data preserved; history-bearing A-07 downgrade correctly refused |
+| uv run pytest tests/integration/test_chat_bindings.py::test_cb18_max_temporary_failure_is_pending_with_durable_retry tests/integration/test_jobs.py -q | PASS, 6 after final provider/terminal-job hardening |
+| uv run python scripts/export_openapi.py | PASS, regenerated |
+| npm --prefix miniapp run api:generate | PASS, regenerated |
+| uv run python scripts/check.py --scope frontend | PASS: npm run typecheck; npm run test -- --run (73); npm run build |
+| uv run python scripts/check.py --scope contracts | PASS: export_openapi --check; validate_region_pack.py; npm exec openapi-typescript to temporary file; TS comparison |
+| uv run uvicorn domsignal.main:create_app --factory --host 127.0.0.1 --port 8020 | Own API for B-02 browser checks, test/off mode |
+| npm --prefix miniapp run test:browser (explicit Node 24 npm CLI, PLAYWRIGHT_BASE_URL=8020, PLAYWRIGHT_CHANNEL=chrome) | PASS, 8; real-detail screenshot inspected |
+| uv run python scripts/docker_smoke.py --project domsignal-smoke-a07 --api-port 18086 | PASS, clean image/PG/migration/seed/API+worker/restart persistence |
+| docker compose -f compose.yaml -f compose.prod.yaml config --format json (synthetic config-only env) | PASS; PostgreSQL no published ports; required services share network |
+| git diff --check | PASS |
 
-B-02 browser screenshots inspected (ignored miniapp/test-results/real-detail.png).
-Real create/board/detail/reload, outsider 404 clears private cached detail, retry,
-keyboard/axe/contrast, 320/430/1280 light/dark and unknown/null data all PASS.
-No frontend UI implementation change needed; one browser expectation moved 403→404.
-Existing Starlette/httpx/anyio deprecation and browser color-env notices remain;
-no checks suppressed. Query-plan benchmarking was not needed for this fixture scale.
+Existing Starlette/httpx/anyio deprecation and browser color notices remain; no
+checks were suppressed. B-02 board/detail/manual/reload and /me/houses/capabilities
+regressions pass with group transport off. CB-01…CB-22 outcomes and test names:
+[acceptance matrix](../../scenarios/acceptance.md). Source/doc mapping and 18 pending
+live smoke steps: [MAX_LIVE_SMOKE](../MAX_LIVE_SMOKE.md).
 
-A-15/MT-01…MT-10 individual outcomes are in scenarios/acceptance.md, separately
-namespaced from the wider ARCH MT-01…MT-20 target matrix. Full platform scenarios
-are not claimed PASS by the foundation tests.
+## Remaining boundary / next
 
-## Deployment / recovery / next
+A-07 PASS refers to this authorized backend/connection slice and deterministic
+regressions. IMPLEMENTED IN BRANCH is not MERGED TO MAIN. MAX integration code is
+IMPLEMENTED / NOT LIVE VERIFIED; live verification is PENDING TOKEN and two real
+existing test chats, HTTPS webhook, genuine permissions/identities and clients.
+No real token was requested from secret stores or invented as production credentials.
+Test adapters/synthetic events are explicitly not live integration evidence.
 
-Existing production Compose already keeps PostgreSQL private; no deployment
-performed or broker added. scripts/backup_postgres.py and deploy/database.md cover
-pg_dump, last-seven rotation, protected off-host target guidance, restore commands
-and guarded downgrade. Local restore VERIFIED; off-host copies/scheduler/VPS
-restore are NOT VERIFIED/NOT CONFIGURED, not an asserted backup platform.
-
-NOT VERIFIED: live MAX Web/iOS/Android, real initData/webhook/host reload, public
-TLS/VPS and external providers; second-developer review/current main CI/merge.
-ChatBinding/Ticket/onboarding/admin UI and archive-history APIs remain out of scope.
-
-One recommended next DEV-B task after review/integration: **A-07 — verified house/chat
-connection**, separately authorized. It has not started; do not begin A-16 or admin UI.
+One recommended next DEV-B task: B-01 — live MAX feasibility using the checklist
+once an approved token and isolated bot/chats are available. Do not start Ticket,
+full admin UI or AI from this handoff. Review/CI of this branch precedes main merge.

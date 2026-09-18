@@ -9,6 +9,71 @@ C0/B-00 convergence не завершена. Реальный slice: test sessio
 manual report → PostgreSQL Report/Incident → REST → board/detail → reload.
 Live MAX NOT VERIFIED; routes/appeals и новая платформа не реализованы.
 
+## A-07 — IMPLEMENTED IN BRANCH, 18.09.2026
+
+`dev/b-experience` extends A-15 with existing MAX chat connections; not MERGED TO
+MAIN and not LIVE VERIFIED. Evidence: [DEV-B](status/dev-b.md),
+[CB acceptance](../scenarios/acceptance.md), [live runbook](MAX_LIVE_SMOKE.md).
+
+- MAXChat is a local snapshot identified only by unique external `max_chat_id`.
+  Title/owner metadata never selects house, tenant or permissions. Groups already
+  exist; no API creates them. Channels/dialogs cannot bind in this MVP.
+- ConnectionRequest stores SHA-256 of a random 256-bit opaque token, TTL (default
+  15 minutes), initiating employee, claimed MAX identity, candidate chat and scope.
+  Raw token appears only in the first response, never inbox/job/outbox/receipts.
+  Central lifecycle: created → connector_claimed → chat_detected → max_verified
+  → awaiting_approval → completed; same-company authorized connector can skip
+  awaiting_approval, but explicit approval is always required. Expired/cancelled/
+  rejected are terminal. Duplicate initiation returns the existing request without
+  reissuing its token; cancellation + new initiation recovers a lost token.
+- ChatBinding has pending/active/suspended/revoked and house/entrance scope.
+  Composite FK `(management_id, house_id)` follows Incident consistency. Partial
+  unique index allows only one active binding per external chat. Different chats
+  may bind the same house. Immutable binding scope/version requires a new flow for
+  reactivation/reassignment. MAXChat increments a version across all its bindings.
+- Lock order is physical house (shared), chat advisory lock, connection row. The
+  per-chat lock also serializes absence checks and activation; the DB unique index
+  is independent protection. Approval atomically verifies current employee access,
+  management/company, MAX rights, TTL and conflict, creates binding and lifecycle
+  outbox event, and completes the request. No separate auth/context/audit framework.
+- `chat.connect` is an AccessPolicy permission for company_admin or active company
+  operator with responsible assignment. MAX identity/admin role is separate.
+  Connector claim is correlation only. One open request per connector prevents
+  ambiguous bot_added association; unrelated events retain only an unbound snapshot.
+- `bot/chat_provider.py` is the typed read-only HTTPX provider. Configured HTTPS
+  origin defaults to platform-api2.max.ru, timeout 5 seconds, header authorization,
+  strict typed mapping, sanitized 401/403/404/429/5xx/errors. No automatic polling,
+  subscription changes or production fake. Test double lives only in tests/fakes.
+  Off/recording mode cannot call MAX, even if a token is configured.
+- `/max/webhook` validates the configured secret before parsing/persistence. Typed
+  Update mapping accepts bot_started/bot_added/bot_removed/message_created; unknown
+  types are acknowledged without product effect. Inbox identity is deterministic
+  (chat+mid for messages, lifecycle type/time/chat/actor otherwise). Receipt + state
+  changes/jobs commit before 200; concurrent delivery is serialized. Lifecycle
+  timestamps prevent older add/remove events from undoing newer installation state.
+- Group intake is explicitly `/report <category> <description>`, using existing
+  manual categories and existing ReportService core transaction. A-07 does not
+  enable B-06 auto-group/NLP. Unbound chats and ordinary conversation are ignored;
+  no message text is persisted for those paths. Group authors still need their
+  existing ResidentMembership/employee access; no automatic membership import.
+- Eligible active-chat jobs capture binding ID/version and event time on receipt.
+  Worker health checks then re-resolves the immutable OperationContext inside the
+  write transaction, using binding → management → tenant/house and existing policy.
+  Stale binding/version, pre-activation event and revoked user rights fail closed.
+  Entrance is verified context, preserved in outbox; text never changes scope.
+  New outbound group sending is not implemented. Future senders must use the same
+  active/version guard immediately before their side effect.
+- bot_removed suspends idempotently with BOT_REMOVED. Worker-callable health service
+  suspends on missing bot admin/permission, inaccessible chat or unknown API state.
+  There is no periodic scheduler. Each group report performs health verification.
+  Management status/end trigger suspends with MANAGEMENT_ENDED; natural expiry is
+  checked by health/access resolution. No binding transfers to the successor UK.
+- Signed Mini App chat/start_param remain ignored as authority; A-15 resolver and
+  policy still control personal reads/writes. New chat-selector UX is not added.
+- Migration 0003 is additive, creates no active/demo bindings and preserves A-15
+  rows. Empty A-07 downgrade works; any connection/chat/job history requires a
+  pre-A07 backup rather than destructive rollback. No new broker/service/DB port.
+
 ## A-15 — IMPLEMENTED IN BRANCH, 18.09.2026
 
 Текущая `dev/b-experience` содержит A-01 и A-15 поверх main baseline выше.

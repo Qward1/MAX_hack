@@ -1,0 +1,110 @@
+"""Documented MAX Update -> internal event; no raw MAX JSON beyond this module."""
+
+import hashlib
+import json
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+from pydantic import BaseModel, Field, StrictBool, StrictInt, ValidationError
+
+from domsignal.services.errors import ServiceError
+
+
+class InvalidMaxUpdate(ServiceError):
+    status = 422
+    code = "invalid_max_update"
+
+
+class _User(BaseModel):
+    user_id: StrictInt
+    is_bot: StrictBool = False
+
+
+class _Recipient(BaseModel):
+    chat_id: StrictInt
+    chat_type: str
+
+
+class _Body(BaseModel):
+    mid: str = Field(min_length=1, max_length=200)
+    text: str | None = Field(default=None, max_length=10000)
+
+
+class _Message(BaseModel):
+    sender: _User | None = None
+    recipient: _Recipient
+    body: _Body | None = None
+
+
+class _Update(BaseModel):
+    update_type: str
+    timestamp: StrictInt
+
+
+class _Lifecycle(_Update):
+    chat_id: StrictInt
+    user: _User
+    is_channel: StrictBool = False
+    payload: str | None = Field(default=None, max_length=512)
+
+
+class _Created(_Update):
+    message: _Message
+
+
+@dataclass(frozen=True)
+class MaxEvent:
+    event_id: str
+    kind: str
+    occurred_at: datetime
+    chat_id: str | None = None
+    actor: str | None = None
+    is_channel: bool = False
+    token: str | None = None
+    text: str | None = None
+
+
+def parse_update(payload: dict[str, Any]) -> MaxEvent:
+    try:
+        header = _Update.model_validate(payload)
+        at = datetime.fromtimestamp(header.timestamp / 1000, UTC)
+        if header.timestamp <= 0 or at > datetime.now(UTC) + timedelta(seconds=30):
+            raise ValueError("Invalid timestamp")
+        identity: list[str | int | bool] = [header.update_type, header.timestamp]
+        if header.update_type in {"bot_started", "bot_added", "bot_removed"}:
+            event = _Lifecycle.model_validate(payload)
+            identity.extend([event.chat_id, event.user.user_id, event.is_channel])
+            if event.payload:
+                identity.append(hashlib.sha256(event.payload.encode()).hexdigest())
+            fields: dict[str, Any] = dict(
+                chat_id=str(event.chat_id),
+                actor=str(event.user.user_id),
+                is_channel=event.is_channel,
+                token=event.payload if event.update_type == "bot_started" else None,
+            )
+        elif header.update_type == "message_created":
+            created = _Created.model_validate(payload)
+            message = created.message
+            # A MAX message ID is unique within its chat; delivery timestamp isn't identity.
+            identity = [
+                header.update_type,
+                message.recipient.chat_id,
+                message.body.mid if message.body else header.timestamp,
+            ]
+            fields = dict(
+                chat_id=str(message.recipient.chat_id),
+                actor=str(message.sender.user_id) if message.sender else None,
+                text=message.body.text
+                if message.body
+                and message.sender
+                and message.recipient.chat_type == "chat"
+                and not message.sender.is_bot
+                else None,
+            )
+        else:
+            fields = {}
+        digest = hashlib.sha256(json.dumps(identity, separators=(",", ":")).encode()).hexdigest()
+        return MaxEvent("max:" + digest, header.update_type, at, **fields)
+    except (ValueError, OverflowError, OSError, ValidationError):
+        raise InvalidMaxUpdate("Invalid MAX update") from None
