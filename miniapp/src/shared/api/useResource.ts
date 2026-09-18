@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { problemStatus } from "./client";
 
-// Small extension of foundation's fetch layer: no parallel query store or persistent private cache.
+// One fetch layer for both surfaces. reload resolves only after the authoritative GET.
 export function useResource<T>(
   key: string,
   load: (signal: AbortSignal) => Promise<T>,
@@ -13,37 +13,46 @@ export function useResource<T>(
     loading: boolean;
     updatedAt?: number;
   }>({ key, loading: true });
-  const [revision, setRevision] = useState(0);
-  const current = useRef(0);
-  const refresh = useCallback(() => setRevision((value) => value + 1), []);
-  useEffect(() => {
+  const active = useRef<AbortController | null>(null);
+  const latest = useRef({ key, load });
+  latest.current = { key, load };
+  const reload = useCallback(async () => {
+    const { key, load } = latest.current;
+    active.current?.abort();
     const controller = new AbortController();
-    const generation = ++current.current;
+    active.current = controller;
     setState((previous) => ({
       key,
+      loading: true,
       data: previous.key === key ? previous.data : undefined,
       updatedAt: previous.key === key ? previous.updatedAt : undefined,
-      loading: true,
     }));
-    void load(controller.signal)
-      .then((data) => {
-        if (!controller.signal.aborted && generation === current.current)
-          setState({ key, data, loading: false, updatedAt: Date.now() });
-      })
-      .catch((error) => {
-        if (controller.signal.aborted || generation !== current.current) return;
+    try {
+      const data = await load(controller.signal);
+      if (controller.signal.aborted)
+        throw new DOMException("Aborted", "AbortError");
+      setState({ key, data, loading: false, updatedAt: Date.now() });
+      return data;
+    } catch (error) {
+      if (!controller.signal.aborted)
         setState((previous) => ({
           ...previous,
+          loading: false,
+          error,
           data: [401, 403, 404].includes(problemStatus(error) ?? 0)
             ? undefined
             : previous.data,
-          error,
-          loading: false,
         }));
-      });
-    return () => controller.abort();
-  }, [key, load, revision]);
-  // Mark old data as stale after backgrounding, without moving cards under the user's pointer.
+      throw error;
+    }
+  }, []);
+  const refresh = useCallback(() => {
+    void reload().catch(() => {});
+  }, [reload]);
+  useEffect(() => {
+    refresh();
+    return () => active.current?.abort();
+  }, [key, load, refresh]);
   const [stale, setStale] = useState(false);
   useEffect(() => {
     setStale(false);
@@ -63,5 +72,6 @@ export function useResource<T>(
     ...(state.key === key ? state : { key, loading: true }),
     stale,
     refresh,
+    reload,
   };
 }

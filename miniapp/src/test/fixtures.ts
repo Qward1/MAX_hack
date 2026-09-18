@@ -86,6 +86,8 @@ export function apiWith(items: IncidentDetail[] = [incident]): DomSignalApi {
       .fn()
       .mockImplementation(async (id) => items.find((item) => item.id === id)),
     createReport: vi.fn().mockResolvedValue(incident),
+    workStatus: vi.fn().mockResolvedValue({ ticket_id: null }),
+    observe: vi.fn(),
   };
 }
 export function error(status: number) {

@@ -201,6 +201,17 @@
             "title": "Performed By",
             "type": "string"
           },
+          "performer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Performer Name"
+          },
           "public_description": {
             "title": "Public Description",
             "type": "string"
@@ -210,6 +221,12 @@
             "title": "Reported By",
             "type": "string"
           },
+          "resolved_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Resolved Count",
+            "type": "integer"
+          },
           "rework_required": {
             "title": "Rework Required",
             "type": "boolean"
@@ -218,6 +235,12 @@
             "format": "uuid",
             "title": "Ticket Id",
             "type": "string"
+          },
+          "unresolved_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Unresolved Count",
+            "type": "integer"
           }
         },
         "required": [
@@ -2554,6 +2577,17 @@
               }
             ],
             "title": "Assignee Id"
+          },
+          "assignee_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee Name"
           },
           "created_at": {
             "format": "date-time",

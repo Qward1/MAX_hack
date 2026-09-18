@@ -62,7 +62,7 @@ DEV-B; интегратор не обходит review или protection `main`.
 | Developer | Сейчас / следующий шаг | Настоящая зависимость и снимающий контракт |
 |---|---|---|
 | DEV-A | Сохранить review/handoff FND-01; затем A-03/AI: baseline extraction/risk detector + evaluation, без обязательного provider. | DEV-B задаёт разрешённый input scope и public application boundary; A возвращает typed analysis fixture и не ждёт реализации всего product backend. |
-| DEV-B | **A-07 IMPLEMENTED IN BRANCH**, `4628d11`, поверх A-01/A-15; B-02 evidence сохранён. Сейчас — Q&A docs alignment; далее B-01 при доступах и отдельное согласование A-16, без начала реализации. | Evidence: [dev-b](docs/status/dev-b.md), [MAX smoke](docs/MAX_LIVE_SMOKE.md). Live MAX NOT VERIFIED / PENDING TOKEN; не MERGED TO MAIN. Групповой путь — явная `/report`, не анализ переписки. |
+| DEV-B | **A-16 + B-14 IMPLEMENTED IN BRANCH**, поверх A-01/A-15/A-07; B-02 regression сохранён. B-14 разрешена отдельным заданием владельца. Далее review/CI/PR, без автоматического начала следующей задачи. | Evidence: [dev-b](docs/status/dev-b.md), [UI-TK](scenarios/acceptance.md#b-14--ui-tk-evidence). Live MAX NOT VERIFIED; не MERGED TO MAIN. Web-auth/MFA и onboarding остаются отдельными срезами. |
 
 ### Встраивание ARCH-PLATFORM-v1 в существующий план
 
@@ -83,7 +83,7 @@ A-02…A-06 сохранены. B-01 допускается параллельн
 документам, но запрещают LIVE VERIFIED. A-03/AI не ждёт всю платформу.
 FND-01 и B-00 не выполняются заново, B-02 не закрыта этим patch.
 
-A-15 — PASS / IMPLEMENTED IN BRANCH, evidence в DEV-B handoff; A-16/B-14 остаются TARGET / TODO. Старый календарь
+A-15/A-16/B-14 — IMPLEMENTED IN BRANCH, evidence в DEV-B handoff; main/live статусы отдельно. Старый календарь
 ниже остаётся ориентиром: расширенный scope требует переоценки перед взятием
 каждого среза, а не обещания выполнить всю платформу к прежнему freeze.
 
@@ -388,11 +388,12 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Acceptance:** photo upload и transcript provider не имитируются. При сбое пользователь вводит текст, черновик сохраняется. Распознавание не публикует вывод без подтверждения; недоступный микрофон не ломает страницу.
 
 ### B-14 — рабочая очередь и карточка Ticket в веб-кабинете
-- **Owner:** DEV-B. **P1 · M · State:** TARGET / TODO. **Depends:** A-16, B-09; B-02 для resident projection. **Allowed paths:** web queue/ticket features в выбранном B-09 entry point, resident Incident Detail, shared API client, UX и browser/component tests.
+- **Owner:** DEV-B. **P1 · M · State:** PASS / IMPLEMENTED IN BRANCH, NOT MERGED, NOT LIVE VERIFIED. **Depends:** A-16, B-02. По отдельному заданию владельца минимальный shell `/admin/` входит в B-14 без ожидания полного B-09; web-auth/onboarding остаются A-10/B-09. **Allowed paths:** текущий Vite admin entry, resident Incident Detail, shared API/types, минимальный внутренний read-model, UX и browser/component/contract tests.
 - **Результат:** разрешённая очередь, фильтры/владелец следующего шага, принятие заявки, комментарий и отчёт исполнителя; отдельное наблюдение/возражение жителя в существующем Incident Detail. Все mutations идут через реальные actions A-16.
 - **Границы:** не дублировать B-02 board/detail, B-08 историю/напоминания и B-09 onboarding/settings. Не выводить рабочие права из Incident.status; не показывать Ticket как внешнюю регистрацию. Нет фальшивого приёма при неактивной УК/очереди.
 - **Acceptance / проверка:** browser → реальный API/PG, MT-13/14/15/19/20 плюс чужой scope MT-12; работник видит только назначения, конфликт принятия обновляет владельца, неподдержанное действие отсутствует, отчёт и возражение раздельны. Кабинет работает без Bridge; resident result проверяется отдельно в MAX web/mobile, отсутствие live записывается NOT VERIFIED.
 - **Handoff:** evidence queue→work report→resident response с ref/ролями и ограничениями, без автоматического закрытия прежних B-задач.
+- **Evidence B-14:** [UI-TK-01…28](scenarios/acceptance.md#b-14--ui-tk-evidence), [DEV-B](docs/status/dev-b.md). 88 frontend tests, 27 browser (19 B-14 + 8 B-02), 53 unit/contract, 98 PostgreSQL integration; typecheck/build/OpenAPI/TS drift и Docker smoke. Реальный vertical path содержит 2 WorkAttempts, unresolved→rework→resolved, reload и direct PG assertions. Canonical claim = `accept`; stale observation по A-16 историческая с `applied_to_current=false`, не обязательно HTTP reject. MAX live и production web-auth не заявлены.
 - **Q&A target:** рабочий и пользовательский UI различают WorkAttempt, ResultObservation, закрытие и delivery state, показывают виды/основания сроков. Позднее возражение не теряется из-за чужого подтверждения. [Сквозной MAX-путь](docs/PRODUCT_ARCHITECTURE.md#сквозной-max-путь--planned) зависит также от A-05/B-03/B-06/B-07/A-09/B-08 и live gate B-01; delivery не входит целиком в A-16/B-14.
 
 ## 8. Kill-фичи и их минимальные доказательства

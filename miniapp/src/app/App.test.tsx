@@ -42,6 +42,8 @@ function clientWith(items: IncidentDetail[] = []): DomSignalApi {
     }),
     incident: vi.fn().mockImplementation(async (id: string) => items.find((item) => item.id === id)),
     createReport: vi.fn(),
+    workStatus: vi.fn().mockResolvedValue({ ticket_id: null }),
+    observe: vi.fn(),
   };
 }
 

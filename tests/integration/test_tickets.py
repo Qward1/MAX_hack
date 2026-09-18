@@ -256,6 +256,10 @@ async def test_tk04_resident_allowlist_and_own_history(tickets: dict) -> None:
         "created_by",
         "routing_reason",
         "accepted_by",
+        "assignee_name",
+        "performer_name",
+        "resolved_count",
+        "unresolved_count",
     ):
         assert forbidden not in response.text
     assert summary["my_latest_observation"]["comment"] == "SECRET_EVE"
@@ -928,3 +932,23 @@ async def test_tk25_replay_spoofing_and_diagnostic_exclusion(tickets: dict) -> N
     )
     assert await runner.run_once()
     assert await count(d, Ticket) == 1  # Accepted diagnostic Report does not instruct a real queue.
+
+
+async def test_b14_internal_attempt_summary_tracks_current_revisions(tickets: dict) -> None:
+    d = tickets
+    attempt_id = await attempt(d)
+    await observe(d, attempt_id, "carol", "resolved")
+    await observe(d, attempt_id, "eve", "unresolved")
+    view = (await read(d)).json()
+    assert view["assignee_name"]
+    assert view["latest_attempt"]["performer_name"] == view["assignee_name"]
+    assert view["latest_attempt"]["resolved_count"] == 1
+    assert view["latest_attempt"]["unresolved_count"] == 1
+    await observe(d, attempt_id, "carol", "unresolved")
+    history = await d["client"].get(
+        f"/api/v1/tickets/{d['ticket']['id']}/work-attempts", headers=d["headers"]["bob"]
+    )
+    summary = history.json()["items"][0]
+    assert summary["resolved_count"] == 0
+    assert summary["unresolved_count"] == 2
+    assert summary == (await read(d)).json()["latest_attempt"]

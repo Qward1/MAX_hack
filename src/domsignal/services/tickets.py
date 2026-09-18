@@ -57,6 +57,7 @@ from domsignal.db.models import (
     Ticket,
     TicketDeadline,
     TicketEvent,
+    User,
     WorkAttempt,
 )
 from domsignal.db.repositories.reliability import ReliabilityRepository, stable_hash
@@ -650,6 +651,11 @@ class TicketService:
             status=ticket.status,
             version=ticket.version,
             assignee_id=ticket.assignee_id,
+            assignee_name=await session.scalar(
+                select(User.display_name).where(User.id == ticket.assignee_id)
+            )
+            if ticket.assignee_id
+            else None,
             accepted_by=ticket.accepted_by,
             accepted_at=ticket.accepted_at,
             requires_reassignment=not available,
@@ -658,7 +664,7 @@ class TicketService:
             created_by=ticket.created_by,
             created_at=ticket.created_at,
             updated_at=ticket.updated_at,
-            latest_attempt=AttemptView.model_validate(attempt) if attempt else None,
+            latest_attempt=await self._attempt_view(session, attempt) if attempt else None,
             observation_conflict=len({o.outcome for o in observations}) > 1,
             deadlines=[self._deadline_view(d) for d in await repo.deadlines(ticket.id)],
             allowed_actions=[
@@ -706,7 +712,7 @@ class TicketService:
                 offset=offset,
             )
             return AttemptList(
-                items=[AttemptView.model_validate(a) for a in attempts],
+                items=[await self._attempt_view(session, a) for a in attempts],
                 page=PageMeta(limit=limit, offset=offset, total=total),
             )
         deadlines, total = await repo.page(
@@ -719,6 +725,20 @@ class TicketService:
         return DeadlineList(
             items=[self._deadline_view(d) for d in deadlines],
             page=PageMeta(limit=limit, offset=offset, total=total),
+        )
+
+    async def _attempt_view(self, session: AsyncSession, attempt: WorkAttempt) -> AttemptView:
+        # Internal read projection only; resident AttemptPublic remains an explicit allowlist.
+        current = await TicketRepository(session).current_observations(attempt.id)
+        return AttemptView(
+            **AttemptView.model_validate(attempt).model_dump(
+                exclude={"performer_name", "resolved_count", "unresolved_count"}
+            ),
+            performer_name=await session.scalar(
+                select(User.display_name).where(User.id == attempt.performed_by)
+            ),
+            resolved_count=sum(o.outcome == "resolved" for o in current),
+            unresolved_count=sum(o.outcome == "unresolved" for o in current),
         )
 
     async def observations(

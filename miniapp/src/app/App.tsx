@@ -25,6 +25,7 @@ import {
 } from "../shared/ui/semantic";
 import { IncidentCard } from "../features/incidents/IncidentCard";
 import { ReportForm } from "../features/incidents/ReportForm";
+import { ResidentWorkProgress } from "../features/tickets/ResidentWorkProgress";
 import {
   categoryLabel,
   formatDate,
@@ -43,6 +44,8 @@ type Loaded = {
 function routeUrl(house?: string, incident?: string, offset = 0) {
   // Never propagate MAX launch/auth parameters into DOM links or copied navigation URLs.
   const url = new URL(window.location.pathname, window.location.origin);
+  const testActor = new URLSearchParams(window.location.search).get("test_actor");
+  if (testActor && /^a16-[a-z-]+$/.test(testActor)) url.searchParams.set("test_actor", testActor);
   if (house) url.searchParams.set("house", house);
   if (incident) url.searchParams.set("incident", incident);
   if (offset) url.searchParams.set("offset", String(offset));
@@ -268,6 +271,8 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
           </Flex>
         </PageHeader>
         {notice}
+        <ResidentWorkProgress key={incident.id} client={client} incidentId={incident.id}
+          revision={resource.updatedAt} parentBusy={resource.loading || Boolean(resource.error) || resource.stale} />
         {incident.status === "reported" && (
           <Panel className="honesty-note">
             Житель отметил отправку. Регистрация во внешней системе ДомСигналом

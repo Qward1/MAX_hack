@@ -65,6 +65,19 @@ ConnectionRequest, ChatBinding, проверка provider/approval и верси
 
 ## Возможности в проверенном main
 
+Сверка интегратора B-14, 18.09.2026: START/END fetch подтверждают прежний
+`origin/main=3d4a095`; принятых новых merge нет, таблица main ниже не повышена.
+На `dev/b-experience` A-16 (`194d91a`) дополнена B-14: один Vite-проект с
+employee `/admin/` и прежней resident Mini App, оба используют A-16 API.
+Это **IMPLEMENTED IN BRANCH**, не MERGED TO MAIN и не LIVE VERIFIED.
+Текущий результат/команды/ограничения находятся в [DEV-B handoff](docs/status/dev-b.md)
+и [UI-TK evidence](scenarios/acceptance.md#b-14--ui-tk-evidence), которые заменяют
+исторические branch-only «A-16/B-14 не начаты» выше. Нового workflow/миграции
+нет; staff read DTO получил имена и summary текущих наблюдений, resident
+allowlist неизменна. Полноценный web-auth/MFA остаётся A-10/B-09; существующая
+сессия используется без выдачи новой identity. Следующая интеграционная операция —
+review DEV-A и актуальный CI/PR; автоматического merge в main нет.
+
 | Возможность / flag | Состояние | Фактический статус |
 |---|---|---|
 | Backend/runtime foundation | IMPLEMENTED · MERGED TO MAIN | FastAPI, services/core, PostgreSQL, Alembic, worker/jobs, Docker и CI quality gate находятся в `main` |

@@ -87,3 +87,44 @@ npm run test:browser
 Проверены Chromium, 320/430/1280px, обе темы, overflow, длинные данные,
 Enter/Space для native summary, Tab/Shift+Tab, ссылки и Back. Это не live
 проверка клиентов MAX iOS/Android/web: такая среда в сессии недоступна.
+
+## B-14 — employee entry и browser fixtures
+
+`/admin/` — отдельный HTML entry того же Vite build, без загрузки MAX UI/Bridge.
+`/?incident=<id>` остаётся resident entry. В local/test backend с test_auth
+администратор использует `a16-admin`; выбор роли явно помечен как тестовый.
+Resident fixture открывается через `?test_actor=a16-resident&incident=<id>`.
+Backend production игнорирует этот способ входа: нужен действующий bearer token,
+вводимый в памяти на экране входа. Полный web-auth/MFA — отдельная A-10/B-09.
+
+Для **полного** browser suite требуется отдельная PostgreSQL DB (отличная от
+integration DB, поскольку pytest очищает её), существующие seeds и явное согласие
+на тестовые fixture mutations. Из корня репозитория, с Node 24/Python 3.12/uv:
+
+```sh
+# DATABASE_URL указывает только на созданную для этого теста PostgreSQL DB.
+export APP_ENV=test MAX_TRANSPORT=off B14_BROWSER_FIXTURES=1
+uv run alembic upgrade head
+uv run python -m domsignal.tools.seed_demo
+uv run python -m domsignal.tools.seed_tickets
+npm --prefix miniapp run build
+uv run uvicorn domsignal.main:create_app --factory --host 127.0.0.1 --port 8030
+# В другом терминале с тем же DATABASE_URL и test environment:
+export PLAYWRIGHT_BASE_URL=http://127.0.0.1:8030
+npm --prefix miniapp run test:browser
+```
+
+PowerShell использует `$env:APP_ENV='test'` и аналогичные присваивания.
+Для установленного Chrome задайте `PLAYWRIGHT_CHANNEL=chrome`; иначе установите
+Chromium существующей командой Playwright. Только B-02 можно запустить через
+`npm --prefix miniapp run test:browser -- experience.spec.ts` без B14 fixtures.
+
+`tests/browser/ticket_fixture.py` — CLI только для isolated test DB, с двумя
+явными gates, не runtime endpoint. Добавляет синтетическое назначение оператора,
+связанный Report для конфликта наблюдений, меняет/revokes собственные fixtures,
+читает PostgreSQL evidence; не truncates и не использует live MAX.
+Browser scenario сопоставляет persisted Ticket.version/status/attempt counts
+с HTTP и UI после reload. Uncertain POST проверяется реальным commit с потерей
+HTTP response; повторное тело/key и одна WorkAttempt подтверждены отдельно.
+Readonly/adversarial HTTP подмены используются только для ошибок, неизвестных
+значений и длинного текста. Сквозной путь и access checks идут в настоящий API.

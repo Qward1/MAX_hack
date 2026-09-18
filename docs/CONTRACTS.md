@@ -136,7 +136,42 @@ needs_clarification — «Нужно уточнение», waiting_external — 
 внешней стороны», closed — «Результат подтверждён жителем», cancelled —
 «Отменена с причиной». WorkAttempt означает отчёт, не подтверждение устранения.
 `responsibility=not_verified` не утверждает юридическую обязанность УК.
-Новый frontend/кабинет, B-14 и автоматический close не реализованы.
+B-14 реализует frontend над этими endpoints; автоматического закрытия по времени нет.
+
+### B-14 — аддитивное расширение внутреннего read-model
+
+`TicketView.assignee_name` и `AttemptView.performer_name` — nullable display name
+уже связанного исполнителя, без контактов. `AttemptView.resolved_count` и
+`unresolved_count` — количество **актуальных** наблюдений попытки, после выбора
+последней ревизии каждого автора существующим repository. Они одинаковы в
+detail/latest_attempt и paginated work-attempts. Это контекст проверки, не голоса
+и не новое правило закрытия. Defaults сохраняют совместимость старых consumers.
+Backend lifecycle/access/DB не менялись, новых HTTP adapters/endpoints нет.
+OpenAPI и generated TS перегенерированы. `ResidentWorkStatus`/`AttemptPublic`
+не расширены этими внутренними полями; negative projection test проверяет их отсутствие.
+
+Queue собирает отдельные разрешённые house pages существующего `/tickets`;
+порядок каждой страницы сохраняется. Адрес — из `/me`, incident title/location/
+counts — из авторизованного Incident Detail. Scope проверяет каждый endpoint.
+`accept` одновременно принимает свободную заявку; отдельного `claim` нет.
+Проигравший concurrent accept может получить **403 либо 409**: A-16 проверяет
+текущие полномочия до expected_version. UI читает свежий Ticket и при новом
+исполнителе показывает сообщение о занятой заявке, не маскируя отказ доступа.
+
+Ответ на старую WorkAttempt по A-16.1 **сохраняется как исторический** с
+`applied_to_current=false`, а не обязательно отвергается HTTP 409. B-14 не меняет
+этот контракт: показывает обновление работы, делает GET work-status и никогда
+не переносит ответ на новую попытку. Даже на replay проверяется target попытки
+относительно свежего GET. После каждого POST UI ожидает отдельный read; при
+потерянном POST response повторяет исходное body/key, при потерянном GET после
+успешного POST повторяет только GET. Actor/tenant никогда не отправляются в команды.
+
+Employee `/admin/` использует существующую Bearer-сессию в памяти. При её
+отсутствии production показывает ввод действующего session token; после reload
+нужен повторный вход. Новый login provider, MAX OAuth, постоянное хранилище токена
+и MFA не добавлены: полноценный web-auth остаётся A-10/B-09. Только при backend
+`test_auth=true` и non-production доступен явно обозначенный выбор `a16-*` fixture
+через test-session. Query `test_actor` не даёт права в production.
 
 ResidentWorkStatus содержит только номер/ID, состояние/version/times,
 AttemptPublic (публичное описание, номер, время, rework), aggregate conflict,

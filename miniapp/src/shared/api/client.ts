@@ -1,5 +1,5 @@
 import type { components } from "./schema";
-import { maxBridge } from "../max/bridge";
+import type { ResidentTicketApi } from "./tickets";
 
 export type Capabilities = components["schemas"]["CapabilitiesResponse"];
 export type Me = components["schemas"]["MeResponse"];
@@ -32,7 +32,7 @@ export function retryable(error: unknown): boolean {
   return error.problem.retryable === true && ![401, 403, 404].includes(error.problem.status);
 }
 
-export interface DomSignalApi {
+export interface DomSignalApi extends ResidentTicketApi {
   capabilities(signal?: AbortSignal): Promise<Capabilities>;
   authenticate(capabilities: Capabilities, signal?: AbortSignal): Promise<void>;
   me(signal?: AbortSignal): Promise<Me>;
@@ -50,6 +50,9 @@ export interface DomSignalApi {
 
 export class ApiClient implements DomSignalApi {
   private token: string | null = null;
+  constructor(private readonly surface: "resident" | "employee" = "resident") {}
+
+  useSession(token: string) { this.token = token.trim() || null; }
 
   async capabilities(signal?: AbortSignal): Promise<Capabilities> {
     return this.request<Capabilities>("/api/v1/capabilities", { signal });
@@ -60,7 +63,8 @@ export class ApiClient implements DomSignalApi {
     signal?: AbortSignal,
   ): Promise<void> {
     if (this.token) return;
-    const initData = maxBridge.initData;
+    const initData = this.surface === "resident"
+      ? (await import("../max/bridge")).maxBridge.initData : null;
     let session: Session;
     if (initData) {
       session = await this.request<Session>("/api/v1/auth/max", {
@@ -74,7 +78,8 @@ export class ApiClient implements DomSignalApi {
     ) {
       session = await this.request<Session>("/api/v1/auth/test-session", {
         method: "POST",
-        body: JSON.stringify({ actor: "demo" }),
+        body: JSON.stringify({ actor: new URLSearchParams(window.location.search).get("test_actor")
+          ?? (this.surface === "employee" ? "a16-admin" : "demo") }),
         signal,
       });
     } else {
@@ -128,7 +133,15 @@ export class ApiClient implements DomSignalApi {
     return created.incident;
   }
 
-  private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  workStatus: ResidentTicketApi["workStatus"] = (id, signal) =>
+    this.request(`/api/v1/incidents/${encodeURIComponent(id)}/work-status`, { signal });
+
+  observe: ResidentTicketApi["observe"] = (id, payload, key) =>
+    this.request(`/api/v1/work-attempts/${encodeURIComponent(id)}/observations`, {
+      method: "POST", body: JSON.stringify(payload), headers: { "Idempotency-Key": key },
+    });
+
+  async request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const headers = new Headers(init.headers);
     headers.set("Content-Type", "application/json");
     if (this.token) headers.set("Authorization", `Bearer ${this.token}`);

@@ -602,6 +602,8 @@ export interface components {
              * Format: uuid
              */
             performed_by: string;
+            /** Performer Name */
+            performer_name?: string | null;
             /** Public Description */
             public_description: string;
             /**
@@ -609,6 +611,11 @@ export interface components {
              * Format: uuid
              */
             reported_by: string;
+            /**
+             * Resolved Count
+             * @default 0
+             */
+            resolved_count: number;
             /** Rework Required */
             rework_required: boolean;
             /**
@@ -616,6 +623,11 @@ export interface components {
              * Format: uuid
              */
             ticket_id: string;
+            /**
+             * Unresolved Count
+             * @default 0
+             */
+            unresolved_count: number;
         };
         /** BindingView */
         BindingView: {
@@ -1474,6 +1486,8 @@ export interface components {
             allowed_actions: components["schemas"]["TicketAction"][];
             /** Assignee Id */
             assignee_id: string | null;
+            /** Assignee Name */
+            assignee_name?: string | null;
             /**
              * Created At
              * Format: date-time

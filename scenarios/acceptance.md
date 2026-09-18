@@ -343,3 +343,50 @@ harnesses: 65 PASS. Unit/provider tests independently exercise fake configuratio
 production selection, timeout/HTTP failures and documented response mapping.
 See [DEV-B](../docs/status/dev-b.md) for exact commands and regression results, and
 [MAX live checklist](../docs/MAX_LIVE_SMOKE.md) for pending real-token verification.
+
+## B-14 — UI-TK evidence
+
+IMPLEMENTED IN BRANCH `dev/b-experience`, 18.09.2026. Основное browser evidence:
+`miniapp/tests/browser/tickets.spec.ts` (реальный HTTP + отдельная PostgreSQL DB),
+component/error/retry evidence: `miniapp/src/features/tickets/tickets.test.tsx`.
+Итоговые команды/счётчики — [DEV-B handoff](../docs/status/dev-b.md).
+Это не MERGED TO MAIN и не LIVE MAX VERIFIED.
+
+| ID | Проверяемый результат | Evidence / outcome |
+|---|---|---|
+| UI-TK-01 | Администратор видит разрешённые заявки своей УК | Scoped queues, API/PG, PASS |
+| UI-TK-02 | Ответственный видит только назначенные дома | Scoped queues + `/me`, PASS |
+| UI-TK-03 | Чужой дом оператору закрыт, контент не раскрыт | HTTP 404 + browser detail, PASS |
+| UI-TK-04 | Очередь администратора включает оба разрешённых дома | Scoped queues, PASS |
+| UI-TK-05 | Свободная заявка принята через canonical accept | Concurrent claims + persisted state, PASS |
+| UI-TK-06 | Два оператора претендуют на одну заявку; проигравший видит актуального исполнителя | Два browser contexts, реальный 403/409 и GET, PASS |
+| UI-TK-07 | Принятие назначенной заявки | Full product path, PASS |
+| UI-TK-08 | Начало работы | Full product path, PASS |
+| UI-TK-09 | Публичный отчёт создаёт WorkAttempt и ожидание проверки | Full product path + PG, PASS |
+| UI-TK-10 | Назначение только из scoped candidates; у operator нет assign | Assignment dialog + actual GET/POST, PASS |
+| UI-TK-11 | Отзыв сотрудника очищает ранее загруженные данные/действия | Real DB revoke → refresh, PASS |
+| UI-TK-12 | Смена УК закрывает старую рабочую заявку обеим сторонам | Isolated management switch + HTTP/browser, PASS |
+| UI-TK-13 | Житель видит последнюю публичную WorkAttempt | Full product path, PASS |
+| UI-TK-14 | Подтверждение привязано к последней попытке | POST/GET/PG/UI, PASS |
+| UI-TK-15 | Возражение возвращает проблему в работу | Full product path, PASS |
+| UI-TK-16 | Позднее возражение открывает тот же Ticket; он виден в «В работе» | Late objection + queue, PASS |
+| UI-TK-17 | Старая попытка не меняет новую; UI обновляется | A-16 historical response applied_to_current=false, PASS (не HTTP reject) |
+| UI-TK-18 | Противоречие показано как необходимость проверки | Два жителя + conflict projection, PASS |
+| UI-TK-19 | Internal-only поля отсутствуют физически | Recursive serialized-key assertions + PG integration allowlist, PASS |
+| UI-TK-20 | Чужой житель не получает projection | Actual HTTP 404 + safe browser error, PASS |
+| UI-TK-21 | Reload обоих UI согласован с БД | Full product path + direct PostgreSQL snapshot, PASS |
+| UI-TK-22 | Unknown status нейтрален | Component + browser, PASS |
+| UI-TK-23 | Unknown action не кнопка; disabled reason не выполняется | Component + browser, PASS |
+| UI-TK-24 | Timeout после commit повторяет body/key, без новой попытки | Real route.fetch→commit→abort→retry; read failure retries GET only, PASS |
+| UI-TK-25 | 409 перечитывает авторитетное состояние | Employee HTTP race + resident component, PASS |
+| UI-TK-26 | Длинные адреса/текст не вызывают horizontal overflow | Admin 390/768/1024/1366; resident 320, PASS |
+| UI-TK-27 | Keyboard, видимый focus, modal trap/Escape/return focus | Chromium + axe WCAG2A/AA/2.1AA, PASS |
+| UI-TK-28 | Resident light/dark сохраняются | Chromium 320px + B-02 320/430/1280, axe, PASS |
+
+Полный вертикальный тест: HTTP Report→Incident→Ticket; browser queue→accept→
+start→WorkAttempt №1; resident unresolved; тот же Ticket in_progress; WorkAttempt
+№2; resident resolved; closed; оба reload; DB snapshot подтверждает тот же ID,
+version, 2 attempts и 2 observations. Self-report не называется актом приёмки.
+Дополнительно проверена field-level 422 с безопасной коррекцией формы.
+A-01/A-15/A-07/A-16 и 8 прежних browser B-02 tests входят в regression прогон.
+Реальные MAX clients/notifications/token/TLS и production web-auth/MFA NOT VERIFIED.

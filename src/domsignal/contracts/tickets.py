@@ -69,6 +69,9 @@ class AttemptView(AttemptPublic):
     ticket_id: UUID
     reported_by: UUID
     performed_by: UUID
+    performer_name: str | None = None
+    resolved_count: int = Field(default=0, ge=0)
+    unresolved_count: int = Field(default=0, ge=0)
 
 
 class OwnObservation(ContractModel):
@@ -116,6 +119,7 @@ class TicketView(ContractModel):
     status: TicketStatus
     version: int
     assignee_id: UUID | None
+    assignee_name: str | None = None
     accepted_by: UUID | None
     accepted_at: datetime | None
     requires_reassignment: bool

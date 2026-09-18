@@ -1,5 +1,124 @@
 # DEV-B — current handoff
 
+Updated: 2026-09-18 (B-14)
+Branch: dev/b-experience
+Current task: B-14 — employee Ticket UI + resident verification
+State: PASS / IMPLEMENTED IN BRANCH; NOT MERGED TO MAIN; NOT LIVE VERIFIED
+
+## B-14 result
+
+Explicit owner request supersedes the earlier “B-14 not started” handoffs.
+START HEAD/origin/dev/b-experience: `194d91a`; origin/main: `3d4a095`.
+Tree was clean. START/END fetch succeeded, refs unchanged; START own ff/main
+sync already up to date. DEV-A status read from origin/dev/a-core, no writes there.
+Final SHA/push result is in the session report, not a follow-up hash-only commit.
+No automatic main merge: second-developer review/current remote CI remain required.
+
+One existing Vite/npm project, two HTML entries: resident `/` and employee
+`/admin/`. Employee entry loads no MAX UI/Bridge/CDN; one sidebar item “Заявки”.
+Queue uses backend-scoped house pages (20 each), server order/status/assignee
+filters, real totals and pagination; detail/URL/back/reload use authoritative reads.
+Address comes from /me, title/category/location/counts from authorized Incident API.
+No fabricated SLA or priority. All permitted houses appear without loading foreign
+scope and filtering it away in React. No Superadmin/onboarding/settings/chat UI.
+
+Detail renders number, state, action panel, assignee, incident, separate attempts,
+current-observation summary, paginated history and published typed deadlines.
+Only allowed_actions expose implemented commands; unknown values fail safely,
+disabled descriptors remain disabled and show reason. Canonical accept performs
+claim; no invented claim endpoint. assign gets only scoped paginated candidates,
+requires a reason and cannot submit an arbitrary employee. Operator has no assign.
+Report form explicitly publishes its text and waits for resident verification.
+Existing clarify/wait-external/resume/cancel adapters use required reasons; deadline
+editing/calculation is outside this slice. Native dialog adds explicit focus trap,
+Escape/return focus, labels and safe field errors.
+
+Existing Incident Detail adds public work-status/latest attempt and attempt-scoped
+observations. Confirmation is a resident observation, not an official acceptance.
+Late objection reopens the same Ticket; employee “В работе” includes it. Conflicting
+observations require another check, not majority voting. A-16 actually records stale
+attempt responses as historical with applied_to_current=false; UI honors that source
+of truth and refreshes the current attempt. It does not claim a backend HTTP reject.
+
+No new workflow, migrations or HTTP endpoints. Minimal additive internal read DTO:
+assignee_name; AttemptView.performer_name/resolved_count/unresolved_count. Counts
+use existing backend current-observation revisions, not a frontend decision rule.
+Separate ResidentWorkStatus/AttemptPublic remain unchanged, internal fields are
+physically absent. Producer/OpenAPI/TS regenerated together; privacy assertions
+cover the additions. Published summaries agree in detail and attempt history.
+
+Mutations retain the original body/key for an uncertain retry, prevent double
+submit, then await GET. Failed GET after acknowledged POST retries only GET.
+No optimistic lifecycle. 403/409 losing claim refetches the winner; 401/403/404
+remove cached private content. 422 attaches safe validation to fields; 429/5xx/
+network use retryable. History refreshes on version change. No raw error/stack/IDs.
+Shared useResource preserves cancellation/out-of-order guards and exposes awaited
+read-after-write. No tokens or private responses persist in browser storage.
+
+## B-14 actual commands and evidence
+
+Dedicated PostgreSQL 16.10 container `domsignal-b14-db`, loopback 55477;
+`b14_tests` for pytest, `b14_browser` for browser (never concurrently shared).
+API 8030 in APP_ENV=test/MAX_TRANSPORT=off. Python 3.12.14, Node 24.19.0,
+existing ignored npm launcher; no dependency/lock updates. Browser fixtures require
+APP_ENV=test + B14_BROWSER_FIXTURES=1, are CLI-only, and never truncate shared data.
+Instructions: [miniapp README](../../miniapp/README.md#b-14--employee-entry-и-browser-fixtures).
+
+| Command actually executed | Final result |
+|---|---|
+| `uv run ruff format` on explicit changed Python files; `uv run ruff check src tests scripts migrations` | PASS; fixture unused import/formatting corrected |
+| `uv run mypy src/domsignal` | PASS, 69 source files |
+| `uv run python scripts/export_openapi.py`; `npm --prefix miniapp run api:generate` | PASS, generated OpenAPI/TS |
+| `uv run python scripts/check.py --scope frontend`; final targeted typecheck, 15 B-14 component tests and build after dialog feedback cleanup | PASS, 88 frontend tests (73 existing + 15 B-14), final targeted 15/15, production build for both entries |
+| `uv run python scripts/check.py --scope all` | PASS: ruff/mypy, 53 unit/contract, 88 frontend, build, OpenAPI/region/TS drift, alembic upgrade, 98 real PG integration (230.95s); A-01/A-15/A-07/A-16 regressions included |
+| `uv run alembic upgrade head`; `uv run python -m domsignal.tools.seed_demo`; `uv run python -m domsignal.tools.seed_tickets` | PASS in separate browser DB; no migration added |
+| `npm --prefix miniapp run test:browser` with base URL 8030, Chrome and fixture gates | Final PASS 27 (19 B-14 + all 8 B-02), 1.8m; real HTTP/PG vertical path, access/revoke/switch, concurrent claim, late/stale/conflict, idempotent retry, reload, field 422, axe and responsive/themes |
+| `uv run python scripts/docker_smoke.py --project domsignal-smoke-b14 --api-port 18089` | PASS clean image/build/PG/migrations/API+worker, persisted Incident after API restart; own smoke project/volume cleaned by script |
+| `git diff --check`; repository required files/conflict markers/local documentation links | PASS before commit |
+
+The full backend/PG gate and Docker smoke preceded the final dialog feedback
+polish. The final frontend build, targeted component checks and all 27 browser
+tests ran after that polish; backend and packaging files were unchanged.
+
+Full vertical scenario: actual Report creates Incident+one Ticket → employee
+queue/detail accepts/starts/reports attempt 1 → resident unresolved → same Ticket
+returns to work → new attempt 2 → resident resolved → closed → both UI reload.
+Direct PostgreSQL snapshot matches HTTP ID/version/status, exactly 2 attempts and
+2 observations. Commit-with-lost-response test returns one WorkAttempt after retry.
+New backend regression verifies current revision counts, names and history/detail
+agreement. Full [UI-TK-01…28 matrix](../../scenarios/acceptance.md#b-14--ui-tk-evidence).
+
+An additional browser regression verifies an in-dialog 409 notice, retained text,
+disabled outdated submit and no duplicate WorkAttempt. Final visual review also
+waits for loaded queue rows before checking responsive overflow.
+
+First browser run exposed Tab escaping the dialog to browser chrome; explicit
+focus trap fixed it. Repeated full run exposed duplicate synthetic address in the
+switch fixture; unique isolated fixture addresses fixed repeatability. Final full
+27/27 rerun passed, no skipped/disabled checks. Screenshots of employee/resident,
+390/768/1024/1366 admin and 320 light/dark resident generated; visual QA performed.
+Existing Starlette/httpx deprecation and browser color environment notices remain.
+
+## B-14 limitations and next step
+
+PASS applies to the authorized UI/workflow slice, not production identity or live MAX.
+Production admin accepts an existing bearer session in memory and requires sign-in
+again after reload; only explicitly enabled non-production test auth offers named
+fixtures. A complete employee login provider/MFA is still A-10/B-09, not invented MAX
+OAuth. Browser reload lifecycle evidence uses real gated test-session identities.
+No live MAX token/chat/callback/notification, real mobile MAX client, public TLS or
+external official acceptance was verified. Outbox delivery unchanged. Existing
+manual report/group-off/B-02 regressions pass; semantic matching remains outside scope.
+Queue composes per-house pages because no cross-house queue endpoint exists; no
+claim of large-tenant performance or server-side global sorting. Deadline editor,
+photos, employee/resident messaging, Superadmin and onboarding are excluded.
+
+One recommended next DEV-B task after review/merge: A-10 employee web authentication
+for this cabinet. Do not start it in this session. Current integration step is DEV-A
+review and green merge-result CI; main stays unchanged.
+
+## Previous A-16 handoff — historical evidence
+
 Updated: 2026-09-18 (A-16 backend)
 Branch: dev/b-experience
 Current task: A-16 — Ticket backend
