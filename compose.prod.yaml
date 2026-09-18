@@ -49,6 +49,10 @@ services:
     image: caddy:2.10.2-alpine
     environment:
       PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN}
+    networks:
+      default:
+        aliases:
+          - ${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN}
     ports:
       - "80:80"
       - "443:443"

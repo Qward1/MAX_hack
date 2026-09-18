@@ -1,11 +1,12 @@
-# MAX live smoke — DEPLOYED / PUBLIC TLS BLOCKED
+# MAX live smoke — DEPLOYED / LIVE BOOTSTRAP VERIFIED
 
 ## Production bootstrap — 19 September 2026 (Europe/Moscow)
 
 **DEPLOYED:** API, worker, PostgreSQL and Caddy are running on `domsignal-prod`
 (`176.108.244.168`), checkout `/opt/domsignal`, branch `dev/b-experience`.
 Initial deployed application SHA: `7d941b94fde0bd9b06fb8b08d969a2417e8b7c1b`.
-The checkpoint containing this report adds Docker context exclusions and docs;
+The resumed bootstrap started at `b986aeda249316d75ad2a2c9620a803033e96a69`.
+This checkpoint adds a production Caddy DNS alias and updates deployment evidence;
 its full deployed checkout SHA is recorded in `deploy/.env.production` as
 `BUILD_COMMIT` and can be checked with `git rev-parse HEAD` on the VPS.
 Built backend image: `sha256:3623dec69b96727577aedd33299e5143e66d918a3a64b389b52fca0e4d98c141`.
@@ -26,63 +27,93 @@ No merge to main, writes to DEV-A, local database copies or synthetic business d
   MAX_TRANSPORT=webhook, strong session/webhook secrets; real HTTP messaging provider.
 - All migrations completed through `2aea407269aa`; seed exited 0 with disabled notice.
   API and DB healthy; Caddy and worker running; worker process/DB reachability pass,
-  restart counts 0. Worker has no Docker healthcheck in the existing configuration.
-- Empty production users/inbox/jobs/tickets/deliveries confirmed; no test DB copied.
+  no automatic restart loops. Worker has no Docker healthcheck in the existing configuration.
+- Users/jobs/tickets/work attempts/deliveries remain empty; no test DB copied.
+  One genuine `bot_started` receipt and its operational smoke result are persisted.
 
-**DETERMINISTIC VERIFIED:** 5 targeted production bootstrap/subscription tests pass.
-Runtime loopback checks: `/ready` 200, resident `/` 200, capabilities 200;
-webhook `{}` without secret 401, with the production secret 422. These are local
-runtime checks, **not public HTTPS verification**.
+**DETERMINISTIC VERIFIED:** 17 targeted production bootstrap, subscription and MAX
+provider tests pass. Quiet Compose validation and fail-closed configuration pass.
+Controlled authenticated replay of the actual event identity returns duplicate=true,
+job_id=null, with the inbox count still one and job count unchanged. This is an
+operator replay, not evidence of a second delivery initiated by MAX.
 
-**LIVE VERIFIED (read-only MAX API only):** production container GET `/me` returned
+**LIVE VERIFIED:** production container GET `/me` returned
 `user_id=402577719`, `username=t480_hakaton_max_bot`, `is_bot=true`, with TLS
-verification enabled. Safe utility `list` returned `subscriptions: []`.
-This does not verify inbound delivery, outbound messaging or the Mini App.
+verification enabled. Public TLS, guarded subscription, real inbound `bot_started`
+and real outbound provider acceptance are verified as detailed below. This does
+not verify product Ticket delivery, callbacks, groups, Mini App binding or message reading.
 
-### Public ingress blocker
+### Public HTTPS and subscription — PASS
 
-Public TCP 80 and 443 time out while TCP 22 succeeds. Caddy listens on all interfaces;
-local port 80 returns its expected 308 redirect. UFW and Docker DNAT/FORWARD rules
-permit 80/443. During controlled external probes, tcpdump on `enp3s0` observed no
-incoming 80/443 SYN packets (only an unrelated outbound metadata request).
-Let's Encrypt independently timed out for both HTTP-01 and TLS-ALPN-01.
-This isolates the block upstream of the guest, consistent with cloud security-group
-filtering; cloud rules themselves cannot be inspected or changed with the available
-SSH-only credentials. Instance metadata names the attached group
-`Security Group 324aa041-8d2e-47f2-a7ee-09f375528334`.
+The operator attached the web security group while retaining SSH access. Public
+HTTP now returns 308 and HTTPS `/ready` returns 200 with `{"status":"ready"}`.
+Checks from outside the VPS confirmed webhook `{}` without secret -> 401 and
+with the production secret -> 422. Public capabilities report test_auth=false.
 
-**PENDING CLOUD ACTION:** allow inbound TCP 80 and 443 from `0.0.0.0/0` on the
-security group attached to this VPS, preserving SSH and keeping 5432 closed.
-No MAX subscription was registered; public preflight correctly refused to pass.
-Caddy remains running with automatic ACME retries. No self-signed certificate or
-TLS-verification bypass was used.
+Caddy obtained a trusted Let's Encrypt YE1 certificate, SAN
+`domsignal.176-108-244-168.sslip.io`, valid until 2026-12-17 20:34:07 UTC.
+External TLS 1.3 and OpenSSL chain/hostname verification passed; the server sends
+four certificates. No self-signed certificate or disabled verification was used.
+
+The cloud public-IP loopback still times out from the VPS itself. The production
+overlay therefore gives Caddy the PUBLIC_DOMAIN alias on the Docker network;
+container preflight reaches the same HTTPS virtual host with normal certificate
+verification. External checks remain separate and are required before registration.
+
+Safe utility `list` first confirmed `[]`. After all checks passed, `register`
+returned registered; another `list` confirmed exactly one subscription:
+`https://domsignal.176-108-244-168.sslip.io/max/webhook` with exactly
+`bot_started`, `bot_stopped`, `bot_added`, `bot_removed`, `message_created`,
+`message_callback`. Names were rechecked against official
+[Update](https://dev.max.ru/docs-api/objects/Update) and
+[POST subscriptions](https://dev.max.ru/docs-api/methods/POST/subscriptions).
+
+### Real event, message and restart — PASS
+
+After the operator pressed Start, the production webhook returned 200 and persisted
+typed `bot_started` at 2026-09-18 21:39:42.616290 UTC (19 September MSK).
+Event ID: `max:9c4f4ba8af7819c343aeb9543b2c9a2387e5e6bdde33bcf81e8b13426fcde119`.
+Authentication is mandatory before parsing; previous operator probes contained only
+invalid `{}`. This successful event followed the actual MAX interaction.
+
+The inbox intentionally stores only chat_id, not raw webhook JSON or correlation
+secrets. GET `/chats/{chatId}` returned the active dialog and its real non-bot user.
+Its last_event_time and verified user/chat identifiers reconstructed the exact
+same parser event hash before the controlled duplicate POST was attempted.
+Duplicate=true and unchanged receipt/job counts verified deduplication.
+
+Production `HttpMaxMessagingProvider.send_personal_message` sent exactly:
+«ДомСигнал подключён. Проверка MAX-бота выполнена.»
+MAX POST `/messages` was accepted with provider ID
+`mid.00000000066d71cf01a0b678f3ea6fad`. GET of that message confirmed the same
+ID, text and intended recipient. Reading/push display is not asserted.
+
+The operation was claimed before send and its actual acceptance/message ID saved
+in the real receipt's `payload.bootstrap_smoke`. This is operational smoke
+evidence, not a Ticket NotificationDelivery or a confirmed app User identity.
+No Ticket, WorkAttempt, app user, membership or synthetic delivery was created.
+The send claim prevents an accidental automatic resend of this operator smoke.
+
+API and worker were restarted via production Compose. HTTPS preflight and the
+single expected subscription still passed; the event and accepted message ID
+survived. API/DB are healthy, worker process and DB connectivity passed, and recent
+API/worker/Caddy logs contained no error/traceback/500 lines or credentials.
 
 ### Remaining gates
 
-- Trusted public TLS/chain/hostname, HTTPS `/ready` and public webhook 401/422:
-  pending cloud ingress. Intended base: `https://domsignal.176-108-244-168.sslip.io`.
-- Intended subscription URL:
-  `https://domsignal.176-108-244-168.sslip.io/max/webhook`.
-  Types: `bot_started`, `bot_stopped`, `bot_added`, `bot_removed`,
-  `message_created`, `message_callback`. Rechecked against the current official
-  [Update](https://dev.max.ru/docs-api/objects/Update) and
-  [POST subscriptions](https://dev.max.ru/docs-api/methods/POST/subscriptions) docs.
-- Real MAX events, typed bot_started persistence/deduplication and outbound
-  acceptance/provider message ID: NOT RUN. No message has been sent.
 - Callback: PENDING PRODUCT LIVE SCENARIO; existing handler needs a genuine
   Ticket/WorkAttempt and accepted delivery. Do not manufacture a production Ticket.
 - Group capability: UNVERIFIED; `/me` exposes no group capability flag. No group
-  addition attempted. If disabled, PENDING ORGANIZER ACTION; A-07 live remains pending.
+  addition attempted and GET `/chats` returned an empty list. If disabled,
+  PENDING ORGANIZER ACTION; A-07 live remains pending. No user action requested now.
 - **PENDING ORGANIZER ACTION:** Mini App binding. Resident entry is `/`, so the
-  intended URL is `https://domsignal.176-108-244-168.sslip.io/`. It serves HTML on
-  loopback but is not yet HTTPS-verified or ready to claim as a live Mini App.
-- API/worker restart after subscription/live event, persistence and subscription
-  recheck remain pending those prerequisites.
+  exact URL to hand to organizers is `https://domsignal.176-108-244-168.sslip.io/`.
+  HTTPS 200 and the resident bundle were checked. Binding, real initData,
+  open_app/start_param and Web/iOS/Android client behavior remain NOT LIVE VERIFIED.
 
-The 18 September SSH blocker is superseded: existing-key SSH now passes.
-Resume from cloud ingress/TLS, then guarded registration, then one real MAX Start
-interaction. Do not recreate SSH keys, regenerate production secrets, or delete
-unknown subscriptions.
+The previous SSH and public-ingress blockers are resolved. No further operator
+action is needed for this bootstrap. Future checks must not recreate SSH keys,
+regenerate production secrets, resend the accepted smoke, or delete unknown subscriptions.
 
 ## Configuration and prerequisites
 
@@ -217,7 +248,8 @@ The documented limits remain two send/edit/answer operations per second per
 destination; our shared gate conservatively limits their combined rate to two.
 No POST idempotency key/guarantee is documented. Send 5xx therefore stays unknown.
 
-Additional live delivery checklist — all PENDING:
+Additional product Ticket delivery checklist — all PENDING (separate from the
+plain-text bootstrap send verified above):
 
 - [ ] Configure the approved bot username and attached Mini App; use the existing
   token/Authorization/configuration boundary and current platform-api2.max.ru TLS trust.
@@ -246,7 +278,7 @@ Additional live delivery checklist — all PENDING:
 B-14 — рабочий и resident UI; A-05/B-03 — доставка/повторы; B-06/B-07 —
 карточки/callbacks/ссылки; A-09/B-08 — reminders/история. Owner всех этих задач
 и B-01/B-11 live проверки — DEV-B. Это расширение smoke после их реализации,
-не добавленная в A-07 функция; весь перечень ниже **NOT RUN / PENDING PUBLIC INGRESS AND LIVE SCENARIO**.
+не добавленная в A-07 функция; весь перечень ниже **NOT RUN / PENDING PRODUCT LIVE SCENARIO**.
 
 - [ ] На изолированном боте/стенде и разрешённом доме: Report → Incident → Ticket
   → WorkAttempt с конкретным отчётом → outbox intent. Для группы — `/report`.
@@ -273,8 +305,8 @@ Evidence уровней: **A** — unit/contract, тестовые адапте�
 **B** — настоящий HTTP, services, PostgreSQL и worker (MAX adapter может быть тестовым);
 **C** — реальные MAX провайдер/клиенты, а для принятого AI-среза отдельно live LLM.
 A/B не заменяют C; transport=off не реальная интеграция. Наличие рабочего токена
-и пустого списка subscriptions не является доставкой события: C остаётся
-NOT RUN / PENDING PUBLIC HTTPS. Сохранять ref, конфигурацию без секретов, роли, тестовые
+и списка subscriptions недостаточно для проверки продуктовой цепочки: её уровень C
+остаётся NOT RUN / PENDING PRODUCT LIVE SCENARIO. Сохранять ref, конфигурацию без секретов, роли, тестовые
 данные, клиент/версию, время, ожидаемый и фактический результат каждого шага.
 Локальный запуск не перепривязывает общий webhook; reset разрешён только для
 явно выбранного собственного тестового окружения. Current bootstrap evidence above supersedes historical prerequisite status; product live scenarios remain unverified.

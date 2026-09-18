@@ -1,15 +1,15 @@
 # DEV-B — current handoff
 
-Updated: 2026-09-19 (production VPS bootstrap; public ingress gate)
+Updated: 2026-09-19 (production HTTPS + real MAX bootstrap completed)
 Branch: dev/b-experience
 Current task: A-12/B-01 production VPS + real MAX webhook bootstrap
-State: DEPLOYED / PUBLIC TLS BLOCKED BY CLOUD INGRESS / NOT MERGED TO MAIN
-Real MAX: LIVE VERIFIED READ-ONLY IDENTITY / SUBSCRIPTIONS EMPTY / EVENTS NOT VERIFIED
+State: DEPLOYED / PUBLIC HTTPS VERIFIED / NOT MERGED TO MAIN
+Real MAX: LIVE VERIFIED bot_started + plain-text outbound / PRODUCT SCENARIOS PENDING
 
 ## Current production checkpoint
 
-START fetch: clean branch, HEAD and own origin ref
-`7d941b94fde0bd9b06fb8b08d969a2417e8b7c1b`; origin/main already an ancestor.
+Resumed START ref and own origin ref:
+`b986aeda249316d75ad2a2c9620a803033e96a69`; origin/main already an ancestor.
 No main merge and no writes to DEV-A. Existing project SSH key passes BatchMode
 and strict host verification; the previous SSH access blocker is resolved.
 
@@ -21,32 +21,48 @@ mode-600 `deploy/.env.production`; `.dockerignore` now excludes nested env files
 
 **DEPLOYED:** Caddy/API/worker/PostgreSQL; migrations completed, demo seed disabled,
 API and DB healthy; worker process and DB reachable, no restart loops.
-Initial application SHA is the START ref above; this checkpoint only changes
-Docker context exclusions and docs. Exact deployed checkpoint SHA is stored as
+Application source remains the previously deployed code; this checkpoint adds a
+Caddy Docker network alias and docs. Exact deployed checkpoint SHA is stored as
 BUILD_COMMIT in the VPS environment file. No test data copied or generated.
 
 **DETERMINISTIC VERIFIED:** Compose quiet validation/fail-closed assertions;
-5 targeted production/subscription tests pass. Loopback `/ready` and resident `/`
-200; webhook without secret 401 and with production secret plus `{}` 422.
+17 targeted production/subscription/MAX provider tests pass. Public `/ready` and
+resident `/` return 200; external webhook without secret 401 and with production
+secret plus `{}` 422. Test auth and demo seed remain disabled.
+Controlled replay of the exact real event identity returns duplicate=true,
+job_id=null; inbox count stays one and no jobs are added. This is operator replay,
+not a second MAX-originated delivery.
 
-**LIVE VERIFIED:** only real production MAX GET `/me` identity
-402577719 / t480_hakaton_max_bot / is_bot=true and read-only subscriptions `[]`.
-No live inbound event, outbound message, callback, group binding or Mini App claim.
+**LIVE VERIFIED:** trusted public TLS (Let's Encrypt YE1, matching SAN and verified
+chain); real production MAX GET `/me` identity
+402577719 / t480_hakaton_max_bot / is_bot=true. Safe utility inspected empty
+subscriptions, registered the expected `/max/webhook` URL, and confirmed exactly
+one subscription with all six documented event types.
 
-**BLOCKER / NEXT ACTION:** cloud ingress TCP 80/443. Both public probes and ACME
-HTTP-01/TLS-ALPN-01 time out. Caddy listens, host firewall/Docker rules permit
-traffic, and interface capture sees no incoming SYN during external probes.
-Attached cloud group from instance metadata:
-`Security Group 324aa041-8d2e-47f2-a7ee-09f375528334`.
-Allow TCP 80/443 from 0.0.0.0/0 in that group; preserve SSH, keep 5432 closed.
-Cloud control-plane credentials are unavailable over this SSH session.
-No webhook registration was attempted after the failed public preflight.
+The operator's real Start produced authenticated, typed, persisted bot_started at
+2026-09-18 21:39:42.616290 UTC. MAX's active dialog data identified the actual
+recipient and reconstructed the exact event hash for duplicate verification.
+Production HttpMaxMessagingProvider sent the requested plain-text confirmation;
+MAX accepted `mid.00000000066d71cf01a0b678f3ea6fad`, and GET read-back verified
+ID/text/recipient. No reading/push-display claim.
+
+Acceptance is persisted in the real inbox receipt's `payload.bootstrap_smoke`;
+a pre-send claim prevents accidental resend. This operational record does not
+create or verify a Ticket NotificationDelivery or app User. Users, tickets, work
+attempts, deliveries and jobs remain empty. API/worker restart retained event,
+accepted message ID and subscription; readiness, TLS preflight and worker process/DB pass.
+
+**FIXES:** cloud ingress was opened by the operator. VPS public-IP loopback remains
+unavailable, so Caddy gets PUBLIC_DOMAIN as a Docker network alias. Container
+HTTPS preflight uses the real Caddy certificate; separate external probes confirm
+actual public reachability. No TLS bypass, token rotation or unrelated services.
 
 **PENDING ORGANIZER ACTION:** Mini App binding; group permission if disabled
-(capability currently unverified, not presumed enabled). Resident entry will be
-`https://domsignal.176-108-244-168.sslip.io/`; HTTPS remains unverified.
+(capability currently unverified; GET chats empty, not presumed disabled/enabled).
+Resident entry for organizers is `https://domsignal.176-108-244-168.sslip.io/`;
+HTTPS/HTML are verified. Mini App binding/initData/client behavior are not.
 Callbacks require a genuine product Ticket/WorkAttempt; no artificial smoke Ticket.
-Restart/persistence/subscription checks follow registration and the real event.
+No further action is requested from the operator now. Product scenarios remain pending.
 
 Full evidence and continuation boundary: [MAX live smoke](../MAX_LIVE_SMOKE.md).
 

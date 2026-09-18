@@ -58,6 +58,13 @@ from `PUBLIC_DOMAIN`. Do not add secrets to tracked files or command arguments.
 The root `.dockerignore` excludes `.env` and nested `.env.*` files so that the
 production environment file is not sent to the Docker builder.
 
+The production Caddy service has `PUBLIC_DOMAIN` as a Docker network alias.
+Containers therefore reach Caddy directly when checking the HTTPS hostname;
+certificate-chain and hostname verification remain enabled. This supports cloud
+networks that cannot loop back through the VPS public IP. The subscription CLI's
+container preflight does not prove external reachability: also check public HTTPS
+and webhook authentication from a machine outside the VPS before registration.
+
 MAX currently uses the Russian Trusted Root CA. The runtime image installs the
 public root from `deploy/ca/russian_trusted_root_ca.crt`; its SHA-256 fingerprint
 is `D2:6D:2D:02:31:B7:C3:9F:92:CC:73:85:12:BA:54:10:35:19:E4:40:5D:68:B5:BD:70:3E:97:88:CA:8E:CF:31`.
