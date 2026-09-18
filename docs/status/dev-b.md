@@ -1,10 +1,10 @@
 # DEV-B — current handoff
 
-Updated: 2026-09-18 (personal MAX Delivery Loop)
+Updated: 2026-09-18 (production MAX webhook bootstrap)
 Branch: dev/b-experience
-Current task: existing A-16 outbox → personal MAX delivery → resident observation
-State: PASS / IMPLEMENTED IN BRANCH / DETERMINISTIC TESTED; NOT MERGED TO MAIN
-Real MAX: NOT LIVE VERIFIED / PENDING TOKEN
+Current task: A-12/B-01 production VPS + real MAX webhook bootstrap
+State: PASS / IMPLEMENTED IN BRANCH / NOT MERGED TO MAIN
+Real MAX: TOKEN VERIFIED READ-ONLY / PUBLIC HTTPS PENDING / NOT LIVE VERIFIED
 
 ## Delivery result and roadmap mapping
 
@@ -681,6 +681,58 @@ existing test chats, HTTPS webhook, genuine permissions/identities and clients.
 No real token was requested from secret stores or invented as production credentials.
 Test adapters/synthetic events are explicitly not live integration evidence.
 
-One recommended next DEV-B task: B-01 — live MAX feasibility using the checklist
-once an approved token and isolated bot/chats are available. Do not start Ticket,
-full admin UI or AI from this handoff. Review/CI of this branch precedes main merge.
+The next DEV-B step is to finish B-01 live feasibility after a public HTTPS VPS/DNS
+endpoint is available, using the issued token and isolated bot/chats. Do not start
+A-10/Mini App binding or unrelated product work from this handoff. Review/CI of
+this branch precedes main merge.
+
+## A-12/B-01 production webhook bootstrap — 18.09.2026
+
+Production Compose is now a fail-closed live overlay: `APP_ENV=production`, test
+session and demo seed disabled, fixed webhook transport/bot username/API origin,
+required token/webhook/session/DB secrets, HTTPS public origin/CORS, DB-backed API
+readiness, restart policies and private PostgreSQL. Caddy remains the single HTTPS
+edge and keeps persistent certificate state. The runtime trust store includes the
+Russian Trusted Root CA used by the current `platform-api2.max.ru` chain; TLS
+verification is not disabled.
+
+Settings reject short/template session and DB secrets, missing/template MAX
+credentials, non-webhook production transport, another bot username/API origin,
+HTTP/path/non-default-port public URLs and invalid CORS. Production composition
+still selects only `HttpMaxChatProvider`/`HttpMaxMessagingProvider`; deterministic
+fakes remain tests-only. Contract coverage proves production test auth is disabled,
+and webhook authentication returns 401 before parsing while valid secret + `{}`
+reaches the expected 422 payload rejection.
+
+Added `deploy/.env.example`, a copy-paste VPS/Caddy/Compose runbook and guarded
+`python -m domsignal.tools.max_subscription`. The operator tool verifies `GET /me`,
+lists subscriptions, refuses every foreign/multiple-URL conflict, checks public
+`/ready` and webhook 401/422, then registers the exact official six update types.
+Update/secret rotation uses documented POST for the same URL; DELETE targets only
+that exact URL and verifies removal. HTTP 200 with `success=false` always fails.
+Application startup never creates, replaces or deletes a subscription.
+
+Read-only live evidence from the built runtime image: TLS validation succeeded;
+`GET /me` matched `t480_hakaton_max_bot`; `GET /subscriptions` returned `[]`.
+No POST/DELETE, polling, public deployment or synthetic live event was performed.
+There is no public HTTPS hostname/VPS in this environment, so external `/ready`,
+subscription registration and real `bot_started`/message/callback delivery remain
+PENDING PUBLIC HTTPS / NOT LIVE VERIFIED. Mini App binding and A-10 were untouched.
+
+Relevant evidence:
+
+| Command/check | Result |
+|---|---|
+| `uv run ruff check ...`; `uv run mypy src/domsignal` | PASS; mypy 77 source files |
+| `uv run python scripts/check.py --scope backend` | PASS: ruff, mypy 77 source files, 96 unit/contract tests |
+| isolated PostgreSQL: Alembic head + `test_chat_bindings.py test_notifications.py` | PASS, 58 tests |
+| `uv run python scripts/docker_smoke.py --project domsignal-smoke-max-live-final --api-port 18092` | PASS; final image migration/seed/API/worker/restart persistence, isolated volume removed |
+| production Compose config with safe synthetic env | PASS; DB has no published ports, API is loopback-only, Caddy 80/443 |
+| production Compose with missing env; runtime with template values | FAIL CLOSED as expected |
+| `caddy validate`; root certificate subject/validity/SHA-256 | PASS |
+| built-container guarded `list` with issued token | PASS; correct bot and zero subscriptions, no mutation |
+
+Canonical commands and manual VPS/DNS/secrets boundary are in
+[`deploy/README.md`](../../deploy/README.md); the live evidence boundary remains in
+[`MAX_LIVE_SMOKE.md`](../MAX_LIVE_SMOKE.md). Final exact test counts, diff check and
+commit SHA belong to the session report after the final checkpoint.

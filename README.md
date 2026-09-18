@@ -49,7 +49,8 @@ npm --prefix=miniapp run dev
 
 По умолчанию API слушает `8000`, Vite — `5173`, PostgreSQL в Compose — только
 внутри сети. В production overlay Caddy публикует `80/443`; запуск overlay
-требует безопасных переменных окружения и HTTPS-домена.
+требует безопасных переменных окружения и HTTPS-домена. Пошаговый VPS deploy,
+проверки TLS/webhook и безопасное управление MAX subscription: [deploy runbook](deploy/README.md).
 
 ## Проверки
 

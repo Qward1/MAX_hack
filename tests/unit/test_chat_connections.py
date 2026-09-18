@@ -8,7 +8,7 @@ from domsignal.bot.chat_provider import HttpMaxChatProvider, MaxProviderError
 from domsignal.contracts.chat_connections import ConnectionCreate
 from domsignal.core.access import AccessPolicy
 from domsignal.core.chat_connections import binding_transition, connection_transition
-from domsignal.settings import Settings
+from domsignal.settings import PRODUCTION_MAX_BOT_USERNAME, Settings
 from tests.fakes.max_chat import FakeMaxChatProvider
 
 
@@ -90,21 +90,24 @@ async def test_adapter_failures(error: str) -> None:
         await FakeMaxChatProvider().get_chat_info("-2")
 
 
-async def test_production_never_selects_fake_and_off_cannot_call_max() -> None:
+async def test_production_never_selects_fake_and_configures_live_max() -> None:
     settings = Settings(
         app_env="production",
         allow_test_session=False,
         demo_seed=False,
-        session_secret="synthetic-long-secret",
-        database_url="postgresql+asyncpg://x:x@localhost/x",
-        public_base_url="https://example.invalid",
+        session_secret="synthetic-production-session-secret-1234",
+        database_url="postgresql+asyncpg://x:strong-password-123@localhost/x",
+        public_base_url="https://domsignal.example.ru",
+        cors_origins=["https://domsignal.example.ru"],
+        max_transport="webhook",
         max_bot_token="synthetic",
+        max_webhook_secret="synthetic_webhook_secret_1234567890",
+        max_bot_username=PRODUCTION_MAX_BOT_USERNAME,
         _env_file=None,
     )
     container = build_container(settings)
     assert isinstance(container.chat_connections.provider, HttpMaxChatProvider)
-    with pytest.raises(MaxProviderError, match="max_not_configured"):
-        await container.chat_connections.provider.get_chat_info("-1")
+    assert container.chat_connections.provider.client.configured
     await container.engine.dispose()
     with pytest.raises(ValidationError):
         Settings(max_required_permissions=[], _env_file=None)

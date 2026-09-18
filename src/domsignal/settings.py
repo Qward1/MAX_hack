@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from enum import StrEnum
 from functools import lru_cache
 from typing import Annotated
@@ -25,6 +26,11 @@ class LlmProvider(StrEnum):
     RULES = "rules"
 
 
+MAX_API_ORIGIN = "https://platform-api2.max.ru"
+PRODUCTION_MAX_BOT_USERNAME = "t480_hakaton_max_bot"
+WEBHOOK_SECRET_PATTERN = re.compile(r"^[A-Za-z0-9_-]{5,256}$")
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -44,7 +50,7 @@ class Settings(BaseSettings):
     max_transport: MaxTransportMode = MaxTransportMode.OFF
     max_bot_token: str | None = Field(default=None, repr=False)
     max_webhook_secret: str | None = Field(default=None, repr=False)
-    max_api_base_url: str = "https://platform-api2.max.ru"
+    max_api_base_url: str = MAX_API_ORIGIN
     max_api_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
     max_bot_username: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_]{1,100}$")
     max_required_permissions: frozenset[str] = frozenset({"read_all_messages"})
@@ -55,10 +61,19 @@ class Settings(BaseSettings):
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
     static_dir: str = "miniapp/dist"
 
-    @field_validator("max_bot_username", mode="before")
+    @field_validator("max_bot_token", "max_bot_username", "max_webhook_secret", mode="before")
     @classmethod
-    def empty_bot_username(cls, value: object) -> object:
+    def empty_max_value(cls, value: object) -> object:
         return None if value == "" else value
+
+    @field_validator("max_webhook_secret")
+    @classmethod
+    def validate_webhook_secret(cls, value: str | None) -> str | None:
+        if value is not None and not WEBHOOK_SECRET_PATTERN.fullmatch(value):
+            raise ValueError(
+                "MAX_WEBHOOK_SECRET must be 5-256 characters from A-Z, a-z, 0-9, _ or -"
+            )
+        return value
 
     @field_validator("max_api_base_url")
     @classmethod
@@ -97,30 +112,79 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
+    @staticmethod
+    def _is_origin(value: str, *, https_only: bool) -> bool:
+        parsed = urlparse(value)
+        return bool(
+            parsed.scheme in ({"https"} if https_only else {"http", "https"})
+            and parsed.hostname
+            and not parsed.username
+            and not parsed.password
+            and parsed.path in {"", "/"}
+            and not parsed.params
+            and not parsed.query
+            and not parsed.fragment
+        )
+
     @model_validator(mode="after")
     def reject_unsafe_production(self) -> Settings:
         if self.app_env is not AppEnvironment.PRODUCTION:
             return self
         problems: list[str] = []
+        database = urlparse(self.database_url)
+        session_secret_lower = self.session_secret.lower()
         if self.allow_test_session:
             problems.append("ALLOW_TEST_SESSION must be false")
         if self.demo_seed:
             problems.append("DEMO_SEED must be false")
-        if self.session_secret in {"", "local-only-change-me", "change-me"}:
-            problems.append("SESSION_SECRET must be replaced")
-        if "domsignal:domsignal@" in self.database_url:
-            problems.append("DATABASE_URL must not use demo credentials")
-        if self.max_transport is MaxTransportMode.RECORDING:
-            problems.append("MAX_TRANSPORT=recording is test-only")
-        if self.max_transport is MaxTransportMode.WEBHOOK:
-            if not self.max_bot_token:
-                problems.append("MAX_BOT_TOKEN is required for webhook transport")
-            if not self.max_webhook_secret:
-                problems.append("MAX_WEBHOOK_SECRET is required for webhook transport")
-        if urlparse(self.public_base_url).scheme != "https":
-            problems.append("PUBLIC_BASE_URL must use https")
-        if any(origin == "*" for origin in self.cors_origins):
-            problems.append("wildcard CORS is forbidden")
+        if (
+            self.session_secret in {"", "local-only-change-me", "change-me"}
+            or len(self.session_secret) < 32
+            or len(set(self.session_secret)) < 8
+            or "replace" in session_secret_lower
+        ):
+            problems.append("SESSION_SECRET must be a strong value of at least 32 characters")
+        if (
+            "domsignal:domsignal@" in self.database_url
+            or not database.password
+            or len(database.password) < 16
+            or "replace" in database.password.lower()
+        ):
+            problems.append("DATABASE_URL must use non-placeholder production credentials")
+        if self.max_transport is not MaxTransportMode.WEBHOOK:
+            problems.append("MAX_TRANSPORT must be webhook in production")
+        if not self.max_bot_token or "replace" in self.max_bot_token.lower():
+            problems.append("MAX_BOT_TOKEN is required in production")
+        if (
+            not self.max_webhook_secret
+            or len(self.max_webhook_secret) < 32
+            or len(set(self.max_webhook_secret)) < 8
+            or "replace" in self.max_webhook_secret.lower()
+        ):
+            problems.append(
+                "MAX_WEBHOOK_SECRET must be a strong value of at least 32 characters"
+            )
+        if self.max_bot_username != PRODUCTION_MAX_BOT_USERNAME:
+            problems.append(f"MAX_BOT_USERNAME must be {PRODUCTION_MAX_BOT_USERNAME} in production")
+        if self.max_api_base_url != MAX_API_ORIGIN:
+            problems.append(f"MAX_API_BASE_URL must be {MAX_API_ORIGIN} in production")
+        if not self._is_origin(self.public_base_url, https_only=True):
+            problems.append("PUBLIC_BASE_URL must be an HTTPS origin")
+        else:
+            public = urlparse(self.public_base_url)
+            if public.port not in {None, 443}:
+                problems.append("PUBLIC_BASE_URL must use the default HTTPS port")
+            hostname = public.hostname or ""
+            if hostname == "example.com" or hostname.endswith(".example.com"):
+                problems.append("PUBLIC_BASE_URL must not use the template hostname")
+        if not self.cors_origins:
+            problems.append("CORS_ORIGINS must not be empty")
+        elif any(not self._is_origin(origin, https_only=True) for origin in self.cors_origins):
+            problems.append("CORS_ORIGINS must contain only HTTPS origins")
+        if self.public_base_url.rstrip("/") not in {
+            origin.rstrip("/") for origin in self.cors_origins
+        }:
+            problems.append("CORS_ORIGINS must include PUBLIC_BASE_URL")
         if problems:
             raise ValueError("unsafe production settings: " + "; ".join(problems))
         return self

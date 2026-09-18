@@ -22,9 +22,15 @@ FROM python:3.12.11-slim-bookworm AS runtime
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     STATIC_DIR=/app/miniapp/dist
 WORKDIR /app
-RUN addgroup --system --gid 10001 domsignal \
+COPY deploy/ca/russian_trusted_root_ca.crt /usr/local/share/ca-certificates/russian-trusted-root-ca.crt
+RUN apt-get update \
+    && apt-get install --no-install-recommends --yes ca-certificates \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && addgroup --system --gid 10001 domsignal \
     && adduser --system --uid 10001 --ingroup domsignal --home /nonexistent domsignal
 COPY --from=python-build --chown=domsignal:domsignal /app/.venv /app/.venv
 COPY --chown=domsignal:domsignal alembic.ini ./

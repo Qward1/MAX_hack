@@ -1,16 +1,31 @@
-# A-07 MAX live smoke — PENDING TOKEN / NOT VERIFIED
+# MAX live smoke — BOOTSTRAP PREPARED / NOT LIVE VERIFIED
 
-Implementation and deterministic tests do not establish live connectivity.
-No checklist item below has been executed against a real MAX bot/chat.
+Implementation and deterministic tests do not establish end-to-end live connectivity.
+Read-only token checks are complete, but no public webhook delivery or real MAX
+event has been observed yet. `LIVE VERIFIED` therefore remains false.
 Use an approved isolated bot, existing test groups and authorized test users.
 Do not change the team's shared webhook or start polling with its token.
+
+## Bootstrap status — 18 September 2026
+
+- [x] The issued token was accepted by `GET /me`; username is
+  `t480_hakaton_max_bot`.
+- [x] `GET /subscriptions` returned an empty list; no subscription was changed.
+- [x] The runtime trust store includes the Russian Trusted Root CA required by the
+  current `platform-api2.max.ru` chain; TLS verification remains enabled.
+- [x] Production config and deterministic webhook checks prove missing secret →
+  401 and valid secret with `{}` → 422 before business persistence.
+- [ ] A publicly reachable HTTPS hostname and VPS are not available in this
+  environment, so external `/ready`, webhook auth and MAX delivery are pending.
+- [ ] `POST /subscriptions` has deliberately not been called. Register only after
+  the public HTTPS preflight in [the production runbook](../deploy/README.md).
 
 ## Configuration and prerequisites
 
 Use the existing API + worker + private PostgreSQL + HTTPS reverse proxy.
 `MAX_TRANSPORT=off` remains the local default. Only explicit `webhook` enables
-inbound MAX and the read-only provider. Outbound MaxTransport is still off;
-A-07 neither broadcasts messages nor registers subscriptions automatically.
+inbound MAX and the production HTTP providers. Subscription registration is an
+explicit guarded operator action; application startup never mutates it.
 
 Set the issued `MAX_BOT_TOKEN` and `MAX_WEBHOOK_SECRET` through deployment secrets;
 never place them in git, shell history, traces or evidence. Default API origin is
@@ -25,9 +40,9 @@ verified ManagementCompany/HouseManagement and employee/resident access through
 the approved existing process. Log in with server-validated MAX initData. There
 is no production test-session bypass and no new full admin UI in A-07.
 
-## Checklist (all PENDING)
+## End-to-end checklist
 
-- [ ] Issued token accepted; read real bot identity with documented `GET /me`.
+- [x] Issued token accepted; read real bot identity with documented `GET /me`.
 - [ ] Group adding enabled in bot settings.
 - [ ] Dedicated HTTPS `/max/webhook` available on port 443; API and worker share DB.
 - [ ] Dedicated subscription uses `X-Max-Bot-Api-Secret`; missing/wrong secret gives
@@ -67,7 +82,7 @@ Capture commit SHA, environment/client versions, times and sanitized results for
 each item. Mark LIVE VERIFIED only for the exact paths actually exercised. Do not
 record tokens, message content from unrelated chats or participant lists.
 
-## Documented provider contract (checked 18 September 2026)
+## Documented provider contract (rechecked 18 September 2026)
 
 - [Chat metadata / API origin](https://dev.max.ru/docs-api/methods/GET/chats/-chatId-)
 - [Bot membership and permissions](https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members/me)
@@ -75,6 +90,8 @@ record tokens, message content from unrelated chats or participant lists.
 - [Updates](https://dev.max.ru/docs-api/objects/Update) and
   [Message](https://dev.max.ru/docs-api/objects/Message)
 - [Webhook secret and delivery](https://dev.max.ru/docs-api/methods/POST/subscriptions)
+- [List subscriptions](https://dev.max.ru/docs-api/methods/GET/subscriptions) and
+  [delete one exact URL](https://dev.max.ru/docs-api/methods/DELETE/subscriptions)
 - [Bot start payload](https://dev.max.ru/docs/chatbots/bots-coding/masterbot)
 
 The production provider uses these three read methods only. No bulk participant
@@ -102,6 +119,15 @@ docs перед реализацией, обрабатывает 429/5xx/timeout
 результат отправки не становится подтверждённым и не даёт слепой бесконечный retry.
 Не придумывать API read receipts, push-подтверждения или права получателя.
 Метод получения сообщения сам по себе не доказательство, что его прочёл человек.
+
+Текущий официальный объект
+[Update](https://dev.max.ru/docs-api/objects/Update) подтверждает нужные типы:
+`bot_started`, `bot_stopped`, `bot_added`, `bot_removed`, `message_created`,
+`message_callback`. Guarded CLI сначала сверяет `GET /me` и
+`GET /subscriptions`, останавливается при любом чужом URL, проверяет публичные
+`/ready`/401/422 и только затем вызывает POST. HTTP 200 без `success=true` не
+считается успехом. Команды регистрации, повторной проверки, обновления тем же
+POST и точечного DELETE приведены в [deploy runbook](../deploy/README.md).
 
 ## Ticket → MAX → Mini App — LIVE PENDING
 
@@ -182,8 +208,9 @@ B-14 — рабочий и resident UI; A-05/B-03 — доставка/повт�
 Evidence уровней: **A** — unit/contract, тестовые адаптеры и записанные входы;
 **B** — настоящий HTTP, services, PostgreSQL и worker (MAX adapter может быть тестовым);
 **C** — реальные MAX провайдер/клиенты, а для принятого AI-среза отдельно live LLM.
-A/B не заменяют C; transport=off не реальная интеграция. Без токена C остаётся
-NOT RUN / PENDING TOKEN. Сохранять ref, конфигурацию без секретов, роли, тестовые
+A/B не заменяют C; transport=off не реальная интеграция. Наличие рабочего токена
+и пустого списка subscriptions не является доставкой события: C остаётся
+NOT RUN / PENDING PUBLIC HTTPS. Сохранять ref, конфигурацию без секретов, роли, тестовые
 данные, клиент/версию, время, ожидаемый и фактический результат каждого шага.
 Локальный запуск не перепривязывает общий webhook; reset разрешён только для
 явно выбранного собственного тестового окружения. В этом docs-запуске live не выполнялся.
