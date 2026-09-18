@@ -1,45 +1,88 @@
-# MAX live smoke — BOOTSTRAP PREPARED / NOT LIVE VERIFIED
+# MAX live smoke — DEPLOYED / PUBLIC TLS BLOCKED
 
-Implementation and deterministic tests do not establish end-to-end live connectivity.
-Read-only token checks are complete, but no public webhook delivery or real MAX
-event has been observed yet. `LIVE VERIFIED` therefore remains false.
-Use an approved isolated bot, existing test groups and authorized test users.
-Do not change the team's shared webhook or start polling with its token.
+## Production bootstrap — 19 September 2026 (Europe/Moscow)
 
-## Bootstrap status — 18 September 2026
+**DEPLOYED:** API, worker, PostgreSQL and Caddy are running on `domsignal-prod`
+(`176.108.244.168`), checkout `/opt/domsignal`, branch `dev/b-experience`.
+Initial deployed application SHA: `7d941b94fde0bd9b06fb8b08d969a2417e8b7c1b`.
+The checkpoint containing this report adds Docker context exclusions and docs;
+its full deployed checkout SHA is recorded in `deploy/.env.production` as
+`BUILD_COMMIT` and can be checked with `git rev-parse HEAD` on the VPS.
+Built backend image: `sha256:3623dec69b96727577aedd33299e5143e66d918a3a64b389b52fca0e4d98c141`.
+No merge to main, writes to DEV-A, local database copies or synthetic business data.
 
-- [x] The issued token was accepted by `GET /me`; username is
-  `t480_hakaton_max_bot`.
-- [x] `GET /subscriptions` returned an empty list; no subscription was changed.
-- [x] The runtime trust store includes the Russian Trusted Root CA required by the
-  current `platform-api2.max.ru` chain; TLS verification remains enabled.
-- [x] Production config and deterministic webhook checks prove missing secret →
-  401 and valid secret with `{}` → 422 before business persistence.
-- [ ] VPS `176.108.244.168` is reachable on SSH, but deployment is blocked by
-  access: `user1` accepts only `publickey`; password authentication is not offered,
-  and the available local key is rejected. No server changes were made.
-- [x] Candidate `domsignal.176-108-244-168.sslip.io` resolves to `176.108.244.168`.
-  DNS resolution alone does not establish HTTPS availability or CA issuance.
-- [ ] Public TLS, external `/ready`, webhook auth and MAX delivery remain pending
-  SSH access. There is no deployed commit or verified Mini App public URL yet.
-- [ ] `POST /subscriptions` has deliberately not been called. Register only after
-  the public HTTPS preflight in [the production runbook](../deploy/README.md).
+- VPS: Ubuntu 24.04.4 LTS, x86_64, 4 vCPU, 7.8 GiB RAM, 55 GiB root disk
+  (49 GiB available before image pulls), no swap; Europe/Moscow; NTP synchronized.
+- Existing project SSH key works with BatchMode and strict host verification.
+- Installed Docker Engine 29.8.1 and Compose plugin 5.5.1; git/curl/CA/openssl present.
+- Fixed missing host DNS resolvers using a persistent systemd-resolved drop-in;
+  fixed the unresolvable Ubuntu apt mirror by using the official Ubuntu archive.
+- DNS A lookup: `domsignal.176-108-244-168.sslip.io` -> `176.108.244.168`.
+- UFW enabled: TCP 22/80/443 only. PostgreSQL has no host port; API binds loopback.
+- Fresh production secrets generated on the VPS; environment file mode 600 and
+  gitignored. Nested `.env` files are now excluded from the Docker build context.
+- Production Compose `config --quiet` and in-memory assertions passed without
+  printing credentials. APP_ENV=production, test auth/demo seed disabled,
+  MAX_TRANSPORT=webhook, strong session/webhook secrets; real HTTP messaging provider.
+- All migrations completed through `2aea407269aa`; seed exited 0 with disabled notice.
+  API and DB healthy; Caddy and worker running; worker process/DB reachability pass,
+  restart counts 0. Worker has no Docker healthcheck in the existing configuration.
+- Empty production users/inbox/jobs/tickets/deliveries confirmed; no test DB copied.
 
-### VPS attempt — 18 September 2026
+**DETERMINISTIC VERIFIED:** 5 targeted production bootstrap/subscription tests pass.
+Runtime loopback checks: `/ready` 200, resident `/` 200, capabilities 200;
+webhook `{}` without secret 401, with the production secret 422. These are local
+runtime checks, **not public HTTPS verification**.
 
-Source branch was clean at `ede9b05331248131929b894b920e2722bbdf3019`, matching
-`origin/dev/b-experience` after fetch. SSH host key (TOFU, not independently
-attested): ED25519 `SHA256:ecMAAIBc6Ffr4XAHYcXYXOxtB9gwAePTMwbviEFl1ms`.
-Both password-method negotiation and an existing-key attempt failed before a
-remote shell opened. OS/resources/firewall, Docker, production secrets and runtime
-identity/subscription checks were therefore not inspected or changed on the VPS.
-Earlier read-only MAX results above are historical, not a new production check.
+**LIVE VERIFIED (read-only MAX API only):** production container GET `/me` returned
+`user_id=402577719`, `username=t480_hakaton_max_bot`, `is_bot=true`, with TLS
+verification enabled. Safe utility `list` returned `subscriptions: []`.
+This does not verify inbound delivery, outbound messaging or the Mini App.
 
-**DEPLOYED:** no. **DETERMINISTIC VERIFIED:** previous bootstrap checks retained.
-**LIVE VERIFIED:** no new evidence. **PENDING EXTERNAL ACCESS:** install the
-operator's public SSH key for `user1` via the VPS panel/console, then resume.
-**PENDING ORGANIZER ACTION:** branding and Mini App binding remain separate.
-No subscription mutation, outbound message or synthetic event was performed.
+### Public ingress blocker
+
+Public TCP 80 and 443 time out while TCP 22 succeeds. Caddy listens on all interfaces;
+local port 80 returns its expected 308 redirect. UFW and Docker DNAT/FORWARD rules
+permit 80/443. During controlled external probes, tcpdump on `enp3s0` observed no
+incoming 80/443 SYN packets (only an unrelated outbound metadata request).
+Let's Encrypt independently timed out for both HTTP-01 and TLS-ALPN-01.
+This isolates the block upstream of the guest, consistent with cloud security-group
+filtering; cloud rules themselves cannot be inspected or changed with the available
+SSH-only credentials. Instance metadata names the attached group
+`Security Group 324aa041-8d2e-47f2-a7ee-09f375528334`.
+
+**PENDING CLOUD ACTION:** allow inbound TCP 80 and 443 from `0.0.0.0/0` on the
+security group attached to this VPS, preserving SSH and keeping 5432 closed.
+No MAX subscription was registered; public preflight correctly refused to pass.
+Caddy remains running with automatic ACME retries. No self-signed certificate or
+TLS-verification bypass was used.
+
+### Remaining gates
+
+- Trusted public TLS/chain/hostname, HTTPS `/ready` and public webhook 401/422:
+  pending cloud ingress. Intended base: `https://domsignal.176-108-244-168.sslip.io`.
+- Intended subscription URL:
+  `https://domsignal.176-108-244-168.sslip.io/max/webhook`.
+  Types: `bot_started`, `bot_stopped`, `bot_added`, `bot_removed`,
+  `message_created`, `message_callback`. Rechecked against the current official
+  [Update](https://dev.max.ru/docs-api/objects/Update) and
+  [POST subscriptions](https://dev.max.ru/docs-api/methods/POST/subscriptions) docs.
+- Real MAX events, typed bot_started persistence/deduplication and outbound
+  acceptance/provider message ID: NOT RUN. No message has been sent.
+- Callback: PENDING PRODUCT LIVE SCENARIO; existing handler needs a genuine
+  Ticket/WorkAttempt and accepted delivery. Do not manufacture a production Ticket.
+- Group capability: UNVERIFIED; `/me` exposes no group capability flag. No group
+  addition attempted. If disabled, PENDING ORGANIZER ACTION; A-07 live remains pending.
+- **PENDING ORGANIZER ACTION:** Mini App binding. Resident entry is `/`, so the
+  intended URL is `https://domsignal.176-108-244-168.sslip.io/`. It serves HTML on
+  loopback but is not yet HTTPS-verified or ready to claim as a live Mini App.
+- API/worker restart after subscription/live event, persistence and subscription
+  recheck remain pending those prerequisites.
+
+The 18 September SSH blocker is superseded: existing-key SSH now passes.
+Resume from cloud ingress/TLS, then guarded registration, then one real MAX Start
+interaction. Do not recreate SSH keys, regenerate production secrets, or delete
+unknown subscriptions.
 
 ## Configuration and prerequisites
 
@@ -203,7 +246,7 @@ Additional live delivery checklist — all PENDING:
 B-14 — рабочий и resident UI; A-05/B-03 — доставка/повторы; B-06/B-07 —
 карточки/callbacks/ссылки; A-09/B-08 — reminders/история. Owner всех этих задач
 и B-01/B-11 live проверки — DEV-B. Это расширение smoke после их реализации,
-не добавленная в A-07 функция; весь перечень ниже **NOT RUN / PENDING TOKEN**.
+не добавленная в A-07 функция; весь перечень ниже **NOT RUN / PENDING PUBLIC INGRESS AND LIVE SCENARIO**.
 
 - [ ] На изолированном боте/стенде и разрешённом доме: Report → Incident → Ticket
   → WorkAttempt с конкретным отчётом → outbox intent. Для группы — `/report`.
@@ -234,4 +277,4 @@ A/B не заменяют C; transport=off не реальная интегра�
 NOT RUN / PENDING PUBLIC HTTPS. Сохранять ref, конфигурацию без секретов, роли, тестовые
 данные, клиент/версию, время, ожидаемый и фактический результат каждого шага.
 Локальный запуск не перепривязывает общий webhook; reset разрешён только для
-явно выбранного собственного тестового окружения. В этом docs-запуске live не выполнялся.
+явно выбранного собственного тестового окружения. Current bootstrap evidence above supersedes historical prerequisite status; product live scenarios remain unverified.

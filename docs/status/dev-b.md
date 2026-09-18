@@ -1,34 +1,54 @@
 # DEV-B — current handoff
 
-Updated: 2026-09-18 (VPS deployment attempt; SSH access gate)
+Updated: 2026-09-19 (production VPS bootstrap; public ingress gate)
 Branch: dev/b-experience
 Current task: A-12/B-01 production VPS + real MAX webhook bootstrap
-State: BOOTSTRAP IMPLEMENTED / DEPLOY BLOCKED BY SSH ACCESS / NOT MERGED TO MAIN
-Real MAX: PREVIOUS TOKEN READ-ONLY CHECK PASSED / PUBLIC HTTPS PENDING / NOT LIVE VERIFIED
+State: DEPLOYED / PUBLIC TLS BLOCKED BY CLOUD INGRESS / NOT MERGED TO MAIN
+Real MAX: LIVE VERIFIED READ-ONLY IDENTITY / SUBSCRIPTIONS EMPTY / EVENTS NOT VERIFIED
 
-## Current VPS attempt — external access required
+## Current production checkpoint
 
-START fetch: clean `dev/b-experience`, HEAD and own origin ref both
-`ede9b05331248131929b894b920e2722bbdf3019`. No main merge and no DEV-A changes.
-Authorized deployment target `176.108.244.168` responds on SSH, but `user1`
-offers only `publickey` authentication. The supplied password cannot be used by
-that configuration; the existing local SSH key also returned permission denied.
-No remote shell opened, so no OS/resource/firewall inventory, installations,
-production secrets, repository checkout or Compose start occurred.
+START fetch: clean branch, HEAD and own origin ref
+`7d941b94fde0bd9b06fb8b08d969a2417e8b7c1b`; origin/main already an ancestor.
+No main merge and no writes to DEV-A. Existing project SSH key passes BatchMode
+and strict host verification; the previous SSH access blocker is resolved.
 
-Candidate hostname `domsignal.176-108-244-168.sslip.io` resolves to the target IPv4.
-TLS issuance and HTTPS reachability are unverified. Official MAX Update and POST
-subscriptions documentation were rechecked: all six configured event names remain
-documented. No subscription or bot setting was mutated; no live events/outbound
-message were observed in this attempt. Previous deterministic checks remain valid;
-docs-only changes require diff/secrets review, not another full backend suite.
+VPS `domsignal-prod`, Ubuntu 24.04.4, 4 vCPU/7.8 GiB RAM/55 GiB disk, now runs
+Docker 29.8.1 + Compose 5.5.1 at `/opt/domsignal`. Missing host DNS resolvers and
+broken Ubuntu mirror fixed; NTP synchronized. UFW allows TCP 22/80/443;
+PostgreSQL has no published port and API is loopback-only. Fresh secrets stay in
+mode-600 `deploy/.env.production`; `.dockerignore` now excludes nested env files.
 
-Next required external action: install the available operator public SSH key for
-`user1` through the VPS panel/console. After access, DEV-B can continue host setup,
-production Compose/TLS checks, runtime identity verification and guarded webhook
-registration. Branding/Mini App binding remain PENDING ORGANIZER ACTION; no URL
-is yet certified ready to hand to organizers. Detailed evidence:
-[`MAX_LIVE_SMOKE.md`](../MAX_LIVE_SMOKE.md).
+**DEPLOYED:** Caddy/API/worker/PostgreSQL; migrations completed, demo seed disabled,
+API and DB healthy; worker process and DB reachable, no restart loops.
+Initial application SHA is the START ref above; this checkpoint only changes
+Docker context exclusions and docs. Exact deployed checkpoint SHA is stored as
+BUILD_COMMIT in the VPS environment file. No test data copied or generated.
+
+**DETERMINISTIC VERIFIED:** Compose quiet validation/fail-closed assertions;
+5 targeted production/subscription tests pass. Loopback `/ready` and resident `/`
+200; webhook without secret 401 and with production secret plus `{}` 422.
+
+**LIVE VERIFIED:** only real production MAX GET `/me` identity
+402577719 / t480_hakaton_max_bot / is_bot=true and read-only subscriptions `[]`.
+No live inbound event, outbound message, callback, group binding or Mini App claim.
+
+**BLOCKER / NEXT ACTION:** cloud ingress TCP 80/443. Both public probes and ACME
+HTTP-01/TLS-ALPN-01 time out. Caddy listens, host firewall/Docker rules permit
+traffic, and interface capture sees no incoming SYN during external probes.
+Attached cloud group from instance metadata:
+`Security Group 324aa041-8d2e-47f2-a7ee-09f375528334`.
+Allow TCP 80/443 from 0.0.0.0/0 in that group; preserve SSH, keep 5432 closed.
+Cloud control-plane credentials are unavailable over this SSH session.
+No webhook registration was attempted after the failed public preflight.
+
+**PENDING ORGANIZER ACTION:** Mini App binding; group permission if disabled
+(capability currently unverified, not presumed enabled). Resident entry will be
+`https://domsignal.176-108-244-168.sslip.io/`; HTTPS remains unverified.
+Callbacks require a genuine product Ticket/WorkAttempt; no artificial smoke Ticket.
+Restart/persistence/subscription checks follow registration and the real event.
+
+Full evidence and continuation boundary: [MAX live smoke](../MAX_LIVE_SMOKE.md).
 
 ## Delivery result and roadmap mapping
 

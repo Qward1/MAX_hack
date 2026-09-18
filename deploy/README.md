@@ -16,6 +16,17 @@ always selects the real MAX webhook/HTTP providers.
 - Wait until the hostname resolves publicly. Caddy obtains and renews the trusted
   TLS certificate; a self-signed certificate is not accepted by MAX.
 
+Verify outbound DNS and NTP before installing packages. The current VPS image
+needed explicit DNS servers in a `systemd-resolved` drop-in and replacement of an
+unresolvable Ubuntu apt mirror with the official Ubuntu archive. Keep the old
+configuration as a backup and verify resolution and time synchronization afterward.
+
+Host firewall rules do not open a cloud security group. If Caddy listens locally
+and both ACME challenges time out, inspect Docker/UFW rules and capture inbound
+SYN packets on the public-facing interface during an external probe. No arriving
+packets indicates an upstream ingress gate; allow TCP 80/443 in the attached cloud
+security group. Keep 5432 private and never bypass TLS validation to proceed.
+
 ## 2. Checkout and secrets
 
 ```bash
@@ -44,6 +55,8 @@ The overlay fixes `APP_ENV=production`, `ALLOW_TEST_SESSION=false`,
 `DEMO_SEED=false`, `MAX_TRANSPORT=webhook`, the issued bot username and
 `https://platform-api2.max.ru`. It derives `PUBLIC_BASE_URL` and `CORS_ORIGINS`
 from `PUBLIC_DOMAIN`. Do not add secrets to tracked files or command arguments.
+The root `.dockerignore` excludes `.env` and nested `.env.*` files so that the
+production environment file is not sent to the Docker builder.
 
 MAX currently uses the Russian Trusted Root CA. The runtime image installs the
 public root from `deploy/ca/russian_trusted_root_ca.crt`; its SHA-256 fingerprint
