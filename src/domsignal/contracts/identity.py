@@ -26,7 +26,18 @@ class MeResponse(ContractModel):
 
 
 class TestSessionRequest(ContractModel):
-    actor: Literal["demo", "outsider"] = "demo"
+    actor: Literal[
+        "demo",
+        "outsider",
+        "a16-admin",
+        "a16-responsible",
+        "a16-operator",
+        "a16-revoked",
+        "a16-resident",
+        "a16-neighbor",
+        "a16-outsider",
+        "a16-beta-admin",
+    ] = "demo"
 
 
 class MaxSessionRequest(ContractModel):

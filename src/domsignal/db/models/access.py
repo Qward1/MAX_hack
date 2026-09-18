@@ -139,6 +139,9 @@ class HouseManagement(Timestamps, Base):
     status: Mapped[str] = mapped_column(String(30), default="active", server_default="active")
     basis_type: Mapped[str | None] = mapped_column(String(100))
     basis_reference: Mapped[str | None] = mapped_column(String(500))
+    ticket_intake_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )

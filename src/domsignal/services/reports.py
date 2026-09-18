@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
-from typing import Any, Literal, cast
+from typing import Literal, cast
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,10 +20,11 @@ from domsignal.contracts.incidents import (
 from domsignal.core.incidents import CATEGORY_TITLES, IncidentStatus, ReportCategory
 from domsignal.db.models import Incident, Report
 from domsignal.db.repositories.incidents import IncidentRepository
-from domsignal.db.repositories.reliability import ReliabilityRepository
+from domsignal.db.repositories.reliability import ReliabilityRepository, stable_hash
 from domsignal.services.context import OperationContext, OperationSource
 from domsignal.services.errors import IdempotencyConflict, ResourceNotFound
 from domsignal.services.membership import MembershipService
+from domsignal.services.tickets import TicketService
 
 
 @dataclass(frozen=True)
@@ -77,10 +76,11 @@ class ReportService:
         if payload.house_id != context.house_id:
             raise ResourceNotFound("Resource was not found")
         actor_id = context.actor_user_id
-        request_hash = _stable_hash(payload.model_dump(mode="json"))
+        request_hash = stable_hash(payload.model_dump(mode="json"))
         action = "report.create"
         reliability = ReliabilityRepository(session)
         self.memberships.require_permission(context, "report.create")
+        await reliability.lock_idempotency(actor_id=actor_id, action=action, key=idempotency_key)
         existing = await reliability.idempotency_record(
             actor_id=actor_id, action=action, key=idempotency_key
         )
@@ -117,6 +117,7 @@ class ReportService:
             classification_mode=payload.classification_mode.value,
             provenance=context.source,
         )
+        await TicketService().ensure(session, context=context, incident_id=incident.id)
         response = ReportCreated(
             report_id=report.id,
             incident=self._detail(
@@ -244,8 +245,3 @@ class ReportService:
             ),
         )
         return detail
-
-
-def _stable_hash(payload: dict[str, Any]) -> str:
-    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()

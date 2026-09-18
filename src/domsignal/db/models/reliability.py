@@ -69,6 +69,7 @@ class OutboxMessage(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     kind: Mapped[str] = mapped_column(String(100))
+    dedupe_key: Mapped[str | None] = mapped_column(String(100), unique=True)
     aggregate_id: Mapped[uuid.UUID] = mapped_column(index=True)
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
     status: Mapped[str] = mapped_column(String(30), default="pending", index=True)

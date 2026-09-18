@@ -165,7 +165,9 @@ async def test_house_context_direct_id_and_untrusted_selectors(
             assert context.chat_binding_id.state == ScopeState.NOT_APPLICABLE
             assert context.source_chat_id.value is context.binding_version.value is None
             assert context.roles == frozenset({"resident"})
-            assert context.permissions == frozenset({"incident.read", "report.create"})
+            assert context.permissions == frozenset(
+                {"incident.read", "report.create", "work.read", "work.observe"}
+            )
         # Current membership is rechecked on direct reads and idempotent retries.
         async with container.session_factory() as session, session.begin():
             membership = await session.scalar(

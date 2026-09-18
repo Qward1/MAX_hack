@@ -3,7 +3,16 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, ForeignKeyConstraint, Index, String, Text, func
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domsignal.db.base import Base
@@ -12,6 +21,7 @@ from domsignal.db.base import Base
 class Incident(Base):
     __tablename__ = "incidents"
     __table_args__ = (
+        UniqueConstraint("id", "management_id", "house_id", name="uq_incident_scope"),
         ForeignKeyConstraint(
             ["management_id", "house_id"],
             ["house_managements.id", "house_managements.house_id"],

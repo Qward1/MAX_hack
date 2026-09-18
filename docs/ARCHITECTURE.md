@@ -225,7 +225,7 @@ upload/storage/access/UX вложений — B. Целевые каталоги
 
 ## Транзакционные границы
 
-**A-16 target (не реализация):** Ticket + история решений/работ + типизированное
+**A-16 — IMPLEMENTED IN BRANCH `dev/b-experience`:** Ticket + история решений/работ + типизированное
 доменное событие/намерение уведомить фиксируются согласованно в одной транзакции
 через существующий PostgreSQL transactional outbox. WorkAttempt хранит отчёт,
 ResultObservation — наблюдение конкретной попытки. A-05/B-03 выполняют сеть
@@ -235,6 +235,27 @@ ResultObservation — наблюдение конкретной попытки. 
 Типы и факты сроков приходят через контракт A-02/A-11/Product, нормы не
 зашиваются в Ticket state machine. [Семантика A-16 и API DoD](CONTRACTS.md),
 [процесс и №416](PRODUCT_ARCHITECTURE.md#сквозной-max-путь--planned).
+
+`core/tickets.py` — центральные transitions, `services/tickets.py` — проверка
+OperationContext/AccessPolicy, idempotency, проекции и атомарные команды;
+`db/models/tickets.py` / migration 0004 — Ticket, WorkAttempt, ResultObservation,
+TicketEvent, TicketDeadline. Tenant не копируется в Ticket. `ReportService`
+вызывает ensure в своей транзакции после принятия Report; один общий путь для
+API и A-07. HouseManagement flag default false, диагностический replay исключён.
+
+Write lock order: House SHARE (A-15) → Incident FOR UPDATE → Ticket/Attempt.
+Incident — единая граница создания/возобновления/попыток/наблюдений, включая
+проверку отсутствия Ticket. Partial unique active Incident — независимая защита
+БД. Staff expected_version проверяется под блокировкой, observations получают
+серверную revision и не теряются при изменении версии другим жителем.
+Повторный report intake сериализует существующий idempotency key через
+PostgreSQL advisory transaction lock в ReliabilityRepository; process-local
+locks и второй механизм receipts не добавлены. Приватные данные не хранятся
+в receipt Ticket — только IDs/версия эффекта; replay строит свежую проекцию.
+
+Outbox использует существующую таблицу с nullable unique dedupe_key, никаких
+delivery jobs для нового kind не создаётся. Жизненный цикл и permissions не
+меняют Incident.status, capabilities/действия существующей Mini App и AI.
 
 - `POST /reports` проверяет membership, создаёт Report/Incident, outbox и
   idempotency record в одной транзакции.

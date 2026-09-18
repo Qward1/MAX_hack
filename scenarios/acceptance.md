@@ -36,6 +36,60 @@ Incident/Ticket/WorkAttempt. До его реализации все строк�
 | QA-12 | A-12/A-13/B-11 / DEV-B | Чистый клон→документированная конфигурация→Docker→миграции→изолированные данные→проверки→restart без потерь; сборка ≤5 минут без первоначальной загрузки base images. Отдельно собственный HTTPS API, роли/данные, обязательные проверки и DATA-API по полученному официальному шаблону. | B + release evidence; MAX стенд C отдельно | PLANNED / NOT RUN |
 | QA-13 | A-08 / DEV-A; A-03/Product / DEV-B | Для принятого provider: invalid schema/timeout/uncertainty → validation/clarification/manual fallback без частичной записи; стабильный контракт, а не одинаковый текст. Provider/data/license gate отдельно от общего разрешения LLM. | A + B; C LLM отдельно при доступе | PLANNED / NOT RUN |
 
+## A-16 — backend evidence 18.09.2026
+
+Согласованный scope A16_TICKET_BACKEND_CODEX.md; IMPLEMENTED IN BRANCH,
+не MERGED/LIVE. Старые C/MT/CB/QA строки и их историческое evidence сохранены.
+Текущий backend delta сопоставлен ниже; combined QA с B-14/MAX delivery не
+становятся PASS только из-за backend. Закрытие/возобновление теперь согласовано
+и реализовано согласно A-16.1 в CONTRACTS.
+
+Уровень B: реальные отдельные PostgreSQL connections/transactions и HTTP ASGI
+через FastAPI/services; дополнительно сетевой HTTP smoke против отдельного API.
+Две УК, три дома, admin/responsible/operator без назначения, multi-house resident,
+реальные авторы fixture Report, outsider; варианты revoked/ended/suspended.
+Связанные Report — явные fixtures существующего Incident, не A-06 matching.
+
+| A-16 ID | Сценарий / тест | Связь с прежними IDs | Результат |
+|---|---|---|---|
+| TK-01 | Общий intake, explicit flag, один Ticket и отдельные Report; GET без backfill | QA-02, MT-13/14 | PASS |
+| TK-02 | accept/start/report, silence, close, late objection, conflict, correction, новая/stale попытка, история | QA-05/09, MT-15 | PASS |
+| TK-03 | Tenant/house/role scope всех списков, totals и nested endpoints (5 ролей) | QA-04, MT-10/12/16 | PASS |
+| TK-04 | Resident allowlist, приватность comments, собственные ревизии | QA-04 | PASS |
+| TK-05 | Self-verification через dual role; нужен собственный Report | QA-04/09 | PASS |
+| TK-06 | Concurrent same-key attempt, same effect/current replay, body conflict, revoke | QA-03/05 | PASS |
+| TK-07 | Parallel resolved/unresolved/ensure, без потери возражения и второго Ticket | QA-02/05/09 | PASS |
+| TK-08 | Внешняя PG-транзакция реально блокирует команду; concurrent attempts | QA-05 | PASS |
+| TK-09 | Single/multiple/no responsible, unknown category, concurrent accept | MT-13, QA-02/05 | PASS |
+| TK-10 | Waiting/reassign/resume, личное принятие, cancel и invalid transition | MT-13/15 | PASS |
+| TK-11 | Cancelled + observation остаётся историей | QA-05/09 | PASS |
+| TK-12 | Management switch/ended/tenant suspended (3 варианта), чужая УК | MT-10/16, QA-04 | PASS |
+| TK-13 | Три kind, internal/agreed, null due, revisions, запрет client normative | QA-11 backend facts | PASS; нормативный engine NOT IMPLEMENTED |
+| TK-14 | Injected outbox failure откатывает Report/Incident/Ticket/Event/Intent | QA-06 | PASS |
+| TK-15 | Новое приложение/engine, те же данные, pending unique safe intents | QA-06/08 | PASS |
+| TK-16 | DB immutable scope/number/authorship/history и active unique | QA-02/05 | PASS |
+| TK-17 | Context spoofing, mandatory headers, bounded pagination, bearer | QA-01/04 | PASS |
+| TK-18 | 5 независимых concurrent ensure отсутствующей работы; double HTTP report | QA-02/03/05 | PASS |
+| TK-19 | Revoked assignee при reopening, admin reserve, новая acceptance | MT-10/13/16 | PASS |
+| TK-20 | Более новый Ticket: old observation/replay сохраняют историю без reopen | QA-05/09 | PASS |
+| TK-21 | DB scope/foreign latest-attempt rejection | QA-04/05 | PASS |
+| TK-22 | Unknown job не блокирует healthy job, Ticket/intents сохранены | QA-06/07 boundary | PASS; новый network delivery NOT RUN |
+| TK-23 | A-07 общий intake; unbound/ordinary/suspended; binding provenance | CB-02/03/11, QA-10 backend | PASS; fake provider, не live |
+| TK-24 | Operator другого дома/назначенный оператор, foreign assignee denied | MT-12/13, QA-04 | PASS |
+| TK-25 | Diagnostic replay actor/house spoof rejected, diagnostic без Ticket | A-01/A-15, QA-04 | PASS |
+| TK-26 | Populated A-07 → 0004: ID/content/access/ChatBinding unchanged, no backfill, downgrade guard | QA-08/12 | PASS |
+
+Актуальный общий прогон `scripts/check.py --scope all`: 53 unit/contract,
+97 PostgreSQL integration, 73 frontend; ruff/mypy, schema/TS checks, build PASS.
+31 A-16 HTTP/PG cases + 1 migration case, прежние 65 integration также PASS.
+B-02 `npm run test:browser`: 8 PASS; реальный board/detail/report/reload сохранён.
+Docker clean-store/API restart smoke PASS; A-16 network smoke через
+`scripts/ticket_smoke.py` и явный `seed_tickets`. Полные команды/refs и restart
+evidence — [DEV-B](../docs/status/dev-b.md).
+
+MAX Web/iOS/Android, новая delivery, B-14 UI, нормативная применимость,
+внешняя регистрация/прочтение — NOT RUN / NOT IMPLEMENTED, не переименованы в PASS.
+
 ## Исходная матрица и evidence
 
 Это acceptance-контракт целевого UX/API `v0.1`, а не отчёт о реализованных

@@ -1,18 +1,31 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import datetime, timedelta
 from typing import Any, cast
 from uuid import UUID, uuid4
 
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domsignal.db.models import IdempotencyRecord, InboxReceipt, Job, OutboxMessage
 
 
+def stable_hash(payload: dict[str, Any]) -> str:
+    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 class ReliabilityRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
+
+    async def lock_idempotency(self, *, actor_id: UUID, action: str, key: str) -> None:
+        await self.session.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+            {"key": f"domsignal:command:{actor_id}:{action}:{key}"},
+        )
 
     async def idempotency_record(
         self, *, actor_id: UUID, action: str, key: str
@@ -49,9 +62,22 @@ class ReliabilityRepository:
             )
         )
 
-    def add_outbox(self, *, kind: str, aggregate_id: UUID, payload: dict[str, Any]) -> None:
+    def add_outbox(
+        self,
+        *,
+        kind: str,
+        aggregate_id: UUID,
+        payload: dict[str, Any],
+        dedupe_key: str | None = None,
+    ) -> None:
         self.session.add(
-            OutboxMessage(kind=kind, aggregate_id=aggregate_id, payload=payload, status="pending")
+            OutboxMessage(
+                kind=kind,
+                aggregate_id=aggregate_id,
+                payload=payload,
+                status="pending",
+                dedupe_key=dedupe_key,
+            )
         )
 
     async def inbox(self, event_id: str) -> InboxReceipt | None:

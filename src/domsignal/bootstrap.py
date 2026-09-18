@@ -13,6 +13,7 @@ from domsignal.services.group_messages import MaxWebhookService
 from domsignal.services.membership import MembershipService
 from domsignal.services.reports import DemoRule, ReportService
 from domsignal.services.sessions import SessionService
+from domsignal.services.tickets import TicketService
 from domsignal.settings import MaxTransportMode, Settings
 from domsignal.worker.handlers import WorkerHandlers
 
@@ -25,6 +26,7 @@ class Container:
     session_service: SessionService
     membership_service: MembershipService
     report_service: ReportService
+    ticket_service: TicketService
     inbound_service: InboundService
     transport: MaxTransport
     worker_handlers: WorkerHandlers
@@ -78,6 +80,7 @@ def build_container(settings: Settings) -> Container:
         membership_service=MembershipService(),
         report_service=report_service,
         inbound_service=InboundService(),
+        ticket_service=TicketService(),
         transport=transport,
         worker_handlers=worker_handlers,
         chat_connections=chat_connections,

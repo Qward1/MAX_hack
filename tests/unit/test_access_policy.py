@@ -28,7 +28,13 @@ def test_policy(org: str | None, assignment: str | None, resident: bool, allowed
         resident=resident,
     )
     assert ("incident.read" in permissions) is allowed
-    assert not permissions & {"ticket.read", "admin", "support.impersonate"}
+    employee = org == "company_admin" or (
+        org == "operator" and assignment in {"responsible", "operator"}
+    )
+    assert ("ticket.read" in permissions) is employee
+    assert ("ticket.work" in permissions) is employee
+    assert ("work.observe" in permissions) is resident
+    assert not permissions & {"admin", "support.impersonate"}
 
 
 def test_known_scope_without_action_permission_is_403() -> None:

@@ -1,4 +1,165 @@
 # DEV-B — current handoff
+
+Updated: 2026-09-18 (A-16 backend)
+Branch: dev/b-experience
+Current task: A-16 — Ticket backend
+State: PASS / IMPLEMENTED IN BRANCH; NOT MERGED; NOT LIVE VERIFIED
+
+## A-16 result and boundaries
+
+Owner authorization: A16_TICKET_BACKEND_CODEX.md, iterations 1–2 agreed;
+the earlier docs-only prohibition below is historical and superseded for A-16.
+Start HEAD/origin/dev/b-experience `0bbe6a4`; origin/main `3d4a095`.
+Fresh refs fetched at START and END; own ff/main sync at START already up to date;
+END refs unchanged. DEV-A handoff read from origin/dev/a-core; no AI/DEV-A writes.
+Initial working tree clean; no unrelated WIP to move/stash. IMPLEMENTATION_CONTEXT
+is intentionally unchanged: its verified-main table must not describe branch-only work.
+Final commit/push SHA is reported in the final response, without a hash-only follow-up commit.
+
+Implemented models: Ticket, WorkAttempt, ResultObservation, TicketEvent,
+TicketDeadline; additive migration `20260918_0004`. No duplicated tenant source:
+Ticket → original Incident house/management via composite FK → HouseManagement.
+Partial unique active Ticket per Incident includes all six nonterminal statuses.
+Composite FK checks latest attempt belongs to Ticket; attempt numbers unique per
+Ticket; global DB identity number rendered `T-N`, stable with permitted gaps.
+Scope, creation authorship and number immutable; attempt identity/report immutable,
+rework only false→true; observations/events/deadlines append-only. Downgrade fails
+with new history/config instead of deleting it. No historical backfill/intents.
+
+Common ReportService.create_in_context calls ensure inside its transaction after
+authorized Report persistence, including A-07 manual group intake. Flag
+HouseManagement.ticket_intake_enabled defaults false; explicit test/demo enabling
+does not verify a real organization. Existing/manual disabled path unchanged.
+One active responsible → assignee while new; several/none → house queue, null
+assignee; unknown category other → needs_clarification. Company admin sees reserve
+and revoked-assignee tasks. Reassignment clears acceptance; work must be accepted
+personally, preserving attempt snapshots of the previous employee.
+
+Central core transitions and service authorization implement new→accepted→
+in_progress→verification_pending→closed, clarification/external waiting/resume,
+reasoned cancellation. Work report is an event and new attempt. No employee close,
+silent/timeout close or external registration. Resident needs current basis and own
+Report; canonical User identity cannot verify its own performed/reported attempt.
+Resolved closes only without current objections and without rework. Late unresolved
+reopens the same latest Ticket; rework is permanent on that attempt. Correction
+appends a server revision; old positive answers cannot close without a new attempt.
+Old/cancelled/superseded attempts remain historical, and response flags say whether
+the observation affected current work. Conflicting opinions remain visible.
+
+House SHARE → Incident FOR UPDATE is the common write lock order, including
+absence/ensure/reopen. Expected version guards staff commands; resident observations
+are serialized without rejecting a valid late answer for a changed Ticket.version.
+Existing idempotency_records and ReliabilityRepository are reused; report intake
+adds an advisory transaction lock for same-key concurrency. Ticket receipts contain
+effect IDs/version, not private snapshots. Replay rechecks access/ownership and
+returns current state plus original effect_version/replayed. Same key/different body
+is a defined 409; revoke cannot replay old success. Internal DB uniqueness supplements
+the serialized decisions rather than serving as the normal conflict handler.
+
+HTTP/DTO handoff: [A-16.1 contract](../CONTRACTS.md#a-161-http-и-handoff-b-14).
+Staff list/detail/assignee lookup, assign/accept/start/clarify/wait-external/resume/
+cancel/work-attempts/deadlines, paginated events/attempts/observations/deadlines;
+resident work-status, authorized observation POST and own observation history.
+Existing Bearer/AccessPolicy/OperationContext; 404 foreign scope, 403 action,
+409 transition/version/key, mandatory Idempotency-Key; bounded pagination/totals.
+Separate ResidentWorkStatus allowlist excludes employees, service notes, other
+comments/reports and agreement references. TicketAction does not change B-00 actions.
+C0.1 plus additive A-16.1; app/OpenAPI version remains 0.1.0; generated TS updated
+only by npm run api:generate. Test-session enum adds only named a16-* demo aliases;
+the existing production prohibition remains enforced.
+
+Deadline facts separate response/completion/next_update and internal/agreed/normative;
+anchor references a same-Ticket event/time, due may be null; changes preserve revision,
+author and reason. Agreement requires recorded source/time (staff attestation, not
+independent external verification). Existing region rule is demo with due_at=null:
+normative HTTP creation is unavailable until verified A-02 applicability exists.
+No clock pause for waiting_external, universal repair deadline or SLA calculator.
+
+Each accepted change persists state + event + existing OutboxMessage in one
+transaction; unique dedupe_key ties intent to event. Typed safe references, context,
+version and audience only; no comment/auth/token copies. Kind
+ticket.notification_intent.v1 stays pending, with no registered delivery handler.
+Work_reported/to_status records both report and pending verification. Future sender
+must recheck recipient/scope/management/binding and latest state, never broadcast to
+all house chats or send a stale fixed result after reopen. No SENT/READ/exactly-once claim.
+
+## A-16 actual verification evidence
+
+Dedicated PostgreSQL 16.10 container `domsignal-a16-db`, host port 55476; final suite
+DB `a16_final`, separate network/browser DB `a16_smoke`. Existing databases untouched.
+Local Python 3.12.14, Node 24.19.0 (within declared 24.x range); ignored local npm
+launcher selects bundled Node, dependency/lock changes not required. Docker uses
+the existing pinned Node 24.21.0/Python 3.12.11 images. MAX off outside explicit
+A-07 fake-provider tests; no live token/webhook/provider or AI calls.
+
+| Actual command / check | Result |
+|---|---|
+| `git fetch origin`; `git merge --ff-only origin/dev/b-experience`; `git merge --no-edit origin/main` | PASS; START sync already up to date; END fetch same refs |
+| `uv run alembic revision --autogenerate -m 'A16 ticket work and resident verification' --rev-id 20260918_0004` | Draft generated, reviewed; dependency order/FK cycle/downgrade guard/history triggers hardened |
+| `uv run alembic upgrade head`; `uv run alembic check` | PASS clean PostgreSQL; no model drift; also exercised in migration tests |
+| `uv run pytest tests/integration/test_tickets.py -x -q` and subsequent targeted added scenarios | Initial 23 PASS; final expanded file 31 PASS in full suite. A new test initially missed an import; fixed before final run |
+| `uv run pytest tests/integration/test_ticket_migration.py -x -q` | PASS populated A-07 preservation, repeated upgrade, drift, guarded downgrade |
+| `uv run python scripts/export_openapi.py`; `npm --prefix miniapp run api:generate` | PASS; generated files not manually edited |
+| `uv run python scripts/check.py --scope all` | Final PASS: ruff, mypy (69 files), 53 unit/contract, 73 frontend, frontend typecheck/build, OpenAPI/region/TS drift, clean migration and 97 PG integration; integration 190.27s |
+| `npm --prefix miniapp run test:browser` with PLAYWRIGHT_BASE_URL=http://127.0.0.1:8026, PLAYWRIGHT_CHANNEL=chrome | PASS 8 / 18.8s, including actual API→PG→board/detail/reload; 320/430/1280 light/dark, keyboard/accessibility/unknown values |
+| `uv run python scripts/docker_smoke.py --project domsignal-smoke-a16 --api-port 18087` | PASS clean build/PG/migrations/seed/API+worker and persisted Incident after API restart; own project cleaned by existing script |
+| `uv run python -m domsignal.tools.seed_tickets`; `uv run python scripts/ticket_smoke.py --base-url http://127.0.0.1:8026` | PASS actual network HTTP Report→Ticket→accept→start→attempt→resolved→late unresolved→read, version 6 |
+| Separate Compose `domsignal-smoke-a16-ticket`, port 18088: seed_tickets; ticket_smoke; `docker compose ... restart api worker`; ticket_smoke `--read-incident d9544cd6-c107-43fd-b5d0-a45dd610f69f` | PASS after actual API AND worker process restart: same Ticket c816f50a-ee3a-45e5-b65b-3dc882352a7c, version 6, in_progress/rework; SQL confirmed all 6 intents pending |
+| `git diff --check`; repository-sanity + relevant local Markdown links | PASS (final pre-commit check) |
+
+Full final suite includes all previous 65 PG integration cases plus 32 A-16 cases
+(31 HTTP/PG + populated migration), with no regression suppression. Two existing
+AccessPolicy permission assertions were extended to the implemented Ticket/resident
+permissions; old scope assertions remain. [TK-01…26 mapping](../../scenarios/acceptance.md#a-16--backend-evidence-18092026)
+preserves C/MT/CB/QA IDs and separates future UI/delivery/live evidence.
+Concurrency uses independent DB sessions, simultaneous HTTP requests, and an
+explicit held PG aggregate lock; it is not sequential simulation. SQL rollback
+fault injection checks no partial Report/Incident/Ticket/Event/Intent. Existing
+Starlette/anyio deprecation warnings and browser color notice remain non-failing.
+
+The host-process restart command was rejected by automatic execution policy;
+the restart requirement was instead completed through the scoped Compose project.
+The loopback browser-test API at 8026 and dedicated PG container at 55476 remain
+available locally; no new scheduled/background automation was created. The separate
+Compose Ticket smoke was stopped with down; its test volume is retained.
+
+## Reproduce A-16 network smoke
+
+Use a fresh isolated Compose project and an unused loopback port, not a shared DB.
+PowerShell example (MAX_TRANSPORT remains off in the checked-in Compose):
+
+```powershell
+$env:API_PORT='18088'
+docker compose -p domsignal-smoke-a16-ticket up --build -d
+docker compose -p domsignal-smoke-a16-ticket exec -T api python -m domsignal.tools.seed_tickets
+uv run python scripts/ticket_smoke.py --base-url http://127.0.0.1:18088
+docker compose -p domsignal-smoke-a16-ticket restart api worker
+# Wait for /ready, then substitute the incident_id printed by the previous command:
+uv run python scripts/ticket_smoke.py --base-url http://127.0.0.1:18088 --read-incident <incident_id>
+docker compose -p domsignal-smoke-a16-ticket down
+```
+
+The idempotent seed adds synthetic roles/two organizations/three houses, without
+resetting data or granting real access. Repeated smoke creates an explicit new
+test report; no generic Ticket create, public seed/reset, or automatic old-data work.
+
+## A-16 status, limitations and next step
+
+- A-16 backend: PASS / IMPLEMENTED IN BRANCH. A-01/A-15/A-07/B-02 regression PASS.
+- MERGED: no; origin/main remains 3d4a095. Remote CI/review are separate from local PASS.
+- LIVE VERIFIED: no. MAX delivery/UI/callbacks/live clients, real organization
+  connection and normative applicability NOT RUN. B-14 and other roadmap work not started.
+- Existing core still creates a new Incident per ordinary Report; linked-report
+  fixtures do not claim semantic matching. Existing assignment roles cover routing;
+  no category rules or responsibility verification were invented.
+- No normative calculator/verified deadline source, join flow, photo/voice,
+  full admin/web-auth/MFA, official registration, archival tenant transfer or retention
+  platform. Current safety UI/path unchanged; no AI/emergency classification added.
+- Next single step: DEV-A review of the A-16 branch and current remote CI before a
+  normal PR merge. Do not automatically start B-14, MAX delivery or the next roadmap task.
+
+## Previous Q&A documentation handoff — historical evidence
+
 Updated: 2026-09-18 (Q&A documentation alignment)
 Branch: dev/b-experience
 Current task: QA-ALIGNMENT-2026-09-18 — документы и план

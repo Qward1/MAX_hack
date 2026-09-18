@@ -50,7 +50,156 @@ types + tests. AI-specific внутренний контракт пишет DEV-
 fallback при ошибке или неуверенности. Побайтовое совпадение генераций не требуется.
 Для сдачи собственного API применяется A-13 и [release checklist](../README.md#чеклист-технической-сдачи--planned--not-run).
 
-## A-16: семантика проектирования — TARGET / PLANNED
+## A-16.1 — согласованный backend-контракт
+
+Реализация согласована владельцем в A16_TICKET_BACKEND_CODEX.md 18.09.2026.
+Таблица переходов зафиксирована до реализации. Incident.status не меняется.
+Employee = актуальный company_admin либо operator с назначением на management;
+manager = company_admin либо responsible. Work owner = текущий assignee,
+который лично принял работу; manager может сообщить результат за такого исполнителя.
+
+| From → to | Команда / событие | Кто и предусловия | Причина |
+|---|---|---|---|
+| отсутствует → new / needs_clarification | intake / created | Разрешённый Report, включённый management; неизвестная категория → уточнение | Серверный routing reason |
+| new → accepted; in_progress → in_progress | accept / accepted | Employee, неназначенная или своя; повторное принятие в работе только после утраты/смены принятия | Нет |
+| accepted → in_progress | start / started | Work owner | Нет |
+| active → new либо прежнее ожидание | assign / assigned | Manager, новый исполнитель имеет актуальный ticket.work; прежнее принятие сбрасывается | Обязательна |
+| new/accepted/in_progress → needs_clarification / waiting_external | clarify / wait-external | Work owner либо manager | Обязательна |
+| needs_clarification/waiting_external → прежнее рабочее состояние либо new | resume / resumed | Work owner либо manager; чужое принятие не наследуется | Обязательна |
+| in_progress → verification_pending | work-attempts / work_reported | Work owner либо manager; действующий лично принявший исполнитель | Явно публичный отчёт |
+| verification_pending → closed | observations / result_confirmed | Resident + собственный Report; не исполнитель/автор отчёта; resolved, нет unresolved/rework | Наблюдение |
+| verification_pending/closed → in_progress | observations / result_objected | Те же права, unresolved последней попытки | Наблюдение |
+| active → cancelled | cancel / cancelled | Manager | Обязательна |
+| active → то же | deadlines / deadline_recorded | Manager; internal либо agreed с источником/временем согласования | Обязательна |
+
+Active включает new, accepted, in_progress, verification_pending,
+needs_clarification, waiting_external. Reassign из verification_pending сохраняет
+попытку/проверку; из accepted/in_progress возвращает new, из ожидания сбрасывает
+resume state в new. Новому сотруднику всегда нужно лично принять работу.
+Закрытие по таймеру и employee close отсутствуют. После любого unresolved
+попытка навсегда требует rework: исправление ответа не закрывает Ticket без новой
+WorkAttempt. Старые попытки и cancelled/newer Ticket принимают исторические
+наблюдения без изменения текущей работы. Каждый ответ append-only, серверная
+ревизия определяет актуальный ответ; поздний ответ не требует Ticket.version.
+
+Ниже сохранены исходные требования проектирования; окончательное правило
+закрытия/возобновления для этого среза задано таблицей выше.
+
+### A-16.1 HTTP и handoff B-14
+
+Аддитивное расширение C0.1, `/api/v1`; app/OpenAPI version остаётся `0.1.0`.
+Все endpoints требуют существующий Bearer session. POST дополнительно требует
+`Idempotency-Key` (8–200 символов); employee body содержит `expected_version >= 1`.
+Actor/tenant/role/management в body запрещены. Problem Details: 401 без session,
+404 чужой/прошлый management или неизвестный объект, 403 недопустимое действие
+в доступном доме, 409 `ticket_conflict` для перехода/версии либо
+`idempotency_conflict` для изменённого body, 422 для схемы. `X-Request-ID`
+возвращается на успехах и ошибках; OpenAPI описывает фактические headers/errors.
+
+| Endpoint | Runtime DTO / смысл |
+|---|---|
+| GET `/tickets?house_id=...` | TicketList; house обязателен; status, assignee_id, unassigned; limit 1–100, offset 0–100000; totals после scope/filter |
+| GET `/tickets/{id}` | TicketView; внутренний номер, version, assignee/acceptance, source/created_by, latest_attempt, current deadlines, observation_conflict, requires_reassignment, allowed_actions |
+| GET `/tickets/{id}/assignees` | Только manager; пагинация актуальных подходящих сотрудников с ID/display_name |
+| POST `/tickets/{id}/assign` | AssignCommand: assignee_id (nullable), reason; сбрасывает прежнее принятие |
+| POST `/tickets/{id}/accept`, `/start` | TicketCommand; только реализованный переход/полномочие |
+| POST `/tickets/{id}/clarify`, `/wait-external`, `/resume`, `/cancel` | ReasonCommand; обязательная непустая reason |
+| POST `/tickets/{id}/work-attempts` | WorkAttemptCreate: явно public_description; новая попытка и verification_pending |
+| POST `/tickets/{id}/deadlines` | DeadlineCreate; kind, basis internal/agreed, start_event_id, due_at nullable, reason; agreed требует agreement_reference + agreed_at |
+| GET `/tickets/{id}/events`, `/work-attempts`, `/deadlines` | Пагинированная внутренняя история; raw reason/employee IDs не resident API |
+| GET `/incidents/{id}/work-status` | Отдельная allowlist ResidentWorkStatus; без Ticket → null status/ticket_id, без записи |
+| POST `/work-attempts/{id}/observations` | ObservationCreate: outcome resolved/unresolved, optional comment/corrects_id; Ticket.version не требуется |
+| GET `/work-attempts/{id}/observations` | Пагинированные внутренние наблюдения; employee scope |
+| GET `/work-attempts/{id}/my-observations` | Только собственные ревизии при актуальном resident-доступе; чужих actor/comments нет |
+
+Employee mutation возвращает TicketMutation: текущий TicketView, event_id,
+effect_version, attempt_id и replayed. Replay сохраняет исходные effect IDs,
+но показывает текущее состояние/версию после повторной проверки прав. Если
+владелец/полномочия изменились, replay не выдаёт старый успешный ответ.
+ObservationRecorded различает target_attempt_id, observation, applied_to_current,
+state_changed, effect_version, replayed и безопасный current. На replay флаги
+описывают исходный эффект, current — нынешнюю работу. Ответ по старой попытке
+пишет историю, не переносится на новую. При более новом Ticket current указывает
+на него, старая closed/cancelled работа не возобновляется.
+
+`allowed_actions` Ticket имеет собственный enum TicketAction (пути команд).
+Он вычисляется из текущего transition + AccessPolicy + владельца/принятия,
+не меняет значения B-00 ActionDescriptor. Resident action `observe_result`
+требует resident basis + свой Report и исключает reported_by/performed_by.
+Для cancelled/старой попытки разрешена только историческая запись наблюдения.
+User UUID — подтверждённая identity существующего session service; role switch
+не меняет её. Join пока отсутствует, членство в чате не означает участие.
+
+Статусы для UI: new — «Новая», accepted — «Принята исполнителем», in_progress —
+«В работе», verification_pending — «Ожидает проверки результата»,
+needs_clarification — «Нужно уточнение», waiting_external — «Ожидаются сведения
+внешней стороны», closed — «Результат подтверждён жителем», cancelled —
+«Отменена с причиной». WorkAttempt означает отчёт, не подтверждение устранения.
+`responsibility=not_verified` не утверждает юридическую обязанность УК.
+Новый frontend/кабинет, B-14 и автоматический close не реализованы.
+
+ResidentWorkStatus содержит только номер/ID, состояние/version/times,
+AttemptPublic (публичное описание, номер, время, rework), aggregate conflict,
+свой последний ответ и DeadlinePublic. В нём нет исполнителей, actor IDs,
+служебных причин, чужих комментариев, raw Report или agreement_reference.
+Внутренняя история доступна отдельными пагинированными endpoints; общий чат
+не получает её через resident DTO. Существенная mutation создаёт один
+TicketEvent соответствующего вида и intent; work_reported с to_status
+verification_pending одновременно фиксирует результат и ожидание проверки.
+
+### Сроки, intake и outbox A-16.1
+
+HouseManagement.ticket_intake_enabled по умолчанию false; включение — доверенная
+серверная настройка/явный `seed_tickets`, без onboarding UI. Принятый Report
+создаёт Ticket через общий ReportService.create_in_context, включая A-07 manual
+group intake. Diagnostic max_replay не создаёт рабочую задачу. В выключенном
+контуре сохраняется прежний manual путь. Один active responsible назначается;
+несколько/ни одного → очередь с assignee=null. Категория other →
+needs_clarification без автоматического назначения. Категорийных правил
+обслуживания пока нет; это fallback по существующим назначениям, не вывод об
+ответственности. Семантический matching A-06 не реализован: обычный новый
+Report по-прежнему получает новый Incident. Несколько заранее связанных Report
+не создают дубли Ticket и не уничтожают оригиналы. После закрытия ensure
+возвращает тот же Ticket; следующий самостоятельный эпизод не создаётся.
+
+Номер `T-<number>` уникален глобально в этой БД (PostgreSQL identity), стабилен,
+может иметь пропуски, не является юридической нумерацией или номером ГИС ЖКХ.
+Latest attempt и исходный incident/house/management защищены composite FK;
+tenant не дублируется, берётся через immutable HouseManagement.
+
+Deadline хранит отдельные kind response/completion/next_update и basis
+internal/agreed/normative, start_event_id и серверное время исходного события,
+due_at либо неизвестно, source/version применимого правила, recorded_by,
+agreement reference/time и reason. Изменение append-only, current определяется
+по revision отдельно для каждой пары kind/basis. Ручной agreed означает
+зафиксированное сотрудником согласование с источником/временем, не независимую
+внешнюю верификацию; без этих данных используется internal. Internal/ожидание
+внешней стороны не переносят другие часы. Действующий region-pack контракт
+имеет только demo правило с due_at=null: нормативная запись через HTTP запрещена,
+пока A-02 не даст проверенную применимость. Нет нового калькулятора/общих 10 дней.
+
+Существующий OutboxMessage: kind `ticket.notification_intent.v1`, status pending,
+unique dedupe_key `ticket-event:<UUID>`. Typed payload TicketNotificationIntent:
+schema_version=1, event/kind, ticket/incident/attempt, house/management/tenant,
+ticket_version, audience staff/participants, optional исходные binding ID/version.
+Нет текста комментария, причины, auth/initData/token или списка всех чатов.
+Это intent, не SENT/READ; consumer не зарегистрирован и MAX sender его не берёт.
+
+Handoff A-05/B-03/B-06/B-07: перед отправкой заново проверить получателя и его
+права, management/tenant, канал и для групп конкретные binding ID/version.
+Не рассылать автоматически по всем чатам дома; сопоставить event version с
+текущей работой, не отправлять устаревшее «исправлено» после reopening.
+Ссылка открывает Incident/WorkAttempt, не выполняет mutation; проверка требует
+отдельного авторизованного POST. Внешняя доставка после commit, её ошибка не
+откатывает Ticket; API accepted не READ, внешнее exactly-once не обещается.
+
+История защищена от UPDATE/DELETE; WorkAttempt допускает только монотонный
+rework_required. Миграция 0004 не создаёт исторические Ticket/intents и запрещает
+downgrade при новых данных/включённой настройке (нужен pre-A16 backup).
+Рабочая история отделена от технических inbox/jobs; универсальный retention TTL
+не введён. Применимость хранения юридически значимых запросов/ответов и №416,
+официальный канал/роль партнёра и передача документов при смене УК остаются
+отдельной проверкой. A-16 не является АДС или заявлением полного compliance.
 
 Это не опубликованные DTO/endpoints и не разрешение реализации.
 Report / Incident / Ticket / ExternalAppeal остаются отдельными объектами.

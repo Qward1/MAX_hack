@@ -174,6 +174,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/incidents/{incident_id}/work-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Work Status */
+        get: operations["work_status_api_v1_incidents__incident_id__work_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -202,6 +219,264 @@ export interface paths {
         put?: never;
         /** Create Report */
         post: operations["create_report_api_v1_reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tickets */
+        get: operations["tickets_api_v1_tickets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ticket Detail */
+        get: operations["ticket_detail_api_v1_tickets__ticket_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept */
+        post: operations["accept_api_v1_tickets__ticket_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign */
+        post: operations["assign_api_v1_tickets__ticket_id__assign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/assignees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Assignees */
+        get: operations["assignees_api_v1_tickets__ticket_id__assignees_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel */
+        post: operations["cancel_api_v1_tickets__ticket_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/clarify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Clarify */
+        post: operations["clarify_api_v1_tickets__ticket_id__clarify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/deadlines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Deadlines */
+        get: operations["deadlines_api_v1_tickets__ticket_id__deadlines_get"];
+        put?: never;
+        /** Deadline */
+        post: operations["deadline_api_v1_tickets__ticket_id__deadlines_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Events */
+        get: operations["events_api_v1_tickets__ticket_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume */
+        post: operations["resume_api_v1_tickets__ticket_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start */
+        post: operations["start_api_v1_tickets__ticket_id__start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/wait-external": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Wait External */
+        post: operations["wait_external_api_v1_tickets__ticket_id__wait_external_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/work-attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Attempts */
+        get: operations["attempts_api_v1_tickets__ticket_id__work_attempts_get"];
+        put?: never;
+        /** Report Work */
+        post: operations["report_work_api_v1_tickets__ticket_id__work_attempts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-attempts/{attempt_id}/my-observations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Observations */
+        get: operations["my_observations_api_v1_work_attempts__attempt_id__my_observations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-attempts/{attempt_id}/observations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Observations */
+        get: operations["observations_api_v1_work_attempts__attempt_id__observations_get"];
+        put?: never;
+        /** Observe */
+        post: operations["observe_api_v1_work_attempts__attempt_id__observations_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -257,6 +532,90 @@ export interface components {
             enabled: boolean;
             /** Reason */
             reason: string | null;
+        };
+        /** AssignCommand */
+        AssignCommand: {
+            /** Assignee Id */
+            assignee_id: string | null;
+            /** Expected Version */
+            expected_version: number;
+            /** Reason */
+            reason: string;
+        };
+        /** AssigneeList */
+        AssigneeList: {
+            /** Items */
+            items: components["schemas"]["AssigneeView"][];
+            page: components["schemas"]["PageMeta"];
+        };
+        /** AssigneeView */
+        AssigneeView: {
+            /** Display Name */
+            display_name: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** AttemptList */
+        AttemptList: {
+            /** Items */
+            items: components["schemas"]["AttemptView"][];
+            page: components["schemas"]["PageMeta"];
+        };
+        /** AttemptPublic */
+        AttemptPublic: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Number */
+            number: number;
+            /** Public Description */
+            public_description: string;
+            /** Rework Required */
+            rework_required: boolean;
+        };
+        /** AttemptView */
+        AttemptView: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Number */
+            number: number;
+            /**
+             * Performed By
+             * Format: uuid
+             */
+            performed_by: string;
+            /** Public Description */
+            public_description: string;
+            /**
+             * Reported By
+             * Format: uuid
+             */
+            reported_by: string;
+            /** Rework Required */
+            rework_required: boolean;
+            /**
+             * Ticket Id
+             * Format: uuid
+             */
+            ticket_id: string;
         };
         /** BindingView */
         BindingView: {
@@ -436,6 +795,174 @@ export interface components {
             /** Scope Value */
             scope_value: string | null;
             status: components["schemas"]["ConnectionStatus"];
+        };
+        /** DeadlineCreate */
+        DeadlineCreate: {
+            /** Agreed At */
+            agreed_at?: string | null;
+            /** Agreement Reference */
+            agreement_reference?: string | null;
+            /**
+             * Basis
+             * @enum {string}
+             */
+            basis: "internal" | "agreed";
+            /** Due At */
+            due_at: string | null;
+            /** Expected Version */
+            expected_version: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "response" | "completion" | "next_update";
+            /** Reason */
+            reason: string;
+            /**
+             * Start Event Id
+             * Format: uuid
+             */
+            start_event_id: string;
+        };
+        /** DeadlineList */
+        DeadlineList: {
+            /** Items */
+            items: components["schemas"]["DeadlineView"][];
+            page: components["schemas"]["PageMeta"];
+        };
+        /** DeadlinePublic */
+        DeadlinePublic: {
+            /** Agreement Recorded */
+            agreement_recorded: boolean;
+            /**
+             * Basis
+             * @enum {string}
+             */
+            basis: "internal" | "agreed" | "normative";
+            /** Due At */
+            due_at: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "response" | "completion" | "next_update";
+            /** Revision */
+            revision: number;
+            /** Rule Source */
+            rule_source: string | null;
+            /** Rule Version */
+            rule_version: string | null;
+            /**
+             * Start Event Id
+             * Format: uuid
+             */
+            start_event_id: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+        };
+        /** DeadlineView */
+        DeadlineView: {
+            /** Agreed At */
+            agreed_at: string | null;
+            /** Agreement Recorded */
+            agreement_recorded: boolean;
+            /** Agreement Reference */
+            agreement_reference: string | null;
+            /**
+             * Basis
+             * @enum {string}
+             */
+            basis: "internal" | "agreed" | "normative";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Due At */
+            due_at: string | null;
+            /**
+             * Event Id
+             * Format: uuid
+             */
+            event_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "response" | "completion" | "next_update";
+            /** Reason */
+            reason: string;
+            /**
+             * Recorded By
+             * Format: uuid
+             */
+            recorded_by: string;
+            /** Revision */
+            revision: number;
+            /** Rule Source */
+            rule_source: string | null;
+            /** Rule Version */
+            rule_version: string | null;
+            /**
+             * Start Event Id
+             * Format: uuid
+             */
+            start_event_id: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+        };
+        /** EventList */
+        EventList: {
+            /** Items */
+            items: components["schemas"]["EventView"][];
+            page: components["schemas"]["PageMeta"];
+        };
+        /** EventView */
+        EventView: {
+            /**
+             * Actor Id
+             * Format: uuid
+             */
+            actor_id: string;
+            /** Assignee Id */
+            assignee_id: string | null;
+            /** Attempt Id */
+            attempt_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            from_status: components["schemas"]["TicketStatus"] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["TicketEventKind"];
+            /** Observation Id */
+            observation_id: string | null;
+            /** Reason */
+            reason: string | null;
+            to_status: components["schemas"]["TicketStatus"];
+            /** Version */
+            version: number;
+            /**
+             * Visibility
+             * @enum {string}
+             */
+            visibility: "internal" | "resident";
         };
         /** FieldError */
         FieldError: {
@@ -618,6 +1145,114 @@ export interface components {
              */
             occurred_at: string;
         };
+        /** ObservationCreate */
+        ObservationCreate: {
+            /** Comment */
+            comment?: string | null;
+            /** Corrects Id */
+            corrects_id?: string | null;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "resolved" | "unresolved";
+        };
+        /** ObservationList */
+        ObservationList: {
+            /** Items */
+            items: components["schemas"]["ObservationView"][];
+            page: components["schemas"]["PageMeta"];
+        };
+        /** ObservationRecorded */
+        ObservationRecorded: {
+            /** Applied To Current */
+            applied_to_current: boolean;
+            current: components["schemas"]["ResidentWorkStatus"];
+            /** Effect Version */
+            effect_version: number;
+            observation: components["schemas"]["OwnObservation"];
+            /**
+             * Replayed
+             * @default false
+             */
+            replayed: boolean;
+            /** State Changed */
+            state_changed: boolean;
+            /**
+             * Target Attempt Id
+             * Format: uuid
+             */
+            target_attempt_id: string;
+        };
+        /** ObservationView */
+        ObservationView: {
+            /**
+             * Actor Id
+             * Format: uuid
+             */
+            actor_id: string;
+            /**
+             * Attempt Id
+             * Format: uuid
+             */
+            attempt_id: string;
+            /** Comment */
+            comment: string | null;
+            /** Corrects Id */
+            corrects_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "resolved" | "unresolved";
+            /** Revision */
+            revision: number;
+        };
+        /** OwnObservation */
+        OwnObservation: {
+            /**
+             * Attempt Id
+             * Format: uuid
+             */
+            attempt_id: string;
+            /** Comment */
+            comment: string | null;
+            /** Corrects Id */
+            corrects_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "resolved" | "unresolved";
+            /** Revision */
+            revision: number;
+        };
+        /** OwnObservationList */
+        OwnObservationList: {
+            /** Items */
+            items: components["schemas"]["OwnObservation"][];
+            page: components["schemas"]["PageMeta"];
+        };
         /** PageMeta */
         PageMeta: {
             /** Limit */
@@ -661,6 +1296,13 @@ export interface components {
             /** Verified At */
             verified_at?: string | null;
         };
+        /** ReasonCommand */
+        ReasonCommand: {
+            /** Expected Version */
+            expected_version: number;
+            /** Reason */
+            reason: string;
+        };
         /**
          * ReportCategory
          * @enum {string}
@@ -702,6 +1344,36 @@ export interface components {
              * Format: uuid
              */
             id: string;
+        };
+        /**
+         * ResidentWorkStatus
+         * @description Explicit allowlist: never constructed by serializing a staff DTO.
+         */
+        ResidentWorkStatus: {
+            /** Allowed Actions */
+            allowed_actions: "observe_result"[];
+            /** Created At */
+            created_at: string | null;
+            /** Deadlines */
+            deadlines: components["schemas"]["DeadlinePublic"][];
+            /**
+             * Incident Id
+             * Format: uuid
+             */
+            incident_id: string;
+            /** Internal Number */
+            internal_number: string | null;
+            latest_attempt: components["schemas"]["AttemptPublic"] | null;
+            my_latest_observation: components["schemas"]["OwnObservation"] | null;
+            /** Observation Conflict */
+            observation_conflict: boolean;
+            status: components["schemas"]["TicketStatus"] | null;
+            /** Ticket Id */
+            ticket_id: string | null;
+            /** Updated At */
+            updated_at: string | null;
+            /** Version */
+            version: number | null;
         };
         /** RuleProvenance */
         RuleProvenance: {
@@ -746,7 +1418,129 @@ export interface components {
              * @default demo
              * @enum {string}
              */
-            actor: "demo" | "outsider";
+            actor: "demo" | "outsider" | "a16-admin" | "a16-responsible" | "a16-operator" | "a16-revoked" | "a16-resident" | "a16-neighbor" | "a16-outsider" | "a16-beta-admin";
+        };
+        /**
+         * TicketAction
+         * @enum {string}
+         */
+        TicketAction: "assign" | "accept" | "start" | "clarify" | "wait-external" | "resume" | "work-attempts" | "cancel" | "deadlines";
+        /** TicketCommand */
+        TicketCommand: {
+            /** Expected Version */
+            expected_version: number;
+        };
+        /**
+         * TicketEventKind
+         * @enum {string}
+         */
+        TicketEventKind: "created" | "assigned" | "accepted" | "started" | "clarification_requested" | "external_wait_recorded" | "resumed" | "work_reported" | "result_confirmed" | "result_objected" | "observation_recorded" | "cancelled" | "deadline_recorded";
+        /** TicketList */
+        TicketList: {
+            /** Items */
+            items: components["schemas"]["TicketView"][];
+            page: components["schemas"]["PageMeta"];
+        };
+        /** TicketMutation */
+        TicketMutation: {
+            /** Attempt Id */
+            attempt_id?: string | null;
+            /** Effect Version */
+            effect_version: number;
+            /**
+             * Event Id
+             * Format: uuid
+             */
+            event_id: string;
+            /**
+             * Replayed
+             * @default false
+             */
+            replayed: boolean;
+            ticket: components["schemas"]["TicketView"];
+        };
+        /**
+         * TicketStatus
+         * @enum {string}
+         */
+        TicketStatus: "new" | "accepted" | "in_progress" | "verification_pending" | "needs_clarification" | "waiting_external" | "closed" | "cancelled";
+        /** TicketView */
+        TicketView: {
+            /** Accepted At */
+            accepted_at: string | null;
+            /** Accepted By */
+            accepted_by: string | null;
+            /** Allowed Actions */
+            allowed_actions: components["schemas"]["TicketAction"][];
+            /** Assignee Id */
+            assignee_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /** Deadlines */
+            deadlines: components["schemas"]["DeadlineView"][];
+            /**
+             * House Id
+             * Format: uuid
+             */
+            house_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Incident Id
+             * Format: uuid
+             */
+            incident_id: string;
+            /** Internal Number */
+            internal_number: string;
+            latest_attempt: components["schemas"]["AttemptView"] | null;
+            /**
+             * Management Id
+             * Format: uuid
+             */
+            management_id: string;
+            /** Observation Conflict */
+            observation_conflict: boolean;
+            /** Requires Reassignment */
+            requires_reassignment: boolean;
+            /**
+             * Responsibility
+             * @default not_verified
+             * @constant
+             */
+            responsibility: "not_verified";
+            /** Routing Reason */
+            routing_reason: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "api" | "max_replay" | "max_group";
+            status: components["schemas"]["TicketStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /** WorkAttemptCreate */
+        WorkAttemptCreate: {
+            /** Expected Version */
+            expected_version: number;
+            /** Public Description */
+            public_description: string;
         };
     };
     responses: never;
@@ -773,6 +1567,8 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -782,6 +1578,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -791,6 +1589,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -800,6 +1600,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -809,6 +1611,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -818,6 +1622,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -827,6 +1633,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -836,6 +1644,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -845,6 +1655,8 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -869,6 +1681,8 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -878,6 +1692,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -887,6 +1703,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -896,6 +1714,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -905,6 +1725,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -914,6 +1736,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -923,6 +1747,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -932,6 +1758,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -941,6 +1769,8 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -961,6 +1791,8 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -970,6 +1802,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -979,6 +1813,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -988,6 +1824,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -997,6 +1835,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1006,6 +1846,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1015,6 +1857,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1024,6 +1868,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1033,6 +1879,8 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1055,6 +1903,8 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1064,6 +1914,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1073,6 +1925,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1082,6 +1936,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1091,6 +1947,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1100,6 +1958,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1109,6 +1969,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1118,6 +1980,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1127,6 +1991,8 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1153,6 +2019,8 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1162,6 +2030,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1171,6 +2041,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1180,6 +2052,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1189,6 +2063,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1198,6 +2074,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1207,6 +2085,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1216,6 +2096,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1225,6 +2107,8 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1247,6 +2131,8 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1256,6 +2142,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1265,6 +2153,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1274,6 +2164,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1283,6 +2175,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1292,6 +2186,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1301,6 +2197,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1310,6 +2208,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1319,6 +2219,8 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1341,6 +2243,8 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1350,6 +2254,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1359,6 +2265,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1368,6 +2276,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1377,6 +2287,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1386,6 +2298,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1395,6 +2309,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1404,6 +2320,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1413,6 +2331,8 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1439,6 +2359,8 @@ export interface operations {
             /** @description Successful Response */
             201: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1448,6 +2370,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1457,6 +2381,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1466,6 +2392,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1475,6 +2403,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1484,6 +2414,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1493,6 +2425,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1502,6 +2436,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1511,6 +2447,8 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1536,6 +2474,8 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1545,6 +2485,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1554,6 +2496,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1563,6 +2507,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1572,6 +2518,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1581,6 +2529,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1590,6 +2540,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1599,6 +2551,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1608,6 +2562,8 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1632,6 +2588,8 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1641,6 +2599,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1650,6 +2610,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1659,6 +2621,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1668,6 +2632,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1677,6 +2643,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1686,6 +2654,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1695,6 +2665,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1704,6 +2676,120 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    work_status_api_v1_incidents__incident_id__work_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResidentWorkStatus"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1724,6 +2810,8 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1733,6 +2821,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1742,6 +2832,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1751,6 +2843,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1760,6 +2854,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1769,6 +2865,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1778,6 +2876,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1787,6 +2887,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1796,6 +2898,8 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1822,6 +2926,8 @@ export interface operations {
             /** @description Successful Response */
             201: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1831,6 +2937,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1840,6 +2948,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1849,6 +2959,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1858,6 +2970,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1867,6 +2981,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1876,6 +2992,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1885,6 +3003,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1894,6 +3014,2107 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    tickets_api_v1_tickets_get: {
+        parameters: {
+            query: {
+                house_id: string;
+                limit?: number;
+                offset?: number;
+                status?: components["schemas"]["TicketStatus"] | null;
+                assignee_id?: string | null;
+                unassigned?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketList"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    ticket_detail_api_v1_tickets__ticket_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketView"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    accept_api_v1_tickets__ticket_id__accept_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketCommand"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketMutation"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    assign_api_v1_tickets__ticket_id__assign_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignCommand"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketMutation"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    assignees_api_v1_tickets__ticket_id__assignees_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssigneeList"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancel_api_v1_tickets__ticket_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonCommand"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketMutation"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    clarify_api_v1_tickets__ticket_id__clarify_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonCommand"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketMutation"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deadlines_api_v1_tickets__ticket_id__deadlines_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeadlineList"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deadline_api_v1_tickets__ticket_id__deadlines_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeadlineCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketMutation"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    events_api_v1_tickets__ticket_id__events_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventList"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resume_api_v1_tickets__ticket_id__resume_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonCommand"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketMutation"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    start_api_v1_tickets__ticket_id__start_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketCommand"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketMutation"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    wait_external_api_v1_tickets__ticket_id__wait_external_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonCommand"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketMutation"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    attempts_api_v1_tickets__ticket_id__work_attempts_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttemptList"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    report_work_api_v1_tickets__ticket_id__work_attempts_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkAttemptCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketMutation"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    my_observations_api_v1_work_attempts__attempt_id__my_observations_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                attempt_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnObservationList"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    observations_api_v1_work_attempts__attempt_id__observations_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                attempt_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationList"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    observe_api_v1_work_attempts__attempt_id__observations_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                attempt_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ObservationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationRecorded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1918,6 +5139,8 @@ export interface operations {
             /** @description Successful Response */
             202: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1927,6 +5150,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1936,6 +5161,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1945,6 +5172,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1954,6 +5183,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1963,6 +5194,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1972,6 +5205,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1981,6 +5216,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -1990,6 +5227,8 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2010,6 +5249,8 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2019,6 +5260,8 @@ export interface operations {
             /** @description Unauthorized */
             401: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2028,6 +5271,8 @@ export interface operations {
             /** @description Forbidden */
             403: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2037,6 +5282,8 @@ export interface operations {
             /** @description Not Found */
             404: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2046,6 +5293,8 @@ export interface operations {
             /** @description Method Not Allowed */
             405: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2055,6 +5304,8 @@ export interface operations {
             /** @description Conflict */
             409: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2064,6 +5315,8 @@ export interface operations {
             /** @description Unprocessable Entity */
             422: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2073,6 +5326,8 @@ export interface operations {
             /** @description Internal Server Error */
             500: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2082,6 +5337,8 @@ export interface operations {
             /** @description Service Unavailable */
             503: {
                 headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
                     [name: string]: unknown;
                 };
                 content: {

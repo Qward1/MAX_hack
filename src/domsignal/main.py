@@ -11,7 +11,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
 
 from domsignal.api.errors import RequestIdMiddleware, install_error_handlers
-from domsignal.api.routes import auth, chat_connections, incidents, max_ingress, me, system
+from domsignal.api.routes import auth, chat_connections, incidents, max_ingress, me, system, tickets
 from domsignal.bootstrap import build_container
 from domsignal.contracts.common import Problem
 from domsignal.settings import Settings, get_settings
@@ -50,6 +50,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(incidents.router)
     app.include_router(max_ingress.router)
     app.include_router(chat_connections.router)
+    app.include_router(tickets.router)
 
     def problem_openapi() -> dict[str, Any]:
         if app.openapi_schema is None:
@@ -57,6 +58,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             for path in schema["paths"].values():
                 for operation in path.values():
                     for code, response in operation.get("responses", {}).items():
+                        response.setdefault("headers", {})["X-Request-ID"] = {
+                            "description": "Server generated correlation ID",
+                            "schema": {"type": "string"},
+                        }
                         if code.isdigit() and int(code) >= 400:
                             response["content"] = {
                                 "application/problem+json": {
