@@ -15,10 +15,31 @@ Do not change the team's shared webhook or start polling with its token.
   current `platform-api2.max.ru` chain; TLS verification remains enabled.
 - [x] Production config and deterministic webhook checks prove missing secret →
   401 and valid secret with `{}` → 422 before business persistence.
-- [ ] A publicly reachable HTTPS hostname and VPS are not available in this
-  environment, so external `/ready`, webhook auth and MAX delivery are pending.
+- [ ] VPS `176.108.244.168` is reachable on SSH, but deployment is blocked by
+  access: `user1` accepts only `publickey`; password authentication is not offered,
+  and the available local key is rejected. No server changes were made.
+- [x] Candidate `domsignal.176-108-244-168.sslip.io` resolves to `176.108.244.168`.
+  DNS resolution alone does not establish HTTPS availability or CA issuance.
+- [ ] Public TLS, external `/ready`, webhook auth and MAX delivery remain pending
+  SSH access. There is no deployed commit or verified Mini App public URL yet.
 - [ ] `POST /subscriptions` has deliberately not been called. Register only after
   the public HTTPS preflight in [the production runbook](../deploy/README.md).
+
+### VPS attempt — 18 September 2026
+
+Source branch was clean at `ede9b05331248131929b894b920e2722bbdf3019`, matching
+`origin/dev/b-experience` after fetch. SSH host key (TOFU, not independently
+attested): ED25519 `SHA256:ecMAAIBc6Ffr4XAHYcXYXOxtB9gwAePTMwbviEFl1ms`.
+Both password-method negotiation and an existing-key attempt failed before a
+remote shell opened. OS/resources/firewall, Docker, production secrets and runtime
+identity/subscription checks were therefore not inspected or changed on the VPS.
+Earlier read-only MAX results above are historical, not a new production check.
+
+**DEPLOYED:** no. **DETERMINISTIC VERIFIED:** previous bootstrap checks retained.
+**LIVE VERIFIED:** no new evidence. **PENDING EXTERNAL ACCESS:** install the
+operator's public SSH key for `user1` via the VPS panel/console, then resume.
+**PENDING ORGANIZER ACTION:** branding and Mini App binding remain separate.
+No subscription mutation, outbound message or synthetic event was performed.
 
 ## Configuration and prerequisites
 

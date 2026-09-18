@@ -1,10 +1,34 @@
 # DEV-B — current handoff
 
-Updated: 2026-09-18 (production MAX webhook bootstrap)
+Updated: 2026-09-18 (VPS deployment attempt; SSH access gate)
 Branch: dev/b-experience
 Current task: A-12/B-01 production VPS + real MAX webhook bootstrap
-State: PASS / IMPLEMENTED IN BRANCH / NOT MERGED TO MAIN
-Real MAX: TOKEN VERIFIED READ-ONLY / PUBLIC HTTPS PENDING / NOT LIVE VERIFIED
+State: BOOTSTRAP IMPLEMENTED / DEPLOY BLOCKED BY SSH ACCESS / NOT MERGED TO MAIN
+Real MAX: PREVIOUS TOKEN READ-ONLY CHECK PASSED / PUBLIC HTTPS PENDING / NOT LIVE VERIFIED
+
+## Current VPS attempt — external access required
+
+START fetch: clean `dev/b-experience`, HEAD and own origin ref both
+`ede9b05331248131929b894b920e2722bbdf3019`. No main merge and no DEV-A changes.
+Authorized deployment target `176.108.244.168` responds on SSH, but `user1`
+offers only `publickey` authentication. The supplied password cannot be used by
+that configuration; the existing local SSH key also returned permission denied.
+No remote shell opened, so no OS/resource/firewall inventory, installations,
+production secrets, repository checkout or Compose start occurred.
+
+Candidate hostname `domsignal.176-108-244-168.sslip.io` resolves to the target IPv4.
+TLS issuance and HTTPS reachability are unverified. Official MAX Update and POST
+subscriptions documentation were rechecked: all six configured event names remain
+documented. No subscription or bot setting was mutated; no live events/outbound
+message were observed in this attempt. Previous deterministic checks remain valid;
+docs-only changes require diff/secrets review, not another full backend suite.
+
+Next required external action: install the available operator public SSH key for
+`user1` through the VPS panel/console. After access, DEV-B can continue host setup,
+production Compose/TLS checks, runtime identity verification and guarded webhook
+registration. Branding/Mini App binding remain PENDING ORGANIZER ACTION; no URL
+is yet certified ready to hand to organizers. Detailed evidence:
+[`MAX_LIVE_SMOKE.md`](../MAX_LIVE_SMOKE.md).
 
 ## Delivery result and roadmap mapping
 
