@@ -34,6 +34,10 @@ confirmed by real GET, desired/applied v7, one send plus two edits, zero retries
 Real resident retains only one house membership and no staff/platform role; distinct
 existing CLI identity cannot resolve the resident launch ref. No new domain objects.
 
+User also confirmed reading «Ваш ответ учтён. Проблема возвращена в работу.» in
+the personal MAX notification. Final reconciled text is now confirmed in the real
+client as well as by provider GET; no API read-receipt/push claim is inferred.
+
 No required client/organizer action remains for this Web smoke. Native mobile and
 additional replay/stale/retry/restart/multi-resident scenarios remain unverified live.
 The editable original is the bot's personal notification, not the human group post.

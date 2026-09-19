@@ -103,6 +103,12 @@ Provider GET 200 confirms «Ваш ответ учтён. Проблема во�
 only the open_app button. This verifies Mini App mutation → outbox → real MAX
 edit without another POST/send; it does not claim editing the resident's group post.
 
+Final human client confirmation: the user read the personal notification and
+reported «Другая проблема дома. Ваш ответ учтён. Проблема возвращена в работу.»
+This confirms the reconciled text is visible in MAX Web, in addition to the
+provider GET evidence. It is user confirmation, not an API read receipt or a
+claim about operating-system push delivery.
+
 Final access read: canonical MAX user 294889720 still has exactly one active
 ResidentMembership, zero organization memberships, no platform role; all sessions
 have source=max. A read-only production resolver check using the existing distinct
