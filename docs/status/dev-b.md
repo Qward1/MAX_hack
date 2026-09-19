@@ -35,7 +35,22 @@ reviewed as synthetic fixtures, existing local DB defaults, revision IDs and eve
 names; no production secret included. `git diff --check` passed. Crypto libraries:
 argon2-cffi 25.1.0, PyOTP 2.10.0, cryptography 48.0.1, qrcode 8.2 (locked).
 
-**Production preparation (not deployed yet):** existing scoped employee UUID
+**DEPLOYED / infrastructure verified:** code and pushed release
+`f861e973f0cb7a2dd4ba5f6ce0f56dee91589600` deployed via verified Git bundle/SSH.
+Production-shaped restored DB upgraded first; Alembic check reports no drift.
+Live DB then upgraded to `1c5baa831ec9`; all 20 domain/audit/delivery table full-row
+contents still match the restored backup, with zero default credentials at migration.
+Public `/ready`, `/admin/`, `/admin/login`, root and capabilities return 200.
+Employee bootstrap returns login with Secure/HttpOnly/Lax cookie; missing CSRF
+is 403; production test-session is 503. Admin-only CSP is present; resident root
+has no frame restriction. API/DB healthy; worker running.
+
+Existing notification provider GET is 200, accepted delivery desired/applied v12,
+zero retries; failed worker jobs=0. Webhook missing secret is 401, valid secret
+with invalid empty payload is 422. Subscription URL and six event types unchanged.
+This is post-deploy health evidence, not a fresh human MAX product loop.
+
+**Isolated employee / human gate pending:** existing scoped employee UUID
 `763c4458-e474-4398-9bc8-16ef79077463` has one active LIVE TEST company_admin
 membership, no Superadmin/MAX identity/resident grant; no authority expansion.
 Backup `/var/backups/domsignal/domsignal-20260919T190532283380Z.dump` restored to
@@ -44,21 +59,25 @@ across 20 domain/audit/delivery tables. Includes 2 Users, 1 resident membership,
 3 Reports/Incidents/Tickets, 1 ChatBinding, 2 notifications, 7 observations.
 Dedicated MFA key generated once on VPS into mode-600 env without printing;
 protected env backup is present. MAX subscription read-only baseline retains
-same URL and six update types. Deploy and live employee enrollment are pending.
+same URL and six update types. Exactly one credential was provisioned through the production CLI for this existing
+User; login `live-test.operator`, active, forced password change, MFA not enrolled,
+zero authenticated employee sessions. Temporary password was returned only in the
+current operator output and is not stored in docs/git. No real MFA enrollment was
+automated. Live employee login, queue/reload and live revocation remain
+**NOT LIVE VERIFIED / WAITING FOR HUMAN MFA OWNERSHIP**.
 
-**Next:** finish deterministic gates, deploy this branch with existing Git bundle/
-SSH process, verify preserved data/readiness/MAX subscription, provision one
-credential for the existing scoped employee, then stop at the requested human
-MFA ownership gate. Do not enroll real MFA by automation. Following human
-completion, inspect scoped admin requests/reload and session state. No automatic
-onboarding task starts.
+Configured-secret scan on VPS compared all tracked files against five actual
+production secret values: zero matches; env mode 600 confirmed. Local scan findings
+were synthetic/default constants, not production credentials.
 
-
-Updated: 2026-09-19 (completed live MAX Web product loop)
-Branch: dev/b-experience
-Current task: live Ticket → personal MAX notification → resident result loop
-State: RESIDENT / GROUP / TICKET PRODUCT LOOP LIVE VERIFIED (MAX WEB) / NOT MERGED TO MAIN
-Real MAX: identity/board/reload, group report, work, notification launch, callback, closure/reopen/edit VERIFIED
+**Next / required human gate:** user opens production `/admin/`, signs in with the
+provided temporary credential, replaces the password and enrolls their own TOTP
+app, then reports «готово». After that verify credential/MFA state, employee-source
+session, real scoped API/queue/reload, and unchanged MAX health. A live revoke may
+remain deterministic-only to preserve the user's newly enrolled test account;
+never revoke resident MAX identity. Do not start onboarding UI. Recommended later
+DEV-B task: A-10/B-09 approved company application/invitation onboarding slice,
+only under a separate explicit task.
 
 ## Latest product checkpoint — 18:16 UTC
 

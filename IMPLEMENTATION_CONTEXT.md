@@ -123,5 +123,6 @@ A-10 employee identity slice is implemented in `dev/b-experience`, separately fr
 A-15 authority. B-14 now has password/MFA cookie entry and session restoration.
 A-10/B-09 onboarding, company applications, limits and staff UI remain open.
 No main merge is implied; `origin/main=3d4a095` remains the accepted baseline.
-Current deterministic/deployment/human MFA evidence is maintained in
+Release `f861e97` is DEPLOYED with deterministic auth/regressions verified; live
+employee MFA ownership is awaiting the human gate. Evidence is maintained in
 [DEV-B status](docs/status/dev-b.md); historical live MAX evidence is preserved.

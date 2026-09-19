@@ -446,6 +446,8 @@ A-01/A-15/A-07/A-16 и 8 прежних browser B-02 tests входят в regre
 # A-10 employee authentication acceptance — 19.09.2026
 
 Scope: A-10 employee-auth slice + B-14 entry; B-09 onboarding is not closed.
+**DETERMINISTIC VERIFIED**: 102 unit/contract, 145 PostgreSQL integration (including
+23 new auth/migration checks), 89 frontend tests and 29 browser scenarios.
 Deterministic evidence uses PostgreSQL (`test_employee_auth.py`,
 `test_employee_auth_migration.py`), the existing MAX/config regressions, and
 `miniapp/tests/browser/employee-auth.spec.ts`. LIVE employee MFA remains pending
