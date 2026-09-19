@@ -13,6 +13,8 @@ import { TicketDetail } from "./TicketDetail";
 
 export function adminUrl(values: Record<string, string | undefined> = {}) {
   const query = new URLSearchParams();
+  const company = new URLSearchParams(window.location.search).get("company");
+  if (company) query.set("company", company);
   const testActor = new URLSearchParams(window.location.search).get(
     "test_actor",
   );
@@ -29,7 +31,7 @@ const filters = [
   ["closed", "Закрытые"],
   ["all", "Все"],
 ];
-export function AdminApp({ client = ticketClient }: { client?: TicketClient }) {
+export function AdminApp({ client = ticketClient, embedded = false, companyId }: { client?: TicketClient; embedded?: boolean; companyId?: string }) {
   const [location, setLocation] = useState(window.location.href);
   const route = new URL(location);
   const ticket = route.searchParams.get("ticket");
@@ -52,9 +54,13 @@ export function AdminApp({ client = ticketClient }: { client?: TicketClient }) {
       const capabilities = await client.capabilities(signal);
       await client.authenticate(capabilities, signal);
       const me = await client.me(signal);
+      if (companyId) {
+        const scoped = await client.request<{house_id: string}[]>(`/api/v1/companies/${companyId}/houses`, {signal});
+        me.houses = me.houses.filter(h => scoped.some(s => s.house_id === h.id));
+      }
       return { capabilities, me };
     },
-    [client],
+    [client, companyId],
   );
   const session = useResource("employee-session", load);
   const [revision, setRevision] = useState(0);
@@ -63,14 +69,19 @@ export function AdminApp({ client = ticketClient }: { client?: TicketClient }) {
     setRevision((v) => v + 1);
   };
   useEffect(() => {
+    const refresh = () => { session.refresh(); setRevision(v => v + 1); };
+    window.addEventListener("administration-refresh", refresh);
+    return () => window.removeEventListener("administration-refresh", refresh);
+  }, [session.refresh]);
+  useEffect(() => {
     document.getElementById("page-title")?.focus();
   }, [ticket, Boolean(session.data)]);
   const me = session.data?.me;
   // Only navigation choices: every list/detail/command is authorized independently by the API.
   const houses = me?.houses.filter((h) => h.role !== "resident") ?? [];
   return (
-    <div className="admin-shell">
-      <aside className="admin-sidebar">
+    <div className={embedded ? "ticket-workspace" : "admin-shell"}>
+      {!embedded && <aside className="admin-sidebar">
         <a
           className="admin-brand"
           href={adminUrl()}
@@ -98,9 +109,9 @@ export function AdminApp({ client = ticketClient }: { client?: TicketClient }) {
           Работа с проблемами дома
           <br />и проверка результата
         </p>
-      </aside>
-      <main className="app-shell admin-main">
-        <div className="toolbar ticket-line">
+      </aside>}
+      <div className={embedded ? "ticket-workspace-main" : "app-shell admin-main"}>
+        {!embedded && <div className="toolbar ticket-line">
           <span>{me?.display_name ?? "Кабинет сотрудника"}</span>
           <button
             className="ticket-button secondary"
@@ -109,8 +120,9 @@ export function AdminApp({ client = ticketClient }: { client?: TicketClient }) {
           >
             Обновить
           </button>
-        </div>
+        </div>}
         {session.data?.capabilities.environment !== "production" &&
+          route.searchParams.has("test_actor") &&
           session.data?.capabilities.features.test_auth && (
             <div className="demo-session">
               <span className="demo-badge">
@@ -234,7 +246,7 @@ export function AdminApp({ client = ticketClient }: { client?: TicketClient }) {
               ))}
           </>
         )}
-      </main>
+      </div>
     </div>
   );
 }

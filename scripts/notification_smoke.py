@@ -256,6 +256,9 @@ def main():
     parser.add_argument("--api-port", type=int, default=18088)
     parser.add_argument("--provider-port", type=int, default=18089)
     parser.add_argument("--browser", action="store_true")
+    parser.add_argument(
+        "--browser-grep", help="Optional Playwright test filter for focused debugging"
+    )
     args = parser.parse_args()
     asyncio.run(prepare())
     env = {
@@ -263,6 +266,7 @@ def main():
         "ND_PROVIDER_PORT": str(args.provider_port),
         "ND_RUN_ID": uuid4().hex,
         "B14_BROWSER_FIXTURES": "1",
+        "B09_BROWSER_FIXTURES": "1",
         "PLAYWRIGHT_BASE_URL": f"http://127.0.0.1:{args.api_port}",
         "PYTHONPATH": os.pathsep.join(
             [str(ROOT), str(ROOT / "src"), sysconfig.get_path("purelib")]
@@ -317,8 +321,13 @@ def main():
             restart()
             asyncio.run(scenario(args.api_port, args.provider_port, restart))
             if args.browser:
+                command = [shutil.which("npm") or "npm", "run", "test:browser"]
+                if args.browser_grep:
+                    command.extend(
+                        ["--", "--grep", args.browser_grep, "--output", "test-results-focused"]
+                    )
                 subprocess.run(
-                    [shutil.which("npm") or "npm", "run", "test:browser"],
+                    command,
                     cwd=ROOT / "miniapp",
                     env=env,
                     check=True,

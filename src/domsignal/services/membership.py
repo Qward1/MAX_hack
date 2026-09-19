@@ -11,6 +11,7 @@ from domsignal.contracts.identity import HouseAccess, MeResponse
 from domsignal.core.access import AccessPolicy
 from domsignal.db.models import House, User
 from domsignal.db.repositories.access import AccessRepository
+from domsignal.db.repositories.reliability import authority_lock
 from domsignal.services.context import OperationContext, OperationSource, ScopeState, ScopeValue
 from domsignal.services.errors import AccessDenied, ResourceNotFound
 
@@ -109,6 +110,7 @@ class MembershipService:
         if house_id is None:
             raise AccessDenied("An explicit authorized house context is required")
         if for_write:
+            await authority_lock(session)
             await AccessRepository(session).lock_house(house_id)
         contexts = await self._contexts(session, user_id=user_id, house_id=house_id, source=source)
         if not contexts:

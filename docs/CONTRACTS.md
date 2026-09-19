@@ -764,3 +764,31 @@ payload: `event_id`, единственный `event_type=diagnostic.report`, st
 `recording`. `off` не выполняет сеть и не меняет subscriptions; `recording`
 разрешён только вне production. Реальный HTTP transport и webhook adapter —
 контрактная задача DEV-B после credentials/fixtures.
+# A-10/B-09 administration contracts — branch implementation
+
+Public `POST /api/v1/onboarding/company-applications` validates plain bounded fields,
+10/12-digit INN syntax and at least one contact. It is rate limited and returns the
+same 202 receipt for accepted submissions and existing/open duplicates. It creates
+no account, membership, session or house. INN is not externally verified.
+
+`GET /api/v1/admin/bootstrap` supplies active company contexts and each context's
+allowed surfaces. A company selector is input to authorization, never a grant.
+`/companies/{company_id}` contains staff/invitations/assignments, organization,
+overview, houses and management requests; foreign contexts are masked 404 and
+operator administrative actions are rejected. MAX operations reuse existing A-07
+connection endpoints; operators receive only read summaries.
+
+`/auth/employee/invitations/{preview,register,claim,accept}` shares A-10 preauth,
+Origin/CSRF and MFA checks. Replayed, expired, revoked or differently claimed links
+fail closed. Company/inviter revocation is rechecked during MFA and acceptance.
+Creation uses an Idempotency-Key; retries return metadata with no raw URL.
+
+`/platform` contains bootstrap, company-applications and decisions, companies and
+suspend/reactivate, first-admin invitation reissue, house-management-requests and
+decisions, houses, binding-disputes, health and audit. Review transitions are
+submitted → under_review/needs_info/approved/rejected/cancelled, under_review →
+needs_info/approved/rejected/cancelled, needs_info → under_review/approved/rejected/
+cancelled. Terminal decisions cannot replay or reopen; reasons and reviewer times
+are retained. House approval requires explicit existing/new resolution; overlapping
+active management is a 409 from A-15. Platform mutation responses use the same
+private-content-free projections as reads. Full source: generated OpenAPI/TS.

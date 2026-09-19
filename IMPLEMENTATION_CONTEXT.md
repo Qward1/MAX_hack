@@ -127,3 +127,12 @@ Release `f861e97` is DEPLOYED with deterministic auth/regressions verified; live
 employee password change, human-owned MFA, scoped queue and same-session reload
 are LIVE VERIFIED. Reset/revoke/recovery remain deterministic-only. Evidence is maintained in
 [DEV-B status](docs/status/dev-b.md); historical live MAX evidence is preserved.
+# Administrative onboarding checkpoint — 19.09.2026
+
+The A-10/B-09 company/staff/house onboarding slice is implemented on
+`dev/b-experience`: additive `e107a3cff433`, existing A-10 MFA, separate administrative
+surfaces and A-07 connection UI. A-10/B-09 remain PARTIAL for limits/settings and
+the remaining roadmap scope. This is not a merge into main (`3d4a095` at START).
+Current deterministic, deployment and live evidence, including explicit limits,
+are in [DEV-B status](docs/status/dev-b.md); older statements below describe their
+recorded refs and are not current branch/live readiness claims.

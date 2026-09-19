@@ -28,6 +28,7 @@ from domsignal.db.models import (
     RecoveryCode,
     User,
 )
+from domsignal.db.repositories.reliability import authority_lock
 from domsignal.services.errors import AccessDenied, AuthenticationRequired, FeatureUnavailable
 from domsignal.services.sessions import AuthenticatedUser
 from domsignal.settings import Settings
@@ -163,6 +164,7 @@ class EmployeeAuthService:
         stage: str,
         credential_id: uuid.UUID | None = None,
         expires_at: datetime | None = None,
+        invitation_id: uuid.UUID | None = None,
     ) -> str:
         token = secrets.token_urlsafe(32)
         now = datetime.now(UTC)
@@ -171,6 +173,7 @@ class EmployeeAuthService:
                 token_hash=self.digest(token),
                 stage=stage,
                 credential_id=credential_id,
+                invitation_id=invitation_id,
                 created_at=now,
                 expires_at=expires_at
                 or now + timedelta(seconds=self.settings.auth_challenge_seconds),
@@ -184,6 +187,7 @@ class EmployeeAuthService:
         token: str,
         stages: set[str],
     ) -> tuple[AuthChallenge, EmployeeCredential | None]:
+        await authority_lock(db)
         row = await db.get(AuthChallenge, self.digest(token))
         if row is None:
             raise AuthenticationRequired(INVALID)
@@ -201,6 +205,12 @@ class EmployeeAuthService:
         await db.refresh(row, with_for_update=True)
         if row.consumed_at or row.expires_at <= datetime.now(UTC) or row.stage not in stages:
             raise AuthenticationRequired(INVALID)
+        if row.invitation_id:
+            from domsignal.services.onboarding import valid_invitation
+
+            if credential is None:
+                raise AuthenticationRequired(INVALID)
+            await valid_invitation(db, row.invitation_id, credential.user_id)
         return row, credential
 
     async def login(
@@ -251,12 +261,28 @@ class EmployeeAuthService:
                     if credential.mfa_enabled
                     else "mfa_enroll"
                 )
-                next_token = self.new_challenge(db, stage=stage, credential_id=credential.id)
+                invitation_id = None
+                if not credential.mfa_enabled:
+                    from domsignal.db.models import EmployeeInvitation
+                    from domsignal.services.onboarding import valid_invitation
+
+                    invitation = await db.scalar(
+                        select(EmployeeInvitation).where(
+                            EmployeeInvitation.claimed_by_user_id == credential.user_id,
+                            EmployeeInvitation.accepted_at.is_(None),
+                        )
+                    )
+                    if invitation:
+                        await valid_invitation(db, invitation.id, credential.user_id)
+                        invitation_id = invitation.id
+                next_token = self.new_challenge(
+                    db, stage=stage, credential_id=credential.id, invitation_id=invitation_id
+                )
         if error:
             raise AuthenticationRequired(INVALID)
         return next_token, stage
 
-    async def change_password(self, db: AsyncSession, token: str, password: str) -> tuple[str, str]:
+    def validate_password(self, password: str) -> None:
         weak = {
             "passwordpassword",
             "password123456",
@@ -273,6 +299,9 @@ class EmployeeAuthService:
             or len(set(password)) < 5
         ):
             raise AccessDenied("Пароль: минимум 12 символов; выберите длинный уникальный пароль.")
+
+    async def change_password(self, db: AsyncSession, token: str, password: str) -> tuple[str, str]:
+        self.validate_password(password)
         async with db.begin():
             row, credential = await self.challenge(db, token, {"password_change"})
             assert credential is not None
@@ -286,7 +315,11 @@ class EmployeeAuthService:
             row.consumed_at = datetime.now(UTC)
             stage = "mfa_challenge" if credential.mfa_enabled else "mfa_enroll"
             next_token = self.new_challenge(
-                db, stage=stage, credential_id=credential.id, expires_at=row.expires_at
+                db,
+                stage=stage,
+                credential_id=credential.id,
+                expires_at=row.expires_at,
+                invitation_id=row.invitation_id,
             )
             audit(db, "password_changed", credential.user_id)
         return next_token, stage
@@ -374,6 +407,11 @@ class EmployeeAuthService:
                     )
                     audit(db, "mfa_enrolled", credential.user_id)
                 audit(db, "mfa_success", credential.user_id)
+                if row.invitation_id:
+                    from domsignal.services.onboarding import accept_invitation
+
+                    await db.flush()
+                    await accept_invitation(db, row.invitation_id, credential.user_id)
                 await self.reset_rate(db, credential.login_name)
                 # Consume every sibling preauth flow, atomically with the final session.
                 await db.execute(
@@ -473,7 +511,11 @@ class EmployeeAuthService:
                 OrganizationMembership.user_id == user_id, OrganizationMembership.status == "active"
             )
         )
-        if user is None or (action in {"create", "reset-password", "reset-mfa"} and not membership):
+        if user is None or (
+            action in {"create", "reset-password", "reset-mfa"}
+            and not membership
+            and user.platform_role != "superadmin"
+        ):
             raise ValueError("Existing user and active employee membership required")
         credential = await db.scalar(
             select(EmployeeCredential)

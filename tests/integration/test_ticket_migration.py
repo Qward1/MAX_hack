@@ -58,8 +58,7 @@ async def test_tk26_populated_a07_migration_retains_all_history(integration_sett
                 "INSERT INTO users(id,display_name) VALUES (:user,'A16 fixture')",
                 "INSERT INTO houses(id,name,address) "
                 "VALUES (:house,'A16','A16 migration synthetic')",
-                "INSERT INTO management_companies(id,name) "
-                "VALUES (:tenant,'A16 fixture company')",
+                "INSERT INTO management_companies(id,name) VALUES (:tenant,'A16 fixture company')",
                 "INSERT INTO house_managements(id,tenant_id,house_id,valid_from) "
                 "VALUES (:management,:tenant,:house,now()-interval '1 day')",
                 "INSERT INTO resident_memberships(id,user_id,house_id) "
@@ -106,9 +105,18 @@ async def test_tk26_populated_a07_migration_retains_all_history(integration_sett
                     if table == "users"
                     else "row_to_json(t)"
                 )
-                assert (await conn.execute(text(f"SELECT {expr} FROM {table} t"))).all() == before[
-                    table
-                ]
+                after = (await conn.execute(text(f"SELECT {expr} FROM {table} t"))).all()
+                if table == "management_companies":
+                    for row in after:
+                        for key in (
+                            "legal_name",
+                            "inn",
+                            "contact_name",
+                            "contact_email",
+                            "contact_phone",
+                        ):
+                            assert row[0].pop(key) is None
+                assert after == before[table]
             assert await conn.scalar(text("SELECT count(*) FROM tickets")) == 0
             assert (
                 await conn.scalar(text("SELECT ticket_intake_enabled FROM house_managements"))

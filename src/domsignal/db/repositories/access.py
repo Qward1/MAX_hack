@@ -16,6 +16,7 @@ from domsignal.db.models import (
     ResidentMembership,
     User,
 )
+from domsignal.db.repositories.reliability import authority_lock
 
 
 class AccessRepository:
@@ -46,6 +47,7 @@ class AccessRepository:
     async def lock_house(self, house_id: UUID) -> None:
         # Writers and management switching share this lock protocol. A management
         # switch cannot race a report into the previous management after commit.
+        await authority_lock(self.session)
         await self.session.execute(
             select(House.id).where(House.id == house_id).with_for_update(read=True)
         )

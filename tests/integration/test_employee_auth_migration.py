@@ -53,9 +53,20 @@ async def test_employee_migration_preserves_domain_and_guards_history(integratio
         await migrate(url, "check")
         async with engine.connect() as c:
             for t in tables:
-                assert (
+                after = (
                     await c.execute(text(f"SELECT row_to_json(t) FROM {t} t ORDER BY id"))
-                ).all() == before[t]
+                ).all()
+                if t == "management_companies":
+                    for row in after:
+                        for key in (
+                            "legal_name",
+                            "inn",
+                            "contact_name",
+                            "contact_email",
+                            "contact_phone",
+                        ):
+                            assert row[0].pop(key) is None
+                assert after == before[t]
             assert (
                 await c.execute(text("SELECT count(*) FROM employee_credentials"))
             ).scalar() == 0

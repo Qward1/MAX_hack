@@ -36,6 +36,7 @@ test("employee cookie flow, reload, real queue, logout and cross-user cache isol
   const codes = await page.locator(".recovery-codes code").allTextContents();
   expect(codes).toHaveLength(10);
   await page.getByRole("button", { name: "Коды сохранены — открыть кабинет" }).click();
+  await page.getByRole("navigation", { name: "Разделы кабинета" }).getByRole("link", { name: "Заявки", exact: true }).click();
   await expect(page.locator(".ticket-row").first()).toBeVisible();
   const cookies = await context.cookies();
   const cookie = cookies.find(c => c.name === "__Host-domsignal_employee")!;
@@ -61,6 +62,7 @@ test("employee cookie flow, reload, real queue, logout and cross-user cache isol
   await page.getByRole("button", { name: "Использовать код восстановления" }).click();
   await page.getByLabel("Код восстановления").fill(codes[0]);
   await page.getByRole("button", { name: "Продолжить" }).click();
+  await page.getByRole("navigation", { name: "Разделы кабинета" }).getByRole("link", { name: "Заявки", exact: true }).click();
   await expect(page.locator(".ticket-row").first()).toBeVisible();
   expect(session.csrf_token).toBeTruthy();
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
@@ -75,6 +77,7 @@ test("employee cookie flow, reload, real queue, logout and cross-user cache isol
   await page.getByLabel("Код из приложения").fill(fixture("otp").code);
   await page.getByRole("button", { name: "Продолжить" }).click();
   await page.getByRole("button", { name: "Коды сохранены — открыть кабинет" }).click();
+  await page.getByRole("navigation", { name: "Разделы кабинета" }).getByRole("link", { name: "Заявки", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Заявки", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "A16 synthetic house b1", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "A16 synthetic house a1", exact: true })).toHaveCount(0);

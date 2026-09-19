@@ -127,7 +127,7 @@ async function openEmployee(
   id?: string,
   actor = "a16-responsible",
 ) {
-  await page.goto(`/admin/?test_actor=${actor}${id ? `&ticket=${id}` : ""}`);
+  await page.goto(`/admin/tickets?test_actor=${actor}${id ? `&ticket=${id}` : ""}`);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   if (id)
     await expect(
@@ -228,7 +228,7 @@ test("UI-TK-01/02/03/04 scoped queues and foreign house denial", async ({
   await expect(
     page.getByRole("option", { name: "A16 synthetic house a2" }),
   ).toHaveCount(0);
-  await page.goto(`/admin/?test_actor=a16-operator&ticket=${two.ticket.id}`);
+  await page.goto(`/admin/tickets?test_actor=a16-operator&ticket=${two.ticket.id}`);
   await expect(
     page.getByText("Заявка не найдена или больше недоступна."),
   ).toBeVisible();

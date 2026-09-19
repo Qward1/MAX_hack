@@ -434,3 +434,23 @@ Sharing cancel не отправка; mobile-only метод имеет fallback
 отправленное» и «Житель отметил отправку». Без фактического ответа внешней
 системы запрещены формулировки «обращение зарегистрировано», «ГИС ЖКХ приняла
 обращение» и «официальная регистрация завершена».
+# Administrative surfaces — A-10/B-09 branch slice
+
+Resident `/` retains the MAX Mini App. Public `/company/apply` ends in a neutral
+receipt with manual-contact expectations. Employee `/admin/` uses ordinary web
+password/MFA and server-provided contexts. Multiple companies require explicit
+selection; changing company discards the prior context. Logout clears selection.
+
+Company Admin has Overview, Tickets, Houses, Staff, MAX chats and Organization.
+Staff invites expose a one-time copyable link; employee details contain explicit
+house assignments and revoke confirmation. House requests show their review
+state. MAX connection uses the existing command, provider verification and explicit
+A-07 approval; joining a chat does not issue company permissions.
+
+Operator has a distinct work header and only Tickets/My houses. My houses show
+assignment and connection status read-only. The separate `/platform-admin/` layout
+has company applications, organizations, house requests, houses, binding disputes,
+system health and audit. It has no tenant work queue or resident private content.
+Reviewers must choose an existing physical house or explicitly create one; address
+matching never decides identity automatically. All lists have loading/empty/error
+states; backend denial remains authoritative for manually entered URLs.

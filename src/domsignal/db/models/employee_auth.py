@@ -33,6 +33,7 @@ class AuthChallenge(Base):
     __tablename__ = "auth_challenges"
 
     token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    invitation_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("employee_invitations.id"))
     credential_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("employee_credentials.id"), index=True
     )

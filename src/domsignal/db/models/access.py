@@ -106,6 +106,11 @@ class ManagementCompany(Timestamps, Base):
     name: Mapped[str] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(30), default="active", server_default="active")
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    legal_name: Mapped[str | None] = mapped_column(String(300))
+    inn: Mapped[str | None] = mapped_column(String(12), unique=True)
+    contact_name: Mapped[str | None] = mapped_column(String(200))
+    contact_email: Mapped[str | None] = mapped_column(String(254))
+    contact_phone: Mapped[str | None] = mapped_column(String(40))
 
 
 class HouseManagement(Timestamps, Base):

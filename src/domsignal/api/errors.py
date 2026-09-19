@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import re
 import uuid
 from collections.abc import Awaitable, Callable
 
@@ -14,6 +16,21 @@ from domsignal.contracts.common import FieldError, Problem
 from domsignal.services.errors import ServiceError
 
 
+class InvitationLogFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.args, tuple):
+            record.args = tuple(
+                re.sub(r"/admin/invite/[^ ?]+", "/admin/invite/[redacted]", arg)
+                if isinstance(arg, str)
+                else arg
+                for arg in record.args
+            )
+        return True
+
+
+logging.getLogger("uvicorn.access").addFilter(InvitationLogFilter())
+
+
 class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
@@ -22,9 +39,9 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         request.state.request_id = str(uuid.uuid4())
         response = await call_next(request)
         response.headers["X-Request-ID"] = request.state.request_id
-        if request.url.path.startswith(("/api/", "/admin")):
+        if request.url.path.startswith(("/api/", "/admin", "/platform-admin", "/company")):
             response.headers["Cache-Control"] = "no-store"
-        if request.url.path.startswith("/admin"):
+        if request.url.path.startswith(("/admin", "/platform-admin", "/company")):
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
                 "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; "

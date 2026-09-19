@@ -52,7 +52,7 @@ def transition_allowed(action: TicketAction, status: str, *, accepted: bool) -> 
         case TicketAction.ASSIGN | TicketAction.CANCEL | TicketAction.DEADLINE:
             return status in ACTIVE
         case TicketAction.ACCEPT:
-            return status == "new" or (status == "in_progress" and not accepted)
+            return status == "new" or (status in {"accepted", "in_progress"} and not accepted)
         case TicketAction.START:
             return status == "accepted"
         case TicketAction.CLARIFY | TicketAction.WAIT_EXTERNAL:

@@ -390,3 +390,41 @@ HMAC-хеш токена. LIVE-вектор MAX пока не проверен.
   при согласованном scope и реальном provider.
 
 Неиспользуемые будущие директории и фиктивные endpoints не созданы.
+# Administrative onboarding — A-10/B-09 branch slice, 19.09.2026
+
+`CompanyOnboardingRequest` → manual platform review → atomic active
+`ManagementCompany` plus first `EmployeeInvitation`. Approval creates no employee
+membership. Invitation registration reuses EmployeeCredential/AuthChallenge and
+the existing password/TOTP session machinery; membership is committed with the
+successful MFA completion. An existing authenticated employee claims and explicitly
+accepts the invitation using the same User. Only HMAC token digests are persisted;
+raw links are returned once, expire after 48 hours by default, and are never stored
+in idempotency responses. Platform may reissue an unaccepted first-admin link with
+an audit reason, invalidating earlier pending/claimed links.
+
+`HouseManagementRequest` does not grant access. Superadmin explicitly chooses a
+physical existing House or creation; address normalization only suggests candidates.
+Approval uses ManagementService and the A-15 exclusion constraint. Past dates over
+one day require explicit confirmation and a reason. There is no implicit transfer
+of previous management history, reports or tickets.
+
+Rare administrative changes take a transaction-wide exclusive PostgreSQL advisory
+authority lock. Domain writers take the shared counterpart before house/credential
+locks. This serializes authority revocation against ticket mutations and MFA
+completion. Current company membership and management scope remain authoritative.
+Last-active-company-admin revocation is rejected. Employee revocation removes this
+company's assignments and authored unaccepted invitations; open tickets clear
+assignee and acceptance fields and add an event without deleting WorkAttempt,
+observations or historical performers. A session can continue in another company.
+Company suspension is checked by existing current-access and delivery resolvers.
+
+Platform APIs require an A-10 MFA employee cookie and exact platform role. Dedicated
+allowlist DTOs expose organization/onboarding/house/binding metadata and aggregate
+health, never resident report text, observations, work descriptions, media or full
+chat messages. Audit payloads contain actor/object IDs and administrative reasons.
+`bootstrap-platform` is a singleton audited operator CLI, refuses MAX-linked users,
+and creates no company/resident authority. No public platform-role grant exists.
+
+Migration `e107a3cff433` is additive over `1c5baa831ec9`. Downgrade refuses retained
+onboarding data, company metadata or administrative audit history. Restore a verified
+pre-migration backup separately when an old version cannot represent the new data.

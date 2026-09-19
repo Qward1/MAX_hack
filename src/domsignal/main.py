@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from domsignal.api.errors import RequestIdMiddleware, install_error_handlers
 from domsignal.api.routes import (
+    administration,
     auth,
     chat_connections,
     employee_auth,
@@ -59,6 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(system.router)
     app.include_router(auth.router)
     app.include_router(employee_auth.router)
+    app.include_router(administration.router)
     app.include_router(me.router)
     app.include_router(incidents.router)
     app.include_router(max_ingress.router)
@@ -89,9 +91,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     static_dir = Path(resolved_settings.static_dir)
     if static_dir.is_dir():
 
-        @app.get("/admin/login", include_in_schema=False)
+        @app.get("/admin/{path:path}", include_in_schema=False)
         async def admin_login() -> FileResponse:
             return FileResponse(static_dir / "admin" / "index.html")
+
+        @app.get("/platform-admin/{path:path}", include_in_schema=False)
+        async def platform_shell() -> FileResponse:
+            return FileResponse(static_dir / "platform-admin" / "index.html")
+
+        @app.get("/company/apply", include_in_schema=False)
+        async def company_apply() -> FileResponse:
+            return FileResponse(static_dir / "company" / "index.html")
 
         app.mount("/", StaticFiles(directory=static_dir, html=True), name="miniapp")
     return app

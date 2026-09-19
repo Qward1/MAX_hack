@@ -1,0 +1,83 @@
+import { useCallback, useEffect } from "react";
+import { AdminApp } from "./AdminApp";
+import { adminClient, Feedback, Title, useRoute, type Schema } from "./administration";
+import { useResource } from "../shared/api/useResource";
+import { ChatConnections, CompanyHouses, MyHouses, Organization, Overview, Staff } from "./CompanyPages";
+
+type Context = Schema["CompanyContext"];
+const names: Record<string, string> = { overview: "Обзор", tickets: "Заявки", houses: "Дома", assigned_houses: "Мои дома",
+  staff: "Сотрудники", chat_connections: "MAX-чаты", organization: "Организация" };
+const paths: Record<string, string> = { overview: "", tickets: "tickets", houses: "houses", assigned_houses: "houses",
+  staff: "staff", chat_connections: "max", organization: "organization" };
+
+export function CompanyPortal() {
+  const { url, navigate } = useRoute();
+  const load = useCallback(async (signal: AbortSignal) => {
+    const caps = await adminClient.capabilities(signal);
+    await adminClient.authenticate(caps, signal);
+    return adminClient.request<Schema["AdminBootstrap"]>("/api/v1/admin/bootstrap", { signal });
+  }, []);
+  const bootstrap = useResource("company-contexts", load);
+  useEffect(() => { const refresh = () => bootstrap.refresh();
+    window.addEventListener("focus", refresh); return () => window.removeEventListener("focus", refresh); }, [bootstrap.refresh]);
+  const companies = bootstrap.error ? [] : bootstrap.data?.companies ?? [];
+  const selector = url.searchParams.get("company");
+  const selected = selector ? companies.find(c => c.company_id === selector) : companies.length === 1 ? companies[0] : undefined;
+  const href = (surface: string, company = selected?.company_id) => {
+    const query = new URLSearchParams(); if (company) query.set("company", company);
+    const actor = url.searchParams.get("test_actor"); if (actor) query.set("test_actor", actor);
+    return `/admin/${paths[surface] ?? surface}?${query}`;
+  };
+  const route = url.pathname.replace(/^\/admin\/?/, "");
+  const surface = route ? Object.keys(paths).find(k => paths[k] === route && selected?.surfaces.includes(k as Context["surfaces"][number])) ?? route
+    : url.searchParams.has("ticket") || url.searchParams.has("house") || url.searchParams.has("filter") ? "tickets"
+    : selected?.surfaces[0] ?? "tickets";
+  if (!selected) return <main className="admin-main"><Title>{companies.length ? "Выберите управляющую компанию" : "Нет доступной рабочей очереди"}</Title>
+    <Feedback loading={bootstrap.loading} error={bootstrap.error} />
+    {selector && !bootstrap.loading && <p role="alert">Выбранная организация недоступна.</p>}
+    {companies.length === 0 && !bootstrap.loading && <p>Активных назначений нет. Обратитесь к администратору вашей УК.</p>}
+    {companies.map(c => <button className="ticket-button" key={c.company_id} onClick={() => navigate(href(c.surfaces[0], c.company_id))}>{c.name}</button>)}
+    <button className="ticket-button secondary" onClick={bootstrap.refresh}>Проверить доступ</button>
+  </main>;
+  const isOrganization = selected.surfaces.includes("staff");
+  const shared = { company: selected, surface, href, navigate };
+  return <div className={`admin-shell ${isOrganization ? "company-workspace" : "operator-workspace"}`}>
+    <aside className="admin-sidebar"><a className="admin-brand" href={href(selected.surfaces[0])}>ДомСигнал
+      <span>{isOrganization ? "Управление компанией" : "Рабочее место оператора"}</span></a>
+      {companies.length > 1 && <label>Управляющая компания<select aria-label="Управляющая компания" value={selected.company_id}
+        onChange={e => { const company = companies.find(c => c.company_id === e.target.value); if (company) navigate(href(company.surfaces[0], company.company_id)); }}>
+        {companies.map(c => <option key={c.company_id} value={c.company_id}>{c.name}</option>)}</select></label>}
+      <nav aria-label="Разделы кабинета">{selected.surfaces.map(s => <a key={s} className="admin-nav-link"
+        aria-current={s === surface ? "page" : undefined} href={href(s)} onClick={e => { e.preventDefault(); navigate(href(s)); }}>{names[s]}</a>)}</nav>
+      <p className="admin-sidebar-note">{selected.name}</p>
+    </aside><main className="app-shell admin-main"><div className="toolbar ticket-line"><span>{bootstrap.data?.display_name}</span>
+      <button className="ticket-button secondary" onClick={() => { bootstrap.refresh(); window.dispatchEvent(new Event("administration-refresh")); }}>Обновить</button></div>
+      {isOrganization ? <CompanyWorkspace key={selected.company_id} {...shared} /> : <OperatorWorkspace key={selected.company_id} {...shared} />}
+    </main>
+  </div>;
+}
+type Workspace = { company: Context; surface: string; href: (surface: string) => string; navigate: (url: string) => void };
+function CompanyWorkspace({ company, surface }: Workspace) {
+  const base = `/api/v1/companies/${company.company_id}`;
+  switch (surface) {
+    case "overview": return <Overview base={base} />;
+    case "tickets": return <AdminApp embedded companyId={company.company_id} />;
+    case "houses": return <CompanyHouses base={base} />;
+    case "staff": return <Staff base={base} />;
+    case "chat_connections": return <ChatConnections base={base} />;
+    case "organization": return <Organization base={base} />;
+    default: return <DeniedRoute base={base} surface={surface} />;
+  }
+}
+function OperatorWorkspace({ company, surface }: Workspace) {
+  const base = `/api/v1/companies/${company.company_id}`;
+  if (surface === "tickets") return <AdminApp embedded companyId={company.company_id} />;
+  if (surface === "assigned_houses") return <MyHouses base={base} />;
+  return <DeniedRoute base={base} surface={surface} />;
+}
+function DeniedRoute({ base, surface }: { base: string; surface: string }) {
+  // A typed URL is still checked by the endpoint; navigation isn't the access boundary.
+  const load = useCallback((signal: AbortSignal) => adminClient.request(`${base}/${surface === "staff" ? "staff" : "organization"}`, { signal }), [base, surface]);
+  const result = useResource(`${base}:${surface}`, load);
+  return <><Title>Раздел недоступен</Title><Feedback loading={result.loading} error={result.error} /></>;
+}

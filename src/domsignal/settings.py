@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     static_dir: str = "miniapp/dist"
     auth_mfa_encryption_key: str | None = Field(default=None, repr=False)
     auth_password_max_length: int = Field(default=1024, ge=64, le=4096)
+    employee_invitation_seconds: int = Field(default=172800, ge=300, le=604800)
     auth_session_idle_seconds: int = Field(default=1800, ge=60, le=86400)
     auth_session_absolute_seconds: int = Field(default=28800, ge=300, le=86400)
     auth_challenge_seconds: int = Field(default=600, ge=60, le=900)

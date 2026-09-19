@@ -502,3 +502,25 @@ Human gate completed 19.09.2026: real password change/TOTP enrollment, scoped
 queue HTTP 200 and page reload preserving the single employee session are LIVE
 VERIFIED. Recovery/reset/revoke/restart/concurrency coverage above remains
 deterministic; the human-owned production account was not reset or revoked.
+# A-10/B-09 administrative acceptance
+
+Executable evidence: `tests/integration/test_administration.py`,
+`test_onboarding_migration.py` and `miniapp/tests/browser/administration.spec.ts`.
+Real PostgreSQL tests cover application neutrality, atomic concurrent approval,
+new MFA enrollment, existing employee reuse/multiple companies, invitation expiry,
+replay/revocation/claim races, first-admin reissue, last-admin concurrency, staff
+revoke versus ticket acceptance, retained work history, assignment and operator
+denials, explicit house identity/backdate/overlap, suspension and platform privacy.
+A unique marker stored in a real resident Report is checked against every platform
+read projection and rendered platform section. Authentication uses actual A-10;
+the integration cookie factory is an explicit isolated fixture, not a permission mock.
+
+The browser flow uses public company application → platform password/MFA review →
+first-admin registration/MFA → operator invitation/MFA → house request/review →
+assignment → operator-only house view → existing A-07 MAX verification adapter →
+platform privacy → revoke and lost access. Synthetic providers are selected only
+by explicit test process opt-in, never production configuration. The migration
+test snapshots existing A-15/A-07/A-10/report/ticket/work history, verifies an additive
+upgrade with unchanged rows, checks schema drift and rejects destructive downgrade.
+Deterministic tests are not live MAX or human MFA evidence; current run/deploy
+results are recorded in `docs/status/dev-b.md`.

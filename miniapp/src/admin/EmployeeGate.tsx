@@ -5,7 +5,8 @@ import type { components } from "../shared/api/schema";
 type State = components["schemas"]["EmployeeSession"];
 type Enrollment = components["schemas"]["EmployeeEnrollment"];
 
-export function EmployeeGate({ children }: { children: ReactNode }) {
+export function EmployeeGate({ children, invitationToken, platform = false }: { children: ReactNode; invitationToken?: string; platform?: boolean }) {
+  const [signup, setSignup] = useState(Boolean(invitationToken));
   const [state, setState] = useState<State | null>(null);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [busy, setBusy] = useState(false);
@@ -18,7 +19,7 @@ export function EmployeeGate({ children }: { children: ReactNode }) {
     setState(next);
     setEnrollment(null);
     if (next.stage !== "mfa_challenge") setRecovery(false);
-    if (next.stage === "login") window.history.replaceState(null, "", "/admin/login");
+    if (next.stage === "login" && !invitationToken && !platform && window.location.pathname === "/admin/") window.history.replaceState(null, "", "/admin/login");
     if (next.stage === "authenticated" && window.location.pathname === "/admin/login")
       window.history.replaceState(null, "", "/admin/");
   };
@@ -51,6 +52,7 @@ export function EmployeeGate({ children }: { children: ReactNode }) {
     setBusy(true); setError("");
     try {
       await client.employeeLogout();
+      if (!invitationToken) window.history.replaceState(null, "", platform ? "/platform-admin/" : "/admin/login");
       setState(null); setForbidden(false); setEnrollment(null); setRevision(v => v + 1);
       const channel = new BroadcastChannel("employee-auth"); channel.postMessage("logout"); channel.close();
       apply(await client.employeeSession());
@@ -64,9 +66,9 @@ export function EmployeeGate({ children }: { children: ReactNode }) {
     setBusy(true); setError("");
     try {
       const step = state?.stage;
-      const path = step === "login" ? "login" : step === "password_change" ? "password/change" :
+      const path = step === "login" ? (signup && invitationToken ? "invitations/register" : "login") : step === "password_change" ? "password/change" :
         step === "mfa_enroll" ? "mfa/verify" : recovery ? "recovery" : "mfa/challenge";
-      const payload = step === "login" ? { login_name: data.get("login"), password: data.get("password") } :
+      const payload = step === "login" ? { login_name: data.get("login"), password: data.get("password"), ...(signup && invitationToken ? { token: invitationToken, display_name: data.get("display_name") } : {}) } :
         step === "password_change" ? { password: data.get("password") } : { code: data.get("code") };
       const next = await client.employeeStep(path, payload);
       form.reset(); apply(next);
@@ -94,14 +96,15 @@ export function EmployeeGate({ children }: { children: ReactNode }) {
         <p>Они показываются один раз. Каждый код заменяет второй фактор при входе с паролем.
           Сохраните их в менеджере паролей.</p>
         <ul className="recovery-codes">{state.recovery_codes.map(code => <li key={code}><code>{code}</code></li>)}</ul>
-        <button className="ticket-button" onClick={() => setState({ ...state, recovery_codes: [] })}>Коды сохранены — открыть кабинет</button>
+        <button className="ticket-button" onClick={() => { if (invitationToken && signup) window.location.assign("/admin/"); else setState({ ...state, recovery_codes: [] }); }}>Коды сохранены — открыть кабинет</button>
       </> : <form onSubmit={submit} className="ticket-form" key={`${state.stage}:${recovery}`}>
-        <h1>{state.stage === "login" ? "Вход сотрудника" : state.stage === "password_change" ? "Создайте свой пароль" :
+        <h1>{state.stage === "login" ? (signup && invitationToken ? "Принять приглашение" : platform ? "Вход в управление платформой" : "Вход сотрудника") : state.stage === "password_change" ? "Создайте свой пароль" :
           state.stage === "mfa_enroll" ? "Подключите аутентификатор" : "Подтвердите вход"}</h1>
+        {state.stage === "login" && invitationToken && <><p>Новый сотрудник принимает приглашение после настройки пароля и MFA.</p><button type="button" className="ticket-button secondary" onClick={() => setSignup(!signup)}>{signup ? "У меня уже есть аккаунт" : "Создать аккаунт сотрудника"}</button>{signup && <label>Ваше имя<input name="display_name" required minLength={2} maxLength={200} /></label>}</>}
         {state.stage === "login" && <label>Логин<input name="login" autoComplete="username" autoCapitalize="none" required maxLength={100} /></label>}
         {["login", "password_change"].includes(state.stage) && <label>{state.stage === "login" ? "Пароль" : "Новый пароль"}
-          <input name="password" type="password" autoComplete={state.stage === "login" ? "current-password" : "new-password"}
-            minLength={state.stage === "password_change" ? 12 : 1} maxLength={1024} required /></label>}
+          <input name="password" type="password" autoComplete={state.stage === "login" && !signup ? "current-password" : "new-password"}
+            minLength={state.stage === "password_change" || signup ? 12 : 1} maxLength={1024} required /></label>}
         {state.stage === "password_change" && <p>Минимум 12 символов. Используйте длинный уникальный пароль.</p>}
         {state.stage === "mfa_enroll" && <>
           <p>Добавьте аккаунт в Google Authenticator, Microsoft Authenticator или другое приложение TOTP.</p>
@@ -119,7 +122,7 @@ export function EmployeeGate({ children }: { children: ReactNode }) {
             pattern={recovery ? undefined : "[0-9]{6}"} maxLength={recovery ? 64 : 6} required /></label>}
         {error && <p role="alert">{error}</p>}
         <button className="ticket-button" type="submit" disabled={busy || (state.stage === "mfa_enroll" && !enrollment)}>
-          {busy ? "Проверяем…" : state.stage === "login" ? "Войти" : "Продолжить"}</button>
+          {busy ? "Проверяем…" : state.stage === "login" ? (signup && invitationToken ? "Создать аккаунт и настроить MFA" : "Войти") : "Продолжить"}</button>
         {state.stage === "mfa_challenge" && <button type="button" className="ticket-button secondary" onClick={() => setRecovery(!recovery)}>
           {recovery ? "Ввести код аутентификатора" : "Использовать код восстановления"}</button>}
         {state.stage !== "login" && <button type="button" className="ticket-button secondary" disabled={busy} onClick={() => void logout()}>Начать вход заново</button>}

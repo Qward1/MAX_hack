@@ -39,6 +39,13 @@ def inject(container):
         ),
         bot_username="fixture_bot",
     )
+    if os.getenv("B09_BROWSER_FIXTURES") == "1":
+        from tests.fakes.max_chat import FakeMaxChatProvider
+
+        provider = FakeMaxChatProvider()
+        chat_id = f"b09-{os.environ['ND_RUN_ID']}"
+        provider.configure(chat_id, connector=chat_id)
+        container.chat_connections.provider = provider
     return container
 
 

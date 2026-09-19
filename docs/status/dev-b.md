@@ -1,5 +1,48 @@
 # DEV-B — current handoff
 
+## A-10/B-09 administrative onboarding — 19.09.2026
+
+START clean `dev/b-experience=02bb61c`; END fetch retains `origin/main=3d4a095`
+as an ancestor. No main merge or DEV-A writes. CompanyOnboardingRequest,
+EmployeeInvitation and HouseManagementRequest are additive migration
+`e107a3cff433` over `1c5baa831ec9`. Company approval creates company and first
+hashed invitation atomically; active membership waits for normal A-10 MFA.
+Existing employees reuse User, invitation reissue invalidates old first links,
+staff assignments and last-admin protection serialize concurrent revocation.
+Open tickets lose current assignment/acceptance while work/history remain.
+House identity is an explicit platform choice; A-15 overlap/history remain intact.
+
+Public `/company/apply`, Company Admin and Operator `/admin/`, and separate
+metadata-only `/platform-admin/` are implemented. Server bootstrap controls
+navigation and multiple-company selection. MAX management reuses A-07; operator
+sees read-only status. Company suspension removes effective current authority.
+Platform cannot read resident content merely through its platform role.
+
+Current deterministic results: ruff, mypy (88 source files), 103 unit/contract,
+166 PostgreSQL integration, OpenAPI/TS drift, 89 frontend tests, typecheck/build,
+HTTP+PG+worker+restart and Docker persistence smoke PASS. Populated migration
+test preserves earlier company/house/binding/credential/report/ticket/work rows
+and refuses downgrade after onboarding data. The expanded platform marker test
+also checks every platform mutation projection (20 administration tests PASS).
+Full browser administrative lifecycle including operator work/history after revoke
+PASS in Chrome; 29 existing browser regressions PASS. A consolidated final run is
+also being recorded. Gitleaks staged scan and both diff checks PASS.
+
+Before deployment, VPS backup
+`/var/backups/domsignal/domsignal-20260919T205955851493Z.dump` was restored into
+`domsignal_b09_restore_20260919`: all 29 public tables match full-row canonical
+hashes/counts, including 3 reports/tickets, 1 work attempt, 7 observations and the
+existing MAX binding. Previous deployed SHA is
+`f861e973f0cb7a2dd4ba5f6ce0f56dee91589600`. Production has not been migrated at this
+checkpoint; deployment/live evidence follows after completion.
+
+Roadmap mapping: A-10 onboarding/access slice implemented, parent PARTIAL for
+limits/reservations/settings/second-region scope; B-09 administrative UI slice
+implemented, parent PARTIAL for limits/quiet hours/auto-react/moderation;
+A-07 existing connection API exposed in company UI; B-14 queue reused.
+Exactly one recommended next DEV-B task: A-10/B-09 company house limits and
+reservation accounting. It is not started by this slice.
+
 ## A-10 employee web-auth checkpoint — 19.09.2026
 
 Owner DEV-B, branch `dev/b-experience`; START `f61b32a`, production before this

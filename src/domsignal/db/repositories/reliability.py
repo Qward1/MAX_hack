@@ -181,3 +181,9 @@ class ReliabilityRepository:
             job.attempts = max(0, job.attempts - 1)
             job.lease_until = None
             job.lease_token = None
+
+
+async def authority_lock(db: AsyncSession, *, exclusive: bool = False) -> None:
+    """MVP authority changes exclusive; protected writes shared, before house/credential locks."""
+    function = "pg_advisory_xact_lock" if exclusive else "pg_advisory_xact_lock_shared"
+    await db.execute(text(f"SELECT {function}(hashtextextended('domsignal:authority', 0))"))
