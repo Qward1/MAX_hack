@@ -1,10 +1,31 @@
 # DEV-B — current handoff
 
-Updated: 2026-09-19 (production HTTPS + real MAX bootstrap completed)
+Updated: 2026-09-19 (live Mini App identity continuation)
 Branch: dev/b-experience
-Current task: A-12/B-01 production VPS + real MAX webhook bootstrap
-State: DEPLOYED / PUBLIC HTTPS VERIFIED / NOT MERGED TO MAIN
-Real MAX: LIVE VERIFIED bot_started + plain-text outbound / PRODUCT SCENARIOS PENDING
+Current task: B-01 live Mini App authentication/context, then A-07 house/group smoke
+State: LIVE IDENTITY VERIFIED / ISOLATED HOUSE CLI IMPLEMENTED / NOT MERGED TO MAIN
+Real MAX: binding + validated initData + canonical User VERIFIED; house reopening pending
+
+## Current Mini App checkpoint
+
+START/own origin `53ee8b5`; fetched main is already an ancestor. DEV-A remote
+handoff read without writes. MAX Web operator launch produced auth/max 200 and
+me 200 at 17:28:29 UTC, with canonical user and verified timestamp committed.
+The real MAX identity matches the previously accepted bot_started destination.
+Production contained zero houses/memberships: empty board was correct access.
+Full sanitized evidence and exact IDs: [MAX live smoke](../MAX_LIVE_SMOKE.md).
+
+Existing HMAC/age validation matches current official MAX documentation and needs
+no bypass. Added `tools.live_fixture` singleton CLI with validated identity
+precondition, ManagementService, explicit ResidentMembership, no employee/platform
+role, operator audit and safe revoke/delete-empty. Deterministic PG tests exercise
+scope isolation, idempotency, invalid identity/other owner rejection, revocation
+and refusal to delete dependent rows. Added wrong-token/future-date/signed selector
+auth tests. OpenAPI/TS unchanged; checks and production deployment are recorded
+in the next live checkpoint below after execution. This is not a main merge.
+
+Next: deploy and provision only the authorized test scope, request one real MAX
+reopen, verify board/context/reload, then proceed to group capability and A-07.
 
 ## Current production checkpoint
 

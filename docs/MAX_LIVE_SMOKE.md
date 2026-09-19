@@ -1,4 +1,45 @@
-# MAX live smoke — DEPLOYED / LIVE BOOTSTRAP VERIFIED
+# MAX live smoke — DEPLOYED / LIVE IDENTITY VERIFIED / HOUSE REOPEN PENDING
+
+## Mini App identity continuation — 19 September 2026
+
+This checkpoint supersedes the older Mini App binding blocker below.
+**LIVE VERIFIED:** organizers bound `t480_hakaton_max_bot`; the operator opened
+the resident frontend inside MAX Web and saw the no-houses state.
+
+Existing deployed code (START `53ee8b5`) already loads official MAX Bridge and
+posts raw initData to server-side HMAC/age validation; no auth bypass or new auth
+algorithm is needed. Official [validation](https://dev.max.ru/docs/webapps/validation)
+and [Bridge](https://dev.max.ru/docs/webapps/bridge) were rechecked on 19 September.
+`initDataUnsafe` is unused. Signed chat/start_param are never membership authority.
+
+Production evidence from that real opening:
+
+- `2026-09-19T17:28:29.767350676Z`: `POST /api/v1/auth/max` → 200.
+- `2026-09-19T17:28:29.875809246Z`: `GET /api/v1/me` → 200.
+- Canonical User `d6d46c79-5001-433f-be7e-867659d6e972`, MAX user `294889720`,
+  display name Владислав; verified_at `2026-09-19T17:28:29.761679+00:00`.
+- This identity matches destination `294889720` in the previous genuine
+  bot_started operational receipt. User has no demo_alias or platform_role.
+- One production session, zero Houses and zero ResidentMemberships at inspection.
+  MembershipService for that user returned `houses: []`.
+
+Thus real initData receipt, signature PASS, auth_date PASS and canonical identity
+are **LIVE VERIFIED** through the mandatory validation route and its committed
+side effects; raw credentials were not retained or replayed. Empty houses were
+correct domain access, not a failed MAX authentication. `/me` embeds houses;
+there is no separate `/me/houses` route.
+
+Added operator-only `domsignal.tools.live_fixture` for the user's explicitly
+authorized singleton test scope: validated existing User only; no staff role,
+test session, demo identity or client authority. It uses ManagementService and
+normal ResidentMembership/AccessPolicy, with an operator audit and revoke/delete
+commands. See [runbook](../deploy/README.md#7-explicit-isolated-live-resident-scope).
+
+House fixture deployment, actual board/reload after reopening, group capability,
+bot_added, authorized ConnectionRequest/ChatBinding, real report/Ticket/WorkAttempt,
+personal product notification, open_app/start_param and callback/observation are
+**PENDING** at this code checkpoint. Mini App authentication/context as a complete
+product gate is not yet promoted. No synthetic production webhook or identity used.
 
 ## Production bootstrap — 19 September 2026 (Europe/Moscow)
 

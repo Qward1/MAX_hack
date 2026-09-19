@@ -62,3 +62,30 @@ def test_rejects_expired_data() -> None:
             max_age_seconds=300,
             now=NOW,
         )
+
+
+@pytest.mark.parametrize("seconds", [31, 3600])
+def test_rejects_future_data(seconds: int) -> None:
+    with pytest.raises(InvalidInitData, match="future"):
+        validate_init_data(
+            signed(auth_date=str(int(NOW.timestamp()) + seconds)),
+            bot_token=BOT_TOKEN,
+            max_age_seconds=300,
+            now=NOW,
+        )
+
+
+def test_signed_chat_and_start_param_are_not_user_authority() -> None:
+    user = validate_init_data(
+        signed(chat='{"id":12345,"type":"DIALOG"}', start_param="foreign-house"),
+        bot_token=BOT_TOKEN,
+        max_age_seconds=300,
+        now=NOW,
+    )
+    assert user.id == 123
+    assert not hasattr(user, "chat") and not hasattr(user, "start_param")
+
+
+def test_wrong_bot_token_cannot_validate_identity() -> None:
+    with pytest.raises(InvalidInitData, match="signature"):
+        validate_init_data(signed(), bot_token="another-bot", max_age_seconds=300, now=NOW)

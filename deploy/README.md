@@ -216,3 +216,55 @@ curl --fail-with-body --silent --show-error "https://$(sed -n 's/^PUBLIC_DOMAIN=
 
 Do not run `down -v` in production. Normal `down`/`up` preserves named volumes;
 backup and restore must still be tested independently.
+
+## 7. Explicit isolated live resident scope
+
+SSH on the current host uses `user1@176.108.244.168` and the existing
+`domsignal_codex_ed25519` key with BatchMode/strict host checking; Docker uses
+`sudo -n`. Do not regenerate keys or print production environment files.
+
+Resident bootstrap is `capabilities` → `POST /api/v1/auth/max` with raw
+`init_data` → `GET /api/v1/me`. The last response contains `houses`; there is
+no separate `/me/houses` endpoint. MAX Bridge is loaded from the official CDN.
+The server validates HMAC-SHA256 with `WebAppData` and the bot token, constant-time
+signature comparison, duplicate/unknown fields, auth_date (300 seconds, up to
+30 seconds future clock tolerance), and typed user data. Only then is a canonical
+User found/created and a random 256-bit session issued (900 seconds; only its
+HMAC digest is stored). `max_identity_verified_at` is set only on this validated
+path. No raw initData, signature, bearer or bot token belongs in logs/evidence.
+`initDataUnsafe`, chat, start_param and browser house selectors grant no access.
+Official reference: [MAX validation](https://dev.max.ru/docs/webapps/validation).
+
+For an explicitly authorized smoke only, the production operator CLI below
+creates a singleton ManagementCompany, House, active HouseManagement (ticket
+intake enabled), and ResidentMembership for an **existing server-validated**
+non-demo MAX User. It never creates identity/session/staff/Superadmin grants.
+The scope is labelled LIVE TEST and is not a real address or residence claim.
+MembershipService/AccessPolicy remains the access authority. General resident
+onboarding and ChatBinding-derived automatic membership are not implemented.
+
+Run inside the production API container using the existing Compose invocation:
+
+```bash
+python -m domsignal.tools.live_fixture create \
+  --user-id <validated-canonical-user-uuid> \
+  --operator <operator-name> --reason <explicit-authorization-reference>
+```
+
+The `operator:live-smoke-house:v1` receipt (`operator.live_fixture`, **not** a
+webhook) retains exact IDs, operator, reason and action timestamps. Transactions
+and a singleton advisory lock make repeated create idempotent for the same user;
+another owner or silent recreation after retirement is refused. Only one fixture
+is permitted per DB. No HTTP seed/reset endpoint, demo seed or test auth is used.
+
+Use the same arguments with `revoke` to revoke resident access, end management
+and archive the test company without erasing history. `delete-empty` removes only
+the four recorded scope rows after checking all mapped FK dependencies (including
+cascades). It refuses product/connection history or additional grants. The User
+and operator audit are retained. A fixture containing business history must be
+revoked and handled under the existing retention process, not force-deleted.
+
+For live confirmation, require a fresh actual MAX launch, correlate auth/max and
+me HTTP success with the verified user/session timestamps, inspect the authorized
+house list and board request, and distinguish an operator service/API check from
+a MAX-client interaction. Never replay or manufacture initData to obtain evidence.
