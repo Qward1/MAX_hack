@@ -124,5 +124,6 @@ A-15 authority. B-14 now has password/MFA cookie entry and session restoration.
 A-10/B-09 onboarding, company applications, limits and staff UI remain open.
 No main merge is implied; `origin/main=3d4a095` remains the accepted baseline.
 Release `f861e97` is DEPLOYED with deterministic auth/regressions verified; live
-employee MFA ownership is awaiting the human gate. Evidence is maintained in
+employee password change, human-owned MFA, scoped queue and same-session reload
+are LIVE VERIFIED. Reset/revoke/recovery remain deterministic-only. Evidence is maintained in
 [DEV-B status](docs/status/dev-b.md); historical live MAX evidence is preserved.

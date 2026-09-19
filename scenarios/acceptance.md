@@ -498,3 +498,7 @@ the human ownership gate; deterministic test OTP is never live evidence.
 
 Production evidence, backup/restore, deployed SHA and human MFA status are recorded
 in [DEV-B status](../docs/status/dev-b.md), separately from these test results.
+Human gate completed 19.09.2026: real password change/TOTP enrollment, scoped
+queue HTTP 200 and page reload preserving the single employee session are LIVE
+VERIFIED. Recovery/reset/revoke/restart/concurrency coverage above remains
+deterministic; the human-owned production account was not reset or revoked.

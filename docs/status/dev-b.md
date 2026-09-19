@@ -50,7 +50,7 @@ zero retries; failed worker jobs=0. Webhook missing secret is 401, valid secret
 with invalid empty payload is 422. Subscription URL and six event types unchanged.
 This is post-deploy health evidence, not a fresh human MAX product loop.
 
-**Isolated employee / human gate pending:** existing scoped employee UUID
+**Isolated employee / human gate completed:** existing scoped employee UUID
 `763c4458-e474-4398-9bc8-16ef79077463` has one active LIVE TEST company_admin
 membership, no Superadmin/MAX identity/resident grant; no authority expansion.
 Backup `/var/backups/domsignal/domsignal-20260919T190532283380Z.dump` restored to
@@ -60,22 +60,45 @@ across 20 domain/audit/delivery tables. Includes 2 Users, 1 resident membership,
 Dedicated MFA key generated once on VPS into mode-600 env without printing;
 protected env backup is present. MAX subscription read-only baseline retains
 same URL and six update types. Exactly one credential was provisioned through the production CLI for this existing
-User; login `live-test.operator`, active, forced password change, MFA not enrolled,
-zero authenticated employee sessions. Temporary password was returned only in the
-current operator output and is not stored in docs/git. No real MFA enrollment was
-automated. Live employee login, queue/reload and live revocation remain
-**NOT LIVE VERIFIED / WAITING FOR HUMAN MFA OWNERSHIP**.
+User; login `live-test.operator`. Temporary password was returned only in the
+operator output and is not stored in docs/git. The user completed password change
+at 19:32:12 UTC and personally enrolled/verified TOTP at 19:32:44 UTC; no real MFA
+enrollment was automated. Credential is active, `mfa_enabled=true`,
+`password_change_required=false`.
+
+**LIVE VERIFIED, 19.09.2026 19:38 UTC:** actual password/change/enroll/verify
+requests returned 200. Exactly one server session has source
+`employee_password_mfa`, created 19:32:44 UTC; after the user's page refresh its
+`last_seen_at` advanced to 19:37:30 UTC with the same session ID and exactly one
+`employee_auth.login_success` audit event. The user explicitly confirmed that
+login persisted and the queue opened. Actual `/api/v1/auth/employee/session`,
+`/api/v1/me` and scoped `/api/v1/tickets` requests returned 200 at 19:37:29 UTC.
+Read-only MembershipService/TicketService checks resolve the same single
+LIVE TEST company_admin grant, tenant `9f0306fa-9660-40ab-8527-f1e361d48d61`,
+one house `6edbf50b-4bb4-4a74-a6fd-40351010802e`, three tickets. No authority was
+added by authentication. All six employee security audit payloads contain only
+`user_id`; configured-secret comparison against API/worker logs found zero
+matches. Raw user passwords/TOTP/recovery codes were not retrieved for inspection.
+
+Post-human-gate health: `/ready` and capabilities 200, test auth false;
+webhook without secret 401, authenticated empty payload 422; existing MAX
+subscription URL/six event types unchanged, existing provider message GET 200.
+Notification remains accepted at desired/applied v12 with zero retries;
+failed jobs=0. API healthy, runtime build remains `f861e97`.
+
+**NOT LIVE VERIFIED:** recovery-code login, logout/relogin, credential reset,
+MFA reset, credential/membership revoke, concurrent MFA and restart survival
+were verified deterministically, not repeated against the human-owned production
+account. No new full human MAX product loop was requested after this auth deploy;
+existing live evidence and post-deploy provider/webhook health are distinguished.
 
 Configured-secret scan on VPS compared all tracked files against five actual
 production secret values: zero matches; env mode 600 confirmed. Local scan findings
 were synthetic/default constants, not production credentials.
 
-**Next / required human gate:** user opens production `/admin/`, signs in with the
-provided temporary credential, replaces the password and enrolls their own TOTP
-app, then reports «готово». After that verify credential/MFA state, employee-source
-session, real scoped API/queue/reload, and unchanged MAX health. A live revoke may
-remain deterministic-only to preserve the user's newly enrolled test account;
-never revoke resident MAX identity. Do not start onboarding UI. Recommended later
+**Next:** human MFA ownership, scoped queue and reload gate is complete. Live
+revoke remains deterministic-only to preserve the user's newly enrolled account;
+resident MAX identity was not revoked. Do not start onboarding UI. Recommended later
 DEV-B task: A-10/B-09 approved company application/invitation onboarding slice,
 only under a separate explicit task.
 
