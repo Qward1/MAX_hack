@@ -3,8 +3,8 @@
 Updated: 2026-09-19 (live Mini App identity continuation)
 Branch: dev/b-experience
 Current task: B-01 live Mini App authentication/context, then A-07 house/group smoke
-State: LIVE IDENTITY VERIFIED / ISOLATED HOUSE CLI IMPLEMENTED / NOT MERGED TO MAIN
-Real MAX: binding + validated initData + canonical User VERIFIED; house reopening pending
+State: MINI APP AUTHENTICATION/CONTEXT LIVE VERIFIED (MAX WEB) / NOT MERGED TO MAIN
+Real MAX: binding + validated initData + canonical User + test house board/reload VERIFIED
 
 ## Current Mini App checkpoint
 
@@ -21,11 +21,33 @@ precondition, ManagementService, explicit ResidentMembership, no employee/platfo
 role, operator audit and safe revoke/delete-empty. Deterministic PG tests exercise
 scope isolation, idempotency, invalid identity/other owner rejection, revocation
 and refusal to delete dependent rows. Added wrong-token/future-date/signed selector
-auth tests. OpenAPI/TS unchanged; checks and production deployment are recorded
-in the next live checkpoint below after execution. This is not a main merge.
+auth tests. OpenAPI/TS unchanged. This is not a main merge.
 
-Next: deploy and provision only the authorized test scope, request one real MAX
-reopen, verify board/context/reload, then proceed to group capability and A-07.
+Deployed code `d4b6776` via verified Git bundle (VPS has no GitHub credential),
+production Docker rebuild and healthy API/DB. The CLI created exactly one test
+scope at 17:43:43 UTC; operator audit retains IDs/reason. Production service reads
+return only that house with resident permissions, empty board succeeds, unknown
+house is masked 404. No organization membership, Report, Ticket or ChatBinding.
+Public ready 200, anonymous me 401 and disabled test-session 503; no new session
+issued by operator checks. Original real MAX session expired before provisioning.
+
+Checks PASS: 68 targeted PG/auth/production tests; backend 100 unit/contract,
+ruff/mypy 78 files, OpenAPI/TS drift, region validation, frontend production build,
+local + production Docker builds, Gitleaks staged scan and diff check. Existing
+Starlette/httpx/anyio deprecation notices only; no checks suppressed.
+
+Operator completed reopening at 17:44:49 UTC and separate MAX-menu reload at
+17:47:34 UTC. Each produced real auth/max, me and exact test-house board GET 200;
+same canonical User and resident scope. Operator confirmed the board remained
+visible. Mini App authentication/context is now LIVE VERIFIED for MAX Web.
+Tool browser inventory did not expose the user's MAX tab; visual confirmation
+is human evidence, not an automated browser fixture. Native mobile is untested.
+
+Provider me exposes no group-add switch. Current official docs deprecate GET/chats
+since June 2026, so its empty response proves neither absence of groups nor group
+disablement. Setting is organizer-owned and currently UNKNOWN. Requested actual
+addition/admin assignment in an existing test group. All later group/product loop
+steps remain pending; no synthetic production webhook/identity or binding used.
 
 ## Current production checkpoint
 

@@ -1,4 +1,4 @@
-# MAX live smoke — DEPLOYED / LIVE IDENTITY VERIFIED / HOUSE REOPEN PENDING
+# MAX live smoke — MINI APP AUTHENTICATION/CONTEXT LIVE VERIFIED (MAX WEB)
 
 ## Mini App identity continuation — 19 September 2026
 
@@ -35,11 +35,82 @@ test session, demo identity or client authority. It uses ManagementService and
 normal ResidentMembership/AccessPolicy, with an operator audit and revoke/delete
 commands. See [runbook](../deploy/README.md#7-explicit-isolated-live-resident-scope).
 
-House fixture deployment, actual board/reload after reopening, group capability,
-bot_added, authorized ConnectionRequest/ChatBinding, real report/Ticket/WorkAttempt,
-personal product notification, open_app/start_param and callback/observation are
-**PENDING** at this code checkpoint. Mini App authentication/context as a complete
-product gate is not yet promoted. No synthetic production webhook or identity used.
+### Isolated fixture — DEPLOYED / CLIENT REOPEN PENDING
+
+Code commit `d4b67769f94ed3a41c26e0934fa9ba8951f46522` is pushed to
+`dev/b-experience` and deployed. VPS has no noninteractive GitHub credential, so
+the verified commit bundle was transferred over existing SSH and fast-forwarded;
+no credential copied or main merge performed. Production runtime image:
+`sha256:a6a63aed17813fb1780655a966ded5c35dd698754658d81dd81bd00e858b5338`.
+`BUILD_COMMIT` matches the code commit, environment file remains mode 600.
+
+At `2026-09-19T17:43:43.629875+00:00`, the operator CLI created exactly:
+
+| Object | Persisted ID |
+|---|---|
+| House, labelled «ДомСигнал — LIVE TEST» | `6edbf50b-4bb4-4a74-a6fd-40351010802e` |
+| Separate ManagementCompany | `9f0306fa-9660-40ab-8527-f1e361d48d61` |
+| Active HouseManagement, ticket intake enabled | `3119b924-0a47-49a6-975d-2c0c5546894d` |
+| Explicit ResidentMembership for the real user above | `636ba083-db30-4ec4-b41a-50b821ddba54` |
+
+Audit receipt `operator:live-smoke-house:v1` records operator
+`codex-user-authorized` and reason `task-01a0bab9-explicit-single-live-test-house`.
+This operator record is not a MAX event. No employee grant or platform role exists.
+After creation DB counts: users/sessions/houses/companies/managements/resident
+memberships each 1; organization memberships, ChatBindings, Reports and Tickets 0.
+
+**Production operator service check:** MembershipService returns that single house
+with resident role. OperationContext pins its tenant and management, with only
+`report.create`, `incident.read`, `work.read`, `work.observe`. Board read succeeds
+with zero incidents; an unknown house is masked as 404. There is no foreign tenant
+in this fresh production DB; two-tenant negative cases are deterministic evidence.
+These direct read-only service checks are **not** a MAX-client board/reload claim.
+
+API and DB healthy, worker and Caddy running; public HTTPS `/ready` 200, anonymous
+`/api/v1/me` 401, disabled test-session probe 503; no session created by that probe.
+ALLOW_TEST_SESSION=false and DEMO_SEED=false, no fresh error/traceback/500 lines.
+The sole real session was source=max and expired at 17:43:29 UTC. Requested one
+fresh real MAX reopening; no raw initData or bearer replay was performed.
+
+**DETERMINISTIC VERIFIED:** 68 targeted tests (2 fixture, 16 tenant access,
+38 A-07, 11 initData, 1 production bootstrap); backend 100 unit/contract tests,
+ruff and mypy (78 source files); OpenAPI export/TS drift and region validation;
+frontend production build; full local and VPS Docker production builds;
+Gitleaks v8.24.3 staged-patch scan (no leaks), `git diff --check`.
+
+**LIVE VERIFIED in MAX Web:** actual House Board/context and reload, as detailed below.
+Group capability, bot_added, authorized ConnectionRequest/ChatBinding, real report,
+Ticket/WorkAttempt, personal product notification, open_app/start_param,
+callback/ResultObservation, close/reopen and source-message edit remain pending.
+Public `group_mode=false` is an application feature flag, not proof that organizers
+disabled the bot's group capability. Do not infer or activate a binding from it.
+
+### Real reopening and reload — Mini App authentication/context LIVE VERIFIED
+
+Operator replied «Готово». MAX Web freshly loaded the root and bundle at 17:44:47
+UTC, then auth/max 200 at 17:44:49.625196282Z, me 200 at 17:44:49.737007452Z
+and the exact authorized house board GET 200 at 17:44:49.847838368Z.
+The same canonical User has verified_at 17:44:49.618527+00:00 and a second
+source=max session expiring at 17:59:49.618573+00:00. The normal me read model
+still contains only the test house and resident role. No extra identity/role.
+
+Separate reload was performed through the MAX menu. Root GET 200 at 17:47:33 UTC,
+cached assets 304, auth/max 200 at 17:47:34.096788723Z, me 200 at
+17:47:34.318183235Z and exact test-house board GET 200 at 17:47:34.419205607Z.
+The operator confirmed the «ДомСигнал — LIVE TEST» board remained visible.
+UI confirmation is human evidence correlated with actual server requests, not a
+browser fixture: tool inventory exposes only empty Codex IAB, not that MAX tab.
+This verifies MAX Web; native iOS/Android and notification launch are not asserted.
+
+Read-only provider me still identifies the correct bot but exposes no group
+allow/deny switch. GET/chats returned an empty array, which is **not usable group
+capability or membership evidence**: current official
+[GET/chats](https://dev.max.ru/docs-api/methods/GET/chats) is unsupported since
+June 2026. Use real bot_added and per-chat membership/admin methods. The group-add
+switch belongs to the organizer's partner portal
+([official settings](https://dev.max.ru/help/chatbots)); default is off, but this
+bot's current setting is UNKNOWN. Requested actual addition/admin assignment in an
+existing test group to resolve this client-only gate. No binding activated.
 
 ## Production bootstrap — 19 September 2026 (Europe/Moscow)
 
