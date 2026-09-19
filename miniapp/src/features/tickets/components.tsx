@@ -95,7 +95,8 @@ export function TicketTimeline({ events }: { events: TicketEvent[] }) {
     <ol className="timeline">
       {events.map((event) => (
         <li key={event.id}>
-          <strong>{eventLabels[event.kind] ?? "Заявка обновлена"}</strong>
+          <strong>{event.kind === "assigned" && event.reason === "employee_revoked"
+            ? "Исполнитель снят с заявки" : eventLabels[event.kind] ?? "Заявка обновлена"}</strong>
           <time dateTime={event.created_at}>
             {formatDate(event.created_at)}
           </time>
@@ -111,7 +112,7 @@ export function TicketTimeline({ events }: { events: TicketEvent[] }) {
                       unknown_category: "Требуется уточнить категорию",
                     } as Record<string, string>
                   )[event.reason] ?? "Заявка передана в обработку")
-                : event.reason}
+                : event.reason === "employee_revoked" ? "Доступ сотрудника к УК отозван. История работы сохранена." : event.reason}
             </p>
           )}
         </li>

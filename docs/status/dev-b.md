@@ -24,17 +24,63 @@ HTTP+PG+worker+restart and Docker persistence smoke PASS. Populated migration
 test preserves earlier company/house/binding/credential/report/ticket/work rows
 and refuses downgrade after onboarding data. The expanded platform marker test
 also checks every platform mutation projection (20 administration tests PASS).
-Full browser administrative lifecycle including operator work/history after revoke
-PASS in Chrome; 29 existing browser regressions PASS. A consolidated final run is
-also being recorded. Gitleaks staged scan and both diff checks PASS.
+All **30 browser tests PASS** in Chrome in a single consolidated run, including
+the administrative lifecycle, operator work and retained history after revoke.
+Visual QA corrected the revoke event label (removed performer, not assigned)
+and translated platform audit events. After that display-only change, all 89
+frontend tests/typecheck/build and the full administrative browser flow PASS again.
+Gitleaks staged scan and both diff checks PASS.
 
 Before deployment, VPS backup
 `/var/backups/domsignal/domsignal-20260919T205955851493Z.dump` was restored into
 `domsignal_b09_restore_20260919`: all 29 public tables match full-row canonical
 hashes/counts, including 3 reports/tickets, 1 work attempt, 7 observations and the
 existing MAX binding. Previous deployed SHA is
-`f861e973f0cb7a2dd4ba5f6ce0f56dee91589600`. Production has not been migrated at this
-checkpoint; deployment/live evidence follows after completion.
+`f861e973f0cb7a2dd4ba5f6ce0f56dee91589600`. The new image first migrated the restored
+copy to `e107a3cff433`, passed Alembic drift and matched all 28 earlier data tables
+after excluding only new nullable columns. Production then migrated successfully
+and matched the same full-row hashes before live smoke. First deployed feature
+SHA: `876d3fe1e22183f0c0433df9fce4fcad160e4524`; the display-only follow-up in this
+checkpoint is deployed with its own exact SHA recorded by `/version` and
+the final handoff, without a documentation hash-update loop.
+
+**LIVE VERIFIED:** real HTTPS Chrome flow used public application → singleton
+audited platform CLI identity → normal password change/TOTP → platform approval →
+first admin invitation/registration/TOTP → company portal → operator invitation/
+registration/TOTP → house request → explicit new-house approval → assignment →
+operator view and reload showing exactly one house. No auth/permission fixtures
+ran in production. Platform bootstrap denied the company admin with 403.
+Three new dedicated identities have MFA; the existing human-owned employee and
+MAX resident were not changed. Credentials/recovery codes are in a local ACL-protected
+directory outside the repository; consumed invitation links and bootstrap password
+exports were removed. No secrets are written in this document.
+
+Isolated `LIVE ADMIN TEST 2026-09-19` company:
+`6d0996eb-02d6-44b4-8975-3c1e47b1316e`; house
+`cafb33aa-d182-426f-89d3-2da6c68b00cd`; management
+`35a1411c-0162-4a86-9aa7-d788d1d58318`. One application, two accepted invitations,
+one approved house request and one assignment; **zero real MAX groups added**.
+The test scope remains available for review. Audited cleanup: platform Organizations
+→ this exact LIVE ADMIN TEST company → enter cleanup reason → Suspend. This removes
+effective employee/house authority and preserves approval/history; do not delete
+the tenant/house or revoke the last administrator to simulate archiving.
+
+Post-deploy `/ready`, all four entry points and public HTTPS return 200; API healthy,
+worker running, test auth/seed false, failed jobs 0. Webhook without secret=401 and
+authenticated empty body=422. Existing bot identity/subscription URL and all six
+event types unchanged; one prior MAX binding remains active. Original 3 Reports,
+3 Tickets, 1 WorkAttempt and 7 observations remain; no new resident content was
+created by this live admin smoke. Source-file and API/worker log scan against five
+actual configured production secrets found zero matches; env mode is 600.
+VPS public self-connection stalled; external HTTPS and local Caddy TLS with the
+unchanged hostname verified readiness instead. No DNS/TLS/MAX configuration changed.
+
+**NOT LIVE VERIFIED:** invite expiry/replay/revoke races, multi-company switching,
+last-admin denial, historical management switches, company suspension and actual
+staff revoke were tested deterministically, not against retained live identities.
+New MAX connection UI was fully verified with the deterministic A-07 provider;
+no second live group was connected. Native mobile MAX and a new human resident
+delivery/observation loop were not repeated. Parent roadmap tasks remain PARTIAL.
 
 Roadmap mapping: A-10 onboarding/access slice implemented, parent PARTIAL for
 limits/reservations/settings/second-region scope; B-09 administrative UI slice

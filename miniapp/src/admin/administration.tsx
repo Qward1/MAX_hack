@@ -60,8 +60,22 @@ export function OneTimeLink({ url }: { url: string }) {
   </section>;
 }
 export function History({ rows }: { rows: Schema["AuditView"][] }) {
+  const labels: Record<string, string> = {
+    "company_application.submitted": "Заявка УК подана", "company_application.under_review": "Заявка УК на рассмотрении",
+    "company_application.needs_info": "Запрошены уточнения по УК", "company_application.approved": "Заявка УК одобрена",
+    "company_application.rejected": "Заявка УК отклонена", "company_application.cancelled": "Заявка УК отменена",
+    "company.created": "Организация создана", "company.suspended": "Организация приостановлена", "company.active": "Организация возобновлена",
+    "invitation.created": "Приглашение создано", "invitation.claimed": "Приглашение закреплено за сотрудником",
+    "invitation.accepted": "Приглашение принято", "invitation.revoked": "Приглашение отозвано",
+    "membership.created": "Доступ сотрудника активирован", "membership.revoked": "Доступ сотрудника отозван",
+    "assignment.changed": "Назначение на дом изменено", "first_admin.reissued": "Первое приглашение перевыпущено",
+    "house_request.submitted": "Заявка на дом подана", "house_request.under_review": "Заявка на дом на рассмотрении",
+    "house_request.needs_info": "Запрошены уточнения по дому", "house_request.approved": "Заявка на дом одобрена",
+    "house_request.rejected": "Заявка на дом отклонена", "house_request.cancelled": "Заявка на дом отменена",
+    "management.approved": "Управление домом подтверждено", "platform.bootstrapped": "Оператор платформы создан",
+  };
   return <ol className="admin-history">{rows.map((r, i) => <li key={i}>
-    <time>{new Date(r.occurred_at).toLocaleString("ru-RU")}</time> · {r.event}
+    <time>{new Date(r.occurred_at).toLocaleString("ru-RU")}</time> · {labels[r.event.replace(/^administration\./, "")] ?? "Административное действие"}
     {r.reason && <p>{r.reason}</p>}</li>)}</ol>;
 }
 export const formValue = (data: FormData, key: string) => String(data.get(key) ?? "").trim();

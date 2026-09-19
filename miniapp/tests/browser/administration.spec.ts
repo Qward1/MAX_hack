@@ -155,6 +155,7 @@ test("B09 full administrative lifecycle, separate surfaces, privacy and revoke",
     await expect(companyTicket).toHaveCount(1);
     await companyTicket.click();
     await expect(admin.getByText("B09 historical work survives revocation", { exact: true })).toBeVisible();
+    await expect(admin.getByText("Исполнитель снят с заявки", { exact: true })).toBeVisible();
     await applicant.goto("/?test_actor=a16-resident");
     await expect(applicant.locator(".admin-sidebar")).toHaveCount(0);
     await platform.screenshot({ path: "test-results/b09-platform.png", fullPage: true });
