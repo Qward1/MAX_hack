@@ -4,7 +4,7 @@ Updated: 2026-09-19 (live Mini App identity continuation)
 Branch: dev/b-experience
 Current task: B-01 live Mini App authentication/context, then A-07 house/group smoke
 State: MINI APP AUTHENTICATION/CONTEXT LIVE VERIFIED (MAX WEB) / NOT MERGED TO MAIN
-Real MAX: binding + validated initData + canonical User + test house board/reload VERIFIED
+Real MAX: Mini App identity/board/reload + group bot_added/admin rights VERIFIED
 
 ## Current Mini App checkpoint
 
@@ -50,6 +50,23 @@ addition/admin assignment in an existing test group. All later group/product loo
 steps remain pending; no synthetic production webhook/identity or binding used.
 
 ## Current production checkpoint
+
+### Live group continuation
+
+Real bot_added accepted at 17:51:14 UTC; MAXChat `-79142681723640` (`TEST_MAX`)
+persisted. Provider verifies bot admin + read_all_messages, connector is current
+admin/owner. Group capability LIVE VERIFIED, organizer gate resolved.
+Requests/bindings remain zero because installation preceded A-07 correlation.
+Added live_connection prepare/approve CLI, confined to audited singleton scope,
+using existing initiate/approve with a separate scoped CLI service principal (no
+MAX identity/session/platform role). Real user's resident permissions unchanged.
+Revoke also disables the operator grant. Correlated bot_started/re-add remains a
+MAX-client step; no synthetic event, backdate, or direct binding state mutation.
+Deterministic coverage tests missing event/correlation, no client/staff escalation,
+fresh-rights rejection, correct activation and scope revocation. Deployment and
+subsequent live evidence will be recorded after execution. Checks PASS: 41 targeted
+PG tests (38 A-07, 2 fixture, 1 operator flow), 100 unit/contract, ruff/mypy 79
+source files, OpenAPI/TS drift, full Docker production build, Gitleaks and diff check.
 
 Resumed START ref and own origin ref:
 `b986aeda249316d75ad2a2c9620a803033e96a69`; origin/main already an ancestor.

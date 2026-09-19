@@ -268,3 +268,31 @@ For live confirmation, require a fresh actual MAX launch, correlate auth/max and
 me HTTP success with the verified user/session timestamps, inspect the authorized
 house list and board request, and distinguish an operator service/API check from
 a MAX-client interaction. Never replay or manufacture initData to obtain evidence.
+
+## 8. Live A-07 operator connection
+
+`python -m domsignal.tools.live_connection prepare --chat-id=<real-chat-id>
+--operator <name> --reason <authorization-reference>` is confined to the singleton
+active fixture and a group already observed in an authenticated bot_added receipt.
+It creates one labelled CLI User with **no MAX identity, session or platform role**
+and company_admin membership only in the test company. The real resident remains
+resident. It calls existing ChatConnectionService.initiate and returns the
+one-time `?start=connect_...` link; the raw token is never in DB/audit/docs.
+This explicit service account supports authorized test-company backend actions;
+it is not a fake MAX identity or employee web-auth bypass.
+
+The connector must open that link in MAX before adding the bot. If the capability
+smoke added it before the request existed, a fresh addition after bot_started is
+required by A-07's temporal correlation. Do not backdate requests, fabricate events,
+assign candidate IDs directly or infer binding from title. Original receipts remain.
+
+After real correlation, `python -m domsignal.tools.live_connection approve
+--chat-id=<same-real-chat-id> --operator <name> --reason <authorization-reference>
+--confirm` checks pinned chat/connector/management and calls existing service approve.
+That service rechecks management/tenant/staff authority and fresh MAX rights before
+creating ACTIVE binding. No new HTTP endpoint or alternate binding transition.
+Operator audit `operator:live-smoke-connection:v1` records request/principal/scope
+and activation IDs, distinct from MAX webhook evidence. Repeat prepare returns no
+new token and grants no additional account. An expired/lost request must be cancelled
+and recreated through the same application service with an explicit operator audit.
+Fixture `revoke` also revokes the CLI company membership; history remains intact.

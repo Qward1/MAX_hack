@@ -18,6 +18,7 @@ from domsignal.db.models import (
     HouseManagement,
     InboxReceipt,
     ManagementCompany,
+    OrganizationMembership,
     ResidentMembership,
     User,
 )
@@ -122,6 +123,13 @@ async def operate(
             membership.status = "revoked"
             management.status = "ended"
             company.status = "archived"
+            if payload.get("operator_membership_id"):
+                grant = await session.get(
+                    OrganizationMembership, UUID(payload["operator_membership_id"])
+                )
+                if grant is None or grant.tenant_id != company.id:
+                    raise ValueError("Operator grant mismatch")
+                grant.status = "revoked"
             payload["status"] = "revoked"
         else:
             # Check every FK in metadata, including cascading ones: no product,

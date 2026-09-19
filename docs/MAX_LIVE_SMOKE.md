@@ -114,6 +114,29 @@ existing test group to resolve this client-only gate. No binding activated.
 
 ## Production bootstrap — 19 September 2026 (Europe/Moscow)
 
+### Live group continuation — 19 September, after resident verification
+
+**LIVE VERIFIED:** operator added the bot to `TEST_MAX` and assigned admin rights.
+Webhook auth succeeded, HTTP 200 at `2026-09-19T17:51:14.626494760Z`.
+Real bot_added receipt:
+`max:675e080a2bdf65fd4177973c06d13f2394878c1c1ca303f41fbf094dc7470248`,
+accepted at `17:51:14.611488+00:00`, actual lifecycle time `17:51:12.762+00:00`.
+MAXChat persists group `-79142681723640`, type=chat, bot_present=true.
+
+Real per-chat API reads confirm bot `402577719` is_admin=true and permission
+read_all_messages (also write/pin_message and other operator-assigned rights).
+Connector `294889720` is the current admin and owner. Group capability is enabled;
+no organizer action needed. This confirms group installation/rights, not binding.
+
+There were zero ConnectionRequests and zero ChatBindings. A-07 requires a request
+and correlated bot_started before bot_added; the capability smoke addition correctly
+did not bind a house. Added operator CLI prepare/approve using the existing A-07
+services, pinned to the audited test scope and observed group. Scoped CLI principal
+has no MAX identity/session/platform role; resident grants do not change.
+See [operator path](../deploy/README.md#8-live-a-07-operator-connection).
+No request timestamps or events are backdated, no candidate/binding state forced.
+Real correlated installation, binding and product report remain pending.
+
 **DEPLOYED:** API, worker, PostgreSQL and Caddy are running on `domsignal-prod`
 (`176.108.244.168`), checkout `/opt/domsignal`, branch `dev/b-experience`.
 Initial deployed application SHA: `7d941b94fde0bd9b06fb8b08d969a2417e8b7c1b`.
