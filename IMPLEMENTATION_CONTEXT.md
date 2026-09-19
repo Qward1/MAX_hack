@@ -116,3 +116,12 @@ B-02 остаётся PARTIAL: C0 producer расходится с B-00 target �
 
 - [DEV-A handoff](docs/status/dev-a.md) · [DEV-B handoff](docs/status/dev-b.md)
 - [Roadmap](ROADMAP.md) · [Architecture](docs/ARCHITECTURE.md) · [Contracts](docs/CONTRACTS.md)
+
+## Employee authentication branch checkpoint — 19.09.2026
+
+A-10 employee identity slice is implemented in `dev/b-experience`, separately from
+A-15 authority. B-14 now has password/MFA cookie entry and session restoration.
+A-10/B-09 onboarding, company applications, limits and staff UI remain open.
+No main merge is implied; `origin/main=3d4a095` remains the accepted baseline.
+Current deterministic/deployment/human MFA evidence is maintained in
+[DEV-B status](docs/status/dev-b.md); historical live MAX evidence is preserved.

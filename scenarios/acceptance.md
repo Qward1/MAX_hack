@@ -443,3 +443,56 @@ version, 2 attempts и 2 observations. Self-report не называется а�
 Дополнительно проверена field-level 422 с безопасной коррекцией формы.
 A-01/A-15/A-07/A-16 и 8 прежних browser B-02 tests входят в regression прогон.
 Реальные MAX clients/notifications/token/TLS и production web-auth/MFA NOT VERIFIED.
+# A-10 employee authentication acceptance — 19.09.2026
+
+Scope: A-10 employee-auth slice + B-14 entry; B-09 onboarding is not closed.
+Deterministic evidence uses PostgreSQL (`test_employee_auth.py`,
+`test_employee_auth_migration.py`), the existing MAX/config regressions, and
+`miniapp/tests/browser/employee-auth.spec.ts`. LIVE employee MFA remains pending
+the human ownership gate; deterministic test OTP is never live evidence.
+
+| Check | Deterministic evidence |
+|---|---|
+| AUTH-01 | Existing active employee provision + password-stage HTTP; browser CLI flow. |
+| AUTH-02 | Unknown login/wrong password have identical Problem payload excluding trace ID. |
+| AUTH-03 | Argon2id persisted; verification and no plaintext password storage. |
+| AUTH-04 | Temporary single-use/expiry and forced replacement; weak password rejected. |
+| AUTH-05 | `/me` denied after password and before MFA; enroll route rejects wrong step. |
+| AUTH-06 | Standard provisioning URI parsed by PyOTP; local SVG QR; browser enrollment. |
+| AUTH-07 | Wrong TOTP rejected. |
+| AUTH-08 | Valid TOTP final cookie; normal challenge and replay protection. |
+| AUTH-09 | Browser reload preserves same valid session identifier. |
+| AUTH-10 | localStorage/sessionStorage empty after login; no production Bearer input. |
+| AUTH-11 | Secure, HttpOnly, Lax, host-only cookie assertions. |
+| AUTH-12 | Anonymous/password/final identifiers differ. |
+| AUTH-13 | Logout denies next `/me`, clears cookie; repeated logout safe. |
+| AUTH-14 | Old final-cookie replay fails after logout. |
+| AUTH-15 | Recovery works only after password stage. |
+| AUTH-16 | Used recovery code replay denied; DB used_at set once. |
+| AUTH-17 | MFA reset invalidates employee sessions and pending challenges. |
+| AUTH-18 | Password reset invalidates employee sessions and old password. |
+| AUTH-19 | Revoked credential cannot login. |
+| AUTH-20 | Membership revoke removes next operational read. |
+| AUTH-21 | Foreign tenant concealed by current A-15 404. |
+| AUTH-22 | Unassigned house denied; revoked/moved assignment takes effect. |
+| AUTH-23 | Suspended company / ended management denies operational access. |
+| AUTH-24 | CSRF-less login and actual Ticket mutation denied. |
+| AUTH-25 | Valid CSRF allows assigned employee Ticket accept. |
+| AUTH-26 | Durable rate limit returns sanitized 429; bounded IP/identifier state. |
+| AUTH-27 | Production config and test-session-disabled contract regression. |
+| AUTH-28 | Existing signed MAX initData/auth integration + resident browser regressions. |
+| AUTH-29 | Provision creates no resident membership; existing domain rights unchanged. |
+| AUTH-30 | Sanitized audit/log capture, generic Problem payloads, no credential contents. |
+| AUTH-31 | Concurrent successful MFA submissions create exactly one session. |
+| AUTH-32 | Revoke during pending MFA makes completion fail. |
+| AUTH-33 | Membership revoked after login blocks next real Ticket mutation. |
+| AUTH-34 | Consumed preauth cannot complete again after final session. |
+| AUTH-35 | Password reset consumes old pending challenges. |
+| AUTH-36 | Correct CSRF with foreign Origin still rejected. |
+| AUTH-37 | New API instance rejects persisted revoked session. |
+| AUTH-38 | New API instance accepts persisted valid session. |
+| AUTH-39 | DB TOTP value differs from secret; decryption requires separate key. |
+| AUTH-40 | Browser logout/back/relogin + switch to another company clears private UI. |
+
+Production evidence, backup/restore, deployed SHA and human MFA status are recorded
+in [DEV-B status](../docs/status/dev-b.md), separately from these test results.

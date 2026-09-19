@@ -25,12 +25,17 @@ def test_local_defaults_use_safe_offline_providers() -> None:
 
 def test_production_rejects_local_bypass_and_default_secrets() -> None:
     with pytest.raises(ValidationError, match="unsafe production settings"):
-        Settings(app_env="production", _env_file=None)
+        Settings(
+            app_env="production",
+            auth_mfa_encryption_key="MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+            _env_file=None,
+        )
 
 
 def test_production_accepts_explicit_safe_baseline() -> None:
     settings = Settings(
         app_env="production",
+        auth_mfa_encryption_key="MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
         database_url="postgresql+asyncpg://app:strong-password-123@db/domsignal",
         session_secret="a-production-secret-with-sufficient-entropy",
         allow_test_session=False,
@@ -49,6 +54,8 @@ def test_production_accepts_explicit_safe_baseline() -> None:
 @pytest.mark.parametrize(
     ("override", "message"),
     [
+        ({"auth_mfa_encryption_key": None}, "AUTH_MFA_ENCRYPTION_KEY"),
+        ({"auth_mfa_encryption_key": "invalid"}, "AUTH_MFA_ENCRYPTION_KEY"),
         ({"session_secret": "short"}, "SESSION_SECRET"),
         ({"max_transport": "off"}, "MAX_TRANSPORT"),
         ({"max_bot_token": ""}, "MAX_BOT_TOKEN"),
@@ -82,6 +89,7 @@ def test_production_rejects_each_unsafe_live_override(
 ) -> None:
     values: dict[str, object] = {
         "app_env": "production",
+        "auth_mfa_encryption_key": "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
         "database_url": "postgresql+asyncpg://app:strong-password-123@db/domsignal",
         "session_secret": "a-production-secret-with-sufficient-entropy",
         "allow_test_session": False,

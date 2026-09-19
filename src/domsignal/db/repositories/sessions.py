@@ -23,6 +23,8 @@ class SessionRepository:
                 select(AppSession).where(
                     AppSession.token_hash == token_hash,
                     AppSession.expires_at > now,
+                    AppSession.revoked_at.is_(None),
+                    AppSession.source.in_(["max", "test"]),
                 )
             ),
         )

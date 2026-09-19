@@ -157,7 +157,12 @@ async function workReport(page: Page, text: string) {
   ).toBeVisible();
 }
 async function axe(page: Page) {
-  await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
+  // Keep production CSP enforced; serve only this test asset from the browser harness.
+  await page.route("**/__test_axe.js", route => route.fulfill({
+    path: require.resolve("axe-core/axe.min.js"), contentType: "text/javascript",
+  }));
+  await page.addScriptTag({ url: "/__test_axe.js" });
+  await page.unroute("**/__test_axe.js");
   const violations = await page.evaluate(async () =>
     (
       await (window as any).axe.run(document, {

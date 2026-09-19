@@ -1,5 +1,23 @@
 # ДомСигнал — UX contract B-00
 
+## A-10 employee entry — branch slice, 19.09.2026
+
+`/admin/` checks the server session before showing private content. `/admin/login`
+supports login/password, required password replacement, authenticator enrollment
+with local QR/manual key, TOTP or recovery challenge, and a one-time recovery-code
+screen. Enrollment verification itself proves the second factor. Reload restores
+the constrained step or authenticated cookie; recovery codes are never restored.
+The employee shell includes logout. No Bearer entry or browser credential storage
+remains in production. Explicit `test_actor` is honored only when the server
+advertises nonproduction test auth; no MAX Bridge is used by employee login.
+
+Logout unmounts private queries and notifies other tabs without sending secrets.
+401 discards private UI and restores the login step; 403 displays no-access.
+The existing query layer also clears private data on concealing 404. No-access
+identity may remain valid while assignments/company status restrict operations.
+Public signup, staff management, company onboarding and email recovery are outside
+this slice. Operator reset/revoke is the recovery path at this stage.
+
 ## Статус и границы
 
 Версия `v0.1` описывает целевой UX для реализации после foundation. Это не

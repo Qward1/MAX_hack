@@ -8,6 +8,12 @@ from domsignal.db.models.access import (
     User,
 )
 from domsignal.db.models.chat_connections import ChatBinding, ConnectionRequest, MAXChat
+from domsignal.db.models.employee_auth import (
+    AuthChallenge,
+    AuthRateLimit,
+    EmployeeCredential,
+    RecoveryCode,
+)
 from domsignal.db.models.incidents import Incident, Report
 from domsignal.db.models.notifications import MaxDestinationLimit, NotificationDelivery
 from domsignal.db.models.reliability import IdempotencyRecord, InboxReceipt, Job, OutboxMessage
@@ -21,6 +27,7 @@ from domsignal.db.models.tickets import (
 )
 
 __all__ = [
+    "AuthChallenge", "AuthRateLimit", "EmployeeCredential", "RecoveryCode",
     "MaxDestinationLimit",
     "NotificationDelivery",
     "Ticket",

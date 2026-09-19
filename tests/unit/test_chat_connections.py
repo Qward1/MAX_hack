@@ -93,6 +93,7 @@ async def test_adapter_failures(error: str) -> None:
 async def test_production_never_selects_fake_and_configures_live_max() -> None:
     settings = Settings(
         app_env="production",
+        auth_mfa_encryption_key="MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
         allow_test_session=False,
         demo_seed=False,
         session_secret="synthetic-production-session-secret-1234",

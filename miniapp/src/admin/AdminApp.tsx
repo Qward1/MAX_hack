@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { problemStatus, type Me } from "../shared/api/client";
+import { type Me } from "../shared/api/client";
 import { TicketClient, ticketClient, type Ticket } from "../shared/api/tickets";
 import { useResource } from "../shared/api/useResource";
 import { categoryLabel, formatDate } from "../features/incidents/presentation";
@@ -154,9 +154,6 @@ export function AdminApp({ client = ticketClient }: { client?: TicketClient }) {
               error={session.error}
               retry={session.refresh}
             />
-            {problemStatus(session.error) === 401 && (
-              <SessionEntry client={client} refresh={session.refresh} />
-            )}
           </>
         ) : session.error ? (
           <TicketState error={session.error} retry={refresh} />
@@ -239,45 +236,6 @@ export function AdminApp({ client = ticketClient }: { client?: TicketClient }) {
         )}
       </main>
     </div>
-  );
-}
-function SessionEntry({
-  client,
-  refresh,
-}: {
-  client: TicketClient;
-  refresh: () => void;
-}) {
-  const [token, setToken] = useState("");
-  return (
-    <form
-      className="ticket-panel ticket-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        client.useSession(token);
-        setToken("");
-        refresh();
-      }}
-    >
-      <h2>Вход с действующей сессией</h2>
-      <p>
-        Введите токен действующей сессии ДомСигнала. После перезагрузки
-        потребуется повторный вход.
-      </p>
-      <label>
-        Токен сессии
-        <input
-          type="password"
-          autoComplete="off"
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-          required
-        />
-      </label>
-      <button className="ticket-button" type="submit">
-        Войти
-      </button>
-    </form>
   );
 }
 function HouseQueue({

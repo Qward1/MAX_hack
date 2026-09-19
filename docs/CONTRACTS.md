@@ -1,5 +1,33 @@
 # ДомСигнал — UX/API contract v0.1
 
+## A-10 employee web-auth contract — 19.09.2026 branch slice
+
+Prefix `/api/v1/auth/employee`:
+
+| Method / suffix | Input / result |
+|---|---|
+| GET `/session` | Restore identity or constrained step; `{stage, csrf_token, recovery_codes: []}`. Missing/expired identity starts anonymous preauth. |
+| POST `/login` | `{login_name,password}`; generic 401 for unknown/wrong/revoked/expired credentials; rotate preauth cookie. |
+| POST `/password/change` | `{password}`; only forced-change preauth, rotates state. |
+| POST `/mfa/enroll` | Preauth only; locally generated `{secret,otpauth_uri,qr_svg}`; no external QR service. |
+| POST `/mfa/verify` | `{code}`; enrollment verification, authenticated cookie and recovery_codes shown once. |
+| POST `/mfa/challenge` | `{code}`; normal TOTP second factor. |
+| POST `/recovery` | `{code}`; requires verified password stage, consumes one recovery code. |
+| POST `/logout` | Revoke employee session/preauth and clear cookies; idempotent. |
+
+Stages: `login`, `password_change`, `mfa_enroll`, `mfa_challenge`, `authenticated`.
+Responses never expose cookie tokens, authority claims or password hashes. The
+enrollment response is sensitive and no-store. Every POST requires matching
+Origin and X-CSRF-Token from the current stage (cookie-free repeated logout only
+requires matching Origin). Business POSTs authenticated with an employee cookie
+have the same CSRF requirement. 429 uses existing Problem Details with
+`auth_rate_limited`; other errors retain sanitized common Problem shape.
+
+Login identifiers normalize trim + lowercase ASCII `[a-z0-9][a-z0-9._-]{2,99}`;
+unique constraint is in PostgreSQL. `/auth/max`, test-session environment gates,
+and A-15 authorization contracts remain unchanged. Forbidden object scope may
+return the established concealing 404. No `/register` endpoint exists.
+
 ## Статус
 
 B-00 ниже сохраняет TARGET будущих workflows. **A-01 / C0.1 IMPLEMENTED IN

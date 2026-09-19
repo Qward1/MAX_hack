@@ -60,6 +60,27 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:8000"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
     static_dir: str = "miniapp/dist"
+    auth_mfa_encryption_key: str | None = Field(default=None, repr=False)
+    auth_password_max_length: int = Field(default=1024, ge=64, le=4096)
+    auth_session_idle_seconds: int = Field(default=1800, ge=60, le=86400)
+    auth_session_absolute_seconds: int = Field(default=28800, ge=300, le=86400)
+    auth_challenge_seconds: int = Field(default=600, ge=60, le=900)
+    auth_temporary_password_seconds: int = Field(default=86400, ge=300, le=172800)
+    auth_rate_threshold: int = Field(default=10, ge=2, le=100)
+    auth_rate_window_seconds: int = Field(default=300, ge=30, le=3600)
+    auth_rate_backoff_seconds: int = Field(default=300, ge=30, le=3600)
+
+    @field_validator("auth_mfa_encryption_key")
+    @classmethod
+    def validate_mfa_key(cls, value: str | None) -> str | None:
+        if value is not None:
+            from cryptography.fernet import Fernet
+
+            try:
+                Fernet(value.encode("ascii"))
+            except (ValueError, UnicodeError) as exc:
+                raise ValueError("AUTH_MFA_ENCRYPTION_KEY must be a Fernet key") from exc
+        return value
 
     @field_validator("max_bot_token", "max_bot_username", "max_webhook_secret", mode="before")
     @classmethod
@@ -131,6 +152,8 @@ class Settings(BaseSettings):
         if self.app_env is not AppEnvironment.PRODUCTION:
             return self
         problems: list[str] = []
+        if not self.auth_mfa_encryption_key:
+            problems.append("AUTH_MFA_ENCRYPTION_KEY is required")
         database = urlparse(self.database_url)
         session_secret_lower = self.session_secret.lower()
         if self.allow_test_session:
@@ -161,9 +184,7 @@ class Settings(BaseSettings):
             or len(set(self.max_webhook_secret)) < 8
             or "replace" in self.max_webhook_secret.lower()
         ):
-            problems.append(
-                "MAX_WEBHOOK_SECRET must be a strong value of at least 32 characters"
-            )
+            problems.append("MAX_WEBHOOK_SECRET must be a strong value of at least 32 characters")
         if self.max_bot_username != PRODUCTION_MAX_BOT_USERNAME:
             problems.append(f"MAX_BOT_USERNAME must be {PRODUCTION_MAX_BOT_USERNAME} in production")
         if self.max_api_base_url != MAX_API_ORIGIN:

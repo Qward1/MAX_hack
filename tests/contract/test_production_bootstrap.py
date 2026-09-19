@@ -7,6 +7,7 @@ from domsignal.settings import PRODUCTION_MAX_BOT_USERNAME, Settings
 def production_settings() -> Settings:
     return Settings(
         app_env="production",
+        auth_mfa_encryption_key="MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
         database_url="postgresql+asyncpg://app:strong-password-123@db/domsignal",
         session_secret="synthetic-production-session-secret-1234",
         allow_test_session=False,

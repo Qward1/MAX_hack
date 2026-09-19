@@ -1,5 +1,49 @@
 # ДомСигнал — фактическая архитектура FND-01
 
+## A-10 employee authentication — branch slice, 19.09.2026
+
+Employee web identity is separate from MAX initData. `EmployeeCredential` references
+one existing User and a normalized unique ASCII login; it contains no company,
+role or house. Operator provisioning requires an existing active organization
+membership. A-15 MembershipService/AccessPolicy still resolves current authority
+on every business request; no JWT or cached authority is introduced.
+
+Passwords use argon2-cffi Argon2id (64 MiB, time cost 3, parallelism 4); verification
+runs outside the event loop with two concurrent expensive verifications per process.
+The 12-character minimum permits spaces/password managers; weak defaults and
+oversized inputs are rejected. Temporary passwords expire and are consumed once.
+PyOTP supplies RFC 6238 TOTP, including replay protection with a locked last time
+step. Fernet protects both pending and enrolled secrets using dedicated
+AUTH_MFA_ENCRYPTION_KEY. Ten random 80-bit recovery codes are HMAC-SHA256 digested
+with purpose separation and atomically consumed under the credential lock.
+
+AuthChallenge stores only a token HMAC, constrained stage, expiry and encrypted
+pending enrollment. Password stage rotates the token; final MFA consumes all
+sibling challenges and creates an `AppSession(source=employee_password_mfa)`.
+This existing session model now has nullable last_seen_at, idle_expires_at and
+revoked_at, leaving MAX/test semantics intact. Employee cookies are 256-bit opaque,
+Secure/HttpOnly/SameSite=Lax, host-only, Path=/, with `__Host-` names. Default idle
+and absolute limits are 30 minutes and 8 hours. Reset/revoke invalidates only this
+source plus its challenges; MAX sessions are preserved. A valid employee cookie
+can remain identity-only after domain access is revoked.
+
+All cookie mutations require exact PUBLIC_BASE_URL Origin and a server-issued,
+session-bound CSRF token in X-CSRF-Token. The shared employee client attaches it
+from memory. Employee session tokens cannot authenticate via Bearer. CORS remains
+noncredentialed for existing MAX consumers; employee web is same-origin. API/admin
+responses are no-store; `/admin` has a separate frame-denying CSP without changing
+resident embedding. The production private API trusts only the reverse-proxy
+deployment boundary for forwarded client addresses; never publish its port broadly.
+
+PostgreSQL AuthRateLimit uses at most 131072 keyed hash slots for normalized IP
+and identifier, temporary threshold/window/backoff, committed before expensive
+verification. MFA/recovery share the account budget; full success resets the
+identifier budget, while the IP budget still bounds abuse. Hash collisions share
+a temporary limit. Security events use the existing InboxReceipt audit pattern,
+with only event type and user ID, never submitted credentials. Migration
+`1c5baa831ec9` is additive and refuses downgrade once credential/session/audit
+history exists. Authentication adds no public registration or onboarding UI.
+
 ## Статус
 
 Проверенный baseline: `origin/main` и `dev/b-experience` на `3d4a095`

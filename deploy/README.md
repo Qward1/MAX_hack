@@ -1,5 +1,52 @@
 # Production VPS runbook
 
+## A-10 employee authentication operations
+
+Generate AUTH_MFA_ENCRYPTION_KEY once **on the VPS**, using
+`cryptography.fernet.Fernet.generate_key()`, and append it directly to the protected
+`deploy/.env.production` (mode 600). Never print/commit the key or rotate it on
+deployment. Production settings and Compose fail closed without a valid key.
+Back up this env/key separately in protected storage alongside the DB backup;
+losing it makes enrolled MFA secrets unreadable. SESSION_SECRET also protects
+session/recovery digests; unplanned rotation invalidates those proofs.
+
+Before migration record deployed SHA and run the existing `backup_postgres.py`
+with a private backup directory. Restore the dump to a separate verification DB
+and compare preserved domain rows; never reset the live DB. Upgrade is additive.
+Downgrade refuses credential/audit loss; use a separate pre-auth backup with the
+matching application if a rollback is necessary. Keep MAX subscription/token and
+webhook secret unchanged. Caddy retains TLS/HSTS; admin-only CSP is set by backend.
+The production API remains loopback/private-network-only: its proxy-header trust
+depends on Caddy being the sole untrusted-client ingress.
+
+Inside the production API container, using an **existing** employee UUID:
+
+```sh
+python -m domsignal.tools.employee_auth create --user-id <UUID> --login-name <login>
+python -m domsignal.tools.employee_auth status --user-id <UUID>
+python -m domsignal.tools.employee_auth reset-password --user-id <UUID>
+python -m domsignal.tools.employee_auth reset-mfa --user-id <UUID>
+python -m domsignal.tools.employee_auth revoke --user-id <UUID>
+```
+
+`create` and `reset-password` return a strong temporary password only in operator
+stdout after commit. Deliver privately, never via command arguments/docs/logs.
+It expires in 24 hours and is consumed by the first password stage; abandoning
+that constrained flow may require operator reset. Reset-password explicitly
+reactivates a revoked credential only if active employee membership still exists.
+Reset-MFA clears encrypted secret/recovery proofs; subsequent password login
+requires fresh enrollment. All three reset/revoke commands invalidate employee
+web sessions and preauth challenges, preserving resident MAX sessions.
+
+Defaults/configuration: AUTH_PASSWORD_MAX_LENGTH=1024;
+AUTH_CHALLENGE_SECONDS=600; AUTH_TEMPORARY_PASSWORD_SECONDS=86400;
+AUTH_SESSION_IDLE_SECONDS=1800; AUTH_SESSION_ABSOLUTE_SECONDS=28800;
+AUTH_RATE_THRESHOLD=10; AUTH_RATE_WINDOW_SECONDS=300;
+AUTH_RATE_BACKOFF_SECONDS=300. IP threshold is five times the identifier threshold.
+MFA is required in every employee flow, including production. Local deterministic
+OTP helpers live only under tests, require APP_ENV=test and test-auth opt-in,
+and must never be used for ownership of a live enrollment.
+
 This runbook deploys the existing API/webhook, durable worker, PostgreSQL and
 Caddy HTTPS edge. It does not create a MAX subscription automatically. Local
 Compose remains offline; the production overlay is intentionally fail-closed and

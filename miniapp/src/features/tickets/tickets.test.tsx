@@ -213,7 +213,9 @@ describe("B-14 resident actions", () => {
   it("employee authentication never reads MAX initData and production ignores test actor", async () => {
     window.WebApp = { initData: "must-not-use" };
     window.history.replaceState(null, "", "/admin/?test_actor=a16-admin");
-    const fetcher = vi.fn();
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      stage: "login", csrf_token: "synthetic-csrf", recovery_codes: [],
+    }), { status: 200 }));
     vi.stubGlobal("fetch", fetcher);
     await expect(
       new ApiClient("employee").authenticate({
@@ -221,6 +223,7 @@ describe("B-14 resident actions", () => {
         environment: "production",
       }),
     ).rejects.toMatchObject({ problem: { status: 401 } });
-    expect(fetcher).not.toHaveBeenCalled();
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(fetcher.mock.calls[0][0]).toBe("/api/v1/auth/employee/session");
   });
 });

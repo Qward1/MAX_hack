@@ -1,5 +1,59 @@
 # DEV-B — current handoff
 
+## A-10 employee web-auth checkpoint — 19.09.2026
+
+Owner DEV-B, branch `dev/b-experience`; START `f61b32a`, production before this
+slice `6ac08e09d22a11836fc18a45cb65b594f67bbad4`. `origin/main=3d4a095` is an
+ancestor; no main merge or DEV-A write. Historical MAX evidence below is retained.
+
+**IMPLEMENTED IN BRANCH:** employee password/TOTP/recovery authentication,
+operator create/reset-password/reset-mfa/revoke/status, constrained preauth,
+server-side cookie AppSession with idle/absolute expiry/revocation, CSRF+Origin,
+PostgreSQL bounded rate limit and security audit. Existing A-15 authority and
+MAX resident authentication remain separate. Web Admin has restore/login/change/
+enrollment/challenge/recovery/logout; manual Bearer entry removed. No public
+registration, staff management or organization onboarding was added.
+
+**Roadmap mapping:** A-10 employee identity/MFA/session-revoke slice only;
+B-14 temporary entry/reload gap replaced; B-09 ordinary web entry prerequisite
+only, not onboarding/settings. A-12 deployment/config/headers verification for
+this release, not full task closure. A-10 and B-09 remain PARTIAL/open.
+
+**Verification executed:** ruff, mypy (84 source files); 102 unit/contract;
+89 frontend tests; typecheck/build; OpenAPI and generated TS drift; 29 browser
+checks via `scripts/notification_smoke.py --browser` (employee + B-14 + resident
+House Board + notification); real HTTP/PG/separate-worker/restart delivery smoke.
+Employee PostgreSQL suite: 22 passed. Full PostgreSQL/migration suite: 145 passed
+(including additive migration and credential-history downgrade guard). Final
+Docker build/migration/restart smoke passed. DETERMINISTIC VERIFIED. AUTH-01…40 evidence mapping is in acceptance.md; these
+are deterministic checks, not live MFA ownership. Browser regression exposed and
+fixed recovery-mode state leakage across account switches; axe now loads a
+same-origin test asset while production CSP remains enabled.
+
+Secret scan: detect-secrets --no-verify over changed/new files; 21 candidates
+reviewed as synthetic fixtures, existing local DB defaults, revision IDs and event
+names; no production secret included. `git diff --check` passed. Crypto libraries:
+argon2-cffi 25.1.0, PyOTP 2.10.0, cryptography 48.0.1, qrcode 8.2 (locked).
+
+**Production preparation (not deployed yet):** existing scoped employee UUID
+`763c4458-e474-4398-9bc8-16ef79077463` has one active LIVE TEST company_admin
+membership, no Superadmin/MAX identity/resident grant; no authority expansion.
+Backup `/var/backups/domsignal/domsignal-20260919T190532283380Z.dump` restored to
+separate `domsignal_a10_restore_20260919`; exact full-row SHA-256 and counts match
+across 20 domain/audit/delivery tables. Includes 2 Users, 1 resident membership,
+3 Reports/Incidents/Tickets, 1 ChatBinding, 2 notifications, 7 observations.
+Dedicated MFA key generated once on VPS into mode-600 env without printing;
+protected env backup is present. MAX subscription read-only baseline retains
+same URL and six update types. Deploy and live employee enrollment are pending.
+
+**Next:** finish deterministic gates, deploy this branch with existing Git bundle/
+SSH process, verify preserved data/readiness/MAX subscription, provision one
+credential for the existing scoped employee, then stop at the requested human
+MFA ownership gate. Do not enroll real MFA by automation. Following human
+completion, inspect scoped admin requests/reload and session state. No automatic
+onboarding task starts.
+
+
 Updated: 2026-09-19 (completed live MAX Web product loop)
 Branch: dev/b-experience
 Current task: live Ticket → personal MAX notification → resident result loop

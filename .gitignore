@@ -46,5 +46,6 @@ uploads/
 .agent-scratch/
 .codex/
 .playwright-cli/
+output/playwright/
 .worktrees/
 worktrees/

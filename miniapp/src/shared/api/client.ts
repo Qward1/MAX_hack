@@ -52,9 +52,36 @@ export interface DomSignalApi extends ResidentTicketApi {
 
 export class ApiClient implements DomSignalApi {
   private token: string | null = null;
+  private csrf: string | null = null;
   constructor(private readonly surface: "resident" | "employee" = "resident") {}
 
   useSession(token: string) { this.token = token.trim() || null; }
+
+  async employeeSession() {
+    const state = await this.request<components["schemas"]["EmployeeSession"]>("/api/v1/auth/employee/session");
+    this.csrf = state.csrf_token;
+    return state;
+  }
+
+  async employeeStep(path: string, payload: object = {}) {
+    const state = await this.request<components["schemas"]["EmployeeSession"]>(`/api/v1/auth/employee/${path}`, {
+      method: "POST", body: JSON.stringify(payload),
+    });
+    this.csrf = state.csrf_token;
+    return state;
+  }
+
+  employeeEnroll() {
+    return this.request<components["schemas"]["EmployeeEnrollment"]>("/api/v1/auth/employee/mfa/enroll", {
+      method: "POST", body: "{}",
+    });
+  }
+
+  async employeeLogout() {
+    await this.request("/api/v1/auth/employee/logout", { method: "POST", body: "{}" });
+    this.csrf = null;
+    this.token = null;
+  }
 
   notificationLaunch(ref: string, signal?: AbortSignal): Promise<NotificationLaunch> {
     return this.request(`/api/v1/notification-launch/${encodeURIComponent(ref)}`, { signal });
@@ -69,6 +96,13 @@ export class ApiClient implements DomSignalApi {
     signal?: AbortSignal,
   ): Promise<void> {
     if (this.token) return;
+    if (this.surface === "employee" && !(capabilities.environment !== "production" &&
+        capabilities.features.test_auth && new URLSearchParams(window.location.search).has("test_actor"))) {
+      const state = await this.employeeSession();
+      if (state.stage === "authenticated") return;
+      throw new ApiProblem({ status: 401, type: "about:blank", code: "authentication_required",
+        title: "Вход сотрудника", detail: "Войдите в кабинет", trace_id: "", retryable: false });
+    }
     const initData = this.surface === "resident"
       ? (await import("../max/bridge")).maxBridge.initData : null;
     let session: Session;
@@ -151,6 +185,8 @@ export class ApiClient implements DomSignalApi {
     const headers = new Headers(init.headers);
     headers.set("Content-Type", "application/json");
     if (this.token) headers.set("Authorization", `Bearer ${this.token}`);
+    if (this.surface === "employee" && this.csrf && init.method === "POST")
+      headers.set("X-CSRF-Token", this.csrf);
     const controller = new AbortController();
     const abort = () => controller.abort();
     if (init.signal?.aborted) abort();
@@ -162,6 +198,7 @@ export class ApiClient implements DomSignalApi {
         headers,
         signal: controller.signal,
         cache: "no-store",
+        credentials: this.surface === "employee" ? "same-origin" : "omit",
       });
       if (!response.ok) {
         const fallback: Problem = {
@@ -182,6 +219,9 @@ export class ApiClient implements DomSignalApi {
           // Keep the safe generic problem when the proxy returned non-JSON.
         }
         if (response.status === 401) this.token = null;
+        if (this.surface === "employee" && [401, 403].includes(response.status) &&
+            !path.startsWith("/api/v1/auth/"))
+          window.dispatchEvent(new CustomEvent("employee-access-lost", { detail: response.status }));
         throw new ApiProblem(problem);
       }
       return (await response.json()) as T;
