@@ -1,4 +1,117 @@
-# MAX live smoke — MINI APP AUTHENTICATION/CONTEXT LIVE VERIFIED (MAX WEB)
+# MAX live smoke — RESIDENT / GROUP / TICKET PRODUCT LOOP LIVE VERIFIED (MAX WEB)
+
+## Current product checkpoint — 19 September 2026, 18:16 UTC
+
+This checkpoint supersedes historical pending labels in the chronological notes
+below. **LIVE VERIFIED:** Mini App binding, validated real identity, resident
+membership/board/reload, group capability/admin rights, correlated A-07 activation,
+real group Report → Incident → Ticket, operator WorkAttempt and personal MAX API
+delivery, notification open_app/start_param, real resolved callback, closure,
+Mini App correction/reopening of the same Ticket and message reconciliation.
+No mandatory client or organizer blocker remains for this MAX Web smoke.
+Native mobile, callback replay/stale-attempt scenarios, multi-resident disputes,
+restart/retry/rate-limit and historical-message edge cases are not LIVE VERIFIED.
+
+The first group command lacked its description; a second attempt arrived in the
+personal dialog. Neither created domain records. The complete command in TEST_MAX
+produced genuine message_created receipt
+`max:621ed77b6942695346a34491dbabc77fe7985fca704dbd1c1e472b837f8e1046`,
+accepted at 18:05:33.404949 UTC (provider event time 18:05:32.067 UTC).
+The authenticated webhook and max.group.report worker job succeeded once, using
+the active binding/version and real MAX actor recorded below.
+
+| Domain object | Persisted ID |
+|---|---|
+| Report, author is the real resident, source=max_group | `8fb88a64-4736-45c7-9b01-89e87ad1b017` |
+| Incident | `e7d812f0-d7d6-4905-9577-44be43325c0e` |
+| Ticket T-1 | `95f526e0-3604-434e-8e21-e71c9e2ccf9a` |
+| WorkAttempt 1 | `cf9bdcb0-8be2-480b-94c2-333711cb4872` |
+| Work verification delivery | `29c32185-d951-4ad9-a059-86f9bf0093f4` |
+
+Exactly one Report, Incident and Ticket exist, all in the isolated house/management.
+The category `other` initially routed T-1 to needs_clarification. At 18:06:53 UTC,
+the audited scoped CLI operator used existing TicketService commands with expected
+versions and fixed idempotency keys: resume (test-company responsibility explicitly
+confirmed), accept, start, work-attempts. Versions advanced 1 → 5, ending in
+verification_pending. The work report explicitly describes a product-cycle test;
+it does not claim a real repair. The real resident received no employee privilege.
+
+The production worker sent one work_verification message, accepted at
+18:06:54.724729 UTC with real provider ID
+`mid.00000000066d71cf01a0bad98cf55266`, desired/applied version 5, attempt_count=1,
+retry_count=0 and no error. The earlier ticket_accepted intent was superseded before
+sending (STALE_INTENT); do not claim a second accepted notification.
+Read-only official [GET message](https://dev.max.ru/docs-api/methods/GET/messages/-messageId-)
+returned 200 for that exact ID: sender bot 402577719, personal chat 107835855,
+recipient 294889720. Actual keyboard contains open_app for t480_hakaton_max_bot
+and resolved/unresolved callbacks; all payloads match the stored opaque launch ref.
+No raw token, initData, session bearer or launch ref is recorded here.
+
+The normal launch service resolves that recipient/ref to the exact Incident,
+House and WorkAttempt above, stale=false. This operator read is not a real client
+open_app claim. The user supplied screenshots of the one-problem house board and
+T-1/attempt 1 with verification buttons; matching incident/work-status API reads
+returned 200. No notification-launch request or ResultObservation was present at
+that checkpoint, so a precise click on the notification's open_app button was
+requested. API acceptance alone is not push/read confirmation.
+
+The original editable message in this loop is the bot's personal notification.
+The source group message belongs to the resident; no edit of that human message
+is implemented or claimed. Cross-tenant negatives remain deterministic evidence:
+this fresh production database contains no foreign tenant to test against live.
+
+### Notification launch and callback — LIVE VERIFIED
+
+The user clicked the actual notification button and confirmed immediate opening
+of the problem/solution card. Fresh auth/max 200 at 18:11:42.952517883 UTC,
+notification-launch 200 at 18:11:43.167446239 UTC, followed by exact Incident and
+work-status GET 200. Thus genuine initData start_param and the authenticated launch
+resolver exercised the correct Incident/House/WorkAttempt in MAX Web.
+
+User then pressed the notification callback «Исправлено». Genuine message_callback
+receipt `max:1ce7ccb3a017d83bbae9dc100ca03034e5a0b91e88143d5bbef905a705428768`
+was accepted at 18:13:12.880378 UTC. Callback job and answer job both succeeded
+once, no errors; the provider answer adapter requires success=true.
+ResultObservation `2dd81f56-fb3a-4388-a70a-8fa4773fffd8` at 18:13:13.263118 UTC
+has real resident actor, attempt 1, resolved, revision 1. Event
+`ab0f1781-5287-4c0c-a8c3-b55ae4bccc20` advanced the same T-1 from
+verification_pending v5 to closed v6. No new Ticket/attempt was created.
+
+Delivery desired/applied versions advanced to 6, preserving the original provider
+message ID. Exact provider GET 200 confirms the closed-result text and only one
+open_app button («Открыть проблему»); verification callbacks were removed.
+attempt_count=2 counts send plus edit, not two sends; retry_count remains zero.
+Requested a real Mini App unresolved correction to exercise reopening next.
+
+### Mini App correction and same-ticket reopening — LIVE VERIFIED
+
+The user saw T-1 «Завершено», then explicitly pressed «Проблема осталась» in
+Mini App and confirmed the action. Fresh validated MAX auth and launch resolver
+both returned 200 at 18:15:22 UTC. Actual POST
+`/api/v1/work-attempts/cf9bdcb0-8be2-480b-94c2-333711cb4872/observations`
+returned 200 at 18:15:25.847033713 UTC, followed by work-status GET 200.
+
+Observation `50f555d8-d831-4db1-abac-104d65fca9c1` at 18:15:25.815783 UTC is
+unresolved revision 2, by the same real resident, correcting revision 1's exact ID.
+Event `9c744146-ebba-459d-9fae-8669820dc842` changed the same T-1 from closed v6
+to in_progress v7; attempt 1 is retained and requires rework. Both observations
+remain in history. No new Report/Incident/Ticket/WorkAttempt was created.
+
+Reconciliation advanced delivery desired/applied to 7, with the same original
+provider message ID, attempt_count=3 (one send plus two edits), retry_count=0.
+Provider GET 200 confirms «Ваш ответ учтён. Проблема возвращена в работу.» and
+only the open_app button. This verifies Mini App mutation → outbox → real MAX
+edit without another POST/send; it does not claim editing the resident's group post.
+
+Final access read: canonical MAX user 294889720 still has exactly one active
+ResidentMembership, zero organization memberships, no platform role; all sessions
+have source=max. A read-only production resolver check using the existing distinct
+CLI operator identity rejects the resident's launch ref with ResourceNotFound.
+No fabricated MAX identity or extra session was used for the negative check.
+
+Code remains the tested/deployed `6ac08e0`; this continuation only updates evidence
+documentation. Scope stays active for review, with the audited revoke path available.
+delete-empty correctly cannot erase this fixture now that domain history exists.
 
 ## Mini App identity continuation — 19 September 2026
 
@@ -136,6 +249,61 @@ has no MAX identity/session/platform role; resident grants do not change.
 See [operator path](../deploy/README.md#8-live-a-07-operator-connection).
 No request timestamps or events are backdated, no candidate/binding state forced.
 Real correlated installation, binding and product report remain pending.
+
+Operator CLI code `6ac08e09d22a11836fc18a45cb65b594f67bbad4` was pushed and
+deployed via verified Git bundle. Runtime image
+`sha256:c20f7b3c0d5564e1b2ff842edce78b7afd00e7007cdf0979188e5742c276fb7a`;
+API/DB healthy, worker running; BUILD_COMMIT updated, environment mode remains 600.
+At 17:59:00 UTC, the CLI created request
+`f650a92a-daf8-4a0e-a83a-dc1c64d25d83`, expiring at 18:14:00 UTC,
+for the exact test management and pinned chat above. It remains `created` pending
+a real token-bearing bot_started; no candidate or binding was assigned.
+
+Scoped CLI User `763c4458-e474-4398-9bc8-16ef79077463` has no MAX identity,
+platform role or session. Its company-admin scope contains only the test house.
+The real user's me still contains one resident house, with three genuine MAX
+sessions from opening/reload and no staff elevation. Operator audit contains no
+raw correlation token. One-time connection link was shown only to the operator
+in the task; it is intentionally absent from docs and stored receipts.
+
+Checks: 41 targeted PG tests PASS, 100 unit/contract PASS, ruff/mypy 79 source
+files PASS, OpenAPI/TS drift PASS, local+VPS production Docker builds PASS,
+Gitleaks staged scan PASS and git diff --check PASS. User action requested:
+open the one-time link in MAX; afterward a fresh bot addition is needed for the
+existing A-07 time ordering. Group/report/notification product effects still pending.
+
+The operator pressed Start. Genuine token-bearing bot_started
+`max:eb521bc4d118e3f09faced86718f9a9e4add7c0a9cfcf435daf23978e471c2fb`
+was accepted at 17:59:48.816127 UTC. Request transitioned to connector_claimed,
+MAX connector `294889720`, claimed_at 17:59:48.007 UTC. This is real correlation,
+not a replay or manually assigned identity.
+
+To perform the required subsequent addition, the operator used documented
+DELETE `/chats/-79142681723640/members/me`: HTTP 200 and success=true.
+Guarded preflight required that exact pinned request/connector, unexpired request,
+zero bindings for that chat, and no previous leave attempt. Audit
+`operator:live-smoke-readd:v1` records the operation as accepted. It removed only
+the bot from the test group, not the chat or participants. No bot_removed webhook
+was present at the immediate follow-up check; do not claim one. Requested user
+re-add/admin assignment in the same group; binding remains pending.
+
+**LIVE VERIFIED — correlated installation and ACTIVE ChatBinding:** second real
+bot_added `max:f59a4c28318a7dcdd273d38b104bc3c72023de5fb935430aef20f3a49edd9c3d`
+arrived at 18:01:49.785292 UTC and selected the claimed request. Initial worker
+verification ran before the user finished assigning admin rights, correctly leaving
+chat_detected/bot_permission_missing. After the user's confirmation, fresh provider
+reads and the existing approve service verified admin/read_all_messages/connector
+owner plus test-company authority. Request completed; binding
+`7786a1b3-b224-48ff-8938-800d79566f6b`, ACTIVE version 1, activated at
+18:02:51.407852 UTC. CLI audit records explicit approval and binding audit is saved.
+
+Verified mapping: chat `-79142681723640` → this binding → management
+`3119b924-0a47-49a6-975d-2c0c5546894d` → house
+`6edbf50b-4bb4-4a74-a6fd-40351010802e` / tenant
+`9f0306fa-9660-40ab-8527-f1e361d48d61`. OperationContext resolves real resident,
+source=max_group, binding ID/version and these exact IDs with resident permissions.
+No title inference, timestamp manipulation or direct binding writes. Requested
+one actual `/report other Тестовая проблема live MAX` in TEST_MAX next.
 
 **DEPLOYED:** API, worker, PostgreSQL and Caddy are running on `domsignal-prod`
 (`176.108.244.168`), checkout `/opt/domsignal`, branch `dev/b-experience`.
@@ -359,11 +527,13 @@ docs перед реализацией, обрабатывает 429/5xx/timeout
 считается успехом. Команды регистрации, повторной проверки, обновления тем же
 POST и точечного DELETE приведены в [deploy runbook](../deploy/README.md).
 
-## Ticket → MAX → Mini App — LIVE PENDING
+## Ticket → MAX → Mini App — historical preflight checklist
 
 Delivery code is now IMPLEMENTED IN BRANCH (A-05/B-03/personal B-06/B-07/B-08).
 Deterministic HTTP+PG+worker/browser evidence is in [DEV-B](status/dev-b.md).
-All live items below remain **NOT LIVE VERIFIED / PENDING TOKEN**.
+This is the preflight checklist recorded before the live run. The current dated
+product checkpoint at the top supplies actual evidence and supersedes these
+historical pending labels; unchecked additional edge cases remain unverified.
 
 Official documentation rechecked before implementation on 18 September 2026:
 [send](https://dev.max.ru/docs-api/methods/POST/messages),

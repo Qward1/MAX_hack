@@ -1,10 +1,45 @@
 # DEV-B — current handoff
 
-Updated: 2026-09-19 (live Mini App identity continuation)
+Updated: 2026-09-19 (completed live MAX Web product loop)
 Branch: dev/b-experience
-Current task: B-01 live Mini App authentication/context, then A-07 house/group smoke
-State: MINI APP AUTHENTICATION/CONTEXT LIVE VERIFIED (MAX WEB) / NOT MERGED TO MAIN
-Real MAX: Mini App identity/board/reload + group bot_added/admin rights VERIFIED
+Current task: live Ticket → personal MAX notification → resident result loop
+State: RESIDENT / GROUP / TICKET PRODUCT LOOP LIVE VERIFIED (MAX WEB) / NOT MERGED TO MAIN
+Real MAX: identity/board/reload, group report, work, notification launch, callback, closure/reopen/edit VERIFIED
+
+## Latest product checkpoint — 18:16 UTC
+
+The full group command created exactly one Report/Incident/Ticket at 18:05 UTC,
+with the real resident as author and the approved test-house binding. Scoped CLI
+TicketService commands resumed the category-other clarification, accepted and
+started T-1, then created attempt 1 at 18:06:53 UTC; verification_pending v5.
+The work description explicitly says this is a test, not an actual repair.
+
+Production worker delivery accepted at 18:06:54 UTC, one send, no retries/errors:
+`mid.00000000066d71cf01a0bad98cf55266`. Provider GET confirms the real bot, correct
+personal recipient and open_app/resolved/unresolved keyboard. Earlier accepted
+intent was superseded before sending. User screenshots plus real API reads verify
+the board, T-1 and attempt 1 UI. Exact IDs/evidence are in MAX_LIVE_SMOKE.md.
+
+LIVE launch at 18:11:43 UTC: actual notification click → validated auth/max →
+notification-launch 200 → exact Incident/attempt card, confirmed by the user.
+LIVE callback at 18:13:13 UTC: resolved observation revision 1 by the real resident
+closed the same T-1 (v6). Callback and answer jobs succeeded once. Reconciliation
+preserved the provider message ID; provider GET confirms closed text and removed
+callback buttons, desired/applied v6, zero retries.
+
+LIVE Mini App correction at 18:15:25 UTC: observations POST 200 saved unresolved
+revision 2 correcting revision 1, reopened the same T-1 to in_progress v7 and marked
+attempt 1 for rework. Same provider message updated to «Проблема возвращена в работу»,
+confirmed by real GET, desired/applied v7, one send plus two edits, zero retries.
+Real resident retains only one house membership and no staff/platform role; distinct
+existing CLI identity cannot resolve the resident launch ref. No new domain objects.
+
+No required client/organizer action remains for this Web smoke. Native mobile and
+additional replay/stale/retry/restart/multi-resident scenarios remain unverified live.
+The editable original is the bot's personal notification, not the human group post.
+Code remains tested/deployed 6ac08e0; latest changes are evidence docs only. Fixture
+stays active for review; revoke is available, delete-empty refuses retained history.
+Historical pending notes below are superseded.
 
 ## Current Mini App checkpoint
 
@@ -67,6 +102,28 @@ fresh-rights rejection, correct activation and scope revocation. Deployment and
 subsequent live evidence will be recorded after execution. Checks PASS: 41 targeted
 PG tests (38 A-07, 2 fixture, 1 operator flow), 100 unit/contract, ruff/mypy 79
 source files, OpenAPI/TS drift, full Docker production build, Gitleaks and diff check.
+
+Code `6ac08e0` pushed/deployed, API/DB healthy; 17:59 UTC CLI prepare created
+request `f650a92a-daf8-4a0e-a83a-dc1c64d25d83` for the test management, pinned to
+TEST_MAX. Separate CLI User has only test-company admin membership and no MAX
+identity/platform role/session; real resident me unchanged. Request is `created`
+until genuine token-bearing bot_started; expires at 18:14 UTC. Requested opening
+the one-time link in MAX. Link is not persisted in docs/audit; next step is genuine
+correlated re-add, fresh rights verification and service approval, then /report.
+
+Real bot_started at 17:59:48 UTC claimed this request to MAX user 294889720.
+Guarded self-leave API for the pinned, unbound test chat returned 200/success=true;
+operator receipt saved. No immediate bot_removed webhook observed. User was asked
+to re-add the bot/admin in TEST_MAX, so A-07 can observe addition after claim.
+No direct candidate assignment, fake event or binding bypass used.
+
+Re-add arrived at 18:01:49 UTC and matched the claimed request. Worker first saw
+missing admin rights (user was still assigning them); explicit approval rechecked
+fresh provider rights and company authority successfully. Binding
+`7786a1b3-b224-48ff-8938-800d79566f6b` ACTIVE v1 at 18:02:51 UTC; request completed.
+Real chat/management/house/tenant mapping and resident OperationContext verified.
+Requested one genuine /report in TEST_MAX; Report/Ticket/product notification
+remain pending until that actual event. Details in MAX_LIVE_SMOKE.
 
 Resumed START ref and own origin ref:
 `b986aeda249316d75ad2a2c9620a803033e96a69`; origin/main already an ancestor.
