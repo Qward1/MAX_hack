@@ -6,7 +6,14 @@ from uuid import UUID
 
 from sqlalchemy.dialects.postgresql import insert
 
-from domsignal.db.models import House, HouseManagement, ManagementCompany, ResidentMembership, User
+from domsignal.db.models import (
+    House,
+    HouseManagement,
+    HouseRoutingProfile,
+    ManagementCompany,
+    ResidentMembership,
+    User,
+)
 from domsignal.db.session import create_engine, create_session_factory
 from domsignal.settings import AppEnvironment, Settings, get_settings
 
@@ -88,6 +95,28 @@ async def seed(settings: Settings | None = None) -> None:
                     )
                     .on_conflict_do_nothing(index_elements=[HouseManagement.id])
                 )
+            # Профиль маршрутизации: демо-дом с неопределённой территорией
+            # показывает выбор диспетчера, второй дом — территорию УК.
+            await session.execute(
+                insert(HouseRoutingProfile)
+                .values(
+                    [
+                        {
+                            "house_id": DEMO_HOUSE_ID,
+                            "region_code": "RU-TA",
+                            "municipality_code": "kazan",
+                            "territory_policy": "unknown",
+                        },
+                        {
+                            "house_id": OTHER_HOUSE_ID,
+                            "region_code": "RU-TA",
+                            "municipality_code": "kazan",
+                            "territory_policy": "uk",
+                        },
+                    ]
+                )
+                .on_conflict_do_nothing(index_elements=[HouseRoutingProfile.house_id])
+            )
             await session.execute(
                 insert(ResidentMembership)
                 .values(
