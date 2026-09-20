@@ -46,6 +46,12 @@ emergency_service | regional_operator | other_authority | unknown`),
 `requires_operator_choice`, `alternatives[]`, `match` (`rule | default | none`),
 `hidden_unverified_channels`, `stale`.
 
+`can_create_ticket` означает «у дома есть действующий период управления
+(`HouseManagement`) на текущий момент». Это необходимое, но не достаточное
+условие: `TicketService` дополнительно требует `ticket_intake_enabled` и
+перепроверяет его в момент создания. Маршрут не заменяет эту проверку и не
+утверждает, что заявка создана.
+
 Порядок вычисления: неизвестный подтип → `other.unspecified`; правило
 `emergency_service` (запах газа остаётся вызовом службы при любой территории);
 `house_common` при активном управлении подключённой УК → `uk_internal`;
