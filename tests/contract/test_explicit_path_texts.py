@@ -8,12 +8,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
 from types import CodeType, ModuleType
 
 import pytest
 
 from domsignal.contracts.capabilities import CapabilityFlags
-from domsignal.contracts.incidents import ReportCreated
+from domsignal.contracts.incidents import ReportCreated, ReportPreview, ReportSubmitted
+from domsignal.contracts.notifications import NotificationLaunch
+from domsignal.contracts.routing import RouteOutcomeView
 from domsignal.core.incidents import ClassificationMode
 from domsignal.services import (
     action_cards,
@@ -23,6 +26,17 @@ from domsignal.services import (
     route_card_render,
 )
 from domsignal.services.action_cards import FORBIDDEN_PHRASES
+
+#: Экраны жителя. Их тексты видны человеку так же, как ответы backend.
+RESIDENT_SURFACES: tuple[str, ...] = (
+    "miniapp/src/app/App.tsx",
+    "miniapp/src/features/appeals/AppealDraftScreen.tsx",
+    "miniapp/src/features/incidents/ReportFlow.tsx",
+    "miniapp/src/features/incidents/presentation.ts",
+    "miniapp/src/features/routing/RouteCard.tsx",
+    "miniapp/src/features/routing/presentation.ts",
+)
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 TEMPLATE_MODULES: tuple[ModuleType, ...] = (
     action_cards,
@@ -126,3 +140,59 @@ def test_action_card_is_optional_on_report_created() -> None:
 def test_route_card_intent_has_no_field_for_model_prose() -> None:
     fields = set(route_card_render.RouteCardIntent.model_fields)
     assert not fields & {"clean_description", "description", "summary"}
+
+
+@pytest.mark.parametrize("surface", RESIDENT_SURFACES)
+def test_no_resident_screen_claims_the_appeal_was_filed(surface: str) -> None:
+    """Экран жителя проверяется тем же списком, что и шаблоны backend."""
+    path = REPOSITORY_ROOT / surface
+    assert path.is_file(), surface
+    lowered = path.read_text(encoding="utf-8").lower()
+    for phrase in FORBIDDEN_PHRASES:
+        assert phrase not in lowered, (surface, phrase)
+
+
+def test_the_route_card_screen_states_who_sends_the_appeal() -> None:
+    draft = (REPOSITORY_ROOT / "miniapp/src/features/appeals/AppealDraftScreen.tsx").read_text(
+        encoding="utf-8"
+    )
+    # Отметка жителя не становится подтверждением внешней регистрации.
+    assert "ДомСигнал не подтверждает регистрацию во внешней системе" in draft
+    assert "Выделите и скопируйте текст вручную" in draft
+
+
+def test_the_draft_screen_keeps_the_agreed_action_order() -> None:
+    draft = (REPOSITORY_ROOT / "miniapp/src/features/appeals/AppealDraftScreen.tsx").read_text(
+        encoding="utf-8"
+    )
+    order = draft.index('["copy_draft", "open_official_channel", "mark_filed"]')
+    assert order > 0
+
+
+def test_launch_contract_grew_additively_for_the_route_card() -> None:
+    fields = NotificationLaunch.model_fields
+    # Прежние потребители продолжают читать ответ: вид по умолчанию — заявка.
+    assert fields["kind"].default == "ticket"
+    assert fields["incident_id"].is_required() is False
+    assert fields["route_outcome_id"].is_required() is False
+    assert fields["house_id"].is_required() is True
+
+
+def test_route_outcome_view_carries_the_card_and_the_directory_signal() -> None:
+    fields = RouteOutcomeView.model_fields
+    assert fields["action_card"].is_required() is True
+    assert fields["directory_changed"].default is False
+    for optional in ("incident_id", "appeal_draft_id"):
+        assert fields[optional].is_required() is False
+
+
+def test_duplicate_candidates_are_optional_and_submit_may_have_no_report() -> None:
+    # Дубли аддитивны: прежний предпросмотр остаётся валидным ответом.
+    assert ReportPreview.model_fields["duplicates"].is_required() is False
+    # Внешний маршрут заявку не создаёт, поэтому `report` пуст по контракту.
+    assert ReportSubmitted.model_fields["report"].is_required() is False
+
+
+def test_route_and_appeal_capabilities_default_to_off() -> None:
+    flags = CapabilityFlags(test_auth=False)
+    assert flags.routes is False and flags.appeals is False

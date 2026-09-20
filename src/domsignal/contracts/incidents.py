@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import Field
 
 from domsignal.contracts.common import ContractModel, PageMeta
-from domsignal.contracts.routing import ActionCard, DangerKind, LocationScope
+from domsignal.contracts.routing import ActionCard, DangerKind, LocationScope, RouteDecision
 from domsignal.core.incidents import ClassificationMode, IncidentStatus, ReportCategory
 
 #: Чем получен разбор: моделью, правилами или ничем (человек уточняет сам).
@@ -25,6 +25,13 @@ class ReportPreviewRequest(ContractModel):
     """Предпросмотр маршрута для формы mini app. Ничего не создаёт."""
 
     description: str = Field(min_length=5, max_length=2000)
+
+
+class ReportSubmitRequest(ContractModel):
+    """Отправка формы. Категория необязательна: обычно её определяют правила."""
+
+    description: str = Field(min_length=5, max_length=2000)
+    category: ReportCategory | None = None
 
 
 class ReportAnalysisView(ContractModel):
@@ -46,11 +53,30 @@ class ReportAnalysisView(ContractModel):
     reason: str
 
 
+class DuplicateCandidate(ContractModel):
+    """Уже открытая проблема того же дома, о которой, возможно, идёт речь.
+
+    Правило детерминированное, модель в нём не участвует. Решение принимает
+    житель: автоматического слияния обращений в продукте нет.
+    """
+
+    incident_id: UUID
+    title: str
+    category: ReportCategory
+    status: IncidentStatus
+    created_at: datetime
+    report_count: int = Field(ge=0)
+    participant_count: int = Field(ge=0)
+    #: Короткая строка из шаблонов продукта, не свободный текст.
+    match_reason: str
+
+
 class ReportPreview(ContractModel):
-    """Разбор и карточка следующего шага без побочных эффектов."""
+    """Разбор, карточка следующего шага и кандидаты в дубли без побочных эффектов."""
 
     analysis: ReportAnalysisView
     action_card: ActionCard
+    duplicates: list[DuplicateCandidate] = Field(default_factory=list)
 
 
 class ReportSummary(ContractModel):
@@ -133,6 +159,20 @@ class ReportCreated(ContractModel):
     incident: IncidentDetail
     #: Та же детерминированная карточка следующего шага, что и в предпросмотре.
     action_card: ActionCard | None = None
+
+
+class ReportSubmitted(ContractModel):
+    """Итог отправки формы: тот же маршрут и то же решение, что и в чате.
+
+    `report` пуст для внешнего маршрута: обращение житель отправляет сам, и
+    заявка управляющей компании при этом не создаётся.
+    """
+
+    route_outcome_id: UUID
+    decision: RouteDecision
+    analysis: ReportAnalysisView
+    action_card: ActionCard
+    report: ReportCreated | None = None
 
 
 class IncidentList(ContractModel):

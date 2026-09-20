@@ -228,9 +228,13 @@ async def test_nd12_13_launch_and_no_disclosure(nd):
     row = next(r for r in await deliveries(d) if r.recipient_user_id == d["ids"]["carol"])
     path = f"/api/v1/notification-launch/{row.launch_ref}"
     good = await d["client"].get(path, headers=d["headers"]["carol"])
+    # Контракт вырос аддитивно: у ссылки `w_` вид остаётся прежним, а поля
+    # карточки маршрута пусты.
     assert good.json() == {
+        "kind": "ticket",
         "incident_id": d["incident"],
         "house_id": str(d["ids"]["a1"]),
+        "route_outcome_id": None,
         "work_attempt_id": aid,
         "stale": False,
     }

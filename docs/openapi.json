@@ -2028,6 +2028,58 @@
         "title": "DeadlineView",
         "type": "object"
       },
+      "DuplicateCandidate": {
+        "additionalProperties": false,
+        "description": "Уже открытая проблема того же дома, о которой, возможно, идёт речь.\n\nПравило детерминированное, модель в нём не участвует. Решение принимает\nжитель: автоматического слияния обращений в продукте нет.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/ReportCategory"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "incident_id": {
+            "format": "uuid",
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "match_reason": {
+            "title": "Match Reason",
+            "type": "string"
+          },
+          "participant_count": {
+            "minimum": 0.0,
+            "title": "Participant Count",
+            "type": "integer"
+          },
+          "report_count": {
+            "minimum": 0.0,
+            "title": "Report Count",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/IncidentStatus"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "incident_id",
+          "title",
+          "category",
+          "status",
+          "created_at",
+          "report_count",
+          "participant_count",
+          "match_reason"
+        ],
+        "title": "DuplicateCandidate",
+        "type": "object"
+      },
       "EmployeeCode": {
         "additionalProperties": false,
         "properties": {
@@ -3221,6 +3273,7 @@
         "type": "object"
       },
       "NotificationLaunch": {
+        "description": "Куда открыть mini app по ссылке из личного сообщения.\n\n`kind` различает два предмета доставки. У карточки маршрута заявки может не\nбыть вовсе (внешнее обращение житель отправляет сам), поэтому `incident_id`\nдопускает пустое значение. Проверки доступа одинаковы для обоих префиксов:\nполучатель доставки, членство в доме и актуальные права.",
         "properties": {
           "house_id": {
             "format": "uuid",
@@ -3228,9 +3281,37 @@
             "type": "string"
           },
           "incident_id": {
-            "format": "uuid",
-            "title": "Incident Id",
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incident Id"
+          },
+          "kind": {
+            "default": "ticket",
+            "enum": [
+              "ticket",
+              "route_card"
+            ],
+            "title": "Kind",
             "type": "string"
+          },
+          "route_outcome_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Outcome Id"
           },
           "stale": {
             "title": "Stale",
@@ -3250,7 +3331,6 @@
           }
         },
         "required": [
-          "incident_id",
           "house_id",
           "work_attempt_id",
           "stale"
@@ -4061,13 +4141,20 @@
       },
       "ReportPreview": {
         "additionalProperties": false,
-        "description": "Разбор и карточка следующего шага без побочных эффектов.",
+        "description": "Разбор, карточка следующего шага и кандидаты в дубли без побочных эффектов.",
         "properties": {
           "action_card": {
             "$ref": "#/components/schemas/ActionCard"
           },
           "analysis": {
             "$ref": "#/components/schemas/ReportAnalysisView"
+          },
+          "duplicates": {
+            "items": {
+              "$ref": "#/components/schemas/DuplicateCandidate"
+            },
+            "title": "Duplicates",
+            "type": "array"
           }
         },
         "required": [
@@ -4092,6 +4179,77 @@
           "description"
         ],
         "title": "ReportPreviewRequest",
+        "type": "object"
+      },
+      "ReportSubmitRequest": {
+        "additionalProperties": false,
+        "description": "Отправка формы. Категория необязательна: обычно её определяют правила.",
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportCategory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "maxLength": 2000,
+            "minLength": 5,
+            "title": "Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description"
+        ],
+        "title": "ReportSubmitRequest",
+        "type": "object"
+      },
+      "ReportSubmitted": {
+        "additionalProperties": false,
+        "description": "Итог отправки формы: тот же маршрут и то же решение, что и в чате.\n\n`report` пуст для внешнего маршрута: обращение житель отправляет сам, и\nзаявка управляющей компании при этом не создаётся.",
+        "properties": {
+          "action_card": {
+            "$ref": "#/components/schemas/ActionCard"
+          },
+          "analysis": {
+            "$ref": "#/components/schemas/ReportAnalysisView"
+          },
+          "decision": {
+            "enum": [
+              "ticket",
+              "external",
+              "needs_clarification"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportCreated"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "route_outcome_id": {
+            "format": "uuid",
+            "title": "Route Outcome Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "route_outcome_id",
+          "decision",
+          "analysis",
+          "action_card"
+        ],
+        "title": "ReportSubmitted",
         "type": "object"
       },
       "ReportSummary": {
@@ -4647,6 +4805,91 @@
         "title": "RouteFact",
         "type": "object"
       },
+      "RouteOutcomeView": {
+        "additionalProperties": false,
+        "description": "Сохранённый исход маршрутизации и карточка по **текущему** справочнику.\n\nКарточка не берётся из снимка доставки: справочник мог обновиться, и житель\nдолжен видеть актуальный маршрут. Если тип маршрута разошёлся с сохранённым,\n`directory_changed` честно об этом сообщает.",
+        "properties": {
+          "action_card": {
+            "$ref": "#/components/schemas/ActionCard"
+          },
+          "appeal_draft_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Appeal Draft Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "ticket",
+              "external",
+              "needs_clarification"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "directory_changed": {
+            "default": false,
+            "title": "Directory Changed",
+            "type": "boolean"
+          },
+          "house_id": {
+            "format": "uuid",
+            "title": "House Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "incident_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incident Id"
+          },
+          "route_type": {
+            "enum": [
+              "uk_internal",
+              "municipality",
+              "resource_supplier",
+              "emergency_service",
+              "regional_operator",
+              "other_authority",
+              "unknown"
+            ],
+            "title": "Route Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "house_id",
+          "created_at",
+          "decision",
+          "route_type",
+          "action_card"
+        ],
+        "title": "RouteOutcomeView",
+        "type": "object"
+      },
       "RuleProvenance": {
         "additionalProperties": false,
         "properties": {
@@ -4903,6 +5146,8 @@
             "default": "demo",
             "enum": [
               "demo",
+              "demo-neighbour",
+              "demo-third",
               "outsider",
               "a16-admin",
               "a16-responsible",
@@ -13642,6 +13887,236 @@
         ]
       }
     },
+    "/api/v1/houses/{house_id}/reports/submit": {
+      "post": {
+        "description": "Отправка формы через ту же цепочку решения, что и сообщение в чате.",
+        "operationId": "submit_report_api_v1_houses__house_id__reports_submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "house_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "House Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 8,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportSubmitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportSubmitted"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Submit Report",
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
     "/api/v1/incidents/{incident_id}": {
       "get": {
         "operationId": "incident_detail_api_v1_incidents__incident_id__get",
@@ -18484,6 +18959,215 @@
           }
         ],
         "summary": "Create Report",
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/route-outcomes/{outcome_id}": {
+      "get": {
+        "description": "Карточка маршрута по исходу. Чужой и несуществующий исход дают 404.",
+        "operationId": "route_outcome_api_v1_route_outcomes__outcome_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "outcome_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Outcome Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RouteOutcomeView"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Route Outcome",
         "tags": [
           "incidents"
         ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import cast
 from uuid import UUID
 
@@ -8,6 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from domsignal.db.models import House, Incident, Report
 from domsignal.services.context import OperationContext
+
+#: Статусы, при которых о проблеме ещё имеет смысл сообщать повторно.
+OPEN_STATUSES: tuple[str, ...] = ("detected", "open", "reported", "overdue", "escalated")
 
 
 class IncidentRepository:
@@ -77,6 +81,35 @@ class IncidentRepository:
             )
         )
         return items, int(total or 0)
+
+    async def open_candidates(
+        self,
+        context: OperationContext,
+        *,
+        category: str,
+        created_after: datetime,
+        limit: int,
+    ) -> list[Incident]:
+        """Открытые проблемы того же дома и той же категории, не старше порога.
+
+        Правило детерминированное и не обращается к модели: тот же дом и тот
+        же период управления, что и на доске, открытый статус, та же
+        продуктовая категория, порог возраста и порядок «сначала свежие».
+        """
+        return list(
+            await self.session.scalars(
+                select(Incident)
+                .where(
+                    Incident.house_id == context.house_id,
+                    Incident.management_id == context.management_id.value,
+                    Incident.category == category,
+                    Incident.status.in_(OPEN_STATUSES),
+                    Incident.created_at >= created_after,
+                )
+                .order_by(Incident.created_at.desc())
+                .limit(limit)
+            )
+        )
 
     async def incident_house_id(self, incident_id: UUID) -> UUID | None:
         # Only routing metadata may be read before resolving access; never content.

@@ -19,6 +19,10 @@ from domsignal.settings import AppEnvironment, Settings, get_settings
 
 DEMO_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 OUTSIDER_USER_ID = UUID("00000000-0000-0000-0000-000000000002")
+#: Соседи демо-дома. Без них нельзя показать честный выбор при дубле:
+#: «это та же проблема» и «нет, это другое» делают разные люди.
+NEIGHBOUR_USER_ID = UUID("00000000-0000-0000-0000-000000000003")
+THIRD_USER_ID = UUID("00000000-0000-0000-0000-000000000004")
 DEMO_HOUSE_ID = UUID("00000000-0000-0000-0000-000000000101")
 DEMO_TENANT_ID = UUID("00000000-0000-0000-0000-000000000301")
 OTHER_HOUSE_ID = UUID("00000000-0000-0000-0000-000000000102")
@@ -48,6 +52,18 @@ async def seed(settings: Settings | None = None) -> None:
                             "display_name": "Житель другого дома",
                             "demo_alias": "outsider",
                             "max_user_id": "outsider-max-user",
+                        },
+                        {
+                            "id": NEIGHBOUR_USER_ID,
+                            "display_name": "Сосед по демо-дому",
+                            "demo_alias": "demo-neighbour",
+                            "max_user_id": "demo-neighbour-max-user",
+                        },
+                        {
+                            "id": THIRD_USER_ID,
+                            "display_name": "Ещё один житель демо-дома",
+                            "demo_alias": "demo-third",
+                            "max_user_id": "demo-third-max-user",
                         },
                     ]
                 )
@@ -139,6 +155,20 @@ async def seed(settings: Settings | None = None) -> None:
                             "id": UUID("00000000-0000-0000-0000-000000000202"),
                             "user_id": OUTSIDER_USER_ID,
                             "house_id": OTHER_HOUSE_ID,
+                            "source": "demo",
+                            "evidence_source": "demo_seed",
+                        },
+                        {
+                            "id": UUID("00000000-0000-0000-0000-000000000203"),
+                            "user_id": NEIGHBOUR_USER_ID,
+                            "house_id": DEMO_HOUSE_ID,
+                            "source": "demo",
+                            "evidence_source": "demo_seed",
+                        },
+                        {
+                            "id": UUID("00000000-0000-0000-0000-000000000204"),
+                            "user_id": THIRD_USER_ID,
+                            "house_id": DEMO_HOUSE_ID,
                             "source": "demo",
                             "evidence_source": "demo_seed",
                         },

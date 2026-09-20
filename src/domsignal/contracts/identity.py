@@ -28,6 +28,8 @@ class MeResponse(ContractModel):
 class TestSessionRequest(ContractModel):
     actor: Literal[
         "demo",
+        "demo-neighbour",
+        "demo-third",
         "outsider",
         "a16-admin",
         "a16-responsible",
