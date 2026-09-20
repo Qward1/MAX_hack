@@ -1,0 +1,69 @@
+# Региональный слой справочника ответственности: Республика Татарстан.
+#
+# Регион демонстрации и пилота — Казань (решение владельца 20.09.2026).
+# Проверенных региональных и муниципальных организаций пока нет: Казань
+# наследует федеральный слой. Записи ниже остаются needs_verification и
+# жителю не показываются, пока владелец не сверит сценарий подачи и ссылку.
+schema_version: 1
+layer_id: RU-TA
+layer: region
+region: RU-TA
+version: "1"
+updated_at: "2026-09-20"
+
+organizations:
+  - id: ru_ta_gji
+    name: Государственная жилищная инспекция Республики Татарстан
+    kind: other_authority
+    region: RU-TA
+    municipality: null
+    verification:
+      status: needs_verification
+      verified_at: null
+      verified_by: null
+      source_title: Страницы gji.tatarstan.ru найдены поиском, содержимое не открывалось
+      source_url: null
+
+channels:
+  - id: ru_ta_narodny_kontrol
+    organization_id: null
+    channel_type: official_web
+    label: ГИС РТ «Народный контроль»
+    url: null
+    phone: null
+    entry_hint: null
+    routes_to_competent_authority: false
+    facts: []
+    unavailable_regions: []
+    verification:
+      status: needs_verification
+      verified_at: null
+      verified_by: null
+      source_title: Страницы digital.tatarstan.ru и uslugi.tatarstan.ru найдены поиском; сценарий подачи вручную не проверен
+      source_url: null
+
+  - id: ru_ta_gji_web
+    organization_id: ru_ta_gji
+    channel_type: official_web
+    label: Обращение в ГЖИ Республики Татарстан
+    url: null
+    phone: null
+    entry_hint: null
+    routes_to_competent_authority: false
+    facts: []
+    unavailable_regions: []
+    verification:
+      status: needs_verification
+      verified_at: null
+      verified_by: null
+      source_title: Страницы gji.tatarstan.ru найдены поиском, содержимое не открывалось
+      source_url: null
+
+rules: []
+
+municipalities:
+  - code: kazan
+    name: Казань
+    organizations: []
+    channels: []
+    rules: []

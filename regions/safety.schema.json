@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://domsignal.local/schemas/safety-blocks-v1.json",
+  "title": "DomSignal safety blocks",
+  "description": "Проверенные памятки безопасности. Пошаговая инструкция допускается только вместе с официальным источником.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "layer_id", "version", "updated_at", "blocks"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "layer_id": {"type": "string", "minLength": 1},
+    "version": {"type": "string", "minLength": 1},
+    "updated_at": {"type": "string", "format": "date"},
+    "blocks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "danger_kinds", "title", "lines", "verification"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9_.-]+$"},
+          "danger_kinds": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          },
+          "title": {"type": "string", "minLength": 1},
+          "lines": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "phone": {"type": ["string", "null"], "pattern": "^[0-9+][0-9 ()-]{2,19}$"},
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["text", "source_title"],
+              "properties": {
+                "text": {"type": "string", "minLength": 1},
+                "source_title": {"type": "string", "minLength": 1},
+                "source_url": {"type": ["string", "null"], "format": "uri"}
+              }
+            }
+          },
+          "verification": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status"],
+            "properties": {
+              "status": {"enum": ["verified", "needs_verification", "demo"]},
+              "verified_at": {"type": ["string", "null"], "format": "date"},
+              "verified_by": {"type": ["string", "null"], "minLength": 1},
+              "source_title": {"type": ["string", "null"], "minLength": 1},
+              "source_url": {"type": ["string", "null"], "format": "uri"}
+            },
+            "if": {"properties": {"status": {"const": "verified"}}, "required": ["status"]},
+            "then": {
+              "required": ["verified_at", "verified_by", "source_title"],
+              "properties": {
+                "verified_at": {"type": "string"},
+                "verified_by": {"type": "string"},
+                "source_title": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

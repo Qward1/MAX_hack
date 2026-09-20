@@ -84,6 +84,7 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:8000"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
     static_dir: str = "miniapp/dist"
+    regions_dir: str = "regions"
     auth_mfa_encryption_key: str | None = Field(default=None, repr=False)
     auth_password_max_length: int = Field(default=1024, ge=64, le=4096)
     employee_invitation_seconds: int = Field(default=172800, ge=300, le=604800)

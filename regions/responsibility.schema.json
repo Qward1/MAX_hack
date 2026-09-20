@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://domsignal.local/schemas/responsibility-directory-v1.json",
+  "title": "DomSignal responsibility directory layer",
+  "description": "Слой справочника ответственности: организации, каналы и правила маршрута. Слой не содержит сроков и не утверждает факт регистрации обращения.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "layer_id", "layer", "version", "updated_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "layer_id": {"type": "string", "minLength": 1},
+    "layer": {"enum": ["federal", "region"]},
+    "region": {"type": ["string", "null"]},
+    "version": {"type": "string", "minLength": 1},
+    "updated_at": {"type": "string", "format": "date"},
+    "organizations": {"type": "array", "items": {"$ref": "#/$defs/organization"}},
+    "channels": {"type": "array", "items": {"$ref": "#/$defs/channel"}},
+    "rules": {"type": "array", "items": {"$ref": "#/$defs/rule"}},
+    "uk_default": {"$ref": "#/$defs/uk_default"},
+    "municipalities": {"type": "array", "items": {"$ref": "#/$defs/municipality"}}
+  },
+  "$defs": {
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {"enum": ["verified", "needs_verification", "demo"]},
+        "verified_at": {"type": ["string", "null"], "format": "date"},
+        "verified_by": {"type": ["string", "null"], "minLength": 1},
+        "source_title": {"type": ["string", "null"], "minLength": 1},
+        "source_url": {"type": ["string", "null"], "format": "uri"}
+      },
+      "if": {"properties": {"status": {"const": "verified"}}, "required": ["status"]},
+      "then": {
+        "required": ["verified_at", "verified_by", "source_title"],
+        "properties": {
+          "verified_at": {"type": "string"},
+          "verified_by": {"type": "string"},
+          "source_title": {"type": "string"}
+        }
+      }
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "source_title"],
+      "properties": {
+        "text": {"type": "string", "minLength": 1},
+        "source_title": {"type": "string", "minLength": 1},
+        "source_url": {"type": ["string", "null"], "format": "uri"}
+      }
+    },
+    "basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "source_title"],
+      "properties": {
+        "text": {"type": "string", "minLength": 1},
+        "source_title": {"type": "string", "minLength": 1},
+        "source_url": {"type": ["string", "null"], "format": "uri"}
+      }
+    },
+    "organization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "kind", "verification"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9_.-]+$"},
+        "name": {"type": "string", "minLength": 1},
+        "kind": {
+          "enum": [
+            "municipality",
+            "resource_supplier",
+            "emergency_service",
+            "regional_operator",
+            "other_authority"
+          ]
+        },
+        "region": {"type": ["string", "null"], "minLength": 1},
+        "municipality": {"type": ["string", "null"], "minLength": 1},
+        "verification": {"$ref": "#/$defs/verification"}
+      }
+    },
+    "channel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "channel_type", "label", "verification"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9_.-]+$"},
+        "organization_id": {"type": ["string", "null"], "pattern": "^[a-z0-9_.-]+$"},
+        "channel_type": {"enum": ["official_web", "phone", "max_bot", "email", "in_person"]},
+        "label": {"type": "string", "minLength": 1},
+        "url": {"type": ["string", "null"], "format": "uri"},
+        "phone": {"type": ["string", "null"], "pattern": "^[0-9+][0-9 ()-]{2,19}$"},
+        "entry_hint": {"type": ["string", "null"], "minLength": 1},
+        "routes_to_competent_authority": {"type": "boolean"},
+        "facts": {"type": "array", "items": {"$ref": "#/$defs/fact"}},
+        "unavailable_regions": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "verification": {"$ref": "#/$defs/verification"}
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "priority", "match", "route_type", "basis", "verification"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9_.-]+$"},
+        "priority": {"type": "integer", "minimum": 0, "maximum": 1000},
+        "match": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["subtypes"],
+          "properties": {
+            "subtypes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"type": "string", "minLength": 1},
+              "uniqueItems": true
+            },
+            "location_scopes": {
+              "type": "array",
+              "items": {"type": "string", "minLength": 1},
+              "uniqueItems": true
+            }
+          }
+        },
+        "route_type": {
+          "enum": [
+            "municipality",
+            "resource_supplier",
+            "emergency_service",
+            "regional_operator",
+            "other_authority"
+          ]
+        },
+        "organization_id": {"type": ["string", "null"], "pattern": "^[a-z0-9_.-]+$"},
+        "channel_ids": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-z0-9_.-]+$"},
+          "uniqueItems": true
+        },
+        "can_prepare_appeal": {"type": "boolean"},
+        "basis": {"$ref": "#/$defs/basis"},
+        "verification": {"$ref": "#/$defs/verification"}
+      }
+    },
+    "uk_default": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subtypes", "basis", "verification"],
+      "properties": {
+        "subtypes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "resource_supplier_alternatives": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "basis": {"$ref": "#/$defs/basis"},
+        "verification": {"$ref": "#/$defs/verification"}
+      }
+    },
+    "municipality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "name"],
+      "properties": {
+        "code": {"type": "string", "pattern": "^[a-z0-9_-]+$"},
+        "name": {"type": "string", "minLength": 1},
+        "organizations": {"type": "array", "items": {"$ref": "#/$defs/organization"}},
+        "channels": {"type": "array", "items": {"$ref": "#/$defs/channel"}},
+        "rules": {"type": "array", "items": {"$ref": "#/$defs/rule"}}
+      }
+    }
+  }
+}

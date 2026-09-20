@@ -1,5 +1,110 @@
 # DEV-B — current handoff
 
+## P3a — Responsibility Router, справочник и ActionCard (A-02) — 20.09.2026
+
+START: worktree `.worktrees/b-p3a-routing`, ветка `agent/b/p3a-routing` от
+`dev/b-experience=31df491` (merge P1 `agent/a/a03-ai-core`). Push, rebase и
+merge в другие ветки не выполнялись; `origin/main=3d4a095` не трогался.
+Это **IMPLEMENTED IN BRANCH**, не MERGED TO MAIN и не LIVE VERIFIED.
+
+### Результат
+
+Детерминированный слой «кто отвечает и какой следующий шаг» без модели и без
+LLM. Эндпоинтов, UI и изменений OpenAPI/TS в срезе нет — HTTP-граница и явный
+путь идут отдельным срезом.
+
+- **Справочник как данные:** `regions/responsibility.schema.json`,
+  `regions/safety.schema.json`, `regions/_federal/responsibility.yaml`,
+  `regions/_federal/safety.yaml`, `regions/RU-TA/responsibility.yaml`
+  (секция муниципалитета `kazan`). `regions/demo/pack.yaml` и его схема не
+  изменены. `scripts/validate_region_pack.py` дополнен: схема каждого файла,
+  существование `organization_id`/`channel_ids`, коды подтипов из
+  `domsignal.ai.taxonomy`, `location_scopes` из контракта AI, обязательные
+  `verified_at`/источник для `verified` и источник у каждого шага памятки.
+- **Router:** `core/responsibility.py` (слои, объединение, видимость),
+  `core/routing.py` (алгоритм), `services/routing.py` (загрузка и проверка
+  один раз при старте, контекст дома из БД). Невалидный справочник не роняет
+  приложение: все маршруты становятся `unknown`, `/ready` не меняется.
+  Сервис маршрута не бросает исключений.
+- **Профиль дома:** аддитивная миграция `20260920_0005` над `e107a3cff433`,
+  таблица `house_routing_profiles`, репозиторий, CLI
+  `python -m domsignal.tools.house_routing_profile` с аудитом `updated_by`.
+  `seed_demo` идемпотентно ставит демо-дому на Чистопольской `RU-TA/kazan`
+  и `territory_policy: unknown`, второму демо-дому — `uk`.
+- **ActionCard:** DTO в `contracts/routing.py`, сборка в
+  `services/action_cards.py`, предпросмотр
+  `python -m domsignal.tools.route_preview`. `ActionDescriptor` инцидента не
+  изменён. Запрещённые формулировки («заявка отправлена», «обращение
+  отправлено», «обращение зарегистрировано», «передано в», «срок исполнения»,
+  «обязан») покрыты тестом по всем комбинациям маршрут × аудитория × источник.
+- **Проводка:** настройка `regions_dir` и `RoutingService`/`ActionCardBuilder`
+  в `Container`. Роутеры, worker и bot их пока не вызывают.
+
+### Проверки
+
+Отдельная тестовая база `domsignal-p3a-db` (контейнер `postgres:16.10-bookworm`,
+`127.0.0.1:55483`, БД `domsignal_p3a`); чужие БД фикстурами не очищались.
+
+| Команда | Результат |
+|---|---|
+| `uv run python scripts/check.py --scope backend` | PASS — ruff, mypy (119 файлов), 321 unit/contract/ai тест |
+| `uv run python scripts/check.py --scope contracts` | PASS — OpenAPI и сгенерированный TS без дрейфа, расширенная валидация `regions/` |
+| `uv run python scripts/check.py --scope integration` | PASS — миграция до head и 177 PostgreSQL-тестов (11 новых) |
+| `uv run python -m domsignal.tools.route_preview …` | Пять поведений на демо-доме: `uk_internal`, `municipality` через ПОС, `emergency_service` со 112, выбор диспетчера для двора, `unknown` |
+
+Новые тесты: табличные маршруты (34 случая, включая видимость `verified`/`demo`/
+`needs_verification`, исключение канала для `RU-MOW`, `stale` старше 180 дней,
+переопределение правила нижним слоем и равноправные правила), ActionCard
+(13 тестов, включая запрещённые формулировки по всем комбинациям маршрут ×
+аудитория × источник), справочник и деградация (10 тестов), PostgreSQL
+(11 тестов: миграция вверх/вниз с отказом при данных, профиль дома,
+идемпотентность `seed_demo`, только текущее управление, CLI и `route_preview`).
+
+Во время прогона предпросмотра нашлась и исправлена реальная ошибка CLI:
+на однобайтовой консоли Windows печать карточки падала на символе «→»
+(`UnicodeEncodeError`). Вывод обоих инструментов идёт через
+`domsignal.tools.print_json` с явным UTF-8; есть регрессионный тест.
+
+### Что проверено в справочнике
+
+`verified` — только два канала: «Госуслуги. Решаем вместе» (по скриншотам
+владельца с gosuslugi.ru от 20.09.2026, `source_url` пуст) и единый номер 112
+(Федеральный закон от 30.12.2020 № 488-ФЗ). Всё остальное —
+`needs_verification` и жителю не показывается: аварийная газовая служба 104,
+«Госуслуги Дом», чат-бот ГИС ЖКХ, ГИС РТ «Народный контроль», ГЖИ РТ,
+ресурсоснабжающие организации и региональный оператор ТКО Казани.
+Проверенных муниципальных организаций Казани нет — муниципалитет наследует
+федеральный слой. Решение — [ROUTING-DIRECTORY-2026-09-20](../decisions.md#routing-directory-2026-09-20).
+
+### Остаток владельцу
+
+1. **Точная ссылка входа в сценарий ПОС** — одна строка `url` у канала
+   `pos_gosuslugi` в `regions/_federal/responsibility.yaml`. Пока `url` пуст,
+   действие перехода показывается с `enabled: false` и причиной, в которой
+   виден `entry_hint`.
+2. По желанию — сверка ГИС РТ «Народный контроль» и «Госуслуги Дом»; после
+   сверки достаточно сменить `verification.status` на `verified` с датой и
+   источником, код не меняется.
+3. Решение о `ticket_intake_enabled` для демо-домов. `has_active_connected_uk`
+   в этом срезе означает «у дома есть действующий период управления
+   (`HouseManagement`) на текущий момент», и `can_create_ticket` повторяет этот
+   признак. `TicketService.ensure` дополнительно требует
+   `ticket_intake_enabled`, а `seed_demo` его не включает: на демо-доме
+   карточка показывает активное «Сообщить в УК», но фактическое создание
+   заявки в следующем срезе вернёт «заявка не создана». Включить флаг в
+   `seed_demo` значит изменить поведение всего демо-потока (каждый отчёт
+   начнёт создавать Ticket) — это отдельное решение владельца, поэтому срез
+   его не трогает. До решения P3b обязан перепроверять `ticket_intake_enabled`
+   перед созданием и показывать причину, а не молча ничего не делать.
+
+### Ограничения
+
+Модель, эндпоинты, Signal Inbox, AppealDraft и групповая карточка в чат в срез
+не входят. Сроки (`due_at`, вид срока, календарь) A-02 этим срезом не
+затронуты. Нормативной проверки состава общего имущества конкретного дома нет:
+`uk_default` помечен `needs_verification` и несёт честную формулировку
+«типовое распределение».
+
 ## A-10/B-09 administrative onboarding — 19.09.2026
 
 START clean `dev/b-experience=02bb61c`; END fetch retains `origin/main=3d4a095`

@@ -22,6 +22,7 @@ from domsignal.db.models.onboarding import (
     HouseManagementRequest,
 )
 from domsignal.db.models.reliability import IdempotencyRecord, InboxReceipt, Job, OutboxMessage
+from domsignal.db.models.routing import HouseRoutingProfile
 from domsignal.db.models.sessions import AppSession
 from domsignal.db.models.tickets import (
     ResultObservation,
@@ -47,6 +48,7 @@ __all__ = [
     "AppSession",
     "House",
     "HouseAssignment",
+    "HouseRoutingProfile",
     "HouseManagement",
     "ManagementCompany",
     "OrganizationMembership",

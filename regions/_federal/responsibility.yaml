@@ -1,0 +1,268 @@
+# Федеральный слой справочника ответственности.
+#
+# Правило: жителю показывается только проверенная запись. Непроверенные органы,
+# телефоны и ссылки остаются в данных со статусом needs_verification и никогда
+# не попадают в ActionCard. Справочник не назначает сроков и не утверждает, что
+# обращение где-то зарегистрировано.
+schema_version: 1
+layer_id: _federal
+layer: federal
+region: null
+version: "1"
+updated_at: "2026-09-20"
+
+organizations: []
+
+channels:
+  - id: pos_gosuslugi
+    organization_id: null
+    channel_type: official_web
+    label: Госуслуги. Решаем вместе
+    url: null
+    phone: null
+    entry_hint: Госуслуги → «Сообщите, что вас волнует»
+    routes_to_competent_authority: true
+    facts:
+      - text: Ответ готовит ответственное ведомство, результат приходит в личный кабинет и на e-mail.
+        source_title: Скриншоты сценария «Сообщите, что вас волнует» на gosuslugi.ru, 20.09.2026
+        source_url: null
+      - text: Срок рассмотрения — до 30 календарных дней, по некоторым категориям быстрее.
+        source_title: Скриншоты сценария «Сообщите, что вас волнует» на gosuslugi.ru, 20.09.2026
+        source_url: null
+      - text: О нескольких проблемах сообщают отдельно — по одной проблеме на сообщение.
+        source_title: Скриншоты сценария «Сообщите, что вас волнует» на gosuslugi.ru, 20.09.2026
+        source_url: null
+      - text: Можно приложить до 10 файлов по 10 МБ; это необязательно.
+        source_title: Скриншоты сценария «Сообщите, что вас волнует» на gosuslugi.ru, 20.09.2026
+        source_url: null
+      - text: Нужен вход в Госуслуги.
+        source_title: Скриншоты сценария «Сообщите, что вас волнует» на gosuslugi.ru, 20.09.2026
+        source_url: null
+    unavailable_regions:
+      - RU-MOW
+    verification:
+      status: verified
+      verified_at: "2026-09-20"
+      verified_by: владелец (скриншоты gosuslugi.ru)
+      source_title: Скриншоты сценария «Сообщите, что вас волнует» на gosuslugi.ru, 20.09.2026
+      source_url: null
+
+  - id: emergency_112
+    organization_id: null
+    channel_type: phone
+    label: Единый номер вызова экстренных оперативных служб
+    url: null
+    phone: "112"
+    entry_hint: null
+    routes_to_competent_authority: true
+    facts:
+      - text: Единый номер 112 принимает вызовы экстренных оперативных служб на всей территории России.
+        source_title: Федеральный закон от 30.12.2020 № 488-ФЗ «Об обеспечении вызова экстренных оперативных служб по единому номеру "112"…»
+        source_url: http://publication.pravo.gov.ru/Document/View/0001202012300005
+    unavailable_regions: []
+    verification:
+      status: verified
+      verified_at: "2026-09-20"
+      verified_by: владелец (текст федерального закона)
+      source_title: Федеральный закон от 30.12.2020 № 488-ФЗ «Об обеспечении вызова экстренных оперативных служб по единому номеру "112"…»
+      source_url: http://publication.pravo.gov.ru/Document/View/0001202012300005
+
+  - id: gas_emergency_104
+    organization_id: null
+    channel_type: phone
+    label: Аварийная газовая служба
+    url: null
+    phone: "104"
+    entry_hint: null
+    routes_to_competent_authority: false
+    facts: []
+    unavailable_regions: []
+    verification:
+      status: needs_verification
+      verified_at: null
+      verified_by: null
+      source_title: Исходный план ДомСигнала, §6.4 — значение помечено как иллюстрация
+      source_url: null
+
+  - id: gosuslugi_dom
+    organization_id: null
+    channel_type: official_web
+    label: Госуслуги Дом
+    url: null
+    phone: null
+    entry_hint: null
+    routes_to_competent_authority: false
+    facts: []
+    unavailable_regions: []
+    verification:
+      status: needs_verification
+      verified_at: null
+      verified_by: null
+      source_title: Исходный план ДомСигнала, §0 — сценарий подачи вручную не проверен
+      source_url: null
+
+  - id: gis_zkh_max_bot
+    organization_id: null
+    channel_type: max_bot
+    label: Чат-бот ГИС ЖКХ в MAX
+    url: null
+    phone: null
+    entry_hint: null
+    routes_to_competent_authority: false
+    facts: []
+    unavailable_regions: []
+    verification:
+      status: needs_verification
+      verified_at: null
+      verified_by: null
+      source_title: Исходный план ДомСигнала, §0 — сценарий подачи вручную не проверен
+      source_url: null
+
+rules:
+  - id: federal.gas_smell.emergency
+    priority: 10
+    match:
+      subtypes:
+        - gas.smell
+      location_scopes: []
+    route_type: emergency_service
+    organization_id: null
+    channel_ids:
+      - emergency_112
+    can_prepare_appeal: false
+    basis:
+      text: Запах газа — повод вызвать экстренные службы, а не завести обычную заявку; вызов принимает единый номер 112.
+      source_title: Федеральный закон от 30.12.2020 № 488-ФЗ «Об обеспечении вызова экстренных оперативных служб по единому номеру "112"…»
+      source_url: http://publication.pravo.gov.ru/Document/View/0001202012300005
+    verification:
+      status: verified
+      verified_at: "2026-09-20"
+      verified_by: владелец (текст федерального закона)
+      source_title: Федеральный закон от 30.12.2020 № 488-ФЗ «Об обеспечении вызова экстренных оперативных служб по единому номеру "112"…»
+      source_url: http://publication.pravo.gov.ru/Document/View/0001202012300005
+
+  - id: federal.municipal_territory.default
+    priority: 100
+    match:
+      subtypes:
+        - street_lighting.failure
+        - road.damage
+        - landscaping.public
+        - snow.street
+      location_scopes:
+        - municipal_territory
+    route_type: municipality
+    organization_id: null
+    channel_ids:
+      - pos_gosuslugi
+    can_prepare_appeal: true
+    basis:
+      text: Типовое распределение — объекты за границей общего имущества дома обычно содержит муниципалитет; ответственное ведомство окончательно определяет официальный сервис.
+      source_title: Скриншоты сценария «Сообщите, что вас волнует» на gosuslugi.ru, 20.09.2026
+      source_url: null
+    verification:
+      status: verified
+      verified_at: "2026-09-20"
+      verified_by: владелец (скриншоты gosuslugi.ru)
+      source_title: Скриншоты сценария «Сообщите, что вас волнует» на gosuslugi.ru, 20.09.2026
+      source_url: null
+
+  - id: federal.waste_removal.regional_operator
+    priority: 100
+    match:
+      subtypes:
+        - waste.removal_regional
+      location_scopes: []
+    route_type: regional_operator
+    organization_id: null
+    channel_ids: []
+    can_prepare_appeal: false
+    basis:
+      text: Типовое распределение — вывоз твёрдых коммунальных отходов ведёт региональный оператор; конкретную организацию и канал проверяет диспетчер.
+      source_title: Справочник ДомСигнала — типовое распределение без проверенного регионального источника
+      source_url: null
+    verification:
+      status: needs_verification
+      verified_at: null
+      verified_by: null
+      source_title: Региональный оператор ТКО для RU-TA не сверен с официальным источником
+      source_url: null
+
+  - id: federal.external_network.resource_supplier
+    priority: 100
+    match:
+      subtypes:
+        - external_network.outage
+        - power.grid_outage
+      location_scopes:
+        - external_network
+    route_type: resource_supplier
+    organization_id: null
+    channel_ids: []
+    can_prepare_appeal: false
+    basis:
+      text: Типовое распределение — сети за границей дома ведёт ресурсоснабжающая организация; конкретную организацию и канал проверяет диспетчер.
+      source_title: Справочник ДомСигнала — типовое распределение без проверенного регионального источника
+      source_url: null
+    verification:
+      status: needs_verification
+      verified_at: null
+      verified_by: null
+      source_title: Ресурсоснабжающие организации Казани не сверены с официальным источником
+      source_url: null
+
+  - id: federal.gas_supply.resource_supplier
+    priority: 100
+    match:
+      subtypes:
+        - gas.supply_outage
+      location_scopes: []
+    route_type: resource_supplier
+    organization_id: null
+    channel_ids: []
+    can_prepare_appeal: false
+    basis:
+      text: Типовое распределение — подачу газа ведёт ресурсоснабжающая организация; конкретную организацию и канал проверяет диспетчер.
+      source_title: Справочник ДомСигнала — типовое распределение без проверенного регионального источника
+      source_url: null
+    verification:
+      status: needs_verification
+      verified_at: null
+      verified_by: null
+      source_title: Газоснабжающая организация Казани не сверена с официальным источником
+      source_url: null
+
+uk_default:
+  subtypes:
+    - elevator.button
+    - elevator.doors
+    - elevator.stopped
+    - water.leak
+    - roof.leak
+    - water.hot_outage
+    - water.supply_outage
+    - water.quality
+    - water.pressure
+    - heating.cold_radiators
+    - lighting.stairwell
+    - electrical.panel
+    - waste.chute
+    - intercom.broken
+    - entrance_door.broken
+    - cleaning.stairwell
+    - structure.damage
+  resource_supplier_alternatives:
+    - water.hot_outage
+    - water.supply_outage
+  basis:
+    text: Общее имущество многоквартирного дома, типовое распределение; первая линия — управляющая компания дома.
+    source_title: Справочник ДомСигнала — типовое распределение по общему имуществу МКД
+    source_url: null
+  verification:
+    status: needs_verification
+    verified_at: null
+    verified_by: null
+    source_title: Состав общего имущества по документам конкретного дома не сверен
+    source_url: null
+
+municipalities: []

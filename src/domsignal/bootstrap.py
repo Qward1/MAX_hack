@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
@@ -9,11 +10,13 @@ from domsignal.bot.ingress import InboundService
 from domsignal.bot.messaging import HttpMaxMessagingProvider
 from domsignal.bot.transport import MaxTransport, OffTransport, RecordingTransport
 from domsignal.db.session import create_engine, create_session_factory
+from domsignal.services.action_cards import ActionCardBuilder
 from domsignal.services.chat_connections import ChatConnectionService
 from domsignal.services.group_messages import MaxWebhookService
 from domsignal.services.membership import MembershipService
 from domsignal.services.notifications import TicketNotificationHandler
 from domsignal.services.reports import DemoRule, ReportService
+from domsignal.services.routing import RoutingService, load_directory_or_none
 from domsignal.services.sessions import SessionService
 from domsignal.services.tickets import TicketService
 from domsignal.settings import MaxTransportMode, Settings
@@ -35,6 +38,8 @@ class Container:
     chat_connections: ChatConnectionService
     max_webhook: MaxWebhookService
     notifications: TicketNotificationHandler
+    routing: RoutingService
+    action_cards: ActionCardBuilder
 
 
 def build_container(settings: Settings) -> Container:
@@ -68,6 +73,9 @@ def build_container(settings: Settings) -> Container:
         required_permissions=settings.max_required_permissions,
     )
     ticket_service = TicketService()
+    # Справочник проверяется один раз на старте; ошибка данных оставляет все
+    # маршруты unknown и не меняет готовность приложения.
+    routing = RoutingService(load_directory_or_none(Path(settings.regions_dir)))
     notifications = TicketNotificationHandler(
         session_factory=session_factory,
         tickets=ticket_service,
@@ -100,4 +108,6 @@ def build_container(settings: Settings) -> Container:
         chat_connections=chat_connections,
         max_webhook=MaxWebhookService(chat_connections),
         notifications=notifications,
+        routing=routing,
+        action_cards=ActionCardBuilder(routing),
     )
