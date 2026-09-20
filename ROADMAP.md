@@ -61,7 +61,7 @@ DEV-B; интегратор не обходит review или protection `main`.
 
 | Developer | Сейчас / следующий шаг | Настоящая зависимость и снимающий контракт |
 |---|---|---|
-| DEV-A | Сохранить review/handoff FND-01; затем A-03/AI: baseline extraction/risk detector + evaluation, без обязательного provider. | DEV-B задаёт разрешённый input scope и public application boundary; A возвращает typed analysis fixture и не ждёт реализации всего product backend. |
+| DEV-A | A-03/AI + A-17/AI: AI-ядро на правилах (P1). | DEV-B задаёт разрешённый input scope и public application boundary; A возвращает typed analysis fixture и не ждёт реализации всего product backend. |
 | DEV-B | **A-16 + B-14 IMPLEMENTED IN BRANCH**, поверх A-01/A-15/A-07; B-02 regression сохранён. B-14 разрешена отдельным заданием владельца. Далее review/CI/PR, без автоматического начала следующей задачи. | Evidence: [dev-b](docs/status/dev-b.md), [UI-TK](scenarios/acceptance.md#b-14--ui-tk-evidence). Live MAX NOT VERIFIED; не MERGED TO MAIN. Web-auth/MFA и onboarding остаются отдельными срезами. |
 
 ### Встраивание ARCH-PLATFORM-v1 в существующий план
@@ -179,6 +179,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Acceptance:** для каждого принятого правила есть источник и фактический статус проверки; неизвестный исполнитель или срок возвращает безопасную неопределённость. На тестовом календаре проверены выходные, переход месяца/года и timezone. Пример из источника не превращён автоматически в норму.
 - **Handoff внутри DEV-B:** RouteResult и fixtures нормального/неполного/неприменимого маршрута для bot/UI; дата источника и причина отсутствия due_at. DEV-A использует только стабильные category codes как вход AI evaluation.
 - **ARCH target / зависит для tenant-среза от A-15:** правила внешнего адресата и сроки не равны routing рабочей очереди (A-16). Resolver ограничен tenant/домом/периодом управления; неизвестный маршрут остаётся неопределённым. Проверка: одинаковая категория в двух УК не заимствует чужую конфигурацию/источник.
+- **Расширение на внешние маршруты ([PASSIVE-CHAT-2026-09-20](docs/decisions.md#passive-chat-2026-09-20)):** Responsibility Router + справочник ответственности с источником и датой проверки; нет правила → `unknown`, без выдуманных органов.
 - **Q&A / №416:** вместе с A-11/Product ведёт применимость, источник/редакцию, вид срока, исходное событие и календарь по [матрице №416](docs/PRODUCT_ARCHITECTURE.md#пп-рф-416--документальная-сверка-18092026). Отдельно ответ, согласованная работа, следующее обновление и подтверждённый нормативный срок; A-16 потребляет контракт правил, без универсального смешанного due_at.
 
 ### A-03 — intake, NLP baseline и safety-off-ramp
@@ -291,6 +292,13 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 
 - **A-16 evidence:** [DEV-B handoff](docs/status/dev-b.md), TK-01…TK-26 в [acceptance](scenarios/acceptance.md#a-16--backend-evidence-18092026): migration 0004; 53 unit/contract, 97 PostgreSQL integration (32 новых A-16), 73 frontend, 8 B-02 browser; OpenAPI/TS drift и Docker smoke PASS. Семантический matching отсутствует; normative deadline недоступен без проверенного A-02; outbox pending без MAX delivery. Предыдущие A-01/A-15/A-07/B-02 regression PASS; main/live статусы не повышены.
 
+### A-17 — пассивные сигналы из подключённого домового чата
+- **Основание:** [PASSIVE-CHAT-2026-09-20](docs/decisions.md#passive-chat-2026-09-20). **P1 · M · Depends:** A-02, A-07, A-16. Разделена на два среза с одним Owner каждый.
+- **A-17/AI — Owner DEV-A. Allowed paths:** `src/domsignal/ai/`, `datasets/`, `evaluation/`, `tests/ai/`. **Сделать:** одно ядро анализа окна реплик (одиночное сообщение = окно из одной реплики): подтип, место, время, объект, территория (`location_scope`), признаки, опасность правил и семантики, fusion, сила сигнала, guard `no_new_facts`, интерфейс провайдера и оценка. Ядро не отвечает на вопрос «кто отвечает».
+- **A-17/Product — Owner DEV-B. Allowed paths:** приём сообщений и буфер, правила опасности в транзакции приёма, сборщик окон, пулы воркеров `operational`/`ai`, таблицы сигналов и событий, Signal Inbox, ActionCard, продвижение сигнала в заявку.
+- **Acceptance:** сигнал не становится заявкой или официальным обращением без оператора; опасность = правила ИЛИ семантика, понижение только по опровержению с цитатой и с событием аудита; ответственную организацию определяет Responsibility Router, модель — нет; буфер сырых реплик ≤ 72 ч; выключатель авто-режима и сообщение о чтении чата; деградация AI не задерживает уведомления и не ломает явный путь.
+- **Handoff:** DEV-A отдаёт типизированный `WindowAnalysis`, коды подтипов таксономии v2 и `location_scope` для роутера P3a; DEV-B применяет бизнес-правила и выполняет транзакцию.
+
 ## 7. Исторические B-ID — Owner DEV-B
 
 ### B-00 — UX-контракт и acceptance-сценарии до каркаса
@@ -344,7 +352,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Сделать:** карточка общего инцидента; edit вместо повторного постинга; меня касается/не проблема; допустимое уточнение; anti-spam/quiet-hours и права; реакция на removal/edit.
 - **Acceptance:** два пользователя видят одну историю; counts правильные; устаревшая кнопка не портит состояние; отключение auto-mode работает. После ручного удаления карточки не начинать бесконечный repost против намерения администратора. При снятии прав нет бесконечных retry.
 - **Fallback:** если group blocked, усиливать B-07/B-08 вместо ложного «работает за флагом».
-- **Ticket extension / PLANNED:** после A-16 — актуальная общая карточка и callbacks с повторной проверкой actor/scope/попытки. Приватные комментарии/контакты в группу не попадают. Текущий A-07 принимает только явную `/report`; auto-анализ переписки этим планом не разрешается.
+- **Ticket extension / PLANNED:** после A-16 — актуальная общая карточка и callbacks с повторной проверкой actor/scope/попытки. Приватные комментарии/контакты в группу не попадают. Пассивный анализ переписки разрешён решением [PASSIVE-CHAT-2026-09-20](docs/decisions.md#passive-chat-2026-09-20) и ведётся в A-17; групповая карточка из пассивного сигнала делается после A-17, для внешних маршрутов она отвечает на вопрос «куда обратиться», а не создаёт обращение.
 
 ### B-07 — контекст между MAX-пространствами, sharing и QR
 - **Delivery slice 18.09.2026:** opaque personal open_app/start_param → authenticated resolver → existing Incident Detail/current WorkAttempt IMPLEMENTED IN BRANCH / deterministic tested. QR, sharing/group transitions and real-client behavior remain unclosed; B-07 PARTIAL.

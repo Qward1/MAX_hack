@@ -1,0 +1,475 @@
+{
+  "$defs": {
+    "ModelDanger": {
+      "additionalProperties": false,
+      "properties": {
+        "contextual": {
+          "default": false,
+          "title": "Contextual",
+          "type": "boolean"
+        },
+        "evidence": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ModelEvidence"
+          },
+          "maxItems": 8,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "gas",
+            "smoke_fire",
+            "electric",
+            "person_trapped",
+            "flooding",
+            "structural",
+            "other_hazard"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "ModelDanger",
+      "type": "object"
+    },
+    "ModelEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "msg": {
+          "description": "Идентификатор реплики окна, например m3",
+          "title": "Msg",
+          "type": "string"
+        },
+        "quote": {
+          "description": "Дословная цитата из этой реплики",
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "msg",
+        "quote"
+      ],
+      "title": "ModelEvidence",
+      "type": "object"
+    },
+    "ModelFacet": {
+      "additionalProperties": false,
+      "properties": {
+        "msg": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Msg"
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quote"
+        },
+        "v": {
+          "enum": [
+            "yes",
+            "no",
+            "unclear"
+          ],
+          "title": "V",
+          "type": "string"
+        }
+      },
+      "required": [
+        "v"
+      ],
+      "title": "ModelFacet",
+      "type": "object"
+    },
+    "ModelFacets": {
+      "additionalProperties": false,
+      "properties": {
+        "current": {
+          "$ref": "#/$defs/ModelFacet"
+        },
+        "local": {
+          "$ref": "#/$defs/ModelFacet"
+        },
+        "observed": {
+          "$ref": "#/$defs/ModelFacet"
+        }
+      },
+      "required": [
+        "current",
+        "local",
+        "observed"
+      ],
+      "title": "ModelFacets",
+      "type": "object"
+    },
+    "ModelLine": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "link_certainty": {
+          "anyOf": [
+            {
+              "enum": [
+                "sure",
+                "unsure"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Link Certainty"
+        },
+        "role": {
+          "enum": [
+            "new_problem",
+            "me_too",
+            "more_info",
+            "objection",
+            "status_question",
+            "resolved_claim",
+            "announcement",
+            "discussion",
+            "chatter",
+            "out_of_scope"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "signals": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 5,
+          "title": "Signals",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "role"
+      ],
+      "title": "ModelLine",
+      "type": "object"
+    },
+    "ModelRefutation": {
+      "additionalProperties": false,
+      "properties": {
+        "msg": {
+          "title": "Msg",
+          "type": "string"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "past",
+            "resolved",
+            "other_place",
+            "explicit_negation",
+            "not_literal"
+          ],
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "quote",
+        "msg"
+      ],
+      "title": "ModelRefutation",
+      "type": "object"
+    },
+    "ModelScope": {
+      "additionalProperties": false,
+      "properties": {
+        "msg": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Msg"
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quote"
+        },
+        "value": {
+          "enum": [
+            "apartment",
+            "house_common",
+            "house_territory",
+            "municipal_territory",
+            "external_network",
+            "other_building",
+            "unknown"
+          ],
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "ModelScope",
+      "type": "object"
+    },
+    "ModelSignal": {
+      "additionalProperties": false,
+      "properties": {
+        "clean_description": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "danger": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ModelDanger"
+          },
+          "maxItems": 8,
+          "title": "Danger",
+          "type": "array"
+        },
+        "danger_refutation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelRefutation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "entrance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "facets": {
+          "$ref": "#/$defs/ModelFacets"
+        },
+        "floor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "location_scope": {
+          "$ref": "#/$defs/ModelScope"
+        },
+        "object": {
+          "maxLength": 120,
+          "title": "Object",
+          "type": "string"
+        },
+        "ref": {
+          "description": "new:N для новой проблемы или open:K открытого элемента",
+          "title": "Ref",
+          "type": "string"
+        },
+        "since": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "subtype": {
+          "enum": [
+            "gas.smell",
+            "gas.supply_outage",
+            "elevator.button",
+            "elevator.doors",
+            "elevator.stopped",
+            "roof.leak",
+            "water.leak",
+            "water.hot_outage",
+            "water.supply_outage",
+            "water.quality",
+            "water.pressure",
+            "heating.cold_radiators",
+            "electrical.panel",
+            "power.grid_outage",
+            "street_lighting.failure",
+            "lighting.yard",
+            "lighting.stairwell",
+            "waste.chute",
+            "waste.container_site",
+            "waste.removal_regional",
+            "intercom.broken",
+            "entrance_door.broken",
+            "cleaning.stairwell",
+            "snow.street",
+            "snow.yard",
+            "playground.damaged",
+            "landscaping.public",
+            "road.damage",
+            "structure.damage",
+            "external_network.outage",
+            "other.unspecified"
+          ],
+          "title": "Subtype",
+          "type": "string"
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "ref",
+        "subtype",
+        "object",
+        "location_scope",
+        "facets"
+      ],
+      "title": "ModelSignal",
+      "type": "object"
+    },
+    "ModelText": {
+      "additionalProperties": false,
+      "properties": {
+        "sources": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 40,
+          "title": "Sources",
+          "type": "array"
+        },
+        "text": {
+          "maxLength": 1000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "ModelText",
+      "type": "object"
+    },
+    "ModelValue": {
+      "additionalProperties": false,
+      "properties": {
+        "msg": {
+          "title": "Msg",
+          "type": "string"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "quote",
+        "msg"
+      ],
+      "title": "ModelValue",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Ответ модели на одно окно.",
+  "properties": {
+    "messages": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ModelLine"
+      },
+      "maxItems": 45,
+      "title": "Messages",
+      "type": "array"
+    },
+    "signals": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ModelSignal"
+      },
+      "maxItems": 5,
+      "title": "Signals",
+      "type": "array"
+    }
+  },
+  "title": "window_output.v1",
+  "type": "object"
+}
