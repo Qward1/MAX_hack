@@ -84,9 +84,9 @@ MAIN и не LIVE VERIFIED.
 
 | Команда | Результат |
 |---|---|
-| `uv run python scripts/check.py --scope backend` | PASS — ruff, mypy (132 файла), 453 unit/contract/ai теста (29 новых) |
+| `uv run python scripts/check.py --scope backend` | PASS — ruff, mypy (132 файла), 465 unit/contract/ai тестов (29 новых) |
 | `uv run python scripts/check.py --scope contracts` | PASS — OpenAPI и сгенерированный TS без дрейфа, валидация `regions/` |
-| `uv run python scripts/check.py --scope frontend` | PASS — typecheck, 73 теста, build |
+| `uv run python scripts/check.py --scope frontend` | PASS — typecheck, 89 тестов, build |
 | `uv run python scripts/check.py --scope integration` | PASS — миграция до head и 242 PostgreSQL-теста (65 новых), 10 мин 25 с |
 | `docker compose … config` для local и production overlay | PASS, `ai-worker` с `--pool ai` в обоих |
 

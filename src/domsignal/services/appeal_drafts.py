@@ -176,16 +176,24 @@ class AppealDraftService:
         *,
         lock: bool = False,
     ) -> tuple[AppealDraft, RouteOutcome, OperationContext]:
-        """Чужой черновик неотличим от отсутствующего: всегда 404."""
-        statement = select(AppealDraft).where(AppealDraft.id == draft_id)
-        if lock:
-            statement = statement.with_for_update()
-        draft = await session.scalar(statement)
+        """Чужой черновик неотличим от отсутствующего: всегда 404.
+
+        Порядок блокировок тот же, что во всём продукте: authority → дом →
+        строка. Поэтому до разрешения доступа читается только принадлежность
+        черновика, а строка блокируется уже после взятия домовых блокировок.
+        """
+        draft = await session.scalar(select(AppealDraft).where(AppealDraft.id == draft_id))
         if draft is None or draft.author_id != actor_id:
             raise ResourceNotFound("Resource was not found")
         context = await self.memberships.require_house(
             session, user_id=actor_id, house_id=draft.house_id, for_write=lock
         )
+        if lock:
+            draft = await session.scalar(
+                select(AppealDraft).where(AppealDraft.id == draft_id).with_for_update()
+            )
+            if draft is None or draft.author_id != actor_id or draft.house_id != context.house_id:
+                raise ResourceNotFound("Resource was not found")
         outcome = await session.get(RouteOutcome, draft.route_outcome_id)
         if outcome is None or outcome.house_id != context.house_id:
             raise ResourceNotFound("Resource was not found")
