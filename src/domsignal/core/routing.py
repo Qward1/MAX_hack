@@ -111,6 +111,16 @@ def _channel_dto(channel: Channel, *, today: date) -> RouteChannel:
     )
 
 
+def visible_to_house(verification: Verification, *, is_demo: bool) -> bool:
+    """Видна ли запись справочника этому дому."""
+    return _visible(verification, is_demo=is_demo)
+
+
+def channel_dto(channel: Channel, *, today: date) -> RouteChannel:
+    """DTO канала справочника без пересчёта маршрута."""
+    return _channel_dto(channel, today=today)
+
+
 def _channels(
     channel_ids: Sequence[str],
     directory: EffectiveDirectory,

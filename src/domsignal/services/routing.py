@@ -24,6 +24,7 @@ from domsignal.contracts.routing import (
     DangerKind,
     LocationScope,
     ResponsibilityRoute,
+    RouteChannel,
     SafetyBlock,
     TerritoryPolicy,
 )
@@ -31,9 +32,11 @@ from domsignal.core.responsibility import ResponsibilityDirectory, build_directo
 from domsignal.core.routing import (
     HouseRoutingContext,
     RoutingQuery,
+    channel_dto,
     resolve_route,
     safety_block,
     unavailable_route,
+    visible_to_house,
 )
 from domsignal.db.repositories.routing import RoutingRepository
 
@@ -203,6 +206,44 @@ class RoutingService:
         except Exception as exc:  # noqa: BLE001 - памятка не должна ронять путь жителя
             logger.error("routing_safety_failed", extra={"error_type": type(exc).__name__})
             return None
+
+    def directory_entry(
+        self,
+        house: HouseRoutingContext,
+        *,
+        organization_id: str | None = None,
+        channel_id: str | None = None,
+    ) -> tuple[str | None, RouteChannel | None]:
+        """Имя организации и канал по идентификаторам сохранённого исхода.
+
+        Черновик обращения собирается из уже принятого решения, поэтому ему
+        нужен не пересчёт маршрута, а та же запись справочника. Непроверенная
+        запись по-прежнему не называется: видимость решает тот же фильтр.
+        """
+        if self.directory is None:
+            return None, None
+        try:
+            effective = self.directory.effective(house.region_code, house.municipality_code)
+            organization = None
+            if organization_id is not None:
+                found = effective.organizations.get(organization_id)
+                if found is not None and visible_to_house(
+                    found.verification, is_demo=house.is_demo
+                ):
+                    organization = found.name
+            channel = None
+            if channel_id is not None:
+                entry = effective.channels.get(channel_id)
+                if (
+                    entry is not None
+                    and entry.available_in(house.region_code)
+                    and visible_to_house(entry.verification, is_demo=house.is_demo)
+                ):
+                    channel = channel_dto(entry, today=datetime.now(UTC).date())
+            return organization, channel
+        except Exception as exc:  # noqa: BLE001 - справочник не должен ронять черновик
+            logger.error("routing_directory_entry_failed", extra={"error_type": type(exc).__name__})
+            return None, None
 
     async def route_for_house(
         self,

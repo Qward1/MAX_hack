@@ -1,14 +1,59 @@
-"""Explicit manual group intake. No NLP, participant sync or implicit access grants."""
+"""Explicit manual group intake. No NLP, participant sync or implicit access grants.
+
+Две формы одной команды. `/report <код категории> <текст>` — прежний ручной
+путь без разбора. `/report <свободный текст>` — запись приёма плюс две задачи:
+разбор ядром в AI-пуле и сторожевой разбор правилами в операционном пуле.
+Разбор в транзакции приёма не выполняется: вызов модели не должен держать
+транзакцию вебхука.
+"""
+
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domsignal.bot.max_updates import MaxEvent
 from domsignal.contracts.chat_connections import GroupMessage
 from domsignal.contracts.jobs import InboundAccepted
-from domsignal.db.models import InboxReceipt
+from domsignal.core.incidents import ReportCategory
+from domsignal.db.models import ExplicitIntake, InboxReceipt
 from domsignal.db.repositories.chat_connections import ChatRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.services.chat_connections import ChatConnectionService
+
+REPORT_COMMAND = "/report "
+
+#: Коды категорий прежнего ручного пути. Совпадение второго слова с кодом
+#: оставляет команду на старом пути без разбора.
+CATEGORY_CODES = frozenset(item.value for item in ReportCategory)
+
+#: Минимальная длина свободного текста. Короче — команда считается неполной и
+#: игнорируется так же, как раньше игнорировался `/report` без описания.
+MIN_FREE_TEXT = 5
+
+#: Сторожевая задача правил ждёт столько секунд, давая AI-пулу шанс ответить.
+FALLBACK_DELAY_SECONDS = 30
+
+ANALYZE_JOB = "ai.report.analyze"
+FALLBACK_JOB = "report.fallback"
+ANALYZE_PRIORITY = 30
+FALLBACK_PRIORITY = 50
+
+
+def is_category_command(text: str) -> bool:
+    """Второе слово — валидный код категории: это прежний ручной путь."""
+    parts = text.split(maxsplit=2)
+    return len(parts) >= 2 and parts[1] in CATEGORY_CODES
+
+
+def free_text_of(text: str) -> str | None:
+    """Свободный текст команды или `None`, если его слишком мало для разбора.
+
+    Возврат `None` не означает «прежний путь»: форму команды определяет
+    `is_category_command`. Слишком короткая команда игнорируется так же, как
+    раньше игнорировался `/report` без описания.
+    """
+    body = text[len(REPORT_COMMAND) :].strip() if text.startswith(REPORT_COMMAND) else ""
+    return body if len(body) >= MIN_FREE_TEXT else None
 
 
 class MaxWebhookService:
@@ -60,7 +105,7 @@ class MaxWebhookService:
                 and event.chat_id
                 and event.actor
                 and event.text
-                and event.text.startswith("/report ")
+                and event.text.startswith(REPORT_COMMAND)
             ):
                 binding = await repo.active_binding(event.chat_id)
                 if (
@@ -68,21 +113,55 @@ class MaxWebhookService:
                     and binding.activated_at is not None
                     and event.occurred_at >= binding.activated_at
                 ):
-                    message = GroupMessage(
-                        event_id=event.event_id,
-                        chat_id=event.chat_id,
-                        external_user_id=event.actor,
-                        occurred_at=event.occurred_at,
-                        text=event.text,
-                        chat_binding_id=binding.id,
-                        binding_version=binding.binding_version,
-                    )
-                    job = await reliability.add_job(
-                        kind="max.group.report",
-                        payload=message.model_dump(mode="json"),
-                        priority=50,
-                    )
-                    job_id = job.id
+                    by_code = is_category_command(event.text)
+                    free_text = None if by_code else free_text_of(event.text)
+                    if by_code:
+                        message = GroupMessage(
+                            event_id=event.event_id,
+                            chat_id=event.chat_id,
+                            external_user_id=event.actor,
+                            occurred_at=event.occurred_at,
+                            text=event.text,
+                            chat_binding_id=binding.id,
+                            binding_version=binding.binding_version,
+                        )
+                        job = await reliability.add_job(
+                            kind="max.group.report",
+                            payload=message.model_dump(mode="json"),
+                            priority=50,
+                        )
+                        job_id = job.id
+                    elif free_text is not None:
+                        session.add(
+                            ExplicitIntake(
+                                event_id=event.event_id,
+                                chat_id=event.chat_id,
+                                chat_binding_id=binding.id,
+                                binding_version=binding.binding_version,
+                                external_user_id=event.actor,
+                                text=free_text,
+                                occurred_at=event.occurred_at,
+                                state="pending",
+                            )
+                        )
+                        payload = {"event_id": event.event_id}
+                        now = datetime.now(UTC)
+                        # Разбор ядром и сторож правил борются за одну запись:
+                        # кто захватил, тот и обрабатывает. Остановленный
+                        # AI-пул задерживает результат, но не отменяет его.
+                        analyze = await reliability.add_job(
+                            kind=ANALYZE_JOB, payload=payload, priority=ANALYZE_PRIORITY, now=now
+                        )
+                        await reliability.add_job(
+                            kind=FALLBACK_JOB,
+                            payload=payload,
+                            priority=FALLBACK_PRIORITY,
+                            delay_seconds=FALLBACK_DELAY_SECONDS,
+                            now=now,
+                        )
+                        job_id = analyze.id
+                    # Свободный текст короче минимума не создаёт ни записи,
+                    # ни задач: команда неполная, как и раньше.
         return InboundAccepted(
             event_id=event.event_id, accepted=True, duplicate=False, job_id=job_id
         )

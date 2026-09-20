@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 from uuid import UUID, uuid4
 
@@ -10,6 +10,7 @@ from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domsignal.db.models import IdempotencyRecord, InboxReceipt, Job, OutboxMessage
+from domsignal.worker.pools import AI_KIND_PREFIX, WorkerPool
 
 
 def stable_hash(payload: dict[str, Any]) -> str:
@@ -98,13 +99,33 @@ class ReliabilityRepository:
         await self.session.flush()
         return job
 
-    async def add_job(self, *, kind: str, payload: dict[str, Any], priority: int = 100) -> Job:
+    async def add_job(
+        self,
+        *,
+        kind: str,
+        payload: dict[str, Any],
+        priority: int = 100,
+        delay_seconds: int = 0,
+        now: datetime | None = None,
+    ) -> Job:
+        """Поставить задачу. `delay_seconds` отодвигает первую попытку."""
         job = Job(kind=kind, payload=payload, status="pending", priority=priority)
+        if delay_seconds:
+            job.next_attempt_at = (now or datetime.now(UTC)) + timedelta(seconds=delay_seconds)
         self.session.add(job)
         await self.session.flush()
         return job
 
-    async def claim_job(self, *, now: datetime, lease_seconds: int) -> Job | None:
+    async def claim_job(
+        self, *, now: datetime, lease_seconds: int, pool: WorkerPool | None = None
+    ) -> Job | None:
+        """Взять задачу своего пула. Без пула видны все виды (как раньше).
+
+        Фильтр строится по виду задачи, а не по составу обработчиков: иначе
+        задача незнакомого вида не досталась бы ни одному пулу и осталась бы в
+        очереди навсегда вместо честного отказа.
+        """
+        ai_kind = Job.kind.startswith(AI_KIND_PREFIX, autoescape=True)
         job = await self.session.scalar(
             select(Job)
             .where(
@@ -112,6 +133,11 @@ class ReliabilityRepository:
                 or_(
                     Job.status == "pending",
                     (Job.status == "leased") & (Job.lease_until < now),
+                ),
+                *(
+                    ()
+                    if pool is None
+                    else (ai_kind if pool == "ai" else ~ai_kind,)
                 ),
             )
             .order_by(Job.priority, Job.created_at)

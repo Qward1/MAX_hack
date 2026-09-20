@@ -16,6 +16,7 @@ from domsignal.core.chat_connections import TERMINAL
 from domsignal.db.repositories.access import AccessRepository
 from domsignal.services.chat_connections import ChatConnectionError, ChatConnectionService
 from domsignal.services.errors import AccessDenied, ResourceNotFound
+from domsignal.services.explicit_reports import ExplicitReportService
 from domsignal.services.notifications import TicketNotificationHandler
 from domsignal.services.reports import ReportService
 
@@ -31,12 +32,14 @@ class WorkerHandlers:
         transport: MaxTransport,
         chat_connections: ChatConnectionService | None = None,
         notifications: TicketNotificationHandler | None = None,
+        explicit_reports: ExplicitReportService | None = None,
     ) -> None:
         self.session_factory = session_factory
         self.report_service = report_service
         self.transport = transport
         self.chat_connections = chat_connections
         self.notifications = notifications
+        self.explicit_reports = explicit_reports
 
     @property
     def mapping(self) -> dict[str, JobHandler]:
@@ -50,6 +53,10 @@ class WorkerHandlers:
         if self.notifications:
             handlers["max.ticket.callback"] = self.notifications.callback
             handlers["max.ticket.answer"] = self.notifications.answer
+        if self.explicit_reports:
+            # Разбор ядром живёт в AI-пуле, сторож правил — в операционном.
+            handlers["ai.report.analyze"] = self.explicit_reports.analyze_with_core
+            handlers["report.fallback"] = self.explicit_reports.analyze_with_rules
         return handlers
 
     async def verify_connection(self, payload: dict[str, Any]) -> None:

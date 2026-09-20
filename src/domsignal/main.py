@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from domsignal.api.errors import RequestIdMiddleware, install_error_handlers
 from domsignal.api.routes import (
     administration,
+    appeals,
     auth,
     chat_connections,
     employee_auth,
@@ -63,6 +64,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(administration.router)
     app.include_router(me.router)
     app.include_router(incidents.router)
+    app.include_router(appeals.router)
     app.include_router(max_ingress.router)
     app.include_router(chat_connections.router)
     app.include_router(tickets.router)
