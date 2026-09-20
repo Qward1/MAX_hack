@@ -24,9 +24,23 @@ class MaxTransportMode(StrEnum):
 
 class LlmProvider(StrEnum):
     RULES = "rules"
+    OPENAI_COMPATIBLE = "openai_compatible"
+
+
+class LlmSchemaMode(StrEnum):
+    """Форма структурированного ответа, подобранная для конкретной модели.
+
+    Значения совпадают с `domsignal.ai.schema_modes.SchemaMode`; настройки
+    намеренно не импортируют AI-пакет.
+    """
+
+    JSON_SCHEMA_STRICT = "json_schema_strict"
+    JSON_SCHEMA = "json_schema"
+    JSON_OBJECT = "json_object"
 
 
 MAX_API_ORIGIN = "https://platform-api2.max.ru"
+LLM_BASE_URL = "https://polza.ai/api/v1"
 PRODUCTION_MAX_BOT_USERNAME = "t480_hakaton_max_bot"
 WEBHOOK_SECRET_PATTERN = re.compile(r"^[A-Za-z0-9_-]{5,256}$")
 
@@ -56,6 +70,16 @@ class Settings(BaseSettings):
     max_required_permissions: frozenset[str] = frozenset({"read_all_messages"})
     chat_connection_ttl_seconds: int = Field(default=900, ge=60, le=3600)
     llm_provider: LlmProvider = LlmProvider.RULES
+    llm_base_url: str = LLM_BASE_URL
+    llm_api_key: str | None = Field(default=None, repr=False)
+    llm_model: str | None = None
+    llm_schema_mode: LlmSchemaMode = LlmSchemaMode.JSON_SCHEMA_STRICT
+    # Путь AI-пула не ждёт человек синхронно (целевая архитектура v3 §10).
+    llm_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
+    llm_max_tokens: int = Field(default=1600, ge=256, le=8192)
+    llm_max_concurrency: int = Field(default=4, ge=1, le=64)
+    llm_daily_call_budget: int = Field(default=1000, ge=0)
+    llm_chat_daily_share: float = Field(default=0.2, gt=0, le=1)
     build_commit: str = "dev"
     public_base_url: str = "http://localhost:8000"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
@@ -83,10 +107,33 @@ class Settings(BaseSettings):
                 raise ValueError("AUTH_MFA_ENCRYPTION_KEY must be a Fernet key") from exc
         return value
 
-    @field_validator("max_bot_token", "max_bot_username", "max_webhook_secret", mode="before")
+    @field_validator(
+        "max_bot_token",
+        "max_bot_username",
+        "max_webhook_secret",
+        "llm_api_key",
+        "llm_model",
+        mode="before",
+    )
     @classmethod
-    def empty_max_value(cls, value: object) -> object:
+    def empty_string_is_missing(cls, value: object) -> object:
         return None if value == "" else value
+
+    @field_validator("llm_base_url")
+    @classmethod
+    def validate_llm_base_url(cls, value: str) -> str:
+        """Ключ уходит в заголовке, поэтому адрес провайдера — только HTTPS."""
+        parsed = urlparse(value)
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError("LLM_BASE_URL must be an HTTPS URL without credentials")
+        return value.rstrip("/")
 
     @field_validator("max_webhook_secret")
     @classmethod
@@ -147,6 +194,32 @@ class Settings(BaseSettings):
             and not parsed.query
             and not parsed.fragment
         )
+
+    @model_validator(mode="after")
+    def require_llm_credentials(self) -> Settings:
+        """Внешний провайдер без ключа или модели — это молчаливый отказ AI.
+
+        Требование одинаково для всех окружений: в production оно не
+        смягчается, а дополняется проверкой на значение-заглушку.
+        """
+        if self.llm_provider is not LlmProvider.OPENAI_COMPATIBLE:
+            return self
+        problems: list[str] = []
+        if not self.llm_api_key:
+            problems.append("LLM_API_KEY is required")
+        if not self.llm_model:
+            problems.append("LLM_MODEL is required")
+        if (
+            self.app_env is AppEnvironment.PRODUCTION
+            and self.llm_api_key
+            and "replace" in self.llm_api_key.lower()
+        ):
+            problems.append("LLM_API_KEY must not be a placeholder in production")
+        if problems:
+            raise ValueError(
+                "llm provider openai_compatible needs credentials: " + "; ".join(problems)
+            )
+        return self
 
     @model_validator(mode="after")
     def reject_unsafe_production(self) -> Settings:

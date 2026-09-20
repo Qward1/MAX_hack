@@ -1,0 +1,52 @@
+version: v1
+selected_at: '2026-09-20'
+note: 'Выбор сделан на синтетических окнах. Это инженерный выбор модели и режима схемы,
+  а не решение о включении LLM-слоя: оно принимается в P6 на данных D2/D3.'
+default: openai/gpt-5-mini
+models:
+- id: openai/gpt-5-mini
+  label: GPT-5 mini
+  role: default
+  schema_mode: json_schema_strict
+  max_tokens: 1600
+  timeout_seconds: 12.0
+  temperature: null
+  extra_body:
+    reasoning:
+      effort: low
+  upstream: openai (режим flex)
+  stores_data_in_russia: false
+  policy_basis: 'polza «Конфиденциальность»: запросы у агрегатора не сохраняются,
+    OpenAI хранит до 30 дней; в список «могут использовать данные для обучения» не
+    входит.'
+  policy_checked_at: '2026-09-20'
+  measured:
+    windows: 58
+    valid_json: 1.0
+    fabricated_quotes: 0.0
+    p50_ms: 5480
+    p95_ms: 9587
+    cost_per_window_rub: 0.1575
+    note: синтетика, не оценка качества на реальных сообщениях
+- id: google/gemini-3.1-flash-lite
+  label: Gemini 3.1 Flash Lite
+  role: fallback
+  schema_mode: json_schema_strict
+  max_tokens: 1600
+  timeout_seconds: 10.0
+  temperature: 0
+  extra_body: null
+  upstream: google-vertex (global, режим flex)
+  stores_data_in_russia: false
+  policy_basis: 'polza «Конфиденциальность»: Google Vertex хранит до 30 дней; в списке
+    «могут использовать данные для обучения» не значится. Выбран вариант через Vertex,
+    а не через бесплатный уровень AI Studio.'
+  policy_checked_at: '2026-09-20'
+  measured:
+    windows: 60
+    valid_json: 1.0
+    fabricated_quotes: 0.0
+    p50_ms: 3321
+    p95_ms: 4254
+    cost_per_window_rub: 0.111
+    note: синтетика, не оценка качества на реальных сообщениях

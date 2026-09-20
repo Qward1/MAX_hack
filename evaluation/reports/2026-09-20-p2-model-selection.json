@@ -1,0 +1,695 @@
+{
+  "base_url": "https://polza.ai/api/v1",
+  "budget": {
+    "approaching": "израсходовано 299/300 вызовов и 31.90/500 ₽",
+    "calls": 300,
+    "max_calls": 300,
+    "max_rub": 500.0,
+    "spent_rub": 32.0696,
+    "stop_reason": "исчерпан лимит вызовов (300/300)"
+  },
+  "candidates": [
+    {
+      "id": "openai/gpt-5-nano",
+      "policy_basis": "polza «Конфиденциальность»: запросы у агрегатора не сохраняются, OpenAI хранит до 30 дней; в список «могут использовать данные для обучения» не входит.",
+      "policy_checked_at": "2026-09-20",
+      "price_in_per_million": 2.95,
+      "price_out_per_million": 23.62,
+      "stores_data_in_russia": false,
+      "upstream": "openai (режим flex)"
+    },
+    {
+      "id": "openai/gpt-5-mini",
+      "policy_basis": "polza «Конфиденциальность»: запросы у агрегатора не сохраняются, OpenAI хранит до 30 дней; в список «могут использовать данные для обучения» не входит.",
+      "policy_checked_at": "2026-09-20",
+      "price_in_per_million": 14.76,
+      "price_out_per_million": 118.1,
+      "stores_data_in_russia": false,
+      "upstream": "openai (режим flex)"
+    },
+    {
+      "id": "openai/gpt-4.1-nano",
+      "policy_basis": "polza «Конфиденциальность»: запросы у агрегатора не сохраняются, модели OpenAI хранятся до 30 дней; обращение идёт через Azure, в списке «обучение на данных» провайдер не значится.",
+      "policy_checked_at": "2026-09-20",
+      "price_in_per_million": 11.81,
+      "price_out_per_million": 47.24,
+      "stores_data_in_russia": false,
+      "upstream": "azure"
+    },
+    {
+      "id": "google/gemini-3.1-flash-lite",
+      "policy_basis": "polza «Конфиденциальность»: Google Vertex хранит до 30 дней; в списке «могут использовать данные для обучения» не значится. Выбран вариант через Vertex, а не через бесплатный уровень AI Studio.",
+      "policy_checked_at": "2026-09-20",
+      "price_in_per_million": 14.76,
+      "price_out_per_million": 88.58,
+      "stores_data_in_russia": false,
+      "upstream": "google-vertex (global, режим flex)"
+    },
+    {
+      "id": "mistralai/mistral-small-2603",
+      "policy_basis": "polza «Конфиденциальность»: Mistral хранит до 30 дней; в списке «могут использовать данные для обучения» не значится. Обращение идёт в собственный API Mistral, а не к перепродавцу.",
+      "policy_checked_at": "2026-09-20",
+      "price_in_per_million": 17.72,
+      "price_out_per_million": 70.86,
+      "stores_data_in_russia": false,
+      "upstream": "mistral"
+    },
+    {
+      "id": "sber/gigachat-2",
+      "policy_basis": "Каталог polza: `stores_data_in_russia: true`, провайдер `sber-gigachat`; страница «Конфиденциальность» не относит Сбер к провайдерам, которые используют данные для обучения. Включена как аргумент для пилота с размещением в РФ; `is_fz152_compliant` в каталоге — false, поэтому для реальных данных нужен отдельный gate.",
+      "policy_checked_at": "2026-09-20",
+      "price_in_per_million": 91.0,
+      "price_out_per_million": 91.0,
+      "stores_data_in_russia": true,
+      "upstream": "sber-gigachat"
+    }
+  ],
+  "contextual": {
+    "google/gemini-3.1-flash-lite": 5,
+    "mistralai/mistral-small-2603": 0,
+    "openai/gpt-4.1-nano": 1,
+    "openai/gpt-5-mini": 5,
+    "openai/gpt-5-nano": 5,
+    "sber/gigachat-2": 4
+  },
+  "default": "openai/gpt-5-mini",
+  "generated_at": "2026-09-20T13:40:38+00:00",
+  "git_sha": "31df491adc4b0caec40e619dc2087f458cba29d9",
+  "limitations": [
+    "Окна собраны из тех же синтетических наборов, по которым писались правила. Числа годятся для сравнения моделей между собой и для выбора режима схемы, но не переносятся на реальные домовые чаты.",
+    "Этап 2 частично пересекается с этапом 1 по строкам набора территории (`sd01`, `sd02`, `sd05`): это одна и та же выборка, а не независимая проверка.",
+    "Условия обработки данных вышестоящими провайдерами отдельно не открывались. Основание допуска модели — страница polza.ai «Конфиденциальность» и поля каталога моделей; для пилота нужен отдельный gate выбора провайдера.",
+    "Режим схемы понижается только на первом окне кандидата: колонка «Окон» считает окна, а не вызовы, поэтому лишние вызовы понижения в неё не входят (поле `calls` в JSON).",
+    "Резервов может оказаться меньше двух: в резервы попадают только кандидаты, прошедшие правило на этапе 2. Третий резерв потребовал бы отдельного прогона кандидатов, отсеянных на этапе 1.",
+    "`max_tokens` одинаков для всех кандидатов. У моделей с внутренними рассуждениями рассуждения расходуют тот же лимит, поэтому часть отказов может быть обрезкой ответа, а не неумением следовать схеме."
+  ],
+  "prompt": "window.v1",
+  "rejected": {
+    "openai/gpt-4.1-nano": [
+      "выдуманных цитат 56.83% > 2%",
+      "контекстная опасность 1/5 < 4"
+    ]
+  },
+  "reserves": [
+    "google/gemini-3.1-flash-lite"
+  ],
+  "schema": "window_output.v1",
+  "stage1": [
+    {
+      "calls": 20,
+      "candidate": "openai/gpt-5-nano",
+      "contextual_danger": {
+        "k": 5,
+        "n": 5
+      },
+      "cost_per_window_rub": 0.0529,
+      "cost_rub": 1.0578,
+      "dropped_fields": 2,
+      "false_problems": 1,
+      "location_scope": {
+        "k": 5,
+        "n": 5
+      },
+      "missed_problems": 0,
+      "no_new_facts_violations": 2,
+      "p50_ms": 7808,
+      "p95_ms": 12139,
+      "quality": 0.8333,
+      "quotes": {
+        "fabricated": 9,
+        "share": 0.1385,
+        "total": 65
+      },
+      "refutations": {
+        "k": 0,
+        "n": 1
+      },
+      "role": {
+        "k": 7,
+        "n": 10
+      },
+      "rules_agreement": {
+        "k": 6,
+        "n": 10
+      },
+      "schema_mode": "json_schema_strict",
+      "stage": "stage1",
+      "states": {
+        "fallback_invalid_output": 3,
+        "ok": 17
+      },
+      "stopped": null,
+      "subtype": {
+        "k": 4,
+        "n": 5
+      },
+      "tokens_in": 147096,
+      "tokens_out": 20132,
+      "valid_json": {
+        "k": 17,
+        "n": 20,
+        "value": 0.85
+      },
+      "windows": 20
+    },
+    {
+      "calls": 20,
+      "candidate": "openai/gpt-5-mini",
+      "contextual_danger": {
+        "k": 5,
+        "n": 5
+      },
+      "cost_per_window_rub": 0.1965,
+      "cost_rub": 3.9305,
+      "dropped_fields": 0,
+      "false_problems": 1,
+      "location_scope": {
+        "k": 4,
+        "n": 5
+      },
+      "missed_problems": 0,
+      "no_new_facts_violations": 0,
+      "p50_ms": 8680,
+      "p95_ms": 12761,
+      "quality": 0.8333,
+      "quotes": {
+        "fabricated": 0,
+        "share": 0.0,
+        "total": 64
+      },
+      "refutations": {
+        "k": 0,
+        "n": 0
+      },
+      "role": {
+        "k": 7,
+        "n": 10
+      },
+      "rules_agreement": {
+        "k": 8,
+        "n": 10
+      },
+      "schema_mode": "json_schema_strict",
+      "stage": "stage1",
+      "states": {
+        "ok": 20
+      },
+      "stopped": null,
+      "subtype": {
+        "k": 5,
+        "n": 5
+      },
+      "tokens_in": 147096,
+      "tokens_out": 13402,
+      "valid_json": {
+        "k": 20,
+        "n": 20,
+        "value": 1.0
+      },
+      "windows": 20
+    },
+    {
+      "calls": 20,
+      "candidate": "openai/gpt-4.1-nano",
+      "contextual_danger": {
+        "k": 1,
+        "n": 5
+      },
+      "cost_per_window_rub": 0.0397,
+      "cost_rub": 0.7949,
+      "dropped_fields": 20,
+      "false_problems": 0,
+      "location_scope": {
+        "k": 0,
+        "n": 5
+      },
+      "missed_problems": 1,
+      "no_new_facts_violations": 0,
+      "p50_ms": 3402,
+      "p95_ms": 5208,
+      "quality": 0.5333,
+      "quotes": {
+        "fabricated": 27,
+        "share": 0.6,
+        "total": 45
+      },
+      "refutations": {
+        "k": 0,
+        "n": 0
+      },
+      "role": {
+        "k": 6,
+        "n": 10
+      },
+      "rules_agreement": {
+        "k": 7,
+        "n": 10
+      },
+      "schema_mode": "json_schema_strict",
+      "stage": "stage1",
+      "states": {
+        "ok": 20
+      },
+      "stopped": null,
+      "subtype": {
+        "k": 5,
+        "n": 5
+      },
+      "tokens_in": 146896,
+      "tokens_out": 5183,
+      "valid_json": {
+        "k": 20,
+        "n": 20,
+        "value": 1.0
+      },
+      "windows": 20
+    },
+    {
+      "calls": 20,
+      "candidate": "google/gemini-3.1-flash-lite",
+      "contextual_danger": {
+        "k": 5,
+        "n": 5
+      },
+      "cost_per_window_rub": 0.1705,
+      "cost_rub": 3.4095,
+      "dropped_fields": 3,
+      "false_problems": 1,
+      "location_scope": {
+        "k": 4,
+        "n": 5
+      },
+      "missed_problems": 0,
+      "no_new_facts_violations": 2,
+      "p50_ms": 3506,
+      "p95_ms": 5270,
+      "quality": 0.8333,
+      "quotes": {
+        "fabricated": 3,
+        "share": 0.0395,
+        "total": 76
+      },
+      "refutations": {
+        "k": 0,
+        "n": 2
+      },
+      "role": {
+        "k": 7,
+        "n": 10
+      },
+      "rules_agreement": {
+        "k": 8,
+        "n": 10
+      },
+      "schema_mode": "json_schema_strict",
+      "stage": "stage1",
+      "states": {
+        "ok": 20
+      },
+      "stopped": null,
+      "subtype": {
+        "k": 5,
+        "n": 5
+      },
+      "tokens_in": 171715,
+      "tokens_out": 8638,
+      "valid_json": {
+        "k": 20,
+        "n": 20,
+        "value": 1.0
+      },
+      "windows": 20
+    },
+    {
+      "calls": 22,
+      "candidate": "mistralai/mistral-small-2603",
+      "contextual_danger": {
+        "k": 0,
+        "n": 0
+      },
+      "cost_per_window_rub": 0.0,
+      "cost_rub": 0.0,
+      "dropped_fields": 0,
+      "false_problems": 0,
+      "location_scope": {
+        "k": 0,
+        "n": 0
+      },
+      "missed_problems": 0,
+      "no_new_facts_violations": 0,
+      "p50_ms": 1102,
+      "p95_ms": 1358,
+      "quality": 0.0,
+      "quotes": {
+        "fabricated": 0,
+        "share": 0.0,
+        "total": 0
+      },
+      "refutations": {
+        "k": 0,
+        "n": 0
+      },
+      "role": {
+        "k": 0,
+        "n": 0
+      },
+      "rules_agreement": {
+        "k": 0,
+        "n": 0
+      },
+      "schema_mode": "json_object",
+      "stage": "stage1",
+      "states": {
+        "fallback_provider_error": 20
+      },
+      "stopped": null,
+      "subtype": {
+        "k": 0,
+        "n": 0
+      },
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "valid_json": {
+        "k": 0,
+        "n": 20,
+        "value": 0.0
+      },
+      "windows": 20
+    },
+    {
+      "calls": 20,
+      "candidate": "sber/gigachat-2",
+      "contextual_danger": {
+        "k": 4,
+        "n": 5
+      },
+      "cost_per_window_rub": 0.2504,
+      "cost_rub": 5.0075,
+      "dropped_fields": 5,
+      "false_problems": 1,
+      "location_scope": {
+        "k": 3,
+        "n": 5
+      },
+      "missed_problems": 0,
+      "no_new_facts_violations": 0,
+      "p50_ms": 2067,
+      "p95_ms": 3525,
+      "quality": 0.7048,
+      "quotes": {
+        "fabricated": 8,
+        "share": 0.1509,
+        "total": 53
+      },
+      "refutations": {
+        "k": 0,
+        "n": 0
+      },
+      "role": {
+        "k": 5,
+        "n": 7
+      },
+      "rules_agreement": {
+        "k": 5,
+        "n": 7
+      },
+      "schema_mode": "json_object",
+      "stage": "stage1",
+      "states": {
+        "fallback_invalid_output": 4,
+        "ok": 16
+      },
+      "stopped": null,
+      "subtype": {
+        "k": 4,
+        "n": 5
+      },
+      "tokens_in": 49986,
+      "tokens_out": 5041,
+      "valid_json": {
+        "k": 16,
+        "n": 20,
+        "value": 0.8
+      },
+      "windows": 20
+    }
+  ],
+  "stage1_windows": [
+    "sw01",
+    "sw02",
+    "sw03",
+    "sw04",
+    "sw05",
+    "g01",
+    "g02",
+    "g03",
+    "g04",
+    "g05",
+    "sd01",
+    "sd02",
+    "sd05",
+    "sd07",
+    "sd09",
+    "stream-1",
+    "stream-2",
+    "stream-3",
+    "stream-4",
+    "stream-5"
+  ],
+  "stage2": [
+    {
+      "calls": 60,
+      "candidate": "openai/gpt-4.1-nano",
+      "contextual_danger": {
+        "k": 0,
+        "n": 0
+      },
+      "cost_per_window_rub": 0.0345,
+      "cost_rub": 2.0715,
+      "dropped_fields": 32,
+      "false_problems": 1,
+      "location_scope": {
+        "k": 1,
+        "n": 5
+      },
+      "missed_problems": 2,
+      "no_new_facts_violations": 0,
+      "p50_ms": 3221,
+      "p95_ms": 3988,
+      "quality": 0.6257,
+      "quotes": {
+        "fabricated": 79,
+        "share": 0.5683,
+        "total": 139
+      },
+      "refutations": {
+        "k": 6,
+        "n": 8
+      },
+      "role": {
+        "k": 50,
+        "n": 57
+      },
+      "rules_agreement": {
+        "k": 49,
+        "n": 57
+      },
+      "schema_mode": "json_schema_strict",
+      "stage": "stage2",
+      "states": {
+        "ok": 60
+      },
+      "stopped": null,
+      "subtype": {
+        "k": 4,
+        "n": 5
+      },
+      "tokens_in": 436426,
+      "tokens_out": 12622,
+      "valid_json": {
+        "k": 60,
+        "n": 60,
+        "value": 1.0
+      },
+      "windows": 60
+    },
+    {
+      "calls": 60,
+      "candidate": "google/gemini-3.1-flash-lite",
+      "contextual_danger": {
+        "k": 0,
+        "n": 0
+      },
+      "cost_per_window_rub": 0.111,
+      "cost_rub": 6.6618,
+      "dropped_fields": 4,
+      "false_problems": 2,
+      "location_scope": {
+        "k": 3,
+        "n": 5
+      },
+      "missed_problems": 1,
+      "no_new_facts_violations": 5,
+      "p50_ms": 3321,
+      "p95_ms": 4254,
+      "quality": 0.7708,
+      "quotes": {
+        "fabricated": 0,
+        "share": 0.0,
+        "total": 215
+      },
+      "refutations": {
+        "k": 6,
+        "n": 12
+      },
+      "role": {
+        "k": 52,
+        "n": 57
+      },
+      "rules_agreement": {
+        "k": 53,
+        "n": 57
+      },
+      "schema_mode": "json_schema_strict",
+      "stage": "stage2",
+      "states": {
+        "ok": 60
+      },
+      "stopped": null,
+      "subtype": {
+        "k": 4,
+        "n": 5
+      },
+      "tokens_in": 509943,
+      "tokens_out": 21043,
+      "valid_json": {
+        "k": 60,
+        "n": 60,
+        "value": 1.0
+      },
+      "windows": 60
+    },
+    {
+      "calls": 58,
+      "candidate": "openai/gpt-5-mini",
+      "contextual_danger": {
+        "k": 0,
+        "n": 0
+      },
+      "cost_per_window_rub": 0.1575,
+      "cost_rub": 9.136,
+      "dropped_fields": 0,
+      "false_problems": 3,
+      "location_scope": {
+        "k": 4,
+        "n": 5
+      },
+      "missed_problems": 0,
+      "no_new_facts_violations": 0,
+      "p50_ms": 5480,
+      "p95_ms": 9587,
+      "quality": 0.9041,
+      "quotes": {
+        "fabricated": 0,
+        "share": 0.0,
+        "total": 190
+      },
+      "refutations": {
+        "k": 6,
+        "n": 7
+      },
+      "role": {
+        "k": 52,
+        "n": 57
+      },
+      "rules_agreement": {
+        "k": 52,
+        "n": 57
+      },
+      "schema_mode": "json_schema_strict",
+      "stage": "stage2",
+      "states": {
+        "ok": 58
+      },
+      "stopped": "исчерпан лимит вызовов (300/300)",
+      "subtype": {
+        "k": 5,
+        "n": 5
+      },
+      "tokens_in": 421616,
+      "tokens_out": 31937,
+      "valid_json": {
+        "k": 58,
+        "n": 58,
+        "value": 1.0
+      },
+      "windows": 58
+    }
+  ],
+  "stage2_windows": [
+    "t01",
+    "t02",
+    "t03",
+    "t04",
+    "t05",
+    "t06",
+    "t07",
+    "t08",
+    "t09",
+    "t10",
+    "t11",
+    "t12",
+    "t13",
+    "t14",
+    "h01",
+    "h02",
+    "h03",
+    "h04",
+    "h05",
+    "h06",
+    "h07",
+    "n01",
+    "n02",
+    "n03",
+    "n04",
+    "n05",
+    "n06",
+    "e01",
+    "e02",
+    "e03",
+    "e04",
+    "e05",
+    "e06",
+    "g01",
+    "g02",
+    "g03",
+    "s01",
+    "s02",
+    "s03",
+    "r01",
+    "r02",
+    "r03",
+    "c01",
+    "c02",
+    "c03",
+    "o01",
+    "o02",
+    "o03",
+    "a01",
+    "a02",
+    "m01",
+    "m02",
+    "sd01",
+    "sd02",
+    "sd03",
+    "sd04",
+    "sd05",
+    "stream-6",
+    "stream-7",
+    "stream-8"
+  ],
+  "status": "STOPPED AT BUDGET",
+  "status_note": "Прогон остановлен: исчерпан лимит вызовов (300/300).",
+  "taxonomy": "v2",
+  "warning": "**СИНТЕТИКА — ЭТО НЕ ОЦЕНКА КАЧЕСТВА НА РЕАЛЬНЫХ СООБЩЕНИЯХ.** Окна написаны той же командой, что и правила; реальных реплик жителей здесь нет и быть не может. Числа годятся для инженерного выбора модели и режима схемы, но не для утверждения, что система работает на живых домовых чатах. Решение о включении LLM-слоя принимается в P6 на данных D2/D3."
+}

@@ -35,6 +35,18 @@ class ProviderInvalidOutput(ProviderError):
     """Провайдер ответил тем, что не разбирается по схеме."""
 
 
+class ProviderBudgetExceeded(ProviderError):
+    """Дневной бюджет вызовов или доля чата исчерпаны: вызова не было."""
+
+
+class ProviderCircuitOpen(ProviderError):
+    """Предохранитель разомкнут после серии отказов: вызова не было."""
+
+
+class ProviderOverloaded(ProviderError):
+    """Свободных мест в ограничителе конкурентности не нашлось за отведённое ожидание."""
+
+
 class Strict(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -65,6 +77,23 @@ class ProviderRequest(Strict):
     open_items: tuple[ProviderOpenItem, ...] = ()
     entrance_hint: str | None = None
     subtype_codes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ProviderResult:
+    """Итог одного вызова модели: сырой ответ и учёт токенов и стоимости.
+
+    `content` — текст ответа без разбора: разбирает и проверяет его ядро, а не
+    провайдер. `tokens_in`, `tokens_out` и `cost_rub` заполняются, только если
+    их сообщил сам провайдер; выдуманных оценок здесь нет.
+    """
+
+    content: str
+    model: str = ""
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    cost_rub: float | None = None
+    latency_ms: int = 0
 
 
 @dataclass(frozen=True)
@@ -134,6 +163,17 @@ def build_request(
 
 @runtime_checkable
 class AnalysisProvider(Protocol):
-    """Провайдер делает ровно один вызов на окно и возвращает сырой ответ."""
+    """Провайдер делает ровно один вызов на окно и возвращает сырой ответ.
 
-    async def analyze_window(self, request: ProviderRequest) -> str: ...
+    Повторов внутри провайдера нет: отказ — это результат, и ядро отвечает
+    результатом правил. Версию промпта провайдер объявляет необязательным
+    атрибутом `prompt_version`; провайдер без промпта его не имеет.
+    """
+
+    async def analyze_window(self, request: ProviderRequest) -> ProviderResult: ...
+
+
+def prompt_version_of(provider: object) -> str | None:
+    """Версия промпта провайдера, если он её объявляет."""
+    version = getattr(provider, "prompt_version", None)
+    return version if isinstance(version, str) and version else None
