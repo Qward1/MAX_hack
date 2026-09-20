@@ -36,7 +36,13 @@ from domsignal.ai.matching import Token, tokenize
 from domsignal.ai.normalize import NormalizedText, normalize
 from domsignal.ai.rules import location as location_rules
 from domsignal.ai.rules.danger import screen_normalized
-from domsignal.ai.rules.lexicon import Lexicon, classify_role, is_displaced, load_lexicon
+from domsignal.ai.rules.lexicon import (
+    Lexicon,
+    classify_role,
+    has_chatter_marker,
+    is_displaced,
+    load_lexicon,
+)
 from domsignal.ai.taxonomy import UNSPECIFIED, SubtypeMatch, Taxonomy, load_taxonomy
 from domsignal.core.incidents import ReportCategory
 
@@ -62,6 +68,7 @@ class LineFacts:
     role: LineRole
     gate: bool
     displaced: bool
+    chatter_marker: bool
 
     @property
     def line_id(self) -> str:
@@ -143,6 +150,7 @@ def analyze_line(
         role=role,
         gate=gate,
         displaced=displaced,
+        chatter_marker=has_chatter_marker(tokens, lex),
     )
 
 
@@ -249,9 +257,11 @@ def analyze_with_rules(
         certainty: LinkCertainty | None = None
         refs: list[str] = []
 
-        if role in ("chatter", "discussion") and joined and not facts.gate and drafts:
+        if role in ("chatter", "discussion") and joined and drafts and not facts.chatter_marker:
+            # Реплика прошла гейт или горячее окно: она относится к ветке,
+            # даже если по эвристикам сама по себе выглядит болтовнёй.
             role = "more_info" if facts.place.has_any and not facts.subtypes else "me_too"
-            certainty = "unsure"
+            certainty = "sure" if facts.gate else "unsure"
 
         if role == "new_problem" and joined:
             matches = _distinct_subtypes(facts)

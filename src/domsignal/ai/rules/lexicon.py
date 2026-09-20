@@ -27,6 +27,7 @@ class Lexicon:
     negation_tokens: frozenset[str]
     roles: dict[str, StemSet]
     displaced: StemSet
+    hypothesis: StemSet
     planned_duration: StemSet
     more_info: StemSet
     location_scope: tuple[tuple[LocationScope, StemSet], ...]
@@ -92,6 +93,7 @@ def build_lexicon(document: Any) -> Lexicon:
         negation_tokens=frozenset(_strings(data, "negation_tokens")),
         roles=roles,
         displaced=StemSet(_strings(data, "displaced_markers"), fuzzy),
+        hypothesis=StemSet(_strings(data, "hypothesis_markers"), fuzzy),
         planned_duration=StemSet(_strings(data, "planned_duration_markers"), fuzzy),
         more_info=StemSet(_strings(data, "more_info_markers"), fuzzy),
         location_scope=tuple(scope),
@@ -101,6 +103,11 @@ def build_lexicon(document: Any) -> Lexicon:
 @lru_cache(maxsize=1)
 def load_lexicon() -> Lexicon:
     return build_lexicon(load_yaml_resource("lexicon.r1.yaml"))
+
+
+def has_chatter_marker(tokens: Sequence[Token], lexicon: Lexicon | None = None) -> bool:
+    """Явный маркер болтовни: приветствие, продажа, благодарность, смех."""
+    return bool((lexicon or load_lexicon()).roles["chatter"].find_all(tokens))
 
 
 def is_displaced(tokens: Sequence[Token], lexicon: Lexicon | None = None) -> bool:
@@ -141,6 +148,8 @@ def classify_role(
     if roles["objection"].find_all(tokens):
         return "objection"
     if displaced:
+        return "discussion"
+    if not has_subtype and lex.hypothesis.find_all(tokens):
         return "discussion"
     if roles["me_too"].find_all(tokens):
         return "me_too"
