@@ -7,6 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import make_url
 
 from domsignal.db.session import create_engine
+from tests.integration.migration_columns import without_added_columns
 from tests.integration.test_migrations import migrate
 
 
@@ -98,12 +99,15 @@ async def test_tk26_populated_a07_migration_retains_all_history(integration_sett
         await migrate(url, "check")
         async with engine.begin() as conn:
             for table in tables:
-                expr = (
-                    "to_jsonb(t) - 'ticket_intake_enabled'"
-                    if table == "house_managements"
-                    else "to_jsonb(t) - 'max_identity_verified_at'"
-                    if table == "users"
-                    else "row_to_json(t)"
+                expr = without_added_columns(
+                    table,
+                    *(
+                        ("ticket_intake_enabled",)
+                        if table == "house_managements"
+                        else ("max_identity_verified_at",)
+                        if table == "users"
+                        else ()
+                    ),
                 )
                 after = (await conn.execute(text(f"SELECT {expr} FROM {table} t"))).all()
                 if table == "management_companies":

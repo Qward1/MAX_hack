@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select, text, update
 from sqlalchemy.engine import make_url
 
 from domsignal.bootstrap import build_container
@@ -49,6 +49,33 @@ async def test_seed_creates_routing_profiles_idempotently(
             assert demo.territory_policy == "unknown"
             assert other.territory_policy == "uk"
             assert demo.updated_by is None
+    finally:
+        await engine.dispose()
+
+
+async def test_seed_enables_ticket_intake_for_both_demo_houses(
+    integration_settings: Settings,
+) -> None:
+    """Решение владельца: на демонстрации виден полный путь до заявки."""
+    engine = create_engine(integration_settings.database_url)
+    factory = create_session_factory(engine)
+    try:
+        # Выключаем флаг и повторяем seed: он обязан включить его обратно.
+        async with factory() as session, session.begin():
+            await session.execute(update(HouseManagement).values(ticket_intake_enabled=False))
+        await seed(integration_settings)
+        await seed(integration_settings)
+        async with factory() as session:
+            enabled = list(
+                await session.scalars(
+                    select(HouseManagement.ticket_intake_enabled).where(
+                        HouseManagement.house_id.in_([DEMO_HOUSE_ID, OTHER_HOUSE_ID])
+                    )
+                )
+            )
+            assert enabled == [True, True]
+            # Повторный seed не размножает периоды управления.
+            assert await session.scalar(select(func.count()).select_from(HouseManagement)) == 2
     finally:
         await engine.dispose()
 
