@@ -25,11 +25,17 @@ from domsignal.ai.providers.fake import FakeProvider  # noqa: E402
 from domsignal.ai.rules.lexicon import load_lexicon  # noqa: E402
 from domsignal.ai.taxonomy import load_taxonomy  # noqa: E402
 from evaluation import metrics  # noqa: E402
+from evaluation.guard import load_allowed_jsonl  # noqa: E402
 from evaluation.metrics import (  # noqa: E402
     DATASETS,
     dataset_card,
-    load_jsonl,
 )
+
+
+def load_dataset(path: pathlib.Path) -> dict[str, Any] | list[dict[str, Any]]:
+    """Набор читается только через сторожа данных (`evaluation.guard`)."""
+    return load_allowed_jsonl(path)
+
 
 WARNING = (
     "**СИНТЕТИКА, ВНУТРИВЫБОРОЧНАЯ ОЦЕНКА — ЭТО НЕ ОЦЕНКА КАЧЕСТВА.** "
@@ -46,7 +52,16 @@ FLOORS: dict[str, str] = {
     "emergency_recall": "срез опасности: 10 из 10",
     "gate_recall": "гейт E0b: recall ≥ 64/66",
     "stream_relevant_recall": "поток E0c, вариант C: recall значимых реплик ≥ 0,70",
+    "v2_role": "набор v2: роль ≥ 0,94",
+    "v2_missed_problems": "набор v2: пропущено проблем ≤ 1",
+    "v2_false_problems": "набор v2: ложных проблем ≤ 0",
 }
+
+#: Пол набора v2 — это текущий результат правил, зафиксированный как порог
+#: регрессии. Он отвечает на вопрос «стало ли хуже», а не «хорошо ли это».
+V2_ROLE_FLOOR = 0.94
+V2_MISSED_FLOOR = 1
+V2_FALSE_FLOOR = 0
 
 
 def git_sha() -> str:
@@ -74,6 +89,7 @@ def check_floors(report: dict[str, Any]) -> list[dict[str, Any]]:
     """
     applicable = report["provider"] == "rules"
     singles = report["single_messages"]
+    v2_total = report["single_messages_v2"]["total"]
     typical = next(
         (item for item in singles["slices"] if item["slice"] == "typical"), None
     )
@@ -91,6 +107,9 @@ def check_floors(report: dict[str, Any]) -> list[dict[str, Any]]:
         ("gate_recall", total["gate_recall"]["k"], 64, "ge"),
         ("stream_relevant_recall", report["chat_stream"]["relevant_recall"]["value"] or 0,
          0.70, "ge"),
+        ("v2_role", v2_total["role"]["value"] or 0, V2_ROLE_FLOOR, "ge"),
+        ("v2_missed_problems", v2_total["missed_problems"]["k"], V2_MISSED_FLOOR, "le"),
+        ("v2_false_problems", v2_total["false_problems"]["k"], V2_FALSE_FLOOR, "le"),
     ]
     result: list[dict[str, Any]] = []
     for name, value, threshold, direction in checks:
@@ -112,10 +131,11 @@ def check_floors(report: dict[str, Any]) -> list[dict[str, Any]]:
 async def build_report(provider: str) -> dict[str, Any]:
     analyzer = build_analyzer(provider)
     rules_only = WindowAnalyzer()
-    singles = load_jsonl(DATASETS / "single_messages.v1.jsonl")
-    scope = load_jsonl(DATASETS / "scope_and_danger.v1.jsonl")
-    stream = load_jsonl(DATASETS / "chat_stream.v1.jsonl")
-    dedup = load_jsonl(DATASETS / "dedup.v1.jsonl")
+    singles = load_dataset(DATASETS / "single_messages.v1.jsonl")
+    singles_v2 = load_dataset(DATASETS / "single_messages.v2.jsonl")
+    scope = load_dataset(DATASETS / "scope_and_danger.v1.jsonl")
+    stream = load_dataset(DATASETS / "chat_stream.v1.jsonl")
+    dedup = load_dataset(DATASETS / "dedup.v1.jsonl")
     taxonomy = load_taxonomy()
     report: dict[str, Any] = {
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -131,11 +151,13 @@ async def build_report(provider: str) -> dict[str, Any]:
         },
         "datasets": [
             dataset_card(DATASETS / "single_messages.v1.jsonl", singles).as_dict(),
+            dataset_card(DATASETS / "single_messages.v2.jsonl", singles_v2).as_dict(),
             dataset_card(DATASETS / "scope_and_danger.v1.jsonl", scope).as_dict(),
             dataset_card(DATASETS / "chat_stream.v1.jsonl", stream).as_dict(),
             dataset_card(DATASETS / "dedup.v1.jsonl", dedup).as_dict(),
         ],
         "single_messages": await metrics.evaluate_singles(analyzer, singles),
+        "single_messages_v2": await metrics.evaluate_singles(analyzer, singles_v2),
         "scope_and_danger": await metrics.evaluate_scope(analyzer, scope),
         "chat_stream": await metrics.evaluate_stream(analyzer, stream),
         "dedup": await metrics.evaluate_dedup(analyzer, rules_only, dedup),
@@ -207,6 +229,32 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines.append("")
     total = report["single_messages"]["total"]
     lines.append(f"Recall-гейт E0b на проблемах: {_cell(total['gate_recall'])}.")
+    lines.append("")
+
+    v2 = report["single_messages_v2"]["total"]
+    v1 = report["single_messages"]["total"]
+    lines.append("## Набор v2: внешние маршруты вместо `out_of_scope`")
+    lines.append("")
+    lines.append(
+        "`single_messages.v2` — копия v1, где инфраструктурная проблема на городской "
+        "территории размечена как сигнал с внешним маршрутом. Полы здесь — текущий "
+        "результат правил: они отвечают на вопрос «стало ли хуже», а не «хорошо ли это»."
+    )
+    lines.append("")
+    lines.append("| Метрика | v1 | v2 |")
+    lines.append("|---|---|---|")
+    lines.append(f"| Роль | {_cell(v1['role'])} | {_cell(v2['role'])} |")
+    lines.append(
+        f"| Категория точно | {_cell(v1['category_exact'])} | {_cell(v2['category_exact'])} |"
+    )
+    lines.append(
+        f"| Пропущено проблем | {v1['missed_problems']['k']}/{v1['missed_problems']['n']} | "
+        f"{v2['missed_problems']['k']}/{v2['missed_problems']['n']} |"
+    )
+    lines.append(
+        f"| Ложных проблем | {v1['false_problems']['k']}/{v1['false_problems']['n']} | "
+        f"{v2['false_problems']['k']}/{v2['false_problems']['n']} |"
+    )
     lines.append("")
 
     scope = report["scope_and_danger"]

@@ -1,0 +1,135 @@
+# Кандидаты отбора моделей P2 — вход скрипта `evaluation/select_models.py`.
+#
+# Правило допуска (целевая архитектура v3 §12, задание P2 §2): в отбор
+# попадают только модели у провайдеров и в режимах API, где переданные данные
+# **не используются для обучения моделей**. Исключены: DeepSeek и
+# OpenInference (polza относит их к «возможно обучение на данных» и «нет
+# гарантий»), бесплатные, экспериментальные и preview-модели, а также
+# бесплатные уровни провайдеров.
+#
+# Основание у каждой модели — страница polza.ai «Конфиденциальность»
+# (https://polza.ai/docs/osobennosti/privacy) плюс поля каталога моделей
+# polza (`GET https://polza.ai/api/v1/models`): `stores_data_in_russia`,
+# `is_fz152_compliant`, `top_provider.name`, `top_provider.pricing`,
+# `top_provider.supported_parameters`. Дата проверки — у каждой записи.
+# Политики вышестоящих провайдеров отдельно не открывались: для пилота это
+# отдельный gate выбора провайдера (§12), здесь — только синтетика.
+#
+# Цены — рубли за миллион токенов, из каталога polza на дату проверки.
+version: v1
+checked_at: 2026-09-20
+policy_source: https://polza.ai/docs/osobennosti/privacy
+catalog_source: https://polza.ai/api/v1/models
+excluded_providers:
+  - id: deepseek
+    reason: polza — «возможно обучение на данных»
+  - id: open-inference
+    reason: polza — «нет гарантий» по использованию данных
+excluded_classes:
+  - бесплатные и free-уровни провайдеров
+  - модели с суффиксом preview и экспериментальные сборки
+
+candidates:
+  - id: openai/gpt-5-nano
+    label: GPT-5 nano
+    upstream: openai (режим flex)
+    schema_mode: json_schema_strict
+    max_tokens: 1600
+    timeout_seconds: 25
+    temperature: null            # семейство gpt-5 принимает только значение по умолчанию
+    extra_body:
+      reasoning:
+        effort: low
+    price_in_per_million: 2.95
+    price_out_per_million: 23.62
+    stores_data_in_russia: false
+    policy_basis: >-
+      polza «Конфиденциальность»: запросы у агрегатора не сохраняются, OpenAI
+      хранит до 30 дней; в список «могут использовать данные для обучения» не
+      входит.
+    policy_checked_at: 2026-09-20
+
+  - id: openai/gpt-5-mini
+    label: GPT-5 mini
+    upstream: openai (режим flex)
+    schema_mode: json_schema_strict
+    max_tokens: 1600
+    timeout_seconds: 25
+    temperature: null
+    extra_body:
+      reasoning:
+        effort: low
+    price_in_per_million: 14.76
+    price_out_per_million: 118.10
+    stores_data_in_russia: false
+    policy_basis: >-
+      polza «Конфиденциальность»: запросы у агрегатора не сохраняются, OpenAI
+      хранит до 30 дней; в список «могут использовать данные для обучения» не
+      входит.
+    policy_checked_at: 2026-09-20
+
+  - id: openai/gpt-4.1-nano
+    label: GPT-4.1 nano
+    upstream: azure
+    schema_mode: json_schema_strict
+    max_tokens: 1600
+    timeout_seconds: 25
+    temperature: 0
+    price_in_per_million: 11.81
+    price_out_per_million: 47.24
+    stores_data_in_russia: false
+    policy_basis: >-
+      polza «Конфиденциальность»: запросы у агрегатора не сохраняются, модели
+      OpenAI хранятся до 30 дней; обращение идёт через Azure, в списке
+      «обучение на данных» провайдер не значится.
+    policy_checked_at: 2026-09-20
+
+  - id: google/gemini-3.1-flash-lite
+    label: Gemini 3.1 Flash Lite
+    upstream: google-vertex (global, режим flex)
+    schema_mode: json_schema_strict
+    max_tokens: 1600
+    timeout_seconds: 25
+    temperature: 0
+    price_in_per_million: 14.76
+    price_out_per_million: 88.58
+    stores_data_in_russia: false
+    policy_basis: >-
+      polza «Конфиденциальность»: Google Vertex хранит до 30 дней; в списке
+      «могут использовать данные для обучения» не значится. Выбран вариант
+      через Vertex, а не через бесплатный уровень AI Studio.
+    policy_checked_at: 2026-09-20
+
+  - id: mistralai/mistral-small-2603
+    label: Mistral Small 2603
+    upstream: mistral
+    schema_mode: json_schema_strict
+    max_tokens: 1600
+    timeout_seconds: 25
+    temperature: 0
+    price_in_per_million: 17.72
+    price_out_per_million: 70.86
+    stores_data_in_russia: false
+    policy_basis: >-
+      polza «Конфиденциальность»: Mistral хранит до 30 дней; в списке «могут
+      использовать данные для обучения» не значится. Обращение идёт в
+      собственный API Mistral, а не к перепродавцу.
+    policy_checked_at: 2026-09-20
+
+  - id: sber/gigachat-2
+    label: GigaChat 2 (российская модель)
+    upstream: sber-gigachat
+    schema_mode: json_object          # каталог polza: response_format не поддержан
+    max_tokens: 1600
+    timeout_seconds: 25
+    temperature: 0
+    price_in_per_million: 91.00
+    price_out_per_million: 91.00
+    stores_data_in_russia: true
+    policy_basis: >-
+      Каталог polza: `stores_data_in_russia: true`, провайдер `sber-gigachat`;
+      страница «Конфиденциальность» не относит Сбер к провайдерам, которые
+      используют данные для обучения. Включена как аргумент для пилота с
+      размещением в РФ; `is_fz152_compliant` в каталоге — false, поэтому для
+      реальных данных нужен отдельный gate.
+    policy_checked_at: 2026-09-20

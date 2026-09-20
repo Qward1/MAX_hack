@@ -2,7 +2,13 @@ import pytest
 from pydantic import ValidationError
 
 from domsignal.db.session import create_engine
-from domsignal.settings import PRODUCTION_MAX_BOT_USERNAME, AppEnvironment, Settings
+from domsignal.settings import (
+    PRODUCTION_MAX_BOT_USERNAME,
+    AppEnvironment,
+    LlmProvider,
+    LlmSchemaMode,
+    Settings,
+)
 
 
 @pytest.mark.parametrize(
@@ -110,3 +116,113 @@ def test_production_rejects_each_unsafe_live_override(
 def test_webhook_secret_matches_max_contract(secret: str) -> None:
     with pytest.raises(ValidationError, match="MAX_WEBHOOK_SECRET"):
         Settings(max_webhook_secret=secret, _env_file=None)
+
+
+def test_llm_defaults_keep_the_offline_rules_path() -> None:
+    settings = Settings(_env_file=None)
+    assert settings.llm_provider is LlmProvider.RULES
+    assert settings.llm_base_url == "https://polza.ai/api/v1"
+    assert settings.llm_api_key is None
+    assert settings.llm_model is None
+    assert settings.llm_schema_mode is LlmSchemaMode.JSON_SCHEMA_STRICT
+    assert settings.llm_timeout_seconds == 10
+    assert settings.llm_max_tokens == 1600
+    assert settings.llm_max_concurrency == 4
+    assert settings.llm_daily_call_budget == 1000
+    assert settings.llm_chat_daily_share == 0.2
+
+
+def test_external_llm_needs_a_key_and_a_model() -> None:
+    with pytest.raises(ValidationError, match="LLM_API_KEY is required"):
+        Settings(llm_provider="openai_compatible", llm_model="openai/gpt-5-nano", _env_file=None)
+    with pytest.raises(ValidationError, match="LLM_MODEL is required"):
+        Settings(llm_provider="openai_compatible", llm_api_key="synthetic-key", _env_file=None)
+
+
+def test_external_llm_accepts_a_complete_configuration() -> None:
+    settings = Settings(
+        llm_provider="openai_compatible",
+        llm_api_key="synthetic-key",
+        llm_model="openai/gpt-5-nano",
+        llm_schema_mode="json_object",
+        _env_file=None,
+    )
+    assert settings.llm_provider is LlmProvider.OPENAI_COMPATIBLE
+    assert settings.llm_schema_mode is LlmSchemaMode.JSON_OBJECT
+    assert "synthetic-key" not in repr(settings)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://polza.ai/api/v1",
+        "https://user:pass@polza.ai/api/v1",
+        "https://polza.ai/api/v1?key=leak",
+        "not-a-url",
+    ],
+)
+def test_llm_base_url_must_be_a_clean_https_url(url: str) -> None:
+    with pytest.raises(ValidationError, match="LLM_BASE_URL"):
+        Settings(llm_base_url=url, _env_file=None)
+
+
+def test_llm_base_url_loses_the_trailing_slash() -> None:
+    settings = Settings(llm_base_url="https://polza.ai/api/v1/", _env_file=None)
+    assert settings.llm_base_url == "https://polza.ai/api/v1"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("llm_timeout_seconds", 0),
+        ("llm_timeout_seconds", 120),
+        ("llm_max_tokens", 10),
+        ("llm_max_concurrency", 0),
+        ("llm_daily_call_budget", -1),
+        ("llm_chat_daily_share", 0),
+        ("llm_chat_daily_share", 1.5),
+    ],
+)
+def test_llm_limits_reject_impossible_values(field: str, value: object) -> None:
+    with pytest.raises(ValidationError):
+        Settings(**{field: value}, _env_file=None)
+
+
+def test_production_keeps_the_same_llm_requirements() -> None:
+    baseline = {
+        "app_env": "production",
+        "auth_mfa_encryption_key": "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+        "database_url": "postgresql+asyncpg://app:strong-password-123@db/domsignal",
+        "session_secret": "a-production-secret-with-sufficient-entropy",
+        "allow_test_session": False,
+        "demo_seed": False,
+        "max_transport": "webhook",
+        "max_bot_token": "synthetic-token",
+        "max_webhook_secret": "synthetic_webhook_secret_1234567890",
+        "max_bot_username": PRODUCTION_MAX_BOT_USERNAME,
+        "public_base_url": "https://domsignal.example.ru",
+        "cors_origins": ["https://domsignal.example.ru"],
+        "_env_file": None,
+    }
+    with pytest.raises(ValidationError, match="LLM_API_KEY is required"):
+        Settings(**baseline, llm_provider="openai_compatible", llm_model="openai/gpt-5-nano")
+    with pytest.raises(ValidationError, match="placeholder"):
+        Settings(
+            **baseline,
+            llm_provider="openai_compatible",
+            llm_model="openai/gpt-5-nano",
+            llm_api_key="replace_with_polza_key",
+        )
+    settings = Settings(
+        **baseline,
+        llm_provider="openai_compatible",
+        llm_model="openai/gpt-5-nano",
+        llm_api_key="synthetic-production-key",
+    )
+    assert settings.llm_provider is LlmProvider.OPENAI_COMPATIBLE
+
+
+def test_empty_llm_values_are_read_as_missing() -> None:
+    settings = Settings(llm_api_key="", llm_model="", _env_file=None)
+    assert settings.llm_api_key is None
+    assert settings.llm_model is None

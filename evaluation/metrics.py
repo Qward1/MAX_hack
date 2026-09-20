@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import math
 import pathlib
 from collections.abc import Iterable, Sequence
@@ -26,6 +25,7 @@ from domsignal.ai import (
 )
 from domsignal.ai.windowing import build_windows
 from domsignal.core.incidents import ReportCategory
+from evaluation.guard import load_allowed_jsonl
 
 DATASETS = pathlib.Path("datasets/synthetic")
 RELEVANT_ROLES = frozenset({"new_problem", "me_too", "more_info", "objection"})
@@ -33,11 +33,8 @@ BASE_TIME = datetime(2026, 9, 20, 18, 0, tzinfo=UTC)
 
 
 def load_jsonl(path: pathlib.Path) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            rows.append(json.loads(line))
-    return rows
+    """Набор читается только через сторожа данных (`evaluation.guard`)."""
+    return load_allowed_jsonl(path)
 
 
 def sha256_of(path: pathlib.Path) -> str:

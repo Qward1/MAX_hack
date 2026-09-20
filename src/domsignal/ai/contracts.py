@@ -290,9 +290,19 @@ class AuditEvent(Frozen):
 
 
 class ExecutionInfo(Frozen):
+    """Как прошёл разбор окна и во что он обошёлся.
+
+    Учётные поля заполняются только тем, что сообщил провайдер: `None`
+    означает «провайдер не сообщил», а не ноль.
+    """
+
     state: ExecutionState
     latency_ms: int = 0
     provider_called: bool = False
+    provider_model: str | None = None
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    cost_rub: float | None = None
 
 
 class Versions(Frozen):
