@@ -56,9 +56,9 @@ def npm() -> str:
 
 
 def backend() -> None:
-    run("uv", "run", "ruff", "check", "src", "tests", "scripts", "migrations")
+    run("uv", "run", "ruff", "check", "src", "tests", "scripts", "migrations", "evaluation")
     run("uv", "run", "mypy", "src/domsignal")
-    run("uv", "run", "pytest", "tests/unit", "tests/contract")
+    run("uv", "run", "pytest", "tests/unit", "tests/contract", "tests/ai")
 
 
 def frontend() -> None:

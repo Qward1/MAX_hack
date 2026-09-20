@@ -313,7 +313,7 @@
     {
       "file": "datasets/synthetic/scope_and_danger.v1.jsonl",
       "records": 30,
-      "sha256": "267456b9da9cfbf7a5a7cad72235883469615f9bb6a0f82d79cb3537132b44c1"
+      "sha256": "c3f0efd01a93b7d5edd71dfefc9425b294b0e68529df123d38eea19310d6511d"
     },
     {
       "file": "datasets/synthetic/chat_stream.v1.jsonl",
@@ -605,8 +605,8 @@
       "value": 0
     }
   ],
-  "generated_at": "2026-09-20T12:09:08+00:00",
-  "git_sha": "9455b73013467bc68a98df7f430202b9ae8151e1",
+  "generated_at": "2026-09-20T12:20:15+00:00",
+  "git_sha": "c1a6967bc6bfa168502dc5e3e36a7206058f89f8",
   "provider": "fake",
   "scope_and_danger": {
     "contextual_windows": [
@@ -971,7 +971,7 @@
       },
       {
         "expected": {
-          "location_scope": "other_building",
+          "location_scope": "unknown",
           "role": "discussion",
           "subtype": null
         },
@@ -1042,12 +1042,12 @@
       },
       "location_scope": {
         "ci95": [
-          0.0071,
-          0.1954
+          0.0222,
+          0.2497
         ],
-        "k": 1,
+        "k": 2,
         "n": 25,
-        "value": 0.04
+        "value": 0.08
       },
       "missed_problems": {
         "k": 24,

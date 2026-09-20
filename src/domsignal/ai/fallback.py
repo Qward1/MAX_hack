@@ -183,7 +183,9 @@ def _open_item_ref(
     if len(candidates) != 1:
         return None
     item = candidates[0]
-    if item.entrance and entrance and item.entrance != entrance.value:
+    if item.entrance and (entrance is None or item.entrance != entrance.value):
+        # «Лифт не работает» при открытом элементе во 2 подъезде — это вопрос
+        # «в каком подъезде?», а не совпадение: без подъезда не привязываем.
         return None
     return item.ref
 

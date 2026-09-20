@@ -28,7 +28,7 @@
 | `synthetic/single_messages.v1.jsonl` | 98 | `b4c2fd369ff8e290cb598a08c4aea1eda0704e0d39ff4987739c139ac7907a21` |
 | `synthetic/dedup.v1.jsonl` | 32 | `bc6c3188345aa0421e09a4dd65c6d9e9ea102116b782064215258590f969cb91` |
 | `synthetic/chat_stream.v1.jsonl` | 63 | `14aea9fda5af56591c39112c98e9b312dad9646c3766117f338aba84b72508b3` |
-| `synthetic/scope_and_danger.v1.jsonl` | 30 | `267456b9da9cfbf7a5a7cad72235883469615f9bb6a0f82d79cb3537132b44c1` |
+| `synthetic/scope_and_danger.v1.jsonl` | 30 | `c3f0efd01a93b7d5edd71dfefc9425b294b0e68529df123d38eea19310d6511d` |
 
 ### `single_messages.v1.jsonl`
 
@@ -78,6 +78,10 @@
 `author`. 25 одиночных сообщений на предварительную территорию
 (`location_scope`) и подтипы вне зоны УК и 5 окон с контекстной опасностью без
 словарных триггеров.
+
+У строки `sd24` ожидаемая территория — `unknown`: `location_scope` является
+полем сигнала, а реплика про соседний дом сигналом не становится. Строка
+проверяет именно это.
 
 Контекстные окна правила ловить **не обязаны** — в репликах нет слов лексикона
 опасности. Они нужны для проверки Emergency Fusion с Fake-провайдером и для

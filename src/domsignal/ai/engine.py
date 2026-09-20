@@ -39,10 +39,14 @@ def decide_strength(
         facet = getattr(facets, name)
         if facet.value == "no" and facet.quote:
             return "filtered", f"facet_no_{name}"
-    values = (facets.current.value, facets.local.value, facets.observed.value)
+    # «no» без подтверждающей цитаты считается «unclear»: уклон в захват.
+    values = tuple(
+        "unclear" if facet.value == "no" and not facet.quote else facet.value
+        for facet in (facets.current, facets.local, facets.observed)
+    )
     if all(value == "yes" for value in values):
         return "strong", "all_facets_yes"
-    if facets.observed.value == "yes" and all(value in ("yes", "unclear") for value in values):
+    if values[2] == "yes" and all(value in ("yes", "unclear") for value in values):
         return "medium", "observed_yes"
     return "weak", "facets_unclear"
 

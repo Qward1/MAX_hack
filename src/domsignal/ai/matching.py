@@ -74,7 +74,7 @@ def within_one_edit(candidate: str, stem: str) -> bool:
 class StemSet:
     """Набор основ (возможно многословных), скомпилированный один раз."""
 
-    __slots__ = ("_phrases", "_fuzzy")
+    __slots__ = ("_phrases", "_fuzzy", "_exact", "_fuzzy_phrases", "_max_prefix")
 
     def __init__(self, stems: Iterable[str], fuzzy_stems: Iterable[str] = ()) -> None:
         phrases: list[tuple[str, tuple[str, ...]]] = []
@@ -84,6 +84,20 @@ class StemSet:
                 phrases.append((stem, words))
         self._phrases = tuple(phrases)
         self._fuzzy = frozenset(word for word in fuzzy_stems if len(word) >= 4)
+        # Индекс по первому слову основы: токен проверяется по своим префиксам,
+        # а не сравнивается с каждой основой набора.
+        exact: dict[str, list[tuple[str, tuple[str, ...]]]] = {}
+        fuzzy_phrases: list[tuple[str, tuple[str, ...]]] = []
+        longest = 1
+        for phrase in self._phrases:
+            first = phrase[1][0]
+            longest = max(longest, len(first))
+            exact.setdefault(first, []).append(phrase)
+            if first in self._fuzzy:
+                fuzzy_phrases.append(phrase)
+        self._exact = exact
+        self._fuzzy_phrases = tuple(fuzzy_phrases)
+        self._max_prefix = longest
 
     def __bool__(self) -> bool:
         return bool(self._phrases)
@@ -100,24 +114,42 @@ class StemSet:
             return False
         return within_one_edit(candidate, word)
 
+    def _candidates(self, token: str) -> list[tuple[str, tuple[str, ...]]]:
+        found: list[tuple[str, tuple[str, ...]]] = []
+        limit = min(len(token), self._max_prefix)
+        for size in range(1, limit + 1):
+            phrases = self._exact.get(token[:size])
+            if phrases:
+                found.extend(phrases)
+        if self._fuzzy_phrases:
+            for phrase in self._fuzzy_phrases:
+                if phrase not in found and self._word_matches(token, phrase[1][0]):
+                    found.append(phrase)
+        return found
+
     def find_all(self, tokens: Sequence[Token]) -> list[StemMatch]:
         matches: list[StemMatch] = []
         total = len(tokens)
-        for stem, words in self._phrases:
-            span = len(words)
-            for start in range(total - span + 1):
-                if all(self._word_matches(tokens[start + offset].text, words[offset])
-                       for offset in range(span)):
-                    last = start + span - 1
-                    matches.append(
-                        StemMatch(
-                            stem=stem,
-                            first_token=start,
-                            last_token=last,
-                            start=tokens[start].start,
-                            end=tokens[last].end,
-                        )
+        for start, token in enumerate(tokens):
+            for stem, words in self._candidates(token.text):
+                span = len(words)
+                last = start + span - 1
+                if last >= total:
+                    continue
+                if span > 1 and not all(
+                    self._word_matches(tokens[start + offset].text, words[offset])
+                    for offset in range(1, span)
+                ):
+                    continue
+                matches.append(
+                    StemMatch(
+                        stem=stem,
+                        first_token=start,
+                        last_token=last,
+                        start=token.start,
+                        end=tokens[last].end,
                     )
+                )
         return matches
 
     def find_first(self, tokens: Sequence[Token]) -> StemMatch | None:

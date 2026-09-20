@@ -1,8 +1,8 @@
 # DEV-A — current handoff
-Updated: 2026-09-17T22:15:00+03:00 (ownership metadata only)
-Branch: dev/a-core
-Current task: FND-01
-State: READY_FOR_REVIEW
+Updated: 2026-09-20T15:30:00+03:00
+Branch: `agent/a/a03-ai-core` (worktree от `origin/dev/b-experience`)
+Current task: A-03/AI + A-17/AI — AI-ядро на правилах (P1)
+State: IMPLEMENTED IN BRANCH / NOT MERGED
 
 ## Active/recent tasks
 
@@ -10,47 +10,112 @@ State: READY_FOR_REVIEW
 |---|---|---|---|
 | BOOT-01 | BASELINE | Repository workflow was present on main before this task | `a70df01` |
 | FND-01 | READY_FOR_REVIEW | C0 UI→API→PostgreSQL slice, auth boundary, jobs, generated contracts, Compose/Caddy and real checks implemented; live MAX remains not verified | local `dev/a-core`; PR pending owner action |
-| A-03/AI | NEXT | NLP extraction/risk baseline and evaluation under the new AI/NLP/ML ownership; no product backend or public DTO implementation is assigned here | Starts after FND-01 handoff/review boundary |
+| A-03/AI + A-17/AI | IMPLEMENTED IN BRANCH | Детерминированное ядро разбора окна: таксономия v2, правила, fallback, fusion, сила сигнала, guard, интерфейс провайдера, датасеты и оценка | `agent/a/a03-ai-core`; `scripts/check.py --scope backend` PASS |
+| A-08 / P2 | NEXT | Реальный провайдер polza.ai за готовым интерфейсом; нужен ключ, бюджет и промпт окна | Зависит от решения владельца по ключу и лимитам |
 
 ## Result
 
-- Test session → closed demo house membership → manual Report/Incident → board/detail → reload works.
-- C0 OpenAPI 3.1 and generated TS types are synchronized; routes/appeals are absent and capabilities are false.
-- PostgreSQL inbox/outbox/jobs include commit-before-accept, `SKIP LOCKED` lease recovery and stale-token protection.
-- MAX initData HMAC has negative tests; transport is only off/recording and normalized replay is explicitly diagnostic.
-- One backend image serves API/static and runs worker/migrate/seed; production overlay adds Caddy without webhook side effects.
+Одно ядро разбирает окно реплик; одиночное сообщение — окно из одной реплики,
+поэтому явный путь (форма, `/report`) и пассивное чтение чата используют один
+и тот же «пол» понимания.
 
-## Checks recorded for FND-01
+- `src/domsignal/ai/` — контракт окна, таксономия подтипов v2 (31 код),
+  нормализация с картой позиций, маскирование, правила опасности, места,
+  времени, территории и ролей, вариант C для режима без модели, строгая схема
+  ответа модели с экспортом JSON Schema, семантический валидатор, Emergency
+  Fusion с журналом аудита, сила сигнала и разделение Inbox/Audit Pool, guard
+  `no_new_facts`, Protocol провайдера с детерминированным Fake и фасад
+  `WindowAnalyzer`, который не бросает исключений.
+- `screen_message_for_danger(text)` — чистая функция без I/O и исключений для
+  вызова в транзакции приёма webhook: p95 < 5 мс, отрицание и «не у нас / не
+  сейчас» фиксируются отдельными флагами.
+- Ответственность ядро не определяет. Организаций, каналов, телефонов, сроков,
+  статусов, уверенности и текстов для жителя в пакете нет.
+- `datasets/synthetic/` — 98 одиночных сообщений, 10 инцидентов с 22 запросами
+  и поток из 63 реплик, перенесённые из эксперимента E0/E0b/E0c без правки
+  текстов, плюс новый набор территории и контекстной опасности.
+- `evaluation/run_eval.py` — воспроизводимый отчёт с интервалами Уилсона.
 
-These results are preserved from the FND-01 handoff at `dev/a-core@c939ccf`.
-The organizational ownership patch did not rerun or upgrade them.
+## Checks
 
-- `python scripts/check.py --scope backend`: pass — ruff, strict mypy, 13 unit/contract tests.
-- `python scripts/check.py --scope frontend`: pass — TypeScript, 2 Vitest tests, Vite production build.
-- `python scripts/check.py --scope contracts`: pass — OpenAPI, generated TS and region schema have no diff/errors.
-- `python scripts/check.py --scope integration`: pass against PostgreSQL 16 — 5 tests.
-- `python scripts/docker_smoke.py --project domsignal-smoke-local`: pass — clean store, create, API restart, persisted read, cleanup.
-- Playwright real-browser check: pass at desktop/mobile — create, board refresh, reload, detail, error-free console after favicon fix.
-- Local and production-overlay `docker compose config --quiet`: pass with explicit safe production variables.
+- `uv run python scripts/check.py --scope backend` — **PASS**: ruff, mypy
+  strict, 264 теста (unit + contract + ai), ~10 с.
+- `uv run python evaluation/run_eval.py --provider rules --out evaluation/reports/`
+  — воспроизводим: два прогона дают одинаковый JSON, кроме `generated_at`.
+  Все регрессионные полы PASS.
+- `uv build --wheel` во временный каталог вне репозитория — в wheel есть
+  `domsignal/ai/resources/taxonomy.v2.yaml`, `lexicon.r1.yaml` и
+  `schemas/window_output.v1.json`.
+- Изменений БД, API, worker, bot, miniapp, settings, bootstrap и зависимостей
+  нет. Единственная правка общего файла — две строки в `scripts/check.py`.
 
 ## Not verified / blockers
 
-Live MAX initData/webhook/API, real MAX group permissions, public DNS/TLS deployment and organizer DATA-API format were not tested. Legal routes, appeals, reminders, classifier quality and the complete demo scenario are intentionally outside FND-01.
+- Реальный провайдер LLM не подключён: это P2. Промпт окна и модель в
+  `versions` — `None`.
+- Все числа оценки — **внутривыборочная синтетика**: авторы данных и правил
+  пересекаются. Настоящий контроль — наборы P6 (смоделированный чат в MAX,
+  набор опасности от другого автора, локальные замеры на реальных выгрузках).
+- Реальные выгрузки чатов из `data/` не открывались и не использовались.
+- Семантическая опасность проверена только через Fake-провайдера с заданными
+  ответами; поведение реальной модели на контекстных окнах неизвестно.
 
 ## Next
 
-DEV-B reviews C0 semantics and mobile UX, then DEV-A opens the FND-01 PR from
-its own branch and CI verifies the GitHub merge result. After an accepted merge,
-integrator DEV-B updates `IMPLEMENTATION_CONTEXT.md`. DEV-A then takes A-03/AI:
-typed category/field extraction, risk signal, uncertainty/fallback and an
-evaluation regression set. A-08 follows only if a useful provider is available;
-no RAG/vector DB/multimodality is added to manufacture AI work.
+P2 — провайдер polza.ai за готовым `AnalysisProvider`: адаптер
+`openai_compatible`, промпт окна v1 поверх уже экспортированной JSON Schema,
+таймаут, circuit breaker и семафор, отбор моделей на синтетических окнах.
+Нужны от владельца: ключ, дневной бюджет и подтверждение, что на хакатон
+уходят только тестовые и синтетические данные.
 
-## For teammate
+## For teammate (DEV-B)
 
-Use `docs/openapi.json`, `miniapp/src/shared/api/schema.ts`, `MaxTransport`, `NormalizedInboundEvent` and capability flags. Do not infer a live MAX payload from diagnostic replay or expose appeals/routes before their contracts exist.
+Для Responsibility Router (P3a) готовы стабильные коды подтипов и значения
+предварительной территории.
 
-DEV-B now owns public contracts, core/services, DB/migrations, common worker and
-all product integration, including A-01 convergence for B-02. DEV-A supplies
-typed AI analysis and remains mandatory reviewer of DEV-B PRs; it is not the
-waiting producer for the C0/B-00 product contract.
+**`location_scope`:** `apartment`, `house_common`, `house_territory`,
+`municipal_territory`, `external_network`, `other_building`, `unknown`.
+Значение приходит только с цитатой; без цитаты — всегда `unknown`.
+
+**Подтипы таксономии v2** (`code | product_category | dedupe_scope`):
+
+| Код | product_category | dedupe_scope |
+|---|---|---|
+| `gas.smell` | other | house |
+| `gas.supply_outage` | other | house |
+| `elevator.button` | elevator | object |
+| `elevator.doors` | elevator | object |
+| `elevator.stopped` | elevator | object |
+| `roof.leak` | water | object |
+| `water.leak` | water | object |
+| `water.hot_outage` | water | house |
+| `water.supply_outage` | water | house |
+| `water.quality` | water | house |
+| `water.pressure` | water | house |
+| `heating.cold_radiators` | other | house |
+| `electrical.panel` | lighting | object |
+| `power.grid_outage` | lighting | house |
+| `street_lighting.failure` | lighting | object |
+| `lighting.yard` | lighting | object |
+| `lighting.stairwell` | lighting | object |
+| `waste.chute` | waste | object |
+| `waste.container_site` | waste | house |
+| `waste.removal_regional` | waste | house |
+| `intercom.broken` | other | object |
+| `entrance_door.broken` | other | object |
+| `cleaning.stairwell` | other | house |
+| `snow.street` | other | object |
+| `snow.yard` | other | house |
+| `playground.damaged` | other | object |
+| `landscaping.public` | other | object |
+| `road.damage` | other | object |
+| `structure.damage` | other | object |
+| `external_network.outage` | other | house |
+| `other.unspecified` | other | house |
+
+Точки входа: `WindowAnalyzer.analyze(window) -> WindowAnalysis`,
+`decide_explicit_report(analysis)` для формы и `/report`,
+`screen_message_for_danger(text)` для транзакции приёма,
+`domsignal.ai.windowing.build_windows` для сборщика окон.
+`product_category` — это код заявки, если её всё-таки создаёт УК; это **не**
+утверждение о том, что проблема входит в зону ответственности УК.
