@@ -107,21 +107,34 @@ test("real API → PostgreSQL → board → detail → reload; web keyboard and 
   await page.getByRole("button", { name: "Сообщить", exact: true }).click();
   const description = `B-02 browser acceptance ${Date.now()}: лифт не работает`;
   await page.getByRole("textbox", { name: "Описание" }).fill(description);
+  await page.getByRole("button", { name: "Дальше" }).click();
+  await expect(page.getByText("Проверьте, что мы поняли")).toBeVisible();
   const created = page.waitForResponse(
     (response) =>
-      response.url().endsWith("/api/v1/reports") &&
+      response.url().includes("/reports/submit") &&
       response.request().method() === "POST",
   );
-  await page.getByRole("button", { name: "Сохранить сигнал" }).click();
+  // Дубль того же лифта мог остаться от предыдущего прогона: житель решает сам.
+  for (const name of ["Нет, это другое", "Сообщить в УК", "Всё верно, отправить"]) {
+    const button = page.getByRole("button", { name, exact: true });
+    if (await button.count()) {
+      await button.first().click();
+      break;
+    }
+  }
   const response = await created;
   expect(response.status()).toBe(201);
-  const id = (await response.json()).incident.id;
+  const id = (await response.json()).report.incident.id;
+  await expect(page.getByRole("heading", { name: "Что дальше" })).toBeVisible();
+  await page.getByRole("button", { name: "Открыть проблему" }).click();
+  await expect(page).toHaveURL(new RegExp(`incident=${id}`));
+  await page.goBack();
   const link = page.locator(`a[href*="incident=${id}"]`);
   await page.screenshot({
     path: "test-results/real-board.png",
     fullPage: true,
   });
-  await link.focus();
+  await link.first().focus();
   await page.keyboard.press("Enter");
   await expect(
     page.getByRole("heading", { name: "Что делать сейчас" }),
