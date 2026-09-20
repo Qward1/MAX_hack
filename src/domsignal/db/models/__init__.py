@@ -14,6 +14,13 @@ from domsignal.db.models.employee_auth import (
     EmployeeCredential,
     RecoveryCode,
 )
+from domsignal.db.models.explicit import (
+    GLOBAL_BUDGET_SCOPE,
+    AiCallBudget,
+    AppealDraft,
+    ExplicitIntake,
+    RouteOutcome,
+)
 from domsignal.db.models.incidents import Incident, Report
 from domsignal.db.models.notifications import MaxDestinationLimit, NotificationDelivery
 from domsignal.db.models.onboarding import (
@@ -35,6 +42,11 @@ from domsignal.db.models.tickets import (
 __all__ = [
     "CompanyOnboardingRequest", "EmployeeInvitation", "HouseManagementRequest",
     "AuthChallenge", "AuthRateLimit", "EmployeeCredential", "RecoveryCode",
+    "GLOBAL_BUDGET_SCOPE",
+    "AiCallBudget",
+    "AppealDraft",
+    "ExplicitIntake",
+    "RouteOutcome",
     "MaxDestinationLimit",
     "NotificationDelivery",
     "Ticket",

@@ -8,18 +8,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from domsignal.db.models import MaxDestinationLimit, NotificationDelivery, OutboxMessage, Report
 
+#: Вид outbox-сообщения A-16, из которого рождается доставка по заявке.
+TICKET_INTENT_KIND = "ticket.notification_intent.v1"
+
 
 class NotificationRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def intent(self) -> OutboxMessage | None:
+    async def intent(self, kind: str = TICKET_INTENT_KIND) -> OutboxMessage | None:
         return cast(
             OutboxMessage | None,
             await self.session.scalar(
                 select(OutboxMessage)
                 .where(
-                    OutboxMessage.kind == "ticket.notification_intent.v1",
+                    OutboxMessage.kind == kind,
                     OutboxMessage.status == "pending",
                 )
                 .order_by(OutboxMessage.created_at, OutboxMessage.id)
@@ -41,6 +44,15 @@ class NotificationRepository:
                 select(NotificationDelivery)
                 .where(NotificationDelivery.ticket_id == ticket_id)
                 .order_by(NotificationDelivery.id)
+                .with_for_update()
+            )
+        )
+
+    async def by_outbox(self, outbox_message_id: UUID) -> list[NotificationDelivery]:
+        return list(
+            await self.session.scalars(
+                select(NotificationDelivery)
+                .where(NotificationDelivery.outbox_message_id == outbox_message_id)
                 .with_for_update()
             )
         )

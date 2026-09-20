@@ -11,6 +11,9 @@ class CapabilityFlags(ContractModel):
     max_live: bool = False
     group_mode: bool = False
     miniapp: bool = True
+    # Внешний провайдер разбора подключён. Правила работают всегда, поэтому
+    # false не скрывает явный путь, а только уточнение моделью.
+    ai_analysis: bool = False
     photo_analysis: bool = False
     voice: bool = False
     admin: bool = False

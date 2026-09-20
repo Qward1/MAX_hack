@@ -62,7 +62,24 @@ services:
   worker:
     image: domsignal-backend:local
     pull_policy: never
-    command: ["python", "-m", "domsignal.worker.main"]
+    command: ["python", "-m", "domsignal.worker.main", "--pool", "operational"]
+    environment: *backend-environment
+    depends_on:
+      db:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+
+  # Нагрузка модели изолирована: её отказ не задерживает доставку уведомлений и
+  # жизненный цикл заявки, которые остаются в операционном пуле. Одна реплика:
+  # предохранитель и семафор провайдера живут в процессе.
+  ai-worker:
+    image: domsignal-backend:local
+    pull_policy: never
+    command: ["python", "-m", "domsignal.worker.main", "--pool", "ai"]
     environment: *backend-environment
     depends_on:
       db:

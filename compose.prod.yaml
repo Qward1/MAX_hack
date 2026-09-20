@@ -48,6 +48,9 @@ services:
   worker:
     environment: *production-environment
 
+  ai-worker:
+    environment: *production-environment
+
   caddy:
     image: caddy:2.10.2-alpine
     environment:

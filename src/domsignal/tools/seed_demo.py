@@ -82,6 +82,9 @@ async def seed(settings: Settings | None = None) -> None:
                 )
                 .on_conflict_do_nothing(index_elements=[ManagementCompany.id])
             )
+            # Решение владельца по итогам P3a: на демонстрации показываем полный
+            # путь «сообщение → разбор → Ticket → статус», поэтому демо-дома
+            # принимают заявки. Идемпотентно: повторный seed только включает флаг.
             for house_id in (DEMO_HOUSE_ID, OTHER_HOUSE_ID):
                 await session.execute(
                     insert(HouseManagement)
@@ -92,8 +95,12 @@ async def seed(settings: Settings | None = None) -> None:
                         valid_from=datetime(2020, 1, 1, tzinfo=UTC),
                         basis_type="demo",
                         is_demo=True,
+                        ticket_intake_enabled=True,
                     )
-                    .on_conflict_do_nothing(index_elements=[HouseManagement.id])
+                    .on_conflict_do_update(
+                        index_elements=[HouseManagement.id],
+                        set_={"ticket_intake_enabled": True},
+                    )
                 )
             # Профиль маршрутизации: демо-дом с неопределённой территорией
             # показывает выбор диспетчера, второй дом — территорию УК.

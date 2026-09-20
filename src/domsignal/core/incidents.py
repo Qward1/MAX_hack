@@ -16,7 +16,16 @@ class IncidentStatus(StrEnum):
 
 
 class ClassificationMode(StrEnum):
+    """Кто определил категорию.
+
+    `manual` — выбрал человек; `rules` — детерминированные правила ядра;
+    `model` — модель, чей ответ прошёл наш валидатор. Значение описывает
+    происхождение классификации, а не уверенность в ней.
+    """
+
     MANUAL = "manual"
+    RULES = "rules"
+    MODEL = "model"
 
 
 CATEGORY_TITLES: dict[ReportCategory, str] = {

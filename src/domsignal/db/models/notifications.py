@@ -13,7 +13,20 @@ class NotificationDelivery(Timestamps, Base):
     __table_args__ = (
         UniqueConstraint("outbox_message_id", "recipient_user_id", "channel", name="uq_delivery"),
         CheckConstraint("channel = 'max'", name="channel"),
-        CheckConstraint("purpose IN ('ticket_accepted','work_verification')", name="purpose"),
+        CheckConstraint(
+            "purpose IN ('ticket_accepted','work_verification','route_action_card')",
+            name="purpose",
+        ),
+        # Доставка относится либо к заявке, либо к исходу маршрутизации.
+        # Внешний маршрут заявку не создаёт, поэтому `ticket_id` может быть пуст.
+        CheckConstraint(
+            "(ticket_id IS NOT NULL) <> (route_outcome_id IS NOT NULL)",
+            name="subject",
+        ),
+        CheckConstraint(
+            "purpose <> 'route_action_card' OR route_outcome_id IS NOT NULL",
+            name="route_card_subject",
+        ),
         CheckConstraint(
             "status IN ('pending','processing','accepted','retry_wait','unknown',"
             "'failed','superseded','skipped')",
@@ -27,7 +40,10 @@ class NotificationDelivery(Timestamps, Base):
     recipient_user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
     channel: Mapped[str] = mapped_column(String(20), default="max")
     purpose: Mapped[str] = mapped_column(String(40))
-    ticket_id: Mapped[UUID] = mapped_column(ForeignKey("tickets.id"), index=True)
+    ticket_id: Mapped[UUID | None] = mapped_column(ForeignKey("tickets.id"), index=True)
+    route_outcome_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("route_outcomes.id", ondelete="CASCADE"), index=True
+    )
     work_attempt_id: Mapped[UUID | None] = mapped_column(ForeignKey("work_attempts.id"))
     launch_ref: Mapped[str] = mapped_column(String(64), unique=True)
     destination: Mapped[str | None] = mapped_column(String(200))

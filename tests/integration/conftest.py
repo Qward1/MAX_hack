@@ -33,9 +33,12 @@ async def reset_database(integration_settings: Settings) -> None:
     async with factory() as session, session.begin():
         await session.execute(
             text(
+                # `ai_call_budget` перечислен явно: у него нет внешних ключей,
+                # поэтому CASCADE его не захватывает и счётчик протёк бы между тестами.
                 "TRUNCATE auth_rate_limits, max_destination_limits, chat_bindings, "
                 "chat_connection_requests, max_chats, "
                 "outbox_messages, jobs, inbox_receipts, idempotency_records, "
+                "ai_call_budget, appeal_drafts, route_outcomes, explicit_intakes, "
                 "app_sessions, reports, incidents, resident_memberships, "
                 "house_assignments, organization_memberships, "
                 "house_managements, management_companies, houses, users CASCADE"

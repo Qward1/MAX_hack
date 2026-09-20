@@ -7,7 +7,11 @@ from uuid import UUID
 from pydantic import Field
 
 from domsignal.contracts.common import ContractModel, PageMeta
+from domsignal.contracts.routing import ActionCard, DangerKind, LocationScope
 from domsignal.core.incidents import ClassificationMode, IncidentStatus, ReportCategory
+
+#: Чем получен разбор: моделью, правилами или ничем (человек уточняет сам).
+AnalysisMode = Literal["model", "rules", "manual"]
 
 
 class ReportCreate(ContractModel):
@@ -15,6 +19,38 @@ class ReportCreate(ContractModel):
     category: ReportCategory
     description: str = Field(min_length=5, max_length=2000)
     classification_mode: ClassificationMode = ClassificationMode.MANUAL
+
+
+class ReportPreviewRequest(ContractModel):
+    """Предпросмотр маршрута для формы mini app. Ничего не создаёт."""
+
+    description: str = Field(min_length=5, max_length=2000)
+
+
+class ReportAnalysisView(ContractModel):
+    """Что удалось понять из описания. Только правила, без обращения к модели.
+
+    Место и «с какого времени» отдаются лишь тогда, когда у значения есть
+    дословная цитата из текста жителя: угадывать продукт не станет.
+    """
+
+    subtype: str | None
+    category: ReportCategory
+    location_scope: LocationScope
+    entrance: str | None
+    floor: str | None
+    since: str | None
+    danger_kinds: list[DangerKind]
+    mode: AnalysisMode
+    confident: bool
+    reason: str
+
+
+class ReportPreview(ContractModel):
+    """Разбор и карточка следующего шага без побочных эффектов."""
+
+    analysis: ReportAnalysisView
+    action_card: ActionCard
 
 
 class ReportSummary(ContractModel):
@@ -51,9 +87,12 @@ class Provenance(ContractModel):
 
 
 class IncidentLocation(ContractModel):
+    """Место и время наблюдения. Заполняется только значениями с цитатой."""
+
     entrance: str | None = None
     floor: str | None = None
     label: str | None = None
+    observed_since: str | None = None
 
 
 class IncidentSummary(ContractModel):
@@ -92,6 +131,8 @@ class IncidentDetail(IncidentSummary):
 class ReportCreated(ContractModel):
     report_id: UUID
     incident: IncidentDetail
+    #: Та же детерминированная карточка следующего шага, что и в предпросмотре.
+    action_card: ActionCard | None = None
 
 
 class IncidentList(ContractModel):

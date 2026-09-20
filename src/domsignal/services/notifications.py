@@ -20,22 +20,39 @@ from domsignal.contracts.tickets import (
     TicketNotificationIntent,
 )
 from domsignal.core.incidents import CATEGORY_TITLES
-from domsignal.db.models import Incident, NotificationDelivery, Ticket, TicketEvent, User
+from domsignal.db.models import (
+    Incident,
+    NotificationDelivery,
+    OutboxMessage,
+    Ticket,
+    TicketEvent,
+    User,
+)
 from domsignal.db.repositories.notifications import NotificationRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.db.repositories.tickets import TicketRepository
 from domsignal.services.errors import AccessDenied, ResourceNotFound
 from domsignal.services.notification_render import actionable, render
+from domsignal.services.route_card_render import (
+    ROUTE_CARD_INTENT_KIND,
+    ROUTE_CARD_REF_PREFIX,
+    RouteCardIntent,
+    render_route_card,
+)
 from domsignal.services.tickets import TicketService
 
 logger = logging.getLogger(__name__)
+
+#: Назначение доставки для карточки маршрута.
+ROUTE_CARD_PURPOSE = "route_action_card"
 
 
 @dataclass(frozen=True)
 class DeliverySnapshot:
     destination: str
-    view: ResidentWorkStatus
     message: PersonalMessage
+    # У карточки маршрута нет состояния работы: она не относится к заявке.
+    view: ResidentWorkStatus | None = None
 
 
 class DeferredNotification(Exception):
@@ -62,6 +79,60 @@ class TicketNotificationHandler:
         session: AsyncSession,
         delivery: NotificationDelivery,
     ) -> DeliverySnapshot:
+        if delivery.purpose == ROUTE_CARD_PURPOSE:
+            return await self._route_card_snapshot(session, delivery)
+        return await self._ticket_snapshot(session, delivery)
+
+    async def _identity(self, user: User, delivery: NotificationDelivery) -> str:
+        """Личная доставка возможна только в подтверждённую личность MAX."""
+        if (
+            not user.max_identity_verified_at
+            or not user.max_user_id
+            or not re.fullmatch(r"[1-9]\d{0,18}", user.max_user_id)
+            or int(user.max_user_id) > 2**63 - 1
+        ):
+            raise ResourceNotFound("NO_MAX_IDENTITY")
+        if delivery.destination and user.max_user_id != delivery.destination:
+            raise ResourceNotFound("MAX_IDENTITY_CHANGED")
+        return user.max_user_id
+
+    async def _route_card_snapshot(
+        self,
+        session: AsyncSession,
+        delivery: NotificationDelivery,
+    ) -> DeliverySnapshot:
+        """Снимок карточки маршрута: доступ перепроверяется, текст — из outbox.
+
+        Формулировка фиксируется в момент разбора, поэтому повторная доставка
+        не меняет текст и не зависит от обновления справочника.
+        """
+        user = await session.get(User, delivery.recipient_user_id)
+        outbox = await session.get(OutboxMessage, delivery.outbox_message_id)
+        if user is None or outbox is None:
+            raise ResourceNotFound("ACCESS_REVOKED")
+        try:
+            intent = RouteCardIntent.model_validate(outbox.payload)
+        except ValidationError as exc:
+            raise ResourceNotFound("INVALID_INTENT") from exc
+        context = await self.tickets.memberships.require_house(
+            session,
+            user_id=user.id,
+            house_id=intent.house_id,
+            source="worker",
+        )
+        if not context.resident_access:
+            raise ResourceNotFound("ACCESS_REVOKED")
+        destination = await self._identity(user, delivery)
+        return DeliverySnapshot(
+            destination,
+            render_route_card(intent, ref=delivery.launch_ref),
+        )
+
+    async def _ticket_snapshot(
+        self,
+        session: AsyncSession,
+        delivery: NotificationDelivery,
+    ) -> DeliverySnapshot:
         user = await session.get(User, delivery.recipient_user_id)
         if user is None:
             raise ResourceNotFound("ACCESS_REVOKED")
@@ -83,15 +154,7 @@ class TicketNotificationHandler:
         )
         if view.ticket_id != ticket.id:
             raise ResourceNotFound("TICKET_SUPERSEDED")
-        if (
-            not user.max_identity_verified_at
-            or not user.max_user_id
-            or not re.fullmatch(r"[1-9]\d{0,18}", user.max_user_id)
-            or int(user.max_user_id) > 2**63 - 1
-        ):
-            raise ResourceNotFound("NO_MAX_IDENTITY")
-        if delivery.destination and user.max_user_id != delivery.destination:
-            raise ResourceNotFound("MAX_IDENTITY_CHANGED")
+        destination = await self._identity(user, delivery)
         incident = await session.get(Incident, ticket.incident_id)
         assert incident is not None
         # Category is a controlled public summary; never forward private Report prose/location.
@@ -100,8 +163,7 @@ class TicketNotificationHandler:
             "Проблема дома",
         )
         return DeliverySnapshot(
-            user.max_user_id,
-            view,
+            destination,
             render(
                 purpose=delivery.purpose,
                 title=title,
@@ -109,6 +171,7 @@ class TicketNotificationHandler:
                 attempt_id=delivery.work_attempt_id,
                 ref=delivery.launch_ref,
             ),
+            view,
         )
 
     @staticmethod
@@ -202,6 +265,55 @@ class TicketNotificationHandler:
             await session.flush()
         return True
 
+    async def consume_route_cards_once(self) -> bool:
+        """Превратить карточку маршрута из outbox в адресную доставку.
+
+        Тот же механизм, что у уведомлений по заявке: второго транспорта не
+        появляется, `launch_ref` и доставка общие. Отличается только предмет —
+        исход маршрутизации вместо заявки, потому что внешний маршрут заявку
+        не создаёт.
+        """
+        async with self.sessions() as session, session.begin():
+            repo = NotificationRepository(session)
+            outbox = await repo.intent(ROUTE_CARD_INTENT_KIND)
+            if outbox is None:
+                return False
+            try:
+                intent = RouteCardIntent.model_validate(outbox.payload)
+            except ValidationError:
+                outbox.status, outbox.last_error = "processed", "INVALID_INTENT"
+                return True
+            if outbox.aggregate_id != intent.route_outcome_id:
+                outbox.status, outbox.last_error = "processed", "INVALID_INTENT"
+                return True
+            if not await repo.by_outbox(outbox.id):
+                delivery = NotificationDelivery(
+                    id=uuid4(),
+                    outbox_message_id=outbox.id,
+                    recipient_user_id=intent.recipient_user_id,
+                    channel="max",
+                    purpose=ROUTE_CARD_PURPOSE,
+                    ticket_id=None,
+                    route_outcome_id=intent.route_outcome_id,
+                    launch_ref=ROUTE_CARD_REF_PREFIX + secrets.token_urlsafe(24),
+                    status="pending",
+                    desired_version=0,
+                )
+                session.add(delivery)
+                try:
+                    snapshot = await self._snapshot(session, delivery)
+                    delivery.destination = snapshot.destination
+                except (AccessDenied, ResourceNotFound) as exc:
+                    code = (
+                        str(exc)
+                        if str(exc) in {"NO_MAX_IDENTITY", "MAX_IDENTITY_CHANGED", "INVALID_INTENT"}
+                        else "ACCESS_REVOKED"
+                    )
+                    self._stop(delivery, code, datetime.now(UTC))
+            outbox.status = "processed"
+            await session.flush()
+        return True
+
     async def deliver_once(self, *, now: datetime | None = None) -> bool:
         if not self.enabled:
             return False
@@ -223,7 +335,7 @@ class TicketNotificationHandler:
             except (AccessDenied, ResourceNotFound):
                 self._stop(delivery, "ACCESS_REVOKED", at)
                 return True
-            if delivery.provider_message_id is None and (
+            if delivery.provider_message_id is None and snapshot.view is not None and (
                 (
                     delivery.purpose == "work_verification"
                     and not actionable(snapshot.view, delivery.work_attempt_id)
@@ -253,14 +365,18 @@ class TicketNotificationHandler:
             assert delivery is not None
             try:
                 snapshot = await self._snapshot(session, delivery)
-                denied = delivery.provider_message_id is None and (
-                    (
-                        delivery.purpose == "work_verification"
-                        and not actionable(snapshot.view, delivery.work_attempt_id)
-                    )
-                    or (
-                        delivery.purpose == "ticket_accepted"
-                        and snapshot.view.status not in {"accepted", "in_progress"}
+                denied = (
+                    delivery.provider_message_id is None
+                    and snapshot.view is not None
+                    and (
+                        (
+                            delivery.purpose == "work_verification"
+                            and not actionable(snapshot.view, delivery.work_attempt_id)
+                        )
+                        or (
+                            delivery.purpose == "ticket_accepted"
+                            and snapshot.view.status not in {"accepted", "in_progress"}
+                        )
                     )
                 )
             except (AccessDenied, ResourceNotFound):
@@ -330,7 +446,9 @@ class TicketNotificationHandler:
                 delivery.status = "accepted"
                 delivery.provider_message_id = message_id
                 delivery.accepted_at = delivery.accepted_at or finished
-                delivery.applied_version = snapshot.view.version or 0
+                delivery.applied_version = (
+                    snapshot.view.version or 0 if snapshot.view is not None else 0
+                )
                 delivery.desired_version = max(delivery.desired_version, delivery.applied_version)
                 delivery.retry_count = 0
                 delivery.next_attempt_at = None
@@ -364,7 +482,9 @@ class TicketNotificationHandler:
         except (AccessDenied, ResourceNotFound):
             raise ResourceNotFound("Resource was not found") from None
         ticket = await session.get(Ticket, delivery.ticket_id)
-        assert ticket is not None
+        # Ссылка `w_` принадлежит только доставке по заявке: карточка маршрута
+        # использует префикс `r_` и не проходит проверку формата выше.
+        assert ticket is not None and snapshot.view is not None
         latest = snapshot.view.latest_attempt
         return NotificationLaunch(
             incident_id=ticket.incident_id,
@@ -385,6 +505,7 @@ class TicketNotificationHandler:
             delivery is None
             or not delivery.accepted_at
             or not delivery.work_attempt_id
+            or delivery.ticket_id is None
             or delivery.provider_message_id != callback.message_id
         ):
             raise ResourceNotFound("Resource was not found")
@@ -398,6 +519,9 @@ class TicketNotificationHandler:
         async with self.sessions() as session, session.begin():
             try:
                 delivery = await self._callback_delivery(session, callback)
+                # Callbacks only reach ticket deliveries; `_callback_delivery`
+                # already rejects anything without a ticket and an attempt.
+                assert delivery.ticket_id is not None
                 # Same lock order and A-16 observer checks as resident HTTP.
                 ticket, context = await self.tickets._context(
                     session,

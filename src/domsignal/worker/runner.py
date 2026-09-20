@@ -12,6 +12,7 @@ from domsignal.bot.messaging import MessagingError
 from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.services.notifications import DeferredNotification, TicketNotificationHandler
 from domsignal.worker.handlers import JobHandler
+from domsignal.worker.pools import DEFAULT_POOL, WorkerPool
 
 logger = logging.getLogger(__name__)
 
@@ -34,18 +35,22 @@ class WorkerRunner:
         lease_seconds: int = 30,
         max_attempts: int = 5,
         notifications: TicketNotificationHandler | None = None,
+        pool: WorkerPool = DEFAULT_POOL,
     ) -> None:
         self.session_factory = session_factory
         self.handlers = handlers
         self.lease_seconds = lease_seconds
         self.max_attempts = max_attempts
-        self.notifications = notifications
+        self.pool = pool
+        # Доставка уведомлений остаётся только в операционном пуле: отказ
+        # провайдера модели не должен задерживать сообщения жителям.
+        self.notifications = notifications if pool == DEFAULT_POOL else None
 
     async def claim(self, *, now: datetime | None = None) -> ClaimedJob | None:
         claimed_at = now or datetime.now(UTC)
         async with self.session_factory() as session, session.begin():
             job = await ReliabilityRepository(session).claim_job(
-                now=claimed_at, lease_seconds=self.lease_seconds
+                now=claimed_at, lease_seconds=self.lease_seconds, pool=self.pool
             )
             if job is None or job.lease_token is None:
                 return None
@@ -103,17 +108,19 @@ class WorkerRunner:
                 now=datetime.now(UTC),
             )
 
-    async def run_once(self) -> bool:
+    async def run_once(self, *, now: datetime | None = None) -> bool:
+        """Один шаг воркера. `now` задаётся только проверками времени."""
         handled = False
         if self.notifications:
             try:
                 handled = await self.notifications.consume_once()
-                handled = await self.notifications.deliver_once() or handled
+                handled = await self.notifications.consume_route_cards_once() or handled
+                handled = await self.notifications.deliver_once(now=now) or handled
             except Exception as exc:
                 # A rolled-back consumer or leased operation remains recoverable. Do not
                 # leak SQL parameters/upstream content, or stop unrelated durable jobs.
                 logger.error("notification_worker_error", extra={"error_type": type(exc).__name__})
-        job = await self.claim()
+        job = await self.claim(now=now)
         if job is None:
             return handled
         await self.process(job)

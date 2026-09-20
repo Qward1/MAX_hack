@@ -19,6 +19,12 @@ docker compose up --build
 mini app получает только локальную тестовую сессию пользователя `demo`. Данные
 хранятся в volume PostgreSQL.
 
+Воркеров два, с одним образом и разными пулами задач:
+`worker` (`--pool operational`) выполняет доставку уведомлений, приём из чата и
+сторожевой разбор правилами, `ai-worker` (`--pool ai`) — только обращения к
+модели. Остановленный `ai-worker` задерживает разбор `/report` не более чем на
+30 секунд и не влияет на уведомления и заявки.
+
 ```bash
 docker compose down       # остановить, сохранив данные
 docker compose up -d      # повторный запуск с прежними данными
@@ -44,6 +50,8 @@ npm --prefix=miniapp ci
 uv run alembic upgrade head
 uv run python -m domsignal.tools.seed_demo
 uv run uvicorn domsignal.main:app --reload --port 8000
+uv run python -m domsignal.worker.main --pool operational
+uv run python -m domsignal.worker.main --pool ai
 npm --prefix=miniapp run dev
 ```
 

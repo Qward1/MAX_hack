@@ -8,6 +8,7 @@ from sqlalchemy.engine import make_url
 
 from domsignal.db.models import NotificationDelivery
 from domsignal.db.session import create_engine, create_session_factory
+from tests.integration.migration_columns import without_added_columns
 from tests.integration.test_migrations import migrate
 
 
@@ -68,7 +69,9 @@ async def test_nd_migration_populated_a16_and_history_guard(integration_settings
                 await c.execute(text(sql), ids)
             tables = ["tickets", "ticket_events", "reports", "outbox_messages"]
             before = {
-                t: (await c.execute(text(f"SELECT row_to_json(t) FROM {t} t"))).all()
+                t: (
+                    await c.execute(text(f"SELECT {without_added_columns(t)} FROM {t} t"))
+                ).all()
                 for t in tables
             }
         await engine.dispose()
@@ -76,9 +79,10 @@ async def test_nd_migration_populated_a16_and_history_guard(integration_settings
         await migrate(url, "check")
         async with engine.connect() as c:
             for t in tables:
-                assert (await c.execute(text(f"SELECT row_to_json(t) FROM {t} t"))).all() == before[
-                    t
-                ]
+                after = (
+                    await c.execute(text(f"SELECT {without_added_columns(t)} FROM {t} t"))
+                ).all()
+                assert after == before[t]
             assert (
                 await c.execute(text("SELECT max_identity_verified_at FROM users"))
             ).scalar() is None

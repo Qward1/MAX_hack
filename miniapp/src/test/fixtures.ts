@@ -20,6 +20,7 @@ export const capabilities: Capabilities = {
     report_create: true,
     incident_board: true,
     incident_detail: true,
+    ai_analysis: false,
     max_live: false,
     group_mode: false,
     miniapp: true,

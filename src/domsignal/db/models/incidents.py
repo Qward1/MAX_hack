@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     DateTime,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domsignal.db.base import Base
@@ -41,6 +43,12 @@ class Incident(Base):
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(30), default="open", index=True)
+    # Место и «с какого времени» заполняются только значениями, у которых есть
+    # дословная цитата из реплики жителя. Из свободного текста не извлекаются.
+    location_entrance: Mapped[str | None] = mapped_column(String(50))
+    location_floor: Mapped[str | None] = mapped_column(String(50))
+    location_label: Mapped[str | None] = mapped_column(String(200))
+    observed_since: Mapped[str | None] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -63,6 +71,10 @@ class Report(Base):
     description: Mapped[str] = mapped_column(Text)
     classification_mode: Mapped[str] = mapped_column(String(30), default="manual")
     provenance: Mapped[str] = mapped_column(String(30), default="api")
+    # Происхождение разбора: режим, состояния, версии, подтип, территория,
+    # флаги, число отброшенных полей, идентификатор модели. **Без текста
+    # реплики** — он уже лежит в `description`, дублировать его незачем.
+    analysis: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

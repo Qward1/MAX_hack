@@ -33,5 +33,8 @@ async def version(container: ContainerDep) -> dict[str, str]:
 async def capabilities(container: ContainerDep) -> Any:
     return CapabilitiesResponse(
         environment=container.settings.app_env.value,
-        features=CapabilityFlags(test_auth=container.settings.test_session_enabled),
+        features=CapabilityFlags(
+            test_auth=container.settings.test_session_enabled,
+            ai_analysis=container.ai_analysis_enabled,
+        ),
     )
