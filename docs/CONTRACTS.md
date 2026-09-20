@@ -197,6 +197,74 @@ P3a действуют и здесь.
 вызова берётся из профиля модели (`models.v1.yaml`); `LLM_TIMEOUT_SECONDS`
 переопределяет его только если задан явно.
 
+## Экран жителя: форма, карточка маршрута и черновик — срез P3c
+
+Первый срез, где житель видит результат работы роутера. Backend расширен ровно
+настолько, насколько без этого экрана не существует; изменения аддитивны.
+
+### Новые endpoints
+
+| Method/path | Request → response |
+|---|---|
+| `POST /api/v1/houses/{house_id}/reports/submit` | `Idempotency-Key` + `{description, category?}` → `ReportSubmitted` (`201`). Разбор синхронный и **только правилами**; решение принимает та же функция, что и чатовый путь. |
+| `GET /api/v1/route-outcomes/{outcome_id}` | → `RouteOutcomeView`. Доступ только автору исхода в пределах дома; чужой и несуществующий дают одинаковый `404`. |
+
+`ReportSubmitted` = `{route_outcome_id, decision, analysis, action_card, report}`.
+`report` пуст для внешнего маршрута: заявка управляющей компании там не
+создаётся. `decision` повторяет `route_outcomes.decision`.
+
+`RouteOutcomeView` = `{id, house_id, created_at, decision, route_type,
+action_card, incident_id, appeal_draft_id, directory_changed}`. Карточка
+**пересобирается по текущему справочнику**, а не берётся из снимка доставки:
+справочник мог обновиться. Если текущий `route_type` разошёлся с сохранённым,
+`directory_changed = true`, и интерфейс показывает одну честную строку.
+
+### Решение по маршруту для формы
+
+Таблица P3b действует без изменений: `uk_internal` + уверенная зона → заявка;
+`uk_internal` без уверенной зоны, `unknown` и `requires_operator_choice` →
+заявка `other` и `needs_clarification`; внешние маршруты → заявки нет.
+Выбор из списка не меняет **решение**, но названная человеком категория не
+заменяется на `other`, а `classification_mode` становится `manual`.
+
+`RouteOutcome` получил `author_id` (кто автор исхода) и `submitted_text` (слова
+жителя из формы). У чатового пути текст по-прежнему живёт в `explicit_intakes`,
+поэтому `AppealDraftService` берёт описание из `submitted_text` только когда
+записи приёма и заявки нет — иначе черновик внешнего обращения из формы остался
+бы без сути проблемы.
+
+### Кандидаты в дубли
+
+`ReportPreview` += `duplicates: list[DuplicateCandidate]` (максимум 3).
+Правило детерминированное и без модели: тот же дом и тот же период управления,
+открытый статус (`detected|open|reported|overdue|escalated`), та же продуктовая
+категория, создана не позже 14 суток назад, сортировка по `created_at` убыв.
+
+`DuplicateCandidate` = `{incident_id, title, category, status, created_at,
+report_count, participant_count, match_reason}`; `match_reason` — короткая
+строка из шаблонов продукта, не свободный текст.
+
+Когда кандидаты есть, `ActionCardBuilder` получает `existing_ticket_ref`
+(заголовок первой проблемы) и в карточке появляется `join_existing`.
+**Идентификатор для перехода интерфейс берёт из `duplicates`**, а не из
+заголовка. Автоматического слияния нет ни на одном пути: пока житель не выбрал
+сам, не отправляется ничего.
+
+### Резолвер запуска
+
+`GET /api/v1/notification-launch/{ref}` принимает `r_[A-Za-z0-9_-]{32}` наравне
+с `w_`. `NotificationLaunch` расширен аддитивно: `kind` (`ticket | route_card`,
+по умолчанию `ticket`), `route_outcome_id`, а `incident_id` стал nullable — у
+внешнего маршрута заявки нет. Проверки те же: получатель доставки, членство в
+доме и актуальные права; любое несовпадение — `404` без различий в тексте.
+
+### Флаги возможностей
+
+`CapabilityFlags.routes` — справочник региона загружен и роутер собран;
+`CapabilityFlags.appeals` — черновики доступны. Оба вычисляются из
+`RoutingService.available`. Mini app прячет новые экраны при `false`, и доска
+B-02 этим не затрагивается.
+
 ## A-10 employee web-auth contract — 19.09.2026 branch slice
 
 Prefix `/api/v1/auth/employee`:
