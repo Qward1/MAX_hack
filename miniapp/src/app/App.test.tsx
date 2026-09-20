@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { DomSignalApi, IncidentDetail } from '../shared/api/client';
+import { apiWith } from '../test/fixtures';
 import { App } from './App';
 
 const house = {
@@ -14,6 +15,7 @@ const house = {
 
 function clientWith(items: IncidentDetail[] = []): DomSignalApi {
   return {
+    ...apiWith(items),
     notificationLaunch: vi.fn(),
     capabilities: vi.fn().mockResolvedValue({
       contract_version: 'c0.1',

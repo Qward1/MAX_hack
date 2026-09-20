@@ -65,6 +65,12 @@ textarea {
 .app-shell {
   --ds-line: color-mix(in srgb, var(--text-primary) 15%, transparent);
   --ds-accent: var(--text-themed);
+  /* Основная кнопка MaxUI по умолчанию даёт белый текст на #007aff — это
+     3,1:1 и не проходит WCAG AA. Берём уже существующий токен действия
+     проекта (#235dcc, 6,0:1): новый язык не появляется, контраст проходит. */
+  --ds-action: #235dcc;
+  --button-primary: var(--ds-action);
+  --states-button-primary-pressed: #1c4aa6;
   width: min(100%, 980px);
   min-height: 100dvh;
   margin-inline: auto;
@@ -389,6 +395,125 @@ textarea {
   min-height: 44px;
   cursor: pointer;
 }
+/* Карточка маршрута, черновик обращения и форма-разговор — те же токены. */
+.safety-panel {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+  border-radius: 16px;
+  border: 2px solid var(--ds-accent);
+  background: var(--background-secondary);
+}
+.safety-panel h2 {
+  margin: 0;
+}
+.safety-phone a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+}
+.safety-steps,
+.route-facts ul,
+.duplicate-grid {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.safety-steps li,
+.route-facts li {
+  display: grid;
+  gap: 6px;
+  padding-inline-start: 14px;
+  border-inline-start: 2px solid var(--ds-line);
+}
+.route-card h2,
+.route-basis h2,
+.route-facts h2 {
+  margin-block: 6px 0;
+}
+.card-actions .action-reason,
+.draft-actions .action-reason {
+  margin-top: 8px;
+}
+/* Растянутая кнопка MaxUI занимает ширину своего блока, а блок — колонки. */
+.card-actions > div > div,
+.draft-actions > div > div {
+  display: grid;
+  gap: 8px;
+}
+.card-actions :where(button, a),
+.draft-actions :where(button, a) {
+  width: 100%;
+}
+.route-disclaimer {
+  display: grid;
+  gap: 12px;
+}
+.report-flow {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.manual-category {
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+.manual-category summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.manual-category label {
+  display: grid;
+  gap: 8px;
+  padding-block: 12px;
+}
+.manual-category select {
+  min-height: 48px;
+  padding: 12px;
+  background: var(--background-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+}
+.duplicate-card {
+  gap: 10px;
+}
+.duplicate-card h4 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.3;
+}
+.draft-editor textarea {
+  min-height: 260px;
+  resize: vertical;
+}
+.draft-conflict {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px dashed var(--ds-line);
+  border-radius: 12px;
+}
+.draft-reference {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.draft-reference input {
+  min-height: 48px;
+  padding: 12px;
+  background: var(--background-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+}
 @media (max-width: 767px) {
   .incident-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -410,6 +535,7 @@ textarea {
   .incident-card,
   .detail-section,
   .next-action,
+  .safety-panel,
   .board-summary {
     padding: 18px;
   }

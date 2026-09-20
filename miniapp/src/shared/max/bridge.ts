@@ -47,8 +47,9 @@ export function createMaxBridge(
     },
     get startParam() {
       // Selector only. The authenticated server resolver rechecks actor and current access.
+      // `w_` points at a ticket notification, `r_` at a route card; both are opaque here.
       const value = new URLSearchParams(read()?.initData ?? "").get("start_param");
-      return value && /^w_[A-Za-z0-9_-]{32}$/.test(value) ? value : null;
+      return value && /^[wr]_[A-Za-z0-9_-]{32}$/.test(value) ? value : null;
     },
     get capabilities() {
       const app = read();

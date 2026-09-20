@@ -14,8 +14,20 @@ export type IncidentDetail = Omit<
   "status" | "category"
 > & { status: string; category: string };
 export type ReportCreate = components["schemas"]["ReportCreate"];
+export type ReportCreated = components["schemas"]["ReportCreated"];
 export type Problem = components["schemas"]["Problem"];
 export type NotificationLaunch = components["schemas"]["NotificationLaunch"];
+export type ActionCard = components["schemas"]["ActionCard"];
+export type ActionCardAction = components["schemas"]["ActionCardAction"];
+export type RouteChannel = components["schemas"]["RouteChannel"];
+export type SafetyBlock = components["schemas"]["SafetyBlock"];
+export type RouteOutcomeView = components["schemas"]["RouteOutcomeView"];
+export type ReportPreview = components["schemas"]["ReportPreview"];
+export type ReportSubmitRequest = components["schemas"]["ReportSubmitRequest"];
+export type ReportSubmitted = components["schemas"]["ReportSubmitted"];
+export type DuplicateCandidate = components["schemas"]["DuplicateCandidate"];
+export type AppealDraftView = components["schemas"]["AppealDraftView"];
+export type AppealDraftCreate = components["schemas"]["AppealDraftCreate"];
 
 type Session = components["schemas"]["SessionResponse"];
 
@@ -47,7 +59,29 @@ export interface DomSignalApi extends ResidentTicketApi {
   createReport(
     payload: ReportCreate,
     idempotencyKey: string,
-  ): Promise<IncidentDetail>;
+  ): Promise<ReportCreated>;
+  previewReport(
+    houseId: string,
+    description: string,
+    signal?: AbortSignal,
+  ): Promise<ReportPreview>;
+  submitReport(
+    houseId: string,
+    payload: ReportSubmitRequest,
+    idempotencyKey: string,
+  ): Promise<ReportSubmitted>;
+  joinIncident(incidentId: string, idempotencyKey: string): Promise<IncidentDetail>;
+  routeOutcome(outcomeId: string, signal?: AbortSignal): Promise<RouteOutcomeView>;
+  createAppealDraft(payload: AppealDraftCreate): Promise<AppealDraftView>;
+  appealDraft(draftId: string, signal?: AbortSignal): Promise<AppealDraftView>;
+  saveAppealDraft(
+    draftId: string,
+    payload: { text: string; version: number },
+  ): Promise<AppealDraftView>;
+  markAppealFiled(
+    draftId: string,
+    reference: string | null,
+  ): Promise<AppealDraftView>;
 }
 
 export class ApiClient implements DomSignalApi {
@@ -158,19 +192,91 @@ export class ApiClient implements DomSignalApi {
     );
   }
 
-  async createReport(
+  createReport(
     payload: ReportCreate,
     idempotencyKey: string,
-  ): Promise<IncidentDetail> {
-    const created = await this.request<components["schemas"]["ReportCreated"]>(
-      "/api/v1/reports",
+  ): Promise<ReportCreated> {
+    // The whole response is returned: the deterministic next-step card lives
+    // beside the incident and must not be dropped at the client boundary.
+    return this.request<ReportCreated>("/api/v1/reports", {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  previewReport(
+    houseId: string,
+    description: string,
+    signal?: AbortSignal,
+  ): Promise<ReportPreview> {
+    return this.request<ReportPreview>(
+      `/api/v1/houses/${encodeURIComponent(houseId)}/reports/preview`,
+      { method: "POST", body: JSON.stringify({ description }), signal },
+    );
+  }
+
+  submitReport(
+    houseId: string,
+    payload: ReportSubmitRequest,
+    idempotencyKey: string,
+  ): Promise<ReportSubmitted> {
+    return this.request<ReportSubmitted>(
+      `/api/v1/houses/${encodeURIComponent(houseId)}/reports/submit`,
       {
         method: "POST",
         headers: { "Idempotency-Key": idempotencyKey },
         body: JSON.stringify(payload),
       },
     );
-    return created.incident;
+  }
+
+  joinIncident(incidentId: string, idempotencyKey: string): Promise<IncidentDetail> {
+    return this.request<IncidentDetail>(
+      `/api/v1/incidents/${encodeURIComponent(incidentId)}/join`,
+      { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: "{}" },
+    );
+  }
+
+  routeOutcome(outcomeId: string, signal?: AbortSignal): Promise<RouteOutcomeView> {
+    return this.request<RouteOutcomeView>(
+      `/api/v1/route-outcomes/${encodeURIComponent(outcomeId)}`,
+      { signal },
+    );
+  }
+
+  createAppealDraft(payload: AppealDraftCreate): Promise<AppealDraftView> {
+    return this.request<AppealDraftView>("/api/v1/appeal-drafts", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  appealDraft(draftId: string, signal?: AbortSignal): Promise<AppealDraftView> {
+    return this.request<AppealDraftView>(
+      `/api/v1/appeal-drafts/${encodeURIComponent(draftId)}`,
+      { signal },
+    );
+  }
+
+  saveAppealDraft(
+    draftId: string,
+    payload: { text: string; version: number },
+  ): Promise<AppealDraftView> {
+    return this.request<AppealDraftView>(
+      `/api/v1/appeal-drafts/${encodeURIComponent(draftId)}`,
+      { method: "PATCH", body: JSON.stringify(payload) },
+    );
+  }
+
+  markAppealFiled(
+    draftId: string,
+    reference: string | null,
+  ): Promise<AppealDraftView> {
+    return this.request<AppealDraftView>(
+      `/api/v1/appeal-drafts/${encodeURIComponent(draftId)}/mark-filed`,
+      { method: "POST", body: JSON.stringify({ reference }) },
+    );
   }
 
   workStatus: ResidentTicketApi["workStatus"] = (id, signal) =>

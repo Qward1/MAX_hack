@@ -3,12 +3,14 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 import {
   ApiProblem,
   apiClient,
+  type AppealDraftView,
   type Capabilities,
   type DomSignalApi,
   type IncidentDetail,
   type IncidentList,
   type Me,
   type NotificationLaunch,
+  type RouteOutcomeView,
   problemStatus,
   retryable,
 } from "../shared/api/client";
@@ -25,7 +27,9 @@ import {
   Timeline,
 } from "../shared/ui/semantic";
 import { IncidentCard } from "../features/incidents/IncidentCard";
-import { ReportForm } from "../features/incidents/ReportForm";
+import { type FlowTarget, ReportFlow } from "../features/incidents/ReportFlow";
+import { AppealDraftScreen } from "../features/appeals/AppealDraftScreen";
+import { RouteCard } from "../features/routing/RouteCard";
 import { ResidentWorkProgress } from "../features/tickets/ResidentWorkProgress";
 import {
   categoryLabel,
@@ -41,16 +45,22 @@ type Loaded = {
   house?: Me["houses"][number];
   incidents?: IncidentList;
   incident?: IncidentDetail;
+  card?: RouteOutcomeView;
+  draft?: AppealDraftView;
   unavailable?: boolean;
 };
-function routeUrl(house?: string, incident?: string, offset = 0) {
+type Target = FlowTarget & { house?: string; offset?: number };
+function routeUrl(target: Target = {}) {
   // Never propagate MAX launch/auth parameters into DOM links or copied navigation URLs.
   const url = new URL(window.location.pathname, window.location.origin);
   const testActor = new URLSearchParams(window.location.search).get("test_actor");
-  if (testActor && /^a16-[a-z-]+$/.test(testActor)) url.searchParams.set("test_actor", testActor);
-  if (house) url.searchParams.set("house", house);
-  if (incident) url.searchParams.set("incident", incident);
-  if (offset) url.searchParams.set("offset", String(offset));
+  if (testActor && /^[a-z0-9-]{1,40}$/.test(testActor))
+    url.searchParams.set("test_actor", testActor);
+  if (target.house) url.searchParams.set("house", target.house);
+  if (target.incident) url.searchParams.set("incident", target.incident);
+  if (target.card) url.searchParams.set("card", target.card);
+  if (target.draft) url.searchParams.set("draft", target.draft);
+  if (target.offset) url.searchParams.set("offset", String(target.offset));
   return url.pathname + url.search;
 }
 
@@ -63,6 +73,9 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
   const route = new URL(location);
   const houseId = route.searchParams.get("house");
   const incidentId = route.searchParams.get("incident");
+  const cardId = route.searchParams.get("card");
+  const draftId = route.searchParams.get("draft");
+  const detail = Boolean(incidentId || cardId || draftId);
   const offset = Math.max(
     0,
     Math.min(
@@ -70,7 +83,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       Number.parseInt(route.searchParams.get("offset") ?? "0") || 0,
     ),
   );
-  const key = JSON.stringify([houseId, incidentId, offset, launchPending]);
+  const key = JSON.stringify([houseId, incidentId, cardId, draftId, offset, launchPending]);
   const navigate = useCallback((href: string) => {
     window.history.pushState(null, "", href);
     setLocation(window.location.href);
@@ -96,19 +109,49 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       const testRef = capabilities.environment !== "production" && capabilities.features.test_auth
         ? new URLSearchParams(window.location.search).get("test_start_param") : null;
       const launchRef = launchPending ? (maxBridge.startParam ?? testRef) : null;
-      if (launchRef && capabilities.features.miniapp && capabilities.features.incident_detail) {
+      if (launchRef && capabilities.features.miniapp) {
         const target = await client.notificationLaunch(launchRef, signal);
-        const incident = await client.incident(target.incident_id, signal, target.house_id);
-        return { capabilities, me, incident, notificationLaunch: target,
-          house: me.houses.find((house) => house.id === target.house_id) };
+        const home = me.houses.find((house) => house.id === target.house_id);
+        // Карточка маршрута ведёт на свой экран: у внешнего маршрута заявки нет.
+        if (target.kind === "route_card" && target.route_outcome_id) {
+          if (!capabilities.features.routes)
+            return { capabilities, me, notificationLaunch: target, unavailable: true };
+          const card = await client.routeOutcome(target.route_outcome_id, signal);
+          return { capabilities, me, card, notificationLaunch: target, house: home };
+        }
+        if (target.incident_id && capabilities.features.incident_detail) {
+          const incident = await client.incident(target.incident_id, signal, target.house_id);
+          return { capabilities, me, incident, notificationLaunch: target, house: home };
+        }
+        return { capabilities, me, notificationLaunch: target, unavailable: true };
       }
       if (
         !capabilities.features.miniapp ||
-        !(incidentId
-          ? capabilities.features.incident_detail
+        (cardId && !capabilities.features.routes) ||
+        (draftId && !capabilities.features.appeals) ||
+        !(detail
+          ? capabilities.features.incident_detail || cardId || draftId
           : capabilities.features.incident_board)
       ) {
         return { capabilities, me, unavailable: true };
+      }
+      if (cardId) {
+        const card = await client.routeOutcome(cardId, signal);
+        return {
+          capabilities,
+          me,
+          card,
+          house: me.houses.find((house) => house.id === card.house_id),
+        };
+      }
+      if (draftId) {
+        const draft = await client.appealDraft(draftId, signal);
+        return {
+          capabilities,
+          me,
+          draft,
+          house: me.houses.find((house) => house.id === draft.house_id),
+        };
       }
       if (incidentId) {
         const incident = await client.incident(
@@ -140,7 +183,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       const incidents = await client.incidents(house.id, signal, offset);
       return { capabilities, me, house, incidents };
     },
-    [client, houseId, incidentId, offset, launchPending],
+    [client, houseId, incidentId, cardId, draftId, detail, offset, launchPending],
   );
   const resource = useResource(key, load);
   const data = resource.data;
@@ -150,16 +193,32 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
     setLaunchPending(false);
     setLaunchNotice(target.stale);
     setLaunchAttempt(target.work_attempt_id);
-    window.history.replaceState(null, "", routeUrl(target.house_id, target.incident_id));
+    window.history.replaceState(
+      null,
+      "",
+      routeUrl(
+        target.kind === "route_card"
+          ? { house: target.house_id, card: target.route_outcome_id ?? undefined }
+          : { house: target.house_id, incident: target.incident_id ?? undefined },
+      ),
+    );
     setLocation(window.location.href);
   }, [data?.notificationLaunch, launchPending]);
-  const back = useCallback(
-    () => navigate(routeUrl(data?.incident?.house_id ?? houseId ?? undefined)),
-    [navigate, data?.incident?.house_id, houseId],
-  );
+  const back = useCallback(() => {
+    // Из черновика возвращаемся к его карточке, из остального — на доску дома.
+    if (data?.draft) {
+      navigate(routeUrl({ house: data.draft.house_id, card: data.draft.route_outcome_id }));
+      return;
+    }
+    navigate(
+      routeUrl({
+        house: data?.incident?.house_id ?? data?.card?.house_id ?? houseId ?? undefined,
+      }),
+    );
+  }, [navigate, data?.incident?.house_id, data?.card?.house_id, data?.draft, houseId]);
   useEffect(
-    () => (incidentId ? maxBridge.subscribeBack(back) : undefined),
-    [incidentId, back],
+    () => (detail ? maxBridge.subscribeBack(back) : undefined),
+    [detail, back],
   );
   useEffect(() => {
     if (data || resource.error)
@@ -171,10 +230,24 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       К домам
     </Button>
   );
+  const headerTitle = cardId
+    ? "Следующий шаг"
+    : draftId
+      ? "Черновик обращения"
+      : incidentId
+        ? "Проблема дома"
+        : "Мой дом";
+  const loadingTitle = cardId
+    ? "Загрузка карточки маршрута"
+    : draftId
+      ? "Загрузка черновика"
+      : incidentId
+        ? "Загрузка проблемы"
+        : "Загрузка доски дома";
   if (!data)
     return (
       <main className="app-shell detail-shell">
-        <PageHeader title={incidentId ? "Проблема дома" : "Мой дом"} />
+        <PageHeader title={headerTitle} />
         {resource.error ? (
           <ErrorPanel
             error={resource.error}
@@ -183,7 +256,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
           />
         ) : (
           <StatePanel
-            title={incidentId ? "Загрузка проблемы" : "Загрузка доски дома"}
+            title={loadingTitle}
             detail="Получаем актуальные данные"
             loading
           />
@@ -199,11 +272,11 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
           detail="Попробуйте обновить данные позже."
           action="Обновить"
           onAction={resource.refresh}
-          back={incidentId ? backLink : undefined}
+          back={detail ? backLink : undefined}
         />
       </main>
     );
-  if (!data.house && !data.incident)
+  if (!data.house && !data.incident && !data.card && !data.draft)
     return (
       <main className="app-shell">
         <PageHeader title="Мой дом" />
@@ -211,7 +284,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
           <Panel>
             <h2>Выберите дом</h2>
             {data.me.houses.map((house) => (
-              <Button key={house.id} onClick={() => navigate(routeUrl(house.id))}>
+              <Button key={house.id} onClick={() => navigate(routeUrl({ house: house.id }))}>
                 {house.address}
               </Button>
             ))}
@@ -264,9 +337,9 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       gap={12}
       className="toolbar"
     >
-      {incidentId ? (
+      {detail ? (
         <Button variant="ghost" onClick={back}>
-          ← К доске дома
+          {draftId ? "← К карточке маршрута" : "← К доске дома"}
         </Button>
       ) : (
         <Typography.Text variant="label-strong">ДомСигнал</Typography.Text>
@@ -281,6 +354,85 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       </Button>
     </Flex>
   );
+  if (data.card) {
+    const view = data.card;
+    return (
+      <main className="app-shell detail-shell">
+        {toolbar}
+        <PageHeader title="Следующий шаг" subtitle={data.house?.address} eyebrow="Карточка маршрута">
+          {data.house?.is_demo && <DemoBadge />}
+        </PageHeader>
+        {notice}
+        {view.directory_changed && (
+          <p role="status" className="refresh-notice">
+            Маршрут уточнён — показываем актуальный.
+          </p>
+        )}
+        <RouteCard
+          card={view.action_card}
+          busy={resource.loading || Boolean(resource.error) || resource.stale}
+          demo={Boolean(data.house?.is_demo)}
+          handlers={{
+            prepare_appeal: () =>
+              void (async () => {
+                const draft = view.appeal_draft_id
+                  ? { id: view.appeal_draft_id }
+                  : await client.createAppealDraft({
+                      house_id: view.house_id,
+                      route_outcome_id: view.id,
+                    });
+                navigate(routeUrl({ house: view.house_id, draft: draft.id }));
+              })(),
+          }}
+          extra={
+            view.incident_id ? (
+              <div>
+                <Button
+                  stretched
+                  onClick={() =>
+                    navigate(routeUrl({ house: view.house_id, incident: view.incident_id! }))
+                  }
+                >
+                  Открыть проблему дома
+                </Button>
+              </div>
+            ) : undefined
+          }
+        />
+        <footer className="page-footer">
+          Карточка собрана по текущему справочнику ответственности.
+        </footer>
+        {import.meta.env.DEV && <Diagnostics />}
+      </main>
+    );
+  }
+  if (data.draft) {
+    const draft = data.draft;
+    return (
+      <main className="app-shell detail-shell">
+        {toolbar}
+        <PageHeader
+          title="Черновик обращения"
+          subtitle={data.house?.address}
+          eyebrow="Вы отправляете обращение сами"
+        >
+          {data.house?.is_demo && <DemoBadge />}
+        </PageHeader>
+        {notice}
+        <AppealDraftScreen
+          key={draft.id}
+          draft={draft}
+          client={client}
+          busy={resource.loading || Boolean(resource.error) || resource.stale}
+          onLoaded={() => resource.refresh()}
+        />
+        <footer className="page-footer">
+          Отметка о подаче остаётся вашим утверждением.
+        </footer>
+        {import.meta.env.DEV && <Diagnostics />}
+      </main>
+    );
+  }
   if (data.incident) {
     const incident = data.incident;
     return (
@@ -409,7 +561,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
           Выбрать дом
           <select
             value={house.id}
-            onChange={(event) => navigate(routeUrl(event.target.value))}
+            onChange={(event) => navigate(routeUrl({ house: event.target.value }))}
           >
             {data.me.houses.map((item) => (
               <option key={item.id} value={item.id}>
@@ -470,14 +622,12 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
         )}
       </Flex>
       {reportOpen && (
-        <ReportForm
+        <ReportFlow
           key={house.id}
           houseId={house.id}
           client={client}
-          onCreated={() => {
-            setReportOpen(false);
-            resource.refresh();
-          }}
+          onOpen={(target) => navigate(routeUrl({ house: house.id, ...target }))}
+          onCreated={() => resource.refresh()}
         />
       )}
       {list.items.length ? (
@@ -487,7 +637,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
               <IncidentCard
                 incident={incident}
                 detailAvailable={data.capabilities.features.incident_detail}
-                href={routeUrl(house.id, incident.id)}
+                href={routeUrl({ house: house.id, incident: incident.id })}
                 onNavigate={navigate}
               />
             </li>
@@ -506,11 +656,10 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
             disabled={offset === 0}
             onClick={() =>
               navigate(
-                routeUrl(
-                  house.id,
-                  undefined,
-                  Math.max(0, offset - list.page.limit),
-                ),
+                routeUrl({
+                  house: house.id,
+                  offset: Math.max(0, offset - list.page.limit),
+                }),
               )
             }
           >
@@ -523,7 +672,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
             variant="secondary"
             disabled={offset + list.items.length >= list.page.total}
             onClick={() =>
-              navigate(routeUrl(house.id, undefined, offset + list.page.limit))
+              navigate(routeUrl({ house: house.id, offset: offset + list.page.limit }))
             }
           >
             Следующие
