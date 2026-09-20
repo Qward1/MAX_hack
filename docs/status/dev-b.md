@@ -78,7 +78,7 @@ token». Это воспроизводится голым `curl` без един
 
 ### Ручная проверка на локальном стенде
 
-`LLM_PROVIDER=rules`, `MAX_TRANSPORT=off`, API на 18025 → 8025, демо-дом из
+`LLM_PROVIDER=rules`, `MAX_TRANSPORT=off`, API на 127.0.0.1:8025, демо-дом из
 `seed_demo`. Проверено по шагам: предпросмотр лифта (`elevator.stopped`,
 подъезд «2» из цитаты, `uk_internal`), отправка (заявка + `route_outcome`
 `source=form`), кандидат в дубли у соседа и присоединение (участников 2),
