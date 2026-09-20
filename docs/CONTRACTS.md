@@ -85,6 +85,118 @@ emergency_service | regional_operator | other_authority | unknown`),
 подтверждает внешнюю регистрацию: официальный канал открывает сам человек,
 дальше остаётся «Житель отметил подачу».
 
+## Явный путь и черновик обращения — A-04 + A-17/Product, срез P3b
+
+HTTP-граница маршрутизации из P3a открывается этим срезом: DTO
+`ResponsibilityRoute`, `ActionCard`, `RouteChannel`, `SafetyBlock` и
+`RouteFact` впервые попадают в OpenAPI. Изменения аддитивны: ни одно поле и ни
+один путь не удалены.
+
+### Приём `/report`
+
+Две формы одной команды. Если второе слово — валидный код категории
+(`elevator | water | lighting | waste | other`), работает **прежний** ручной
+путь без разбора. Иначе всё после `/report ` — свободный текст: в транзакции
+приёма создаётся запись `explicit_intakes` и ставятся две задачи —
+`ai.report.analyze` (пул `ai`, приоритет 30) и `report.fallback` (пул
+`operational`, первая попытка через 30 с, приоритет 50). Запись захватывается
+атомарно, поэтому ровно одна задача доводит дело до результата. Свободный текст
+короче 5 символов игнорируется так же, как раньше игнорировался `/report` без
+описания.
+
+**Результат не зависит от живости AI-пула.** Остановленный `ai-worker`
+задерживает разбор не более чем на задержку сторожа и не отменяет его.
+
+### Решение по маршруту
+
+| Маршрут | Заявка УК | `route_outcomes.decision` | `explicit_intakes.result_kind` |
+|---|---|---|---|
+| `uk_internal` + уверенная зона | создаётся с категорией разбора | `ticket` | `ticket` |
+| `uk_internal` без уверенной зоны | создаётся как `other` | `needs_clarification` | `needs_clarification` |
+| `municipality`, `resource_supplier`, `regional_operator`, `other_authority`, `emergency_service` | **не создаётся** | `external` | `external_route` |
+| `unknown` / `requires_operator_choice` | создаётся как `other` | `needs_clarification` | `needs_clarification` |
+| автор не найден среди жителей | не создаётся | записи нет | `ignored` |
+
+При непустых `danger_kinds` личное сообщение с блоком безопасности и телефоном
+112 уходит **при любом маршруте** и стоит первым в тексте.
+
+`classification_mode` отражает происхождение классификации: `model`, когда
+ответ модели прошёл наш валидатор, иначе `rules`. `manual` остаётся значением
+ручного пути.
+
+### Доставка карточки маршрута
+
+Новое назначение доставки `purpose = route_action_card` в **существующей**
+цепочке outbox → `notification_deliveries`. Второго транспорта нет,
+`launch_ref` общий (префикс `r_` вместо `w_`). Доставка относится к
+`route_outcome_id`, а не к заявке: внешний маршрут заявку не создаёт, поэтому
+`notification_deliveries.ticket_id` стал nullable, и ровно один из двух
+предметов обязателен.
+
+Текст сообщения детерминированный и снимается в момент разбора: заголовок
+маршрута, основание с источником, один-два факта канала с источником,
+дисклеймер. **Текст модели (`clean_description`) в сообщение не попадает** —
+он нужен только в черновике, где его правит человек. Запрещённые формулировки
+P3a действуют и здесь.
+
+### Новые endpoints
+
+| Method/path | Request → response |
+|---|---|
+| `POST /api/v1/houses/{house_id}/reports/preview` | `{description}` → `{analysis, action_card}`. Синхронно, **только правила**, без побочных эффектов. |
+| `POST /api/v1/incidents/{incident_id}/join` | `Idempotency-Key` → актуальный `IncidentDetail`. Новый `Report` под тем же `Incident`; новый Ticket **не** создаётся; закрытый инцидент → `409 incident_closed`. |
+| `POST /api/v1/appeal-drafts` | `{house_id, route_outcome_id \| report_id}` → `AppealDraftView` (`201`). Один черновик на один исход маршрутизации у автора. |
+| `GET /api/v1/appeal-drafts/{draft_id}` | → `AppealDraftView`; чужой черновик → `404`. |
+| `PATCH /api/v1/appeal-drafts/{draft_id}` | `{text, version}` → `AppealDraftView`; устаревшая версия → `409 stale_version`, сохранённый текст не затирается. |
+| `POST /api/v1/appeal-drafts/{draft_id}/mark-filed` | необязательный `{reference}` → `AppealDraftView` с `provenance.origin = user_reported`. |
+
+`ReportPreview.analysis` содержит `subtype`, `category`, `location_scope`,
+`entrance`, `floor`, `since`, `danger_kinds`, `mode` (`model | rules | manual`),
+`confident` и `reason`. Место и «с какого времени» отдаются только при наличии
+дословной цитаты.
+
+### Изменённые DTO
+
+- `ReportCreated` += `action_card` (nullable, аддитивно) — та же
+  детерминированная карточка, что в предпросмотре. В квитанции
+  идемпотентности карточка не сохраняется: она собирается заново при каждом
+  чтении, потому что справочник мог обновиться.
+- `ClassificationMode` += `rules`, `model`.
+- `CapabilityFlags` += `ai_analysis` (`LLM_PROVIDER != rules`). Выключенный
+  флаг **не** скрывает явный путь: правила работают всегда.
+- `IncidentLocation` += `observed_since`; read-model отдаёт `entrance`,
+  `floor`, `label` и `observed_since` из сохранённых полей `incidents`.
+  Значения попадают туда только вместе с цитатой, при чтении текст не
+  разбирается.
+
+### Черновик обращения
+
+`mark-filed` записывает **только** утверждение жителя и отдаёт
+`provenance.origin = user_reported` с пояснением «внешней системой не
+подтверждено». Повторная отметка не меняет первую и не создаёт второго
+события. Продукт не открывает официальный канал за человека: при незаполненной
+ссылке действие `open_official_channel` приходит с `enabled: false` и причиной.
+
+Требование канала «Госуслуги. Решаем вместе» — одна проблема, одно обращение —
+закреплено уникальностью `(route_outcome_id, author_id)`.
+
+### Пулы воркеров и бюджет
+
+Один образ, пул выбирается параметром запуска: `python -m domsignal.worker.main
+--pool operational|ai` (по умолчанию `operational`). Пул определяется видом
+задачи по префиксу `ai.`, а не составом обработчиков, поэтому задача
+незнакомого вида достаётся ровно одному пулу и честно проваливается, а не
+остаётся в очереди навсегда. Доставка уведомлений живёт только в операционном
+пуле.
+
+Дневной бюджет вызовов модели — счётчик `ai_call_budget` в PostgreSQL:
+атомарный инкремент с проверкой лимита, строка `scope_key = ''` хранит общий
+дневной счёт, остальные — доли чатов. Значения по умолчанию: 1000 вызовов в
+сутки, 20 % на чат. Отказ доли откатывает и общий счёт. Исчерпанный бюджет даёт
+`execution.state = fallback_budget` **без обращения** к провайдеру. Таймаут
+вызова берётся из профиля модели (`models.v1.yaml`); `LLM_TIMEOUT_SECONDS`
+переопределяет его только если задан явно.
+
 ## A-10 employee web-auth contract — 19.09.2026 branch slice
 
 Prefix `/api/v1/auth/employee`:
