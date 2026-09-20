@@ -1,0 +1,98 @@
+"""AI-ядро ДомСигнала: детерминированный «пол» понимания текста.
+
+Одно ядро разбирает окно реплик — и для пассивного чтения подключённого
+домового чата, и для явного пути (форма mini app, `/report`), где окно
+состоит из одной реплики.
+
+Ядро отвечает только на вопросы: что, где, когда, какой объект, какой подтип,
+происходит ли сейчас, у нас ли, наблюдение ли это, какая предварительная
+территория и есть ли признаки опасности. Вопрос «кто отвечает» решает
+детерминированный Responsibility Router продукта — здесь нет организаций,
+каналов, телефонов, сроков, статусов и текстов для жителя.
+"""
+
+from __future__ import annotations
+
+from domsignal.ai.contracts import (
+    AuditEvent,
+    DangerHit,
+    DangerKind,
+    EmergencyDecision,
+    Evidence,
+    ExplicitReportDecision,
+    Facet,
+    Facets,
+    LineRole,
+    LineVerdict,
+    LocationEvidence,
+    LocationScope,
+    OpenItem,
+    SemanticDanger,
+    SignalDraft,
+    SignalStrength,
+    WindowAnalysis,
+    WindowInput,
+    WindowLine,
+)
+from domsignal.ai.engine import audit_sample, decide_explicit_report, decide_strength
+from domsignal.ai.facade import WindowAnalyzer
+from domsignal.ai.facts import NoNewFactsResult, check_no_new_facts
+from domsignal.ai.fusion import fuse_emergency
+from domsignal.ai.model_output import SCHEMA_ID, WindowModelOutput, build_json_schema
+from domsignal.ai.providers.base import (
+    AnalysisProvider,
+    ProviderError,
+    ProviderInvalidOutput,
+    ProviderRequest,
+    ProviderTimeout,
+    ProviderUnavailable,
+)
+from domsignal.ai.rules.danger import screen_message_for_danger
+from domsignal.ai.rules.lexicon import passes_recall_gate
+from domsignal.ai.taxonomy import Taxonomy, load_taxonomy
+from domsignal.ai.windowing import WindowPolicy, build_windows, split_stream
+
+__all__ = [
+    "SCHEMA_ID",
+    "AnalysisProvider",
+    "AuditEvent",
+    "DangerHit",
+    "DangerKind",
+    "EmergencyDecision",
+    "Evidence",
+    "ExplicitReportDecision",
+    "Facet",
+    "Facets",
+    "LineRole",
+    "LineVerdict",
+    "LocationEvidence",
+    "LocationScope",
+    "NoNewFactsResult",
+    "OpenItem",
+    "ProviderError",
+    "ProviderInvalidOutput",
+    "ProviderRequest",
+    "ProviderTimeout",
+    "ProviderUnavailable",
+    "SemanticDanger",
+    "SignalDraft",
+    "SignalStrength",
+    "Taxonomy",
+    "WindowAnalysis",
+    "WindowAnalyzer",
+    "WindowInput",
+    "WindowLine",
+    "WindowModelOutput",
+    "WindowPolicy",
+    "audit_sample",
+    "build_json_schema",
+    "build_windows",
+    "check_no_new_facts",
+    "decide_explicit_report",
+    "decide_strength",
+    "fuse_emergency",
+    "load_taxonomy",
+    "passes_recall_gate",
+    "screen_message_for_danger",
+    "split_stream",
+]
