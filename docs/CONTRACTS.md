@@ -1,5 +1,84 @@
 # ДомСигнал — UX/API contract v0.1
 
+## Responsibility Router и ActionCard — A-02, срез P3a
+
+Детерминированный слой «кто отвечает и какой следующий шаг».
+**Модель в нём не участвует:** вход — код подтипа и `location_scope` из
+внутреннего контракта AI плюс серверный контекст дома. Организации, каналы,
+телефоны и ссылки берутся только из справочника `regions/`. HTTP-границы в этом
+срезе нет: DTO живут в `src/domsignal/contracts/routing.py` и появятся в
+OpenAPI вместе с эндпоинтами следующего среза, поэтому дрейфа схемы нет.
+
+### Слои справочника
+
+`regions/_federal/responsibility.yaml` → `regions/<REGION>/responsibility.yaml`
+→ муниципальная секция внутри файла региона → дом (таблица
+`house_routing_profiles`). Нижний слой уточняет верхний: запись с тем же `id`
+переопределяет, новая — добавляется. Каждый файл проверяется
+`regions/responsibility.schema.json`, памятки — `regions/safety.schema.json`;
+обе проверки входят в `scripts/validate_region_pack.py` и в
+`scripts/check.py --scope contracts`. Существующий `regions/demo/pack.yaml`
+и его схема не изменены.
+
+### Видимость по статусу проверки
+
+| `verification.status` | Кому видно |
+|---|---|
+| `verified` | Всем. Обязаны быть `verified_at` и `source_title`. |
+| `demo` | Только домам с `is_demo`, с пометкой «Тестовые данные». |
+| `needs_verification` | **Никогда.** В маршруте остаётся только счётчик `hidden_unverified_channels`. |
+
+Непроверенная организация не называется даже во внутреннем поле маршрута.
+Канал, у которого регион дома входит в `unavailable_regions`, исключается
+(например, ПОС не предлагается для `RU-MOW`). Запись с `verified_at` старше
+180 дней получает `stale: true` и показывается с пометкой «требует проверки»,
+действие при этом остаётся доступным.
+
+### `ResponsibilityRoute`
+
+`route_type` (`uk_internal | municipality | resource_supplier |
+emergency_service | regional_operator | other_authority | unknown`),
+`organization_id`/`organization_name` (null, если организация не проверена),
+`channels[]` (только видимые), `basis` (`rule_id`, текст, источник,
+`verified_at`, `verification_status`), `directory_version`,
+`directory_verified_at`, `automatic_integration` (true только для
+`uk_internal`), `can_create_ticket`, `can_prepare_appeal`,
+`requires_operator_choice`, `alternatives[]`, `match` (`rule | default | none`),
+`hidden_unverified_channels`, `stale`.
+
+Порядок вычисления: неизвестный подтип → `other.unspecified`; правило
+`emergency_service` (запах газа остаётся вызовом службы при любой территории);
+`house_common` при активном управлении подключённой УК → `uk_internal`;
+`house_territory` → по `territory_policy` дома (`uk`, `municipal`,
+`mixed|unknown` → `requires_operator_choice`); правила справочника по приоритету
+и слою, несколько равноправных → `requires_operator_choice` с `alternatives`;
+подтипы общего имущества (`uk_default`) → `uk_internal`; иначе `unknown`.
+Нет правила — `unknown`, а не догадка. Ошибка справочника или БД тоже даёт
+`unknown` (`directory_version: unavailable`); сервис маршрута не бросает
+исключений и не меняет `/ready`.
+
+### `ActionCard`
+
+Собирается детерминированно (`generated_by: rules`) из маршрута, аудитории
+(`resident | operator`) и источника (`chat | explicit`): `title`,
+`explanation`, `safety`, `facts[]` (только с источником), `actions[]`,
+`disclaimer`, `demo_notice`. `ActionCardAction` — `type`, `label`, `enabled`,
+`reason`, `url`, `phone` в стиле существующего `ActionDescriptor`; DTO инцидента
+не меняется. `enabled=false` всегда сопровождается причиной: непроверенный
+канал, незаполненная ссылка входа или отсутствие подключённой УК.
+
+Блок `safety` приходит из `regions/_federal/safety.yaml` (продуктовые данные,
+не модель) и показывается при любом маршруте, если есть признак опасности;
+вызов 112 становится первым действием. Пошаговых инструкций без официального
+источника в памятке нет — структура `steps[]` есть, но заполняется только
+записью с источником.
+
+**Запрещённые формулировки** в любом тексте карточки: «заявка отправлена»,
+«обращение отправлено», «обращение зарегистрировано», «передано в», «срок
+исполнения», «обязан». Продукт не подаёт обращение за человека и не
+подтверждает внешнюю регистрацию: официальный канал открывает сам человек,
+дальше остаётся «Житель отметил подачу».
+
 ## A-10 employee web-auth contract — 19.09.2026 branch slice
 
 Prefix `/api/v1/auth/employee`:

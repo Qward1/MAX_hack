@@ -266,12 +266,12 @@ src/domsignal/
   api/           dependencies, errors, initData, routers
   bot/           normalized ingress и MaxTransport port/adapters
   worker/        handler mapping, claim/lease runner, process entrypoint
-  tools/         идемпотентный demo seed
+  tools/         идемпотентный demo seed, профиль дома и предпросмотр карточки
   bootstrap.py   composition root
   main.py        create_app, lifespan и router mounts
 miniapp/         React/Vite shell, board, detail, typed client, states
 migrations/      одна миграция только используемых таблиц
-regions/         JSON Schema и безопасный demo pack
+regions/         JSON Schema, demo pack и слои справочника ответственности
 deploy/          Caddyfile без webhook side effects
 scripts/         checks, OpenAPI export, region validation, Docker smoke
 ```
@@ -280,6 +280,25 @@ scripts/         checks, OpenAPI export, region validation, Docker smoke
 находятся только в `db/repositories`; React и ingress не содержат правил
 ответственности. `bootstrap.py` явно собирает engine, services, transport и
 worker handlers без DI-framework.
+
+### Справочник ответственности и маршрут — A-02, срез P3a
+
+Справочник — данные, а не код: `regions/_federal/responsibility.yaml` →
+`regions/<REGION>/responsibility.yaml` → муниципальная секция внутри файла
+региона → профиль дома (`house_routing_profiles`, аддитивная миграция
+`20260920_0005`). Нижний слой уточняет верхний по `id` записи.
+`regions/_federal/safety.yaml` держит проверенные памятки безопасности.
+
+Код: `core/responsibility.py` разбирает слои и собирает их под конкретный дом,
+`core/routing.py` детерминированно выбирает маршрут, `contracts/routing.py`
+описывает `ResponsibilityRoute`, `SafetyBlock` и `ActionCard`,
+`services/routing.py` читает и проверяет справочник один раз при старте и
+достаёт контекст дома из БД, `services/action_cards.py` собирает карточку.
+Невалидный справочник не роняет приложение: `RoutingService` остаётся без
+данных, все маршруты становятся `unknown`, `/ready` не меняется. Модель
+в этом слое не участвует, LLM карточку не генерирует. Эндпоинтов и UI пока нет:
+слой вызывается из `Container` и двух CLI (`tools/house_routing_profile.py`,
+`tools/route_preview.py`).
 
 ## Граница AI ↔ product backend — TARGET
 
