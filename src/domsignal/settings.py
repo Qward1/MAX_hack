@@ -80,6 +80,21 @@ class Settings(BaseSettings):
     llm_max_concurrency: int = Field(default=4, ge=1, le=64)
     llm_daily_call_budget: int = Field(default=1000, ge=0)
     llm_chat_daily_share: float = Field(default=0.2, gt=0, le=1)
+    # Пассивное чтение подключённого чата (A-17/Product). Глобальный выключатель
+    # по умолчанию выключен: без него реплики не сохраняются вовсе.
+    passive_capture_enabled: bool = False
+    # Политика окна по умолчанию совпадает с `domsignal.ai.WindowPolicy`; на
+    # показе стенд поднимается с короткой тишиной, 120 секунд там ждать нельзя.
+    passive_window_silence_seconds: int = Field(default=120, ge=5, le=3600)
+    # Окно ядра — не больше 40 реплик вместе с пятью репликами контекста.
+    passive_window_max_lines: int = Field(default=10, ge=1, le=35)
+    passive_window_max_age_seconds: int = Field(default=300, ge=10, le=86400)
+    # Слабые сигналы сверх лимита на дом за сутки уходят в Audit Pool.
+    passive_weak_daily_limit: int = Field(default=10, ge=0, le=1000)
+    # Сколько суток открытый сигнал собирает ветку с тем же ключом.
+    passive_dedupe_days: int = Field(default=7, ge=1, le=30)
+    # Сырые реплики живут не дольше 72 часов независимо от состояния разбора.
+    passive_buffer_hours: int = Field(default=72, ge=1, le=72)
     build_commit: str = "dev"
     public_base_url: str = "http://localhost:8000"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]

@@ -30,9 +30,12 @@ from domsignal.services.explicit_reports import ExplicitReportService
 from domsignal.services.group_messages import MaxWebhookService
 from domsignal.services.membership import MembershipService
 from domsignal.services.notifications import TicketNotificationHandler
+from domsignal.services.passive_analysis import PassiveWindowAnalysis
+from domsignal.services.passive_capture import PassiveCaptureService
 from domsignal.services.reports import DemoRule, ReportService
 from domsignal.services.routing import RoutingService, load_directory_or_none
 from domsignal.services.sessions import SessionService
+from domsignal.services.signals import PassiveConfig, SignalEngine
 from domsignal.services.tickets import TicketService
 from domsignal.settings import LlmProvider, MaxTransportMode, Settings
 from domsignal.worker.handlers import WorkerHandlers
@@ -64,6 +67,9 @@ class Container:
     rules_analyzer: WindowAnalyzer
     explicit_reports: ExplicitReportService
     appeal_drafts: AppealDraftService
+    signals: SignalEngine
+    passive: PassiveCaptureService
+    passive_analysis: PassiveWindowAnalysis
     ai_budget: PostgresBudgetGuard | None = None
     ai_provider: OpenAICompatibleProvider | None = field(default=None, repr=False)
 
@@ -234,6 +240,20 @@ def build_container(settings: Settings) -> Container:
         budget=ai.budget,
     )
     appeal_drafts = AppealDraftService(routing=routing)
+    # Пассивное чтение чата: приём и окна в операционном контуре, разбор окна —
+    # тем же анализатором, что и явный путь, в AI-пуле.
+    signals = SignalEngine(routing, PassiveConfig.from_settings(settings))
+    passive = PassiveCaptureService(
+        session_factory=session_factory,
+        connections=chat_connections,
+        engine=signals,
+    )
+    passive_analysis = PassiveWindowAnalysis(
+        session_factory=session_factory,
+        engine=signals,
+        analyzer=ai.analyzer,
+        budget=ai.budget,
+    )
     worker_handlers = WorkerHandlers(
         session_factory=session_factory,
         report_service=report_service,
@@ -241,6 +261,8 @@ def build_container(settings: Settings) -> Container:
         chat_connections=chat_connections,
         notifications=notifications,
         explicit_reports=explicit_reports,
+        passive=passive,
+        passive_analysis=passive_analysis,
     )
     return Container(
         settings=settings,
@@ -257,7 +279,7 @@ def build_container(settings: Settings) -> Container:
         transport=transport,
         worker_handlers=worker_handlers,
         chat_connections=chat_connections,
-        max_webhook=MaxWebhookService(chat_connections),
+        max_webhook=MaxWebhookService(chat_connections, passive),
         notifications=notifications,
         routing=routing,
         action_cards=action_cards,
@@ -265,6 +287,9 @@ def build_container(settings: Settings) -> Container:
         rules_analyzer=ai.rules_analyzer,
         explicit_reports=explicit_reports,
         appeal_drafts=appeal_drafts,
+        signals=signals,
+        passive=passive,
+        passive_analysis=passive_analysis,
         ai_budget=ai.budget,
         ai_provider=ai.provider,
     )

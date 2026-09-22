@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from domsignal.bot.messaging import MessagingError
 from domsignal.db.repositories.reliability import ReliabilityRepository
+from domsignal.services.errors import RescheduleJob
 from domsignal.services.notifications import DeferredNotification, TicketNotificationHandler
 from domsignal.worker.handlers import JobHandler
 from domsignal.worker.pools import DEFAULT_POOL, WorkerPool
@@ -72,7 +73,9 @@ class WorkerRunner:
             async with self.session_factory() as session, session.begin():
                 repo = ReliabilityRepository(session)
                 code = exc.code if isinstance(exc, MessagingError) else type(exc).__name__
-                if isinstance(exc, DeferredNotification):
+                if isinstance(exc, DeferredNotification | RescheduleJob):
+                    # Перенос себя не расходует попытку: тик окна ждёт тишины,
+                    # очистка буфера повторяется по расписанию.
                     await repo.defer_job(
                         job_id=job.id,
                         lease_token=job.lease_token,
@@ -115,6 +118,7 @@ class WorkerRunner:
             try:
                 handled = await self.notifications.consume_once()
                 handled = await self.notifications.consume_route_cards_once() or handled
+                handled = await self.notifications.consume_chat_messages_once() or handled
                 handled = await self.notifications.deliver_once(now=now) or handled
             except Exception as exc:
                 # A rolled-back consumer or leased operation remains recoverable. Do not

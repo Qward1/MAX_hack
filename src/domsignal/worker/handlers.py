@@ -18,6 +18,8 @@ from domsignal.services.chat_connections import ChatConnectionError, ChatConnect
 from domsignal.services.errors import AccessDenied, ResourceNotFound
 from domsignal.services.explicit_reports import ExplicitReportService
 from domsignal.services.notifications import TicketNotificationHandler
+from domsignal.services.passive_analysis import PassiveWindowAnalysis
+from domsignal.services.passive_capture import PassiveCaptureService
 from domsignal.services.reports import ReportService
 
 JobHandler = Callable[[dict[str, Any]], Awaitable[None]]
@@ -33,6 +35,8 @@ class WorkerHandlers:
         chat_connections: ChatConnectionService | None = None,
         notifications: TicketNotificationHandler | None = None,
         explicit_reports: ExplicitReportService | None = None,
+        passive: PassiveCaptureService | None = None,
+        passive_analysis: PassiveWindowAnalysis | None = None,
     ) -> None:
         self.session_factory = session_factory
         self.report_service = report_service
@@ -40,6 +44,8 @@ class WorkerHandlers:
         self.chat_connections = chat_connections
         self.notifications = notifications
         self.explicit_reports = explicit_reports
+        self.passive = passive
+        self.passive_analysis = passive_analysis
 
     @property
     def mapping(self) -> dict[str, JobHandler]:
@@ -57,6 +63,15 @@ class WorkerHandlers:
             # Разбор ядром живёт в AI-пуле, сторож правил — в операционном.
             handlers["ai.report.analyze"] = self.explicit_reports.analyze_with_core
             handlers["report.fallback"] = self.explicit_reports.analyze_with_rules
+        if self.notifications:
+            # Оповещение операторов о критическом сигнале — операционный пул.
+            handlers["signal.alert"] = self.notifications.fan_out_signal_alert
+        if self.passive:
+            handlers["chat.window.tick"] = self.passive.tick
+            handlers["chat.buffer.purge"] = self.passive.purge
+        if self.passive_analysis:
+            # Разбор окна живёт в AI-пуле: его отказ не задерживает приём.
+            handlers["ai.window.analyze"] = self.passive_analysis.analyze_window
         return handlers
 
     async def verify_connection(self, payload: dict[str, Any]) -> None:

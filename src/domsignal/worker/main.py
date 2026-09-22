@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 
 from domsignal.bootstrap import build_container
 from domsignal.settings import get_settings
 from domsignal.worker.pools import DEFAULT_POOL, POOLS, WorkerPool
 from domsignal.worker.runner import WorkerRunner
+
+logger = logging.getLogger(__name__)
 
 
 def parse_pool(argv: list[str] | None = None) -> WorkerPool:
@@ -18,6 +21,13 @@ def parse_pool(argv: list[str] | None = None) -> WorkerPool:
 
 async def run(pool: WorkerPool = DEFAULT_POOL) -> None:
     container = build_container(get_settings())
+    if pool == DEFAULT_POOL:
+        # Очистка буфера ставится при старте и дальше переставляет себя сама.
+        # Сбой постановки не мешает доставке и приёму: следующий старт повторит.
+        try:
+            await container.passive.ensure_purge_scheduled()
+        except Exception as exc:  # noqa: BLE001
+            logger.error("buffer_purge_not_scheduled", extra={"error_type": type(exc).__name__})
     runner = WorkerRunner(
         session_factory=container.session_factory,
         handlers=container.worker_handlers.mapping,

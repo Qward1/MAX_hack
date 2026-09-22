@@ -37,6 +37,29 @@ class _Message(BaseModel):
     sender: _User | None = None
     recipient: _Recipient
     body: _Body | None = None
+    # `LinkedMessage` («пересланное или ответное сообщение»): форма ссылки
+    # разбирается отдельно и мягко, поэтому здесь остаётся сырой объект:
+    # неожиданная форма ссылки не должна отвергать всё обновление.
+    link: Any = None
+
+
+#: Ссылка на исходное сообщение ответа: `link.type = reply`, `link.message.mid`.
+_MID = re.compile(r"[A-Za-z0-9._-]{1,200}")
+
+
+def _reply_to_mid(link: Any) -> str | None:
+    """Идентификатор сообщения, на которое ответили, или `None`.
+
+    Документированная форма MAX: `Message.link` — `LinkedMessage` с полями
+    `type` (`forward` | `reply`), `sender`, `chat_id` и `message` (`MessageBody`
+    с `mid`). Пересылка ответом не считается. Любая другая форма даёт `None`:
+    ссылку продукт не угадывает, а реплика от этого не теряется.
+    """
+    if not isinstance(link, dict) or link.get("type") != "reply":
+        return None
+    message = link.get("message")
+    mid = message.get("mid") if isinstance(message, dict) else None
+    return mid if isinstance(mid, str) and _MID.fullmatch(mid) else None
 
 
 class _Update(BaseModel):
@@ -78,6 +101,10 @@ class MaxEvent:
     token: str | None = None
     text: str | None = None
     callback: TicketCallback | None = None
+    # Идентификатор сообщения MAX и ссылка на исходное сообщение ответа.
+    # Идентичность события по-прежнему считается от `mid` выше.
+    mid: str | None = None
+    reply_to_mid: str | None = None
 
 
 def parse_update(payload: dict[str, Any]) -> MaxEvent:
@@ -116,6 +143,8 @@ def parse_update(payload: dict[str, Any]) -> MaxEvent:
                 and message.recipient.chat_type == "chat"
                 and not message.sender.is_bot
                 else None,
+                mid=message.body.mid if message.body else None,
+                reply_to_mid=_reply_to_mid(message.link),
             )
         elif header.update_type == "message_callback":
             value = _CallbackUpdate.model_validate(payload)
