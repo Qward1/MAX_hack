@@ -128,3 +128,51 @@ Browser scenario сопоставляет persisted Ticket.version/status/attemp
 HTTP response; повторное тело/key и одна WorkAttempt подтверждены отдельно.
 Readonly/adversarial HTTP подмены используются только для ошибок, неизвестных
 значений и длинного текста. Сквозной путь и access checks идут в настоящий API.
+
+## Браузерный стенд: переменные, без которых падают чужие спеки
+
+Проверено на P5 (23.09.2026). Стенд — отдельная PostgreSQL DB (не та, что у
+`pytest`, он её очищает) и один процесс API **без воркеров**: фикстуры сами
+прогоняют задачи, и фоновые пулы стенда им только мешают.
+
+| Переменная | Значение | Зачем |
+|---|---|---|
+| `APP_ENV` | `test` | тестовая сессия и фикстуры |
+| `B14_BROWSER_FIXTURES` | `1` | иначе `ticket_fixture.py` и `signal_fixture.py` отказываются работать |
+| `DATABASE_URL` | своя БД стенда | та же у API и у фикстур |
+| `PUBLIC_BASE_URL` | ровно `PLAYWRIGHT_BASE_URL` (`http://127.0.0.1:8031`) | CSRF сверяет `Origin` кабинета именно с ним; иначе каждый POST — 403 |
+| `AUTH_MFA_ENCRYPTION_KEY` | валидный ключ Fernet, общий у API и фикстур | иначе привязка второго фактора в `employee-auth.spec` падает на шаге QR |
+| `PASSIVE_CAPTURE_ENABLED` | `true` | переключатель чтения чата в кабинете (`signal_fixture.py` включает приём у себя сам) |
+| `MAX_TRANSPORT` | `off` | никаких сетевых вызовов MAX |
+| `PYTHONPATH` | корень репозитория | `administration_fixture.py` импортирует `tests.fakes` |
+| `PLAYWRIGHT_CHANNEL` | `chrome` | установленный Chrome вместо скачивания Chromium |
+
+Перед каждым полным прогоном очистите **свой** `auth_rate_limits`
+(`DELETE FROM auth_rate_limits`): все входы идут с `127.0.0.1`, и повторные
+прогоны подряд упираются в ограничитель попыток (10 на идентификатор, 50 на IP
+за 300 с).
+
+```sh
+uv run alembic upgrade head
+uv run python -m domsignal.tools.seed_demo
+uv run python -m domsignal.tools.seed_tickets
+npm --prefix miniapp run build
+uv run uvicorn domsignal.main:create_app --factory --host 127.0.0.1 --port 8031
+# во втором терминале, с теми же переменными:
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:8031 npm --prefix miniapp run test:browser
+```
+
+`signals.spec.ts` (P5) засевает сигналы настоящим путём P4 через
+`tests/browser/signal_fixture.py`: события вебхука → `parse_update` +
+`MaxWebhookService.accept` → окно → разбор правилами, без INSERT в `signals`.
+Фикстура сама создаёт синтетический дом, оператора `p5-operator` и чат (через
+A-07 с заглушкой проверки прав MAX), а в начале прогона закрывает оставшиеся
+открытыми сигналы своего дома. Лимит слабых сигналов на дом в сутки у фикстуры
+поднят: иначе после нескольких прогонов за день новые слабые сигналы честно
+уходят в Audit Pool и в очереди их нет.
+
+Два спека по умолчанию пропускаются: `notifications.spec.ts` (нужен
+`ND_FIXTURES=1` и рантайм доставки) и `administration.spec.ts` (нужен
+`B09_BROWSER_FIXTURES=1`). B09 на HTTP-стенде без MAX проходит проверки
+разделов кабинета, но на шаге «Подтвердить подключение» API заново проверяет
+чат настоящим провайдером MAX, которого на таком стенде нет.

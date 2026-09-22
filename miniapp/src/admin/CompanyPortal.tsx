@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AdminApp } from "./AdminApp";
 import { SignalsApp } from "./SignalsApp";
 import { adminClient, Feedback, Title, useRoute, type Schema } from "./administration";
@@ -14,7 +14,14 @@ const paths: Record<string, string> = { overview: "", tickets: "tickets", signal
 const isSignalsRoute = (url: URL) => url.searchParams.get("section") === "signals" || url.searchParams.has("signal");
 
 export function CompanyPortal() {
-  const { url, navigate } = useRoute();
+  const { url, navigate: go } = useRoute();
+  // Каждый переход портала (меню, ссылка в другой раздел, Back) заново
+  // открывает раздел; перерисовка по другой причине — нет: форма решения,
+  // начатая в разделе, не теряется, когда портал обновляет свой bootstrap.
+  const [visit, setVisit] = useState(0);
+  const navigate = (href: string) => { go(href); setVisit(v => v + 1); };
+  useEffect(() => { const back = () => setVisit(v => v + 1);
+    window.addEventListener("popstate", back); return () => window.removeEventListener("popstate", back); }, []);
   const load = useCallback(async (signal: AbortSignal) => {
     const caps = await adminClient.capabilities(signal);
     await adminClient.authenticate(caps, signal);
@@ -52,7 +59,7 @@ export function CompanyPortal() {
     <button className="ticket-button secondary" onClick={bootstrap.refresh}>Проверить доступ</button>
   </main>;
   const isOrganization = selected.surfaces.includes("staff");
-  const shared = { company: selected, surface, href, navigate };
+  const shared = { company: selected, surface, href, navigate, visit };
   return <div className={`admin-shell ${isOrganization ? "company-workspace" : "operator-workspace"}`}>
     <aside className="admin-sidebar"><a className="admin-brand" href={href(selected.surfaces[0])}>ДомСигнал
       <span>{isOrganization ? "Управление компанией" : "Рабочее место оператора"}</span></a>
@@ -68,7 +75,7 @@ export function CompanyPortal() {
     </main>
   </div>;
 }
-type Workspace = { company: Context; surface: string; href: (surface: string) => string; navigate: (url: string) => void };
+type Workspace = { company: Context; surface: string; href: (surface: string) => string; navigate: (url: string) => void; visit: number };
 function openTicket(navigate: (url: string) => void, href: (surface: string) => string) {
   return (ticketId: string) => {
     const target = new URL(href("tickets"), window.location.origin);
@@ -76,12 +83,12 @@ function openTicket(navigate: (url: string) => void, href: (surface: string) => 
     navigate(`${target.pathname}${target.search}`);
   };
 }
-function CompanyWorkspace({ company, surface, href, navigate }: Workspace) {
+function CompanyWorkspace({ company, surface, href, navigate, visit }: Workspace) {
   const base = `/api/v1/companies/${company.company_id}`;
   switch (surface) {
     case "overview": return <Overview base={base} />;
-    case "tickets": return <AdminApp key={window.location.search} embedded companyId={company.company_id} />;
-    case "signals": return <SignalsApp key={window.location.search} companyId={company.company_id} openTicket={openTicket(navigate, href)} />;
+    case "tickets": return <AdminApp key={visit} embedded companyId={company.company_id} />;
+    case "signals": return <SignalsApp key={visit} companyId={company.company_id} openTicket={openTicket(navigate, href)} />;
     case "houses": return <CompanyHouses base={base} />;
     case "staff": return <Staff base={base} />;
     case "chat_connections": return <ChatConnections base={base} />;
@@ -89,10 +96,10 @@ function CompanyWorkspace({ company, surface, href, navigate }: Workspace) {
     default: return <DeniedRoute base={base} surface={surface} />;
   }
 }
-function OperatorWorkspace({ company, surface, href, navigate }: Workspace) {
+function OperatorWorkspace({ company, surface, href, navigate, visit }: Workspace) {
   const base = `/api/v1/companies/${company.company_id}`;
-  if (surface === "tickets") return <AdminApp key={window.location.search} embedded companyId={company.company_id} />;
-  if (surface === "signals") return <SignalsApp key={window.location.search} companyId={company.company_id} openTicket={openTicket(navigate, href)} />;
+  if (surface === "tickets") return <AdminApp key={visit} embedded companyId={company.company_id} />;
+  if (surface === "signals") return <SignalsApp key={visit} companyId={company.company_id} openTicket={openTicket(navigate, href)} />;
   if (surface === "assigned_houses") return <MyHouses base={base} />;
   return <DeniedRoute base={base} surface={surface} />;
 }

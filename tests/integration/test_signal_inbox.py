@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from domsignal.db.models import (
     Incident,
@@ -225,7 +225,7 @@ async def test_create_ticket_uses_the_quotes_and_the_employee_context(pv) -> Non
     result = mutation["signal"]
     assert result["status"] == "converted" and result["allowed_actions"] == []
     assert result["version"] == view["version"] + 1 == mutation["effect_version"]
-    assert result["linked"]["ticket_number"] == "T-1"
+    assert result["linked"]["ticket_number"].startswith("T-")
     assert result["decision"]["decided_by"] == "admin1"
 
     report = await pv.scalar(select(Report))
@@ -234,6 +234,7 @@ async def test_create_ticket_uses_the_quotes_and_the_employee_context(pv) -> Non
     assert report.description == draft["description"]
     ticket = await pv.scalar(select(Ticket))
     assert ticket.incident_id == report.incident_id and ticket.status == "new"
+    assert result["linked"]["ticket_number"] == f"T-{ticket.number}"
     incident = await pv.scalar(select(Incident))
     assert incident.location_entrance == "2"
     stored = await pv.scalar(select(Signal).where(Signal.id == signal.id))
@@ -616,3 +617,23 @@ async def test_the_cabinet_switch_toggles_chat_reading_with_chat_connect(pv) -> 
     assert await pv.scalar(select(func.count()).select_from(Signal)) == 0
     capabilities = await pv.client.get("/api/v1/capabilities")
     assert capabilities.json()["features"]["passive_capture"] is True
+
+
+async def test_a_place_quoted_only_from_context_is_not_shown_or_sent(pv) -> None:  # noqa: F811
+    """Модель может взять подъезд из реплики контекста (прошлого разговора):
+    цитата есть, но строки окна у неё нет. Оператору и в заявку это не идёт."""
+    await pv.bind()
+    signal = await lift(pv)
+    async with pv.container.session_factory() as session, session.begin():
+        await session.execute(
+            update(Signal)
+            .where(Signal.id == signal.id)
+            .values(entrance={"value": "3", "quote": "в третьем подъезде", "line_mid": None})
+        )
+    view = await detail(pv, signal.id)
+    assert view["place"].get("entrance") is None
+    assert "Подъезд" not in view["ticket_draft"]["description"]
+    created = await decide(pv, signal.id, "create-ticket", {"expected_version": view["version"]})
+    assert created.status_code == 200
+    incident = await pv.scalar(select(Incident))
+    assert incident.location_entrance is None

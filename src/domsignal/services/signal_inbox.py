@@ -211,9 +211,20 @@ def _strength(value: str) -> SignalStrength:
     return cast(SignalStrength, value if value in ("critical", "strong", "medium") else "weak")
 
 
+def own_value(raw: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Место или время сигнала — только с цитатой из его собственной реплики.
+
+    Цитата из реплики контекста (предыдущий разговор чата) у значения есть, но
+    строки окна у неё нет: такое значение оператору и в заявку не отдаётся.
+    """
+    if not raw or not raw.get("line_mid"):
+        return None
+    return raw
+
+
 def _place(signal: Signal) -> SignalPlace:
     def value(raw: dict[str, Any] | None) -> SignalEvidenceValue | None:
-        found = quoted_value(raw)
+        found = quoted_value(own_value(raw))
         return SignalEvidenceValue(value=found[0], quote=found[1]) if found else None
 
     return SignalPlace(
@@ -372,9 +383,9 @@ class SignalInboxService:
                 idempotency_key=f"signal:{signal.id}:{idempotency_key}"[:200],
             )
             located = {
-                "location_entrance": (quoted_value(signal.entrance) or (None,))[0],
-                "location_floor": (quoted_value(signal.floor) or (None,))[0],
-                "observed_since": (quoted_value(signal.since) or (None,))[0],
+                "location_entrance": (quoted_value(own_value(signal.entrance)) or (None,))[0],
+                "location_floor": (quoted_value(own_value(signal.floor)) or (None,))[0],
+                "observed_since": (quoted_value(own_value(signal.since)) or (None,))[0],
             }
             if any(located.values()):
                 await session.execute(
@@ -922,7 +933,7 @@ class SignalInboxService:
             created_after=after,
             limit=MAX_JOIN_CANDIDATES,
         )
-        entrance = (quoted_value(signal.entrance) or (None,))[0]
+        entrance = (quoted_value(own_value(signal.entrance)) or (None,))[0]
         ordered = list(dict.fromkeys([*related, *by_category]))[:MAX_JOIN_CANDIDATES]
         counts = await incidents.counts([item.id for item in ordered])
         related_ids = {item.id for item in related}
@@ -960,7 +971,11 @@ class SignalInboxService:
                 else CATEGORY_TITLES[category],
                 report_count=signal.report_count,
                 author_count=signal.author_count,
-                place={"entrance": signal.entrance, "floor": signal.floor, "since": signal.since},
+                place={
+                    "entrance": own_value(signal.entrance),
+                    "floor": own_value(signal.floor),
+                    "since": own_value(signal.since),
+                },
                 quotes=[(item.author_ref, item.text) for item in quotes],
             ),
         )
