@@ -27,6 +27,10 @@ services:
       DEMO_SEED: "true"
       MAX_TRANSPORT: "off"
       LLM_PROVIDER: rules
+      # Пассивное чтение чата выключено, пока его не включат явно. Локальный
+      # стенд показа закрывает окно после 20 секунд тишины, а не 120.
+      PASSIVE_CAPTURE_ENABLED: ${PASSIVE_CAPTURE_ENABLED:-false}
+      PASSIVE_WINDOW_SILENCE_SECONDS: ${PASSIVE_WINDOW_SILENCE_SECONDS:-20}
       PUBLIC_BASE_URL: http://localhost:${API_PORT:-8000}
       CORS_ORIGINS: http://localhost:5173,http://localhost:${API_PORT:-8000}
     depends_on:

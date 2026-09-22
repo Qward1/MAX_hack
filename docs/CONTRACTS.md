@@ -265,6 +265,216 @@ report_count, participant_count, match_reason}`; `match_reason` — коротк
 `RoutingService.available`. Mini app прячет новые экраны при `false`, и доска
 B-02 этим не затрагивается.
 
+## Пассивное чтение подключённого чата — A-17/Product, срез P4
+
+Подключённый чат читается целиком: реплики складываются в окна, окно
+разбирается одним вызовом ядра, из окна рождаются сигналы с цитатами, а
+опасность замечается ещё в транзакции приёма — без модели и без сети.
+**HTTP-границы для сигналов в этом срезе нет** (её вводит P5): OpenAPI и
+сгенерированный TS не меняются. Проверка и показ — read-only инструментом
+`python -m domsignal.tools.signals_preview --house <id> [--pool inbox|audit]`.
+
+### Приём и структурный фильтр
+
+`MaxEvent` получил `mid` (`message.body.mid`) и `reply_to_mid`. Ссылка на
+исходное сообщение берётся только из документированного `Message.link`
+(`LinkedMessage`: `type` = `forward | reply`, `message` = `MessageBody` с `mid`):
+`reply_to_mid` заполняется только для `type = reply` и валидного `mid`, любая
+другая форма даёт `None` — ссылку продукт не угадывает. Идентичность события
+по-прежнему считается от `mid`.
+
+В транзакции вебхука, после ветки `/report`, реплика кладётся в буфер
+`chat_messages` только если: глобальный `PASSIVE_CAPTURE_ENABLED`, привязка
+`active`, событие не раньше `activated_at`, у привязки
+`passive_capture_enabled`, тип чата `chat`, отправитель не бот, текст не
+пустой, есть `mid`, и это не команда боту (`/report …`, `/start` — у них свой
+путь). Всё остальное отбрасывается молча и без следа. Пара `max_chat_id + mid`
+уникальна: повтор вебхука второй строки не создаёт. Текст обрезается до 4000
+символов с флагом `text_truncated`; `author_ref` — устойчивый псевдоним автора
+в пределах дома (`ai.masking.author_alias`: «A», «B», …, номер не
+переиспользуется, связь с человеком — только в `chat_author_aliases`).
+
+Ошибка в правилах, сборщике окон или роутере приём не роняет: каждый шаг идёт
+в своей точке сохранения, исключение логируется кодом, реплика остаётся в
+буфере, вебхук отвечает 200.
+
+**Правок и удалений сообщений продукт не видит.** MAX присылает
+`message_edited` и `message_removed`, но подписка ДомСигнала — ровно шесть видов
+(`bot_started`, `bot_stopped`, `bot_added`, `bot_removed`, `message_created`,
+`message_callback`; `tools/max_subscription.py`). Удалённая или исправленная в
+чате реплика остаётся в буфере в исходном виде до конца срока хранения; это
+единственная защита, и она описана здесь прямо.
+
+### Контур 1: опасность в транзакции приёма
+
+`screen_message_for_danger(text, line_id=mid)` — чистая функция ядра, по
+полному тексту, до окна и до любой обрезки. Продукт её не дублирует и не
+расширяет.
+
+| Срабатывание | Что происходит |
+|---|---|
+| есть без `negated` | Предварительный критический сигнал (`strength=critical`, `source=rules`, флаг `preliminary`, цитата, вид опасности); окно закрывается сразу; `ai.window.analyze` с приоритетом 20; оповещение операторов — задача `signal.alert` приоритета 10 в операционном пуле; памятка в чат |
+| только `displaced` («в соседнем доме», «в прошлом году») | Предварительный критический сигнал с флагом `displaced`, **без памятки**; ждёт вердикта окна |
+| только `negated` | Ни сигнала, ни памятки; событие `danger_negated` без текста |
+
+Повторное сообщение об опасности того же вида в том же доме в течение 30 минут
+присоединяется к открытому критическому сигналу (счётчики, цитата) и не
+создаёт второго оповещения. Памятка того же вида в тот же чат не повторяется
+чаще раза в 30 минут.
+
+Получатели оповещения — сотрудники текущей УК дома с подтверждённым
+отображением в MAX, чей доступ к дому подтверждает существующая политика
+(`MembershipService.require_house` + `ticket.read`). Новой модели доступа нет.
+Получателей нет — доставка `skipped` с причиной `NO_RECIPIENTS`, сигнал всё
+равно в очереди. Транспорт тот же: outbox → `notification_deliveries`.
+
+### Сборщик окон
+
+Состояние окна — `conversation_windows` (`open → closed → analyzing → done`,
+одно открытое окно на привязку). Политика — ядра: `WindowPolicy` и
+`split_stream`; значения — из настроек `PASSIVE_WINDOW_SILENCE_SECONDS` (120),
+`PASSIVE_WINDOW_MAX_LINES` (10), `PASSIVE_WINDOW_MAX_AGE_SECONDS` (300).
+
+- Реплика присоединяется к открытому окну, если политика ядра не отделяет её;
+  иначе окно закрывается (`silence | max_age | max_lines`) и открывается новое.
+- Десятая реплика и опасность закрывают окно прямо в транзакции приёма.
+- Тишину проверяет отложенная задача `chat.window.tick` (операционный пул) на
+  `min(last_line_at + тишина, first_line_at + возраст)`. Одна задача на окно:
+  её идентификатор лежит в `tick_job_id`, тик либо закрывает окно, либо
+  переносит себя, не расходуя попытку. Повторный тик по закрытому окну ничего
+  не делает; окно и задача переживают перезапуск воркера.
+
+### Разбор окна в AI-пуле
+
+`ai.window.analyze` (добавлен в `AI_JOB_KINDS`): короткая транзакция захвата
+`UPDATE … SET state='analyzing' … WHERE state='closed' OR (state='analyzing'
+AND claimed_at < now() - 600s)`; чтение реплик окна, до пяти предыдущих реплик
+чата как контекста (`is_context=True`), до десяти открытых сигналов и заявок
+дома (`OpenItem`) и подсказки подъезда из `scope_value` привязки; **один**
+`WindowAnalyzer.analyze(window)` вне транзакции; короткая транзакция записи,
+которая сначала переводит окно в `done` при своём `claimed_by` — поэтому гонка
+двух задач и повторный запуск дают один набор сигналов. Бюджет —
+`PostgresBudgetGuard` с долей на привязку; исчерпан — вызова нет,
+`execution_state = fallback_budget`, результат правил. Чтение выключено к
+моменту разбора — окно закрывается как `capture_stopped` без сигналов.
+
+Что продукт делает с результатом (силу не пересчитывает, fusion не
+переопределяет):
+
+- `filtered` и выборка аудита → `disposition = audit_pool` (`audit_reason`
+  `filtered | audit_sample`); остальное — `inbox`.
+- Слабых сигналов в очереди дома — не больше `PASSIVE_WEAK_DAILY_LIMIT` (10) за
+  сутки; переполнение → `audit_pool`, `audit_reason = weak_overflow`.
+- Склейка ветки: сигнал с тем же ключом (`подтип | dedupe_scope таксономии |
+  подъезд`) и открытым статусом (`new | in_review`) в пределах
+  `PASSIVE_DEDUPE_DAYS` (7) не создаёт второй строки: растут счётчики реплик и
+  уникальных авторов, добавляются цитаты (всего не больше трёх), обновляется
+  `last_seen_at`, сила только растёт. Реплика без подъезда не склеивается с
+  объектом в известном подъезде. Отброшенное (`filtered`) не склеивается с
+  сигналами очереди. Слияния заявок нет — это решение оператора (P5).
+- Предварительный критический сигнал примиряется с вердиктом окна по реплике
+  опасности: подтип, место и признаки берутся из окна; понижение — только если
+  ядро понизило опасность по опровержению с валидной цитатой и оставило событие
+  `emergency_downgraded` (причина и цитата лежат и в событии, и в
+  `emergency.downgrades`). Иначе сигнал остаётся критическим
+  (`emergency_kept`). Семантическая опасность, найденная только окном, даёт
+  оповещение операторов и **не** пишет в чат.
+- Маршрут считает `RoutingService.route_for_house` при создании сигнала и при
+  смене подтипа; результат — `route_outcomes` с `source = passive` и
+  `signal_id`. `decision` = `external` для внешних маршрутов, иначе
+  `needs_clarification`: заявку или внешний маршрут выбирает оператор.
+  ActionCard собирается при показе и не хранится.
+- Все `audit_events` ядра пишутся в `signal_events` как есть, с версиями
+  таксономии, правил, схемы, промпта и модели.
+- Заявка УК или обращение из пассивного сигнала автоматически не создаются.
+
+### `signals` и связанные таблицы
+
+`signals`: `id, house_id, chat_binding_id, window_id, subtype,
+product_category, object_label, entrance/floor/since` (значение + цитата +
+`line_mid`), `location_scope` + `location`, `facets` (значения и цитаты),
+`strength, strength_reason, disposition, audit_reason, source, flags,
+emergency` (виды, источники, доказательства, понижения), `dedupe_key, status`
+(`new | in_review | converted | routed_external | dismissed`),
+`report_count, author_count, first_seen_at, last_seen_at, route_outcome_id`.
+`signal_quotes` — не больше трёх дословных цитат (до 300 символов) с
+псевдонимом и временем. `signal_lines` — роль реплики окна и её связь с
+сигналом, без текста. `signal_events` — события аудита окна и сигнала.
+
+### Голос бота в чате — ровно два сообщения
+
+`MaxMessagingProvider.send_chat_message(chat_id, message)` — тот же
+документированный `POST /messages`, что и личное сообщение, но с `chat_id`
+вместо `user_id`; ответ принимается только если созданное сообщение лежит в
+этом групповом чате (`recipient.chat_type = chat`), иначе исход неизвестен.
+Доставка — существующий outbox (`chat.message.v1`) → `notification_deliveries`
+(`purpose = chat_reading_notice | chat_safety_memo`, предмет — привязка,
+получателя-человека нет) с теми же повторами, шлюзом адресата (не больше двух
+сообщений в секунду в один чат) и состояниями. При `MAX_TRANSPORT=off`
+отправитель инертен. Перед отправкой перепроверяются активность привязки, её
+версия и включённое чтение; иначе доставка `superseded`.
+
+1. **Сообщение о чтении чата** — один раз на привязку и её версию (dedupe
+   `chat_notice:<binding>:<version>`), в момент включения чтения: кто
+   подключил (управляющая компания), что бот читает сообщения, чтобы замечать
+   проблемы дома, что он почти никогда не пишет сам, что сообщение в чате не
+   является официальным обращением, кто может отключить чтение. Без сроков,
+   гарантий и ссылок.
+2. **Памятка безопасности** — только при срабатывании правил без `negated` и без
+   `displaced`; текст — проверенный блок `regions/_federal/safety.yaml` (112 и
+   его источник), не модель. Нет блока в справочнике — памятки нет.
+
+Запрещённые формулировки (`FORBIDDEN_PHRASES`) действуют и здесь; модуль
+шаблонов `services/chat_voice.py` входит в контрактный тест. Оповещение
+оператора — личное сообщение (`purpose = signal_alert`) без кнопки: экрана
+очереди до P5 нет, а кнопка в никуда запрещена.
+
+### Выключатель, срок хранения, журналы
+
+- Глобальный `PASSIVE_CAPTURE_ENABLED` (по умолчанию `false`) и
+  `chat_bindings.passive_capture_enabled` (по умолчанию `false`). Выключено —
+  реплики не сохраняются вовсе. Переключает сотрудник с `chat.connect`
+  (`python -m domsignal.tools.passive_capture --binding … --actor …
+  --enable|--disable`); включение при выключенном глобальном признаке
+  отклоняется (`passive_capture_disabled`). Выключение сразу прекращает приём и
+  оставляет собранные сигналы.
+- `chat.buffer.purge` (операционный пул) ставится при старте операционного
+  воркера и переносит себя каждый час: удаляет разобранные реплики, кроме пяти
+  последних разобранных на чат (контекст), всё старше `PASSIVE_BUFFER_HOURS`
+  (72, больше задать нельзя) независимо от состояния и роли реплик без сигнала
+  старше того же срока. Пропуск запуска приём не ломает.
+- **Что мы храним.** Сырые реплики — только во временном буфере и не дольше
+  срока. После него от разговора остаётся лишь то, что привязано к сигналу:
+  до трёх дословных цитат с псевдонимом автора и временем, счётчики реплик и
+  уникальных авторов, роли реплик без текста и события аудита. Связь
+  псевдонима с человеком — только локально, в `chat_author_aliases`.
+- В журналы не попадают ни текст реплик, ни `external_user_id`: только
+  идентификаторы окон, сигналов, привязок и коды состояний (контрактный тест
+  проверяет ключи `extra`).
+
+### Задачи и пулы
+
+| Вид | Пул | Приоритет |
+|---|---|---|
+| `signal.alert` | operational | 10 |
+| `ai.window.analyze` (окно с опасностью / обычное) | ai | 20 / 60 |
+| `chat.window.tick` | operational | 40 |
+| `chat.buffer.purge` | operational | 90 |
+
+Выключенный AI-пул не задерживает ни приём, ни оповещение, ни памятку: они в
+транзакции приёма и в операционном пуле.
+
+### Миграция `20260922_0008`
+
+Аддитивна: таблицы `chat_messages`, `conversation_windows`, `signals`,
+`signal_quotes`, `signal_lines`, `signal_events`, `chat_author_aliases`;
+`chat_bindings.passive_capture_enabled` (default `false`);
+`route_outcomes.signal_id` и `source += passive`;
+`notification_deliveries.signal_id`, `chat_binding_id`, `recipient_user_id`
+nullable, назначения `signal_alert | chat_reading_notice | chat_safety_memo`,
+предмет доставки — ровно один из четырёх. Downgrade отказывает, пока есть
+данные пассивного чтения или включённое чтение, — как в P3b.
+
 ## A-10 employee web-auth contract — 19.09.2026 branch slice
 
 Prefix `/api/v1/auth/employee`:
@@ -641,7 +851,9 @@ The report job contains chat ID, binding ID/version, user identity, event time a
 explicit command text. Resolve/access/version validation precedes product core.
 A-07 group command is `/report <elevator|water|lighting|waste|other> <description>`
 (5–2000 characters); it reuses manual ReportCreate semantics. Ordinary conversation
-is ignored; auto-group NLP is a separate task. `group_mode` capability is not
+is ignored unless passive reading is enabled globally and on the binding (P4, see
+«Пассивное чтение подключённого чата» above); even then it never becomes a Report
+or Ticket without an operator. `group_mode` capability is not
 promoted to a live-ready automatic feature. Personal/manual APIs stay unchanged.
 
 Mini App signed chat/start_param do not grant access or create ResidentMembership;
