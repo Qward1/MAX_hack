@@ -15,7 +15,7 @@ from domsignal.main import create_app
 from domsignal.services.employee_auth import EmployeeAuthService
 from domsignal.tools.seed_tickets import seed, seed_id
 from tests.fakes.max_chat import FakeMaxChatProvider
-from tests.integration.migration_columns import added_by_p3b
+from tests.integration.migration_columns import added_by_p3b, added_default
 from tests.integration.test_migrations import migrate
 
 
@@ -161,7 +161,7 @@ async def test_populated_onboarding_upgrade_preserves_history_and_guards_downgra
                         else ()
                     ) + added_by_p3b(table)
                     for key in extra:
-                        assert row.pop(key) is None
+                        assert row.pop(key) == added_default(key), key
                 assert sorted(after, key=str) == sorted(before[table], key=str), table
             for table in (
                 "company_onboarding_requests",

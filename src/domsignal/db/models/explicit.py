@@ -107,7 +107,7 @@ class RouteOutcome(Base):
 
     __tablename__ = "route_outcomes"
     __table_args__ = (
-        CheckConstraint("source IN ('group_report', 'form')", name="source"),
+        CheckConstraint("source IN ('group_report', 'form', 'passive')", name="source"),
         CheckConstraint(
             "decision IN ('ticket', 'external', 'needs_clarification')",
             name="decision",
@@ -142,6 +142,11 @@ class RouteOutcome(Base):
     # поэтому здесь он пуст; без него черновик внешнего обращения из формы
     # остался бы без описания проблемы.
     submitted_text: Mapped[str | None] = mapped_column(Text)
+    # Сигнал пассивного чтения, для которого посчитан маршрут. Решения по
+    # сигналу исход не означает: заявку или внешний маршрут выбирает оператор.
+    signal_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("signals.id", ondelete="SET NULL"), index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

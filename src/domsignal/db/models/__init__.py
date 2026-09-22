@@ -28,6 +28,15 @@ from domsignal.db.models.onboarding import (
     EmployeeInvitation,
     HouseManagementRequest,
 )
+from domsignal.db.models.passive import (
+    ChatAuthorAlias,
+    ChatMessage,
+    ConversationWindow,
+    Signal,
+    SignalEvent,
+    SignalLine,
+    SignalQuote,
+)
 from domsignal.db.models.reliability import IdempotencyRecord, InboxReceipt, Job, OutboxMessage
 from domsignal.db.models.routing import HouseRoutingProfile
 from domsignal.db.models.sessions import AppSession
@@ -48,6 +57,13 @@ __all__ = [
     "ExplicitIntake",
     "RouteOutcome",
     "MaxDestinationLimit",
+    "ChatAuthorAlias",
+    "ChatMessage",
+    "ConversationWindow",
+    "Signal",
+    "SignalEvent",
+    "SignalLine",
+    "SignalQuote",
     "NotificationDelivery",
     "Ticket",
     "WorkAttempt",

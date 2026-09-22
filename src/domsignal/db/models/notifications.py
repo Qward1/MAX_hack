@@ -1,31 +1,72 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domsignal.db.base import Base
 from domsignal.db.models.access import Timestamps
+
+#: Назначения доставки в групповой чат: получатель — чат, а не человек.
+CHAT_PURPOSES = ("chat_reading_notice", "chat_safety_memo")
+
+#: Оповещение оператора о критическом сигнале.
+SIGNAL_ALERT_PURPOSE = "signal_alert"
+
+PURPOSE_CHECK = (
+    "purpose IN ('ticket_accepted','work_verification','route_action_card',"
+    "'signal_alert','chat_reading_notice','chat_safety_memo')"
+)
 
 
 class NotificationDelivery(Timestamps, Base):
     __tablename__ = "notification_deliveries"
     __table_args__ = (
         UniqueConstraint("outbox_message_id", "recipient_user_id", "channel", name="uq_delivery"),
-        CheckConstraint("channel = 'max'", name="channel"),
-        CheckConstraint(
-            "purpose IN ('ticket_accepted','work_verification','route_action_card')",
-            name="purpose",
+        # У сообщения в чат получателя-человека нет: одна доставка на запись outbox.
+        Index(
+            "uq_delivery_outbox_without_recipient",
+            "outbox_message_id",
+            unique=True,
+            postgresql_where=text("recipient_user_id IS NULL"),
         ),
-        # Доставка относится либо к заявке, либо к исходу маршрутизации.
-        # Внешний маршрут заявку не создаёт, поэтому `ticket_id` может быть пуст.
+        CheckConstraint("channel = 'max'", name="channel"),
+        CheckConstraint(PURPOSE_CHECK, name="purpose"),
+        # Предмет доставки ровно один: заявка, исход маршрутизации, сигнал
+        # или привязка чата. Внешний маршрут заявку не создаёт, сообщение в чат
+        # относится к привязке, оповещение оператора — к сигналу.
         CheckConstraint(
-            "(ticket_id IS NOT NULL) <> (route_outcome_id IS NOT NULL)",
+            "num_nonnulls(ticket_id, route_outcome_id, signal_id, chat_binding_id) = 1",
             name="subject",
         ),
         CheckConstraint(
             "purpose <> 'route_action_card' OR route_outcome_id IS NOT NULL",
             name="route_card_subject",
+        ),
+        CheckConstraint(
+            "purpose <> 'signal_alert' OR signal_id IS NOT NULL",
+            name="signal_alert_subject",
+        ),
+        CheckConstraint(
+            "purpose NOT IN ('chat_reading_notice','chat_safety_memo') "
+            "OR (chat_binding_id IS NOT NULL AND recipient_user_id IS NULL)",
+            name="chat_subject",
+        ),
+        # Без получателя — только сообщение в чат или оповещение, которому
+        # честно некого оповестить (`skipped` с причиной).
+        CheckConstraint(
+            "recipient_user_id IS NOT NULL "
+            "OR purpose IN ('chat_reading_notice','chat_safety_memo') "
+            "OR (purpose = 'signal_alert' AND status = 'skipped')",
+            name="recipient",
         ),
         CheckConstraint(
             "status IN ('pending','processing','accepted','retry_wait','unknown',"
@@ -37,12 +78,19 @@ class NotificationDelivery(Timestamps, Base):
     )
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     outbox_message_id: Mapped[UUID] = mapped_column(ForeignKey("outbox_messages.id"))
-    recipient_user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
+    # Пусто у сообщения в групповой чат и у оповещения без получателей.
+    recipient_user_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id"))
     channel: Mapped[str] = mapped_column(String(20), default="max")
     purpose: Mapped[str] = mapped_column(String(40))
     ticket_id: Mapped[UUID | None] = mapped_column(ForeignKey("tickets.id"), index=True)
     route_outcome_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("route_outcomes.id", ondelete="CASCADE"), index=True
+    )
+    signal_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("signals.id", ondelete="CASCADE"), index=True
+    )
+    chat_binding_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("chat_bindings.id"), index=True
     )
     work_attempt_id: Mapped[UUID | None] = mapped_column(ForeignKey("work_attempts.id"))
     launch_ref: Mapped[str] = mapped_column(String(64), unique=True)
