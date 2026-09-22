@@ -80,7 +80,7 @@ function CompanyWorkspace({ company, surface, href, navigate }: Workspace) {
   const base = `/api/v1/companies/${company.company_id}`;
   switch (surface) {
     case "overview": return <Overview base={base} />;
-    case "tickets": return <AdminApp embedded companyId={company.company_id} />;
+    case "tickets": return <AdminApp key={window.location.search} embedded companyId={company.company_id} />;
     case "signals": return <SignalsApp key={window.location.search} companyId={company.company_id} openTicket={openTicket(navigate, href)} />;
     case "houses": return <CompanyHouses base={base} />;
     case "staff": return <Staff base={base} />;
@@ -91,7 +91,7 @@ function CompanyWorkspace({ company, surface, href, navigate }: Workspace) {
 }
 function OperatorWorkspace({ company, surface, href, navigate }: Workspace) {
   const base = `/api/v1/companies/${company.company_id}`;
-  if (surface === "tickets") return <AdminApp embedded companyId={company.company_id} />;
+  if (surface === "tickets") return <AdminApp key={window.location.search} embedded companyId={company.company_id} />;
   if (surface === "signals") return <SignalsApp key={window.location.search} companyId={company.company_id} openTicket={openTicket(navigate, href)} />;
   if (surface === "assigned_houses") return <MyHouses base={base} />;
   return <DeniedRoute base={base} surface={surface} />;

@@ -404,3 +404,10 @@ body {
   outline: 3px solid var(--text-themed);
   outline-offset: 3px;
 }
+/* Ссылка в виде кнопки сохраняет цвет кнопки, а не общий цвет ссылок. */
+.signal-banner a.ticket-button {
+  color: #fff;
+}
+.signal-contacts a.ticket-button {
+  color: var(--text-primary);
+}

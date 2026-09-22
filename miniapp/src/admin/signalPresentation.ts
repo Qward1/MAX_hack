@@ -118,6 +118,17 @@ export function knownSignalActions(
   return result;
 }
 
+/** Дата проверки справочника — только день, без выдуманного времени. */
+export function formatDay(value?: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Intl.DateTimeFormat("ru", {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(date);
+}
+
 /** «14:05», а для не сегодняшнего дня — «21 сент., 14:05». */
 export function shortTime(value?: string | null): string {
   if (!value) return "";

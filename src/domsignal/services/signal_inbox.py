@@ -75,7 +75,7 @@ from domsignal.core.incidents import (
     IncidentStatus,
     ReportCategory,
 )
-from domsignal.core.routing import HouseRoutingContext
+from domsignal.core.routing import UNSPECIFIED_SUBTYPE, HouseRoutingContext
 from domsignal.core.signals import DANGER_LABELS, author_label
 from domsignal.db.models import HouseManagement, Incident, RouteOutcome, Signal, SignalEvent
 from domsignal.db.models.passive import OPEN_SIGNAL_STATUSES
@@ -96,6 +96,7 @@ from domsignal.services.membership import MembershipService
 from domsignal.services.reports import IncidentClosed, ReportService
 from domsignal.services.routing import RoutingService
 from domsignal.services.signal_texts import (
+    DANGER_TITLE,
     DISMISS_REASON_LABELS,
     EVENT_LABELS,
     RELATED_CONVERSION_REASON,
@@ -226,6 +227,13 @@ def _subtype_label(code: str) -> str:
         return subtype_title(taxonomy.get(code).label)
     except KeyError:
         return subtype_title(taxonomy.get("other.unspecified").label)
+
+
+def _signal_title(signal: Signal) -> str:
+    """Подпись сигнала: подтип таксономии, а до разбора — «Признак опасности»."""
+    if signal.subtype == UNSPECIFIED_SUBTYPE and (signal.emergency or {}).get("kinds"):
+        return DANGER_TITLE
+    return _subtype_label(signal.subtype)
 
 
 def _quote_view(author_ref: str, sent_at: datetime, text: str) -> SignalQuoteView:
@@ -764,7 +772,7 @@ class SignalInboxService:
             house_id=signal.house_id,
             house_address=address,
             subtype=signal.subtype,
-            subtype_label=_subtype_label(signal.subtype),
+            subtype_label=_signal_title(signal),
             object_label=signal.object_label,
             category=_category(signal.product_category),
             strength=_strength(signal.strength),

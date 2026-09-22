@@ -4019,7 +4019,7 @@ export interface components {
              * @default demo
              * @enum {string}
              */
-            actor: "demo" | "demo-neighbour" | "demo-third" | "outsider" | "a16-admin" | "a16-responsible" | "a16-operator" | "a16-revoked" | "a16-resident" | "a16-neighbor" | "a16-outsider" | "a16-beta-admin";
+            actor: "demo" | "demo-neighbour" | "demo-third" | "outsider" | "a16-admin" | "a16-responsible" | "a16-operator" | "a16-revoked" | "a16-resident" | "a16-neighbor" | "a16-outsider" | "a16-beta-admin" | "p5-operator" | "p5-admin";
         };
         /**
          * TicketAction

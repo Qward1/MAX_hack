@@ -27,6 +27,7 @@ import {
   categoryOptions,
   countsLine,
   dismissReasons,
+  formatDay,
   knownSignalActions,
   label,
   routeBadgeLabels,
@@ -206,7 +207,7 @@ export function SignalDetail({
                 <p className="muted">
                   Источник: {safety.source_title}
                   {safety.verified_at &&
-                    `, проверено ${formatDate(safety.verified_at)}`}
+                    `, проверено ${formatDay(safety.verified_at)}`}
                 </p>
               )}
             </div>
@@ -403,7 +404,7 @@ function RouteBlock({ data }: { data: SignalView }) {
             <p className="muted">
               Источник: {basis.source_title}
               {basis.verified_at &&
-                `, проверено ${formatDate(basis.verified_at)}`}
+                `, проверено ${formatDay(basis.verified_at)}`}
             </p>
           </>
         ) : (
@@ -804,7 +805,7 @@ function DecisionHistory({
                   — {decision.route.basis_text} (
                   {decision.route.basis_source_title}
                   {decision.route.basis_verified_at &&
-                    `, проверено ${formatDate(decision.route.basis_verified_at)}`}
+                    `, проверено ${formatDay(decision.route.basis_verified_at)}`}
                   )
                 </span>
               )}

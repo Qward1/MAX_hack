@@ -39,6 +39,9 @@ class TestSessionRequest(ContractModel):
         "a16-neighbor",
         "a16-outsider",
         "a16-beta-admin",
+        # Синтетический оператор и админ очереди сигналов браузерного стенда P5.
+        "p5-operator",
+        "p5-admin",
     ] = "demo"
 
 

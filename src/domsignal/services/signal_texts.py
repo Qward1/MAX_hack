@@ -74,12 +74,15 @@ EVENT_LABELS: dict[str, str] = {
     "signal_dismissed": "Оператор закрыл сигнал",
 }
 
+#: Подпись сигнала опасности, у которого подтипа ещё нет (до разбора окна).
+DANGER_TITLE = "Признак опасности"
+
 #: Почему открытая проблема предложена для присоединения.
 RELATED_CONVERSION_REASON = "По такому же сигналу уже создана заявка"
 
 _TICKET_LEAD = "Из домового чата"
 _QUOTES_HEADING = "Слова жителей:"
-_PLACE_LABELS = (("entrance", "Подъезд"), ("floor", "Этаж"), ("since", "Наблюдается с"))
+_PLACE_LABELS = (("entrance", "Подъезд"), ("floor", "Этаж"), ("since", "Наблюдается"))
 TICKET_DESCRIPTION_LIMIT = 2000
 
 
@@ -136,6 +139,7 @@ def ticket_description(
 
 
 __all__ = [
+    "DANGER_TITLE",
     "DISMISS_REASON_LABELS",
     "EVENT_LABELS",
     "RELATED_CONVERSION_REASON",

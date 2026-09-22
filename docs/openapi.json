@@ -6549,7 +6549,9 @@
               "a16-resident",
               "a16-neighbor",
               "a16-outsider",
-              "a16-beta-admin"
+              "a16-beta-admin",
+              "p5-operator",
+              "p5-admin"
             ],
             "title": "Actor",
             "type": "string"

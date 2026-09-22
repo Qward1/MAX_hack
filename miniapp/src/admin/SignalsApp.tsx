@@ -7,6 +7,7 @@ import {
 } from "../shared/api/signals";
 import { useResource } from "../shared/api/useResource";
 import { Pagination } from "../features/tickets/components";
+import { dangerLabel } from "../features/routing/presentation";
 import { SignalDetail } from "./SignalDetail";
 import {
   SignalState,
@@ -96,6 +97,16 @@ export function SignalsApp({
     status,
     strength,
   };
+  // Деталь читается только после входа: в тестовой сессии токен выдаёт тот
+  // же запрос сессии, а по ссылке из оповещения страница открывается сразу.
+  if (signalId && !session.data)
+    return (
+      <SignalState
+        loading={session.loading}
+        error={session.error}
+        retry={session.refresh}
+      />
+    );
   if (signalId)
     return (
       <SignalDetail
@@ -493,7 +504,14 @@ function SignalRow({
               {label(strengthLabels, item.strength, "strength")}
             </span>
             {danger && (
-              <span className="status-badge tone-attention">Опасность</span>
+              <span className="status-badge tone-attention">
+                Опасность:{" "}
+                {(item.danger_kinds ?? [])
+                  .map((kind) =>
+                    (dangerLabel(kind) ?? "другой признак").toLowerCase(),
+                  )
+                  .join(", ")}
+              </span>
             )}
             {item.status !== "new" && (
               <span className="status-badge tone-neutral">

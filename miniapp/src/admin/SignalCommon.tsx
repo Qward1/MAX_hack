@@ -75,7 +75,7 @@ export function placeLine(item: SignalSummary): string {
   return [
     item.place.entrance && `Подъезд ${item.place.entrance.value}`,
     item.place.floor && `Этаж ${item.place.floor.value}`,
-    item.place.since && `С ${item.place.since.value}`,
+    item.place.since && `Наблюдается: ${item.place.since.value}`,
   ]
     .filter(Boolean)
     .join(" · ");
