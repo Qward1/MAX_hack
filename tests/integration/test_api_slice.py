@@ -21,9 +21,10 @@ async def test_seed_is_idempotent(integration_settings: Settings) -> None:
     engine = create_engine(integration_settings.database_url)
     factory = create_session_factory(engine)
     async with factory() as session:
-        assert await session.scalar(select(func.count()).select_from(User)) == 2
+        # Демо-дом населён четырьмя жителями: выбор при дубле делают разные люди.
+        assert await session.scalar(select(func.count()).select_from(User)) == 4
         assert await session.scalar(select(func.count()).select_from(House)) == 2
-        assert await session.scalar(select(func.count()).select_from(ResidentMembership)) == 2
+        assert await session.scalar(select(func.count()).select_from(ResidentMembership)) == 4
     await engine.dispose()
 
 

@@ -11,7 +11,10 @@ from domsignal.contracts.incidents import (
     ReportCreated,
     ReportPreview,
     ReportPreviewRequest,
+    ReportSubmitRequest,
+    ReportSubmitted,
 )
+from domsignal.contracts.routing import RouteOutcomeView
 
 router = APIRouter(prefix="/api/v1", tags=["incidents"])
 
@@ -50,6 +53,42 @@ async def preview_report(
         actor_id=current_user.id,
         house_id=house_id,
         description=payload.description,
+    )
+
+
+@router.post(
+    "/houses/{house_id}/reports/submit",
+    response_model=ReportSubmitted,
+    status_code=status.HTTP_201_CREATED,
+)
+async def submit_report(
+    house_id: UUID,
+    payload: ReportSubmitRequest,
+    current_user: CurrentUserDep,
+    session: DbDep,
+    container: ContainerDep,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=8, max_length=200)],
+) -> ReportSubmitted:
+    """Отправка формы через ту же цепочку решения, что и сообщение в чате."""
+    return await container.explicit_reports.submit(
+        session,
+        actor_id=current_user.id,
+        house_id=house_id,
+        payload=payload,
+        idempotency_key=idempotency_key,
+    )
+
+
+@router.get("/route-outcomes/{outcome_id}", response_model=RouteOutcomeView)
+async def route_outcome(
+    outcome_id: UUID,
+    current_user: CurrentUserDep,
+    session: DbDep,
+    container: ContainerDep,
+) -> RouteOutcomeView:
+    """Карточка маршрута по исходу. Чужой и несуществующий исход дают 404."""
+    return await container.explicit_reports.outcome_view(
+        session, actor_id=current_user.id, outcome_id=outcome_id
     )
 
 

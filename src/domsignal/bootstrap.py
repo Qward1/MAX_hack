@@ -72,6 +72,16 @@ class Container:
         """Есть ли внешний провайдер разбора. Правила работают всегда."""
         return self.ai_provider is not None
 
+    @property
+    def routes_enabled(self) -> bool:
+        """Справочник региона загружен и роутер собран."""
+        return self.routing.available
+
+    @property
+    def appeals_enabled(self) -> bool:
+        """Черновики обращений доступны: их каркас берётся из того же справочника."""
+        return self.routing.available
+
     async def aclose(self) -> None:
         """Закрыть HTTP-клиент провайдера и пул соединений с БД."""
         if self.ai_provider is not None:

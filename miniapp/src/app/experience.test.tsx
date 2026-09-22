@@ -8,7 +8,16 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { apiWith, deferred, error, house, incident } from "../test/fixtures";
+import {
+  actionCard,
+  apiWith,
+  deferred,
+  draft,
+  error,
+  house,
+  incident,
+  outcome,
+} from "../test/fixtures";
 import { type IncidentDetail } from "../shared/api/client";
 import { App } from "./App";
 
@@ -219,32 +228,126 @@ describe("board/detail experience", () => {
   });
   it("does not offer report retry when the producer forbids it", async () => {
     const client = apiWith([]);
-    vi.mocked(client.createReport).mockRejectedValue(error(403));
+    vi.mocked(client.previewReport).mockRejectedValue(error(403));
     render(<App client={client} />);
     fireEvent.click(await screen.findByRole("button", { name: "Сообщить" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Описание" }), {
       target: { value: "Не работает лифт" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Сохранить сигнал" }));
+    fireEvent.click(screen.getByRole("button", { name: "Дальше" }));
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).not.toContain("Попробуйте ещё раз");
-    expect((screen.getByRole("button", { name: "Сохранить сигнал" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Дальше" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
     expect(screen.queryByText("PRIVATE")).toBeNull();
   });
-  it("keeps manual foundation report and reuses idempotency key after ambiguous failure", async () => {
+  it("keeps the described problem and reuses the idempotency key after an ambiguous failure", async () => {
     const client = apiWith([]);
-    vi.mocked(client.createReport).mockRejectedValueOnce(new Error("network"));
+    vi.mocked(client.submitReport).mockRejectedValueOnce(new Error("network"));
     render(<App client={client} />);
     fireEvent.click(await screen.findByRole("button", { name: "Сообщить" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Описание" }), {
       target: { value: "Не работает лифт" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Сохранить сигнал" }));
+    fireEvent.click(screen.getByRole("button", { name: "Дальше" }));
+    const send = await screen.findByRole("button", { name: "Всё верно, отправить" });
+    fireEvent.click(send);
     await screen.findByRole("alert");
-    fireEvent.click(screen.getByRole("button", { name: "Сохранить сигнал" }));
-    await waitFor(() => expect(client.createReport).toHaveBeenCalledTimes(2));
-    expect(vi.mocked(client.createReport).mock.calls[0][1]).toBe(
-      vi.mocked(client.createReport).mock.calls[1][1],
+    fireEvent.click(screen.getByRole("button", { name: "Всё верно, отправить" }));
+    await waitFor(() => expect(client.submitReport).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(client.submitReport).mock.calls[0][2]).toBe(
+      vi.mocked(client.submitReport).mock.calls[1][2],
     );
+    // Описание жителя остаётся: неудача отправки не теряет его слова.
+    expect(vi.mocked(client.submitReport).mock.calls[1][1].description).toBe(
+      "Не работает лифт",
+    );
+  });
+});
+
+describe("route card and appeal draft navigation", () => {
+  const ref = `r_${"a".repeat(32)}`;
+  function launched() {
+    const client = apiWith();
+    vi.mocked(client.notificationLaunch).mockResolvedValue({
+      kind: "route_card",
+      incident_id: null,
+      house_id: house.id,
+      route_outcome_id: outcome.id,
+      work_attempt_id: null,
+      stale: false,
+    });
+    return client;
+  }
+
+  it("an r_ launch link opens the route card, not the house board", async () => {
+    window.history.replaceState(null, "", `/?test_start_param=${ref}`);
+    const client = launched();
+    render(<App client={client} />);
+    await screen.findByText(actionCard.title);
+    expect(client.routeOutcome).toHaveBeenCalledWith(
+      outcome.id,
+      expect.any(AbortSignal),
+    );
+    expect(client.incident).not.toHaveBeenCalled();
+    expect(window.location.search).toContain(`card=${outcome.id}`);
+  });
+
+  it("the card screen opens the appeal draft and returns to the card", async () => {
+    window.history.replaceState(null, "", `/?card=${outcome.id}`);
+    const client = apiWith();
+    render(<App client={client} />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Подготовить текст обращения" }),
+    );
+    await screen.findByRole("heading", { name: "Текст обращения" });
+    expect(client.createAppealDraft).toHaveBeenCalledWith({
+      house_id: house.id,
+      route_outcome_id: outcome.id,
+    });
+    expect(window.location.search).toContain(`draft=${draft.id}`);
+    fireEvent.click(screen.getByRole("button", { name: /К карточке маршрута/ }));
+    await screen.findByText(actionCard.title);
+  });
+
+  it("says the route was refreshed when the directory changed", async () => {
+    window.history.replaceState(null, "", `/?card=${outcome.id}`);
+    const client = apiWith();
+    vi.mocked(client.routeOutcome).mockResolvedValue({
+      ...outcome,
+      directory_changed: true,
+    });
+    render(<App client={client} />);
+    expect(
+      await screen.findByText("Маршрут уточнён — показываем актуальный."),
+    ).toBeTruthy();
+  });
+
+  it.each([
+    ["routes", `card=${outcome.id}`],
+    ["appeals", `draft=${draft.id}`],
+  ])("does not request a %s screen while the capability is off", async (flag, query) => {
+    window.history.replaceState(null, "", `/?${query}`);
+    const client = apiWith();
+    const capabilities = await client.capabilities();
+    vi.mocked(client.capabilities).mockResolvedValue({
+      ...capabilities,
+      features: { ...capabilities.features, [flag]: false },
+    });
+    render(<App client={client} />);
+    await screen.findByText("Этот раздел сейчас отключён");
+    expect(client.routeOutcome).not.toHaveBeenCalled();
+    expect(client.appealDraft).not.toHaveBeenCalled();
+  });
+
+  it("a foreign or missing outcome is a plain not found", async () => {
+    window.history.replaceState(null, "", `/?card=${outcome.id}`);
+    const client = apiWith();
+    vi.mocked(client.routeOutcome).mockRejectedValue(error(404));
+    render(<App client={client} />);
+    await screen.findByText("Проблема не найдена");
+    expect(screen.queryByText(actionCard.title)).toBeNull();
+    expect(screen.queryByText("PRIVATE")).toBeNull();
   });
 });

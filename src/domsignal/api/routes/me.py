@@ -10,9 +10,12 @@ router = APIRouter(prefix="/api/v1", tags=["identity"])
 @router.get("/me", response_model=MeResponse)
 async def me(current_user: CurrentUserDep, session: DbDep, container: ContainerDep) -> MeResponse:
     return await container.membership_service.me(
-        session, user_id=current_user.id,
+        session,
+        user_id=current_user.id,
         capabilities=CapabilityFlags(
             test_auth=container.settings.test_session_enabled,
             ai_analysis=container.ai_analysis_enabled,
+            routes=container.routes_enabled,
+            appeals=container.appeals_enabled,
         ),
     )

@@ -5,8 +5,18 @@ from pydantic import BaseModel, Field
 
 
 class NotificationLaunch(BaseModel):
-    incident_id: UUID
+    """Куда открыть mini app по ссылке из личного сообщения.
+
+    `kind` различает два предмета доставки. У карточки маршрута заявки может не
+    быть вовсе (внешнее обращение житель отправляет сам), поэтому `incident_id`
+    допускает пустое значение. Проверки доступа одинаковы для обоих префиксов:
+    получатель доставки, членство в доме и актуальные права.
+    """
+
+    kind: Literal["ticket", "route_card"] = "ticket"
+    incident_id: UUID | None = None
     house_id: UUID
+    route_outcome_id: UUID | None = None
     work_attempt_id: UUID | None
     stale: bool
 

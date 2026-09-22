@@ -642,6 +642,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/houses/{house_id}/reports/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Report
+         * @description Отправка формы через ту же цепочку решения, что и сообщение в чате.
+         */
+        post: operations["submit_report_api_v1_houses__house_id__reports_submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/incidents/{incident_id}": {
         parameters: {
             query?: never;
@@ -1030,6 +1050,26 @@ export interface paths {
         put?: never;
         /** Create Report */
         post: operations["create_report_api_v1_reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/route-outcomes/{outcome_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Route Outcome
+         * @description Карточка маршрута по исходу. Чужой и несуществующий исход дают 404.
+         */
+        get: operations["route_outcome_api_v1_route_outcomes__outcome_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2141,6 +2181,35 @@ export interface components {
              */
             started_at: string;
         };
+        /**
+         * DuplicateCandidate
+         * @description Уже открытая проблема того же дома, о которой, возможно, идёт речь.
+         *
+         *     Правило детерминированное, модель в нём не участвует. Решение принимает
+         *     житель: автоматического слияния обращений в продукте нет.
+         */
+        DuplicateCandidate: {
+            category: components["schemas"]["ReportCategory"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Incident Id
+             * Format: uuid
+             */
+            incident_id: string;
+            /** Match Reason */
+            match_reason: string;
+            /** Participant Count */
+            participant_count: number;
+            /** Report Count */
+            report_count: number;
+            status: components["schemas"]["IncidentStatus"];
+            /** Title */
+            title: string;
+        };
         /** EmployeeCode */
         EmployeeCode: {
             /** Code */
@@ -2576,18 +2645,31 @@ export interface components {
              */
             occurred_at: string;
         };
-        /** NotificationLaunch */
+        /**
+         * NotificationLaunch
+         * @description Куда открыть mini app по ссылке из личного сообщения.
+         *
+         *     `kind` различает два предмета доставки. У карточки маршрута заявки может не
+         *     быть вовсе (внешнее обращение житель отправляет сам), поэтому `incident_id`
+         *     допускает пустое значение. Проверки доступа одинаковы для обоих префиксов:
+         *     получатель доставки, членство в доме и актуальные права.
+         */
         NotificationLaunch: {
             /**
              * House Id
              * Format: uuid
              */
             house_id: string;
+            /** Incident Id */
+            incident_id?: string | null;
             /**
-             * Incident Id
-             * Format: uuid
+             * Kind
+             * @default ticket
+             * @enum {string}
              */
-            incident_id: string;
+            kind: "ticket" | "route_card";
+            /** Route Outcome Id */
+            route_outcome_id?: string | null;
             /** Stale */
             stale: boolean;
             /** Work Attempt Id */
@@ -2883,11 +2965,13 @@ export interface components {
         };
         /**
          * ReportPreview
-         * @description Разбор и карточка следующего шага без побочных эффектов.
+         * @description Разбор, карточка следующего шага и кандидаты в дубли без побочных эффектов.
          */
         ReportPreview: {
             action_card: components["schemas"]["ActionCard"];
             analysis: components["schemas"]["ReportAnalysisView"];
+            /** Duplicates */
+            duplicates?: components["schemas"]["DuplicateCandidate"][];
         };
         /**
          * ReportPreviewRequest
@@ -2896,6 +2980,37 @@ export interface components {
         ReportPreviewRequest: {
             /** Description */
             description: string;
+        };
+        /**
+         * ReportSubmitRequest
+         * @description Отправка формы. Категория необязательна: обычно её определяют правила.
+         */
+        ReportSubmitRequest: {
+            category?: components["schemas"]["ReportCategory"] | null;
+            /** Description */
+            description: string;
+        };
+        /**
+         * ReportSubmitted
+         * @description Итог отправки формы: тот же маршрут и то же решение, что и в чате.
+         *
+         *     `report` пуст для внешнего маршрута: обращение житель отправляет сам, и
+         *     заявка управляющей компании при этом не создаётся.
+         */
+        ReportSubmitted: {
+            action_card: components["schemas"]["ActionCard"];
+            analysis: components["schemas"]["ReportAnalysisView"];
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "ticket" | "external" | "needs_clarification";
+            report?: components["schemas"]["ReportCreated"] | null;
+            /**
+             * Route Outcome Id
+             * Format: uuid
+             */
+            route_outcome_id: string;
         };
         /** ReportSummary */
         ReportSummary: {
@@ -3096,6 +3211,51 @@ export interface components {
             /** Text */
             text: string;
         };
+        /**
+         * RouteOutcomeView
+         * @description Сохранённый исход маршрутизации и карточка по **текущему** справочнику.
+         *
+         *     Карточка не берётся из снимка доставки: справочник мог обновиться, и житель
+         *     должен видеть актуальный маршрут. Если тип маршрута разошёлся с сохранённым,
+         *     `directory_changed` честно об этом сообщает.
+         */
+        RouteOutcomeView: {
+            action_card: components["schemas"]["ActionCard"];
+            /** Appeal Draft Id */
+            appeal_draft_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "ticket" | "external" | "needs_clarification";
+            /**
+             * Directory Changed
+             * @default false
+             */
+            directory_changed: boolean;
+            /**
+             * House Id
+             * Format: uuid
+             */
+            house_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Incident Id */
+            incident_id?: string | null;
+            /**
+             * Route Type
+             * @enum {string}
+             */
+            route_type: "uk_internal" | "municipality" | "resource_supplier" | "emergency_service" | "regional_operator" | "other_authority" | "unknown";
+        };
         /** RuleProvenance */
         RuleProvenance: {
             /** Due At */
@@ -3190,7 +3350,7 @@ export interface components {
              * @default demo
              * @enum {string}
              */
-            actor: "demo" | "outsider" | "a16-admin" | "a16-responsible" | "a16-operator" | "a16-revoked" | "a16-resident" | "a16-neighbor" | "a16-outsider" | "a16-beta-admin";
+            actor: "demo" | "demo-neighbour" | "demo-third" | "outsider" | "a16-admin" | "a16-responsible" | "a16-operator" | "a16-revoked" | "a16-resident" | "a16-neighbor" | "a16-outsider" | "a16-beta-admin";
         };
         /**
          * TicketAction
@@ -8311,6 +8471,135 @@ export interface operations {
             };
         };
     };
+    submit_report_api_v1_houses__house_id__reports_submit_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                house_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportSubmitRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportSubmitted"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     incident_detail_api_v1_incidents__incident_id__get: {
         parameters: {
             query?: {
@@ -11066,6 +11355,129 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportCreated"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    route_outcome_api_v1_route_outcomes__outcome_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                outcome_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteOutcomeView"];
                 };
             };
             /** @description Unauthorized */

@@ -13,7 +13,7 @@ export const statusLabels: Record<string, string> = {
   open: "Открыта",
   reported: "Житель отметил отправку",
   overdue: "Срок истёк",
-  escalated: "Передано выше",
+  escalated: "Передано на следующий уровень",
   resolved: "Решена",
   dismissed: "Не подтверждена",
 };
@@ -22,7 +22,7 @@ export const actionLabels = {
   edit_draft: "Редактировать черновик",
   join: "Меня тоже касается",
   copy_draft: "Скопировать текст",
-  open_official_channel: "Открыть официальный канал",
+  open_official_channel: "Открыть официальный сервис",
   mark_filed: "Я отправил(а) обращение",
   mark_resolved: "Проблема решена",
   mark_unresolved: "Проблема остаётся",
@@ -72,6 +72,14 @@ export function knownActions(raw: unknown): ActionDescriptor[] {
     });
   }
   return result;
+}
+
+export function formatDay(value?: string | null): string | null {
+  // Дата проверки справочника приходит без времени; выдумывать его не нужно.
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00Z`);
+  if (!Number.isFinite(date.getTime())) return null;
+  return new Intl.DateTimeFormat("ru", { dateStyle: "long", timeZone: "UTC" }).format(date);
 }
 
 export function formatDate(value?: string | null): string | null {

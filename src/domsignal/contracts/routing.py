@@ -1,8 +1,7 @@
 """DTO детерминированного Responsibility Router и ActionCard.
 
 Модель здесь не участвует: маршрут и карточка собираются правилами по
-проверенному справочнику. Эти DTO пока не публикуются ни одним endpoint —
-HTTP-граница появится отдельным срезом, поэтому OpenAPI не меняется.
+проверенному справочнику.
 
 `LocationScope` и `DangerKind` объявлены продуктом заново, а не импортированы
 из внутреннего контракта AI: продукт проверяет вход, а не доверяет ему.
@@ -11,8 +10,9 @@ HTTP-граница появится отдельным срезом, поэто
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
+from uuid import UUID
 
 from pydantic import Field
 
@@ -38,6 +38,8 @@ ChannelType = Literal["official_web", "phone", "max_bot", "email", "in_person"]
 VerificationStatus = Literal["verified", "needs_verification", "demo"]
 TerritoryPolicy = Literal["uk", "municipal", "mixed", "unknown"]
 RouteMatch = Literal["rule", "default", "none"]
+#: Что продукт сделал по итогам маршрутизации. Совпадает с `route_outcomes.decision`.
+RouteDecision = Literal["ticket", "external", "needs_clarification"]
 Audience = Literal["resident", "operator"]
 CardSource = Literal["chat", "explicit"]
 ActionType = Literal[
@@ -211,3 +213,22 @@ class ActionCard(ContractModel):
     demo_notice: str | None = None
     existing_ticket_ref: str | None = None
     generated_by: Literal["rules"] = "rules"
+
+
+class RouteOutcomeView(ContractModel):
+    """Сохранённый исход маршрутизации и карточка по **текущему** справочнику.
+
+    Карточка не берётся из снимка доставки: справочник мог обновиться, и житель
+    должен видеть актуальный маршрут. Если тип маршрута разошёлся с сохранённым,
+    `directory_changed` честно об этом сообщает.
+    """
+
+    id: UUID
+    house_id: UUID
+    created_at: datetime
+    decision: RouteDecision
+    route_type: RouteType
+    action_card: ActionCard
+    incident_id: UUID | None = None
+    appeal_draft_id: UUID | None = None
+    directory_changed: bool = False

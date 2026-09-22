@@ -220,6 +220,11 @@ class AppealDraftService:
             report = await session.get(Report, outcome.report_id)
             if report is not None:
                 original = report.description
+        if not original and outcome.submitted_text:
+            # Внешний маршрут из формы: записи приёма нет и заявки нет, поэтому
+            # слова жителя приходят из самого исхода. Без них черновик
+            # обращения остался бы без описания проблемы.
+            original = outcome.submitted_text
         return original, clean
 
     async def _located(self, session: AsyncSession, outcome: RouteOutcome) -> Incident | None:

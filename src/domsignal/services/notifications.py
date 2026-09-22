@@ -24,6 +24,8 @@ from domsignal.db.models import (
     Incident,
     NotificationDelivery,
     OutboxMessage,
+    Report,
+    RouteOutcome,
     Ticket,
     TicketEvent,
     User,
@@ -335,14 +337,18 @@ class TicketNotificationHandler:
             except (AccessDenied, ResourceNotFound):
                 self._stop(delivery, "ACCESS_REVOKED", at)
                 return True
-            if delivery.provider_message_id is None and snapshot.view is not None and (
-                (
-                    delivery.purpose == "work_verification"
-                    and not actionable(snapshot.view, delivery.work_attempt_id)
-                )
-                or (
-                    delivery.purpose == "ticket_accepted"
-                    and snapshot.view.status not in {"accepted", "in_progress"}
+            if (
+                delivery.provider_message_id is None
+                and snapshot.view is not None
+                and (
+                    (
+                        delivery.purpose == "work_verification"
+                        and not actionable(snapshot.view, delivery.work_attempt_id)
+                    )
+                    or (
+                        delivery.purpose == "ticket_accepted"
+                        and snapshot.view.status not in {"accepted", "in_progress"}
+                    )
                 )
             ):
                 self._stop(delivery, "STALE_INTENT", at)
@@ -472,7 +478,14 @@ class TicketNotificationHandler:
     async def launch(
         self, session: AsyncSession, *, actor_id: UUID, ref: str
     ) -> NotificationLaunch:
-        if not re.fullmatch(r"w_[A-Za-z0-9_-]{32}", ref):
+        """Куда открыть mini app по ссылке из личного сообщения.
+
+        Оба префикса проходят одни и те же проверки: получатель доставки,
+        членство в доме и актуальные права. Любое несовпадение даёт 404 без
+        различий в тексте, поэтому по ответу нельзя узнать, существует ли
+        ссылка вообще.
+        """
+        if not re.fullmatch(r"[wr]_[A-Za-z0-9_-]{32}", ref):
             raise ResourceNotFound("Resource was not found")
         delivery = await NotificationRepository(session).by_ref(ref)
         if delivery is None or delivery.recipient_user_id != actor_id:
@@ -481,18 +494,43 @@ class TicketNotificationHandler:
             snapshot = await self._snapshot(session, delivery)
         except (AccessDenied, ResourceNotFound):
             raise ResourceNotFound("Resource was not found") from None
+        if delivery.purpose == ROUTE_CARD_PURPOSE:
+            return await self._route_card_launch(session, delivery)
         ticket = await session.get(Ticket, delivery.ticket_id)
-        # Ссылка `w_` принадлежит только доставке по заявке: карточка маршрута
-        # использует префикс `r_` и не проходит проверку формата выше.
         assert ticket is not None and snapshot.view is not None
         latest = snapshot.view.latest_attempt
         return NotificationLaunch(
+            kind="ticket",
             incident_id=ticket.incident_id,
             house_id=ticket.house_id,
             work_attempt_id=latest.id if latest else None,
             stale=bool(
                 delivery.work_attempt_id and (not latest or latest.id != delivery.work_attempt_id)
             ),
+        )
+
+    async def _route_card_launch(
+        self, session: AsyncSession, delivery: NotificationDelivery
+    ) -> NotificationLaunch:
+        """Ссылка `r_` ведёт на экран карточки маршрута, а не на заявку.
+
+        У внешнего маршрута заявки нет вовсе, поэтому `incident_id` остаётся
+        пустым: подставлять вместо него чужую проблему продукт не станет.
+        """
+        outcome = await session.get(RouteOutcome, delivery.route_outcome_id)
+        if outcome is None:
+            raise ResourceNotFound("Resource was not found")
+        incident_id: UUID | None = None
+        if outcome.report_id is not None:
+            report = await session.get(Report, outcome.report_id)
+            incident_id = report.incident_id if report is not None else None
+        return NotificationLaunch(
+            kind="route_card",
+            incident_id=incident_id,
+            house_id=outcome.house_id,
+            route_outcome_id=outcome.id,
+            work_attempt_id=None,
+            stale=False,
         )
 
     async def _callback_delivery(

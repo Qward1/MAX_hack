@@ -131,10 +131,17 @@ class RouteOutcome(Base):
         ForeignKey("reports.id", ondelete="SET NULL")
     )
     # Откуда пришёл исход: черновик обращения берёт отсюда исходный текст
-    # жителя и проверенную переформулировку. Для формы (P3c) ссылки нет.
+    # жителя и проверенную переформулировку. У формы записи приёма нет.
     intake_event_id: Mapped[str | None] = mapped_column(
         ForeignKey("explicit_intakes.event_id", ondelete="SET NULL")
     )
+    # Автор исхода. Карточку маршрута по ссылке `r_…` и по `?card=` видит
+    # только он: исход — это ответ конкретному человеку, а не запись дома.
+    author_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    # Слова жителя из формы. Для чатового пути текст остаётся в записи приёма,
+    # поэтому здесь он пуст; без него черновик внешнего обращения из формы
+    # остался бы без описания проблемы.
+    submitted_text: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -36,5 +36,7 @@ async def capabilities(container: ContainerDep) -> Any:
         features=CapabilityFlags(
             test_auth=container.settings.test_session_enabled,
             ai_analysis=container.ai_analysis_enabled,
+            routes=container.routes_enabled,
+            appeals=container.appeals_enabled,
         ),
     )
