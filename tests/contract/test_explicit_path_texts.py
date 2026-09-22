@@ -25,6 +25,8 @@ from domsignal.services import (
     explicit_reports,
     notification_render,
     route_card_render,
+    signal_inbox,
+    signal_texts,
 )
 from domsignal.services.action_cards import FORBIDDEN_PHRASES
 
@@ -36,6 +38,11 @@ RESIDENT_SURFACES: tuple[str, ...] = (
     "miniapp/src/features/incidents/presentation.ts",
     "miniapp/src/features/routing/RouteCard.tsx",
     "miniapp/src/features/routing/presentation.ts",
+    # Кабинет оператора: очередь сигналов и её подписи (P5).
+    "miniapp/src/admin/SignalsApp.tsx",
+    "miniapp/src/admin/SignalCommon.tsx",
+    "miniapp/src/admin/SignalDetail.tsx",
+    "miniapp/src/admin/signalPresentation.ts",
 )
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
@@ -47,6 +54,9 @@ TEMPLATE_MODULES: tuple[ModuleType, ...] = (
     explicit_reports,
     notification_render,
     route_card_render,
+    # Очередь сигналов оператора: причина силы, подписи, описание заявки.
+    signal_inbox,
+    signal_texts,
 )
 
 
