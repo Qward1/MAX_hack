@@ -21,6 +21,7 @@ from domsignal.core.incidents import ClassificationMode
 from domsignal.services import (
     action_cards,
     appeal_drafts,
+    chat_voice,
     explicit_reports,
     notification_render,
     route_card_render,
@@ -41,6 +42,8 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE_MODULES: tuple[ModuleType, ...] = (
     action_cards,
     appeal_drafts,
+    # Голос бота в домовом чате и оповещение оператора — тот же список запретов.
+    chat_voice,
     explicit_reports,
     notification_render,
     route_card_render,
