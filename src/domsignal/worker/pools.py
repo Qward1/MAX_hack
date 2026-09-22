@@ -25,7 +25,7 @@ AI_KIND_PREFIX = "ai."
 
 #: Известные виды задач AI-пула. Перечень документирует состав пула; решение
 #: принимает префикс, поэтому будущий `ai.*` не окажется без хозяина.
-AI_JOB_KINDS: frozenset[str] = frozenset({"ai.report.analyze"})
+AI_JOB_KINDS: frozenset[str] = frozenset({"ai.report.analyze", "ai.window.analyze"})
 
 
 def pool_for(kind: str) -> WorkerPool:

@@ -120,3 +120,7 @@ class ChatBinding(Timestamps, Base):
     suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     suspension_reason: Mapped[str | None] = mapped_column(String(100))
+    # Пассивное чтение чата. Выключено — реплики не сохраняются вовсе.
+    passive_capture_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )

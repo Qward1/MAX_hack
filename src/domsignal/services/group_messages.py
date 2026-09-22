@@ -1,10 +1,14 @@
-"""Explicit manual group intake. No NLP, participant sync or implicit access grants.
+"""Group intake: explicit `/report` and passive capture. No participant sync or grants.
 
 Две формы одной команды. `/report <код категории> <текст>` — прежний ручной
 путь без разбора. `/report <свободный текст>` — запись приёма плюс две задачи:
 разбор ядром в AI-пуле и сторожевой разбор правилами в операционном пуле.
 Разбор в транзакции приёма не выполняется: вызов модели не должен держать
 транзакцию вебхука.
+
+Остальные реплики привязанного чата при включённом пассивном чтении уходят в
+буфер (`PassiveCaptureService`) — в той же транзакции, после ветки `/report`.
+Команды в буфер не попадают: у них свой путь.
 """
 
 from datetime import UTC, datetime
@@ -19,6 +23,7 @@ from domsignal.db.models import ExplicitIntake, InboxReceipt
 from domsignal.db.repositories.chat_connections import ChatRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.services.chat_connections import ChatConnectionService
+from domsignal.services.passive_capture import PassiveCaptureService
 
 REPORT_COMMAND = "/report "
 
@@ -57,8 +62,13 @@ def free_text_of(text: str) -> str | None:
 
 
 class MaxWebhookService:
-    def __init__(self, connections: ChatConnectionService) -> None:
+    def __init__(
+        self,
+        connections: ChatConnectionService,
+        passive: PassiveCaptureService | None = None,
+    ) -> None:
         self.connections = connections
+        self.passive = passive
 
     async def accept(self, session: AsyncSession, event: MaxEvent) -> InboundAccepted:
         async with session.begin():
@@ -162,6 +172,11 @@ class MaxWebhookService:
                         job_id = analyze.id
                     # Свободный текст короче минимума не создаёт ни записи,
                     # ни задач: команда неполная, как и раньше.
+            if event.kind == "message_created" and self.passive is not None:
+                # Пассивное чтение: вся реплика привязанного чата, кроме команд.
+                # Структурный фильтр внутри; приём не падает из-за правил,
+                # сборщика окон или роутера.
+                await self.passive.capture(session, event)
         return InboundAccepted(
             event_id=event.event_id, accepted=True, duplicate=False, job_id=job_id
         )

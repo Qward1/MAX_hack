@@ -98,7 +98,8 @@ def build_route_card_intent(
     )
 
 
-def _safety_lines(safety: SafetyBlock) -> list[str]:
+def safety_lines(safety: SafetyBlock) -> list[str]:
+    """Строки проверенной памятки: личное сообщение и памятка в чат общие."""
     lines = [safety.title, *safety.lines]
     if safety.phone:
         lines.append(f"Единый номер экстренных служб: {safety.phone}")
@@ -117,7 +118,7 @@ def render_route_card(intent: RouteCardIntent, *, ref: str) -> PersonalMessage:
     blocks: list[str] = []
     # Памятка безопасности идёт первой при любом маршруте.
     if intent.dangerous and intent.safety is not None:
-        blocks.append("\n".join(_safety_lines(intent.safety)))
+        blocks.append("\n".join(safety_lines(intent.safety)))
     blocks.append(intent.title)
     blocks.append(intent.explanation)
     if intent.basis_text:

@@ -50,6 +50,7 @@ class MaxMessagingProvider(Protocol):
     ) -> SentMessage: ...
     async def edit_message(self, message_id: str, message: PersonalMessage) -> None: ...
     async def answer_callback(self, callback_id: str, message: PersonalMessage) -> None: ...
+    async def send_chat_message(self, chat_id: str, message: PersonalMessage) -> SentMessage: ...
 
 
 class _Body(BaseModel):
@@ -69,6 +70,24 @@ class _Sent(BaseModel):
 
 class _SendResponse(BaseModel):
     message: _Sent
+
+
+class _ChatRecipient(BaseModel):
+    chat_id: StrictInt
+    chat_type: Literal["chat"]
+
+
+class _ChatSent(BaseModel):
+    body: _Body
+    recipient: _ChatRecipient
+
+
+class _ChatSendResponse(BaseModel):
+    message: _ChatSent
+
+
+#: Идентификатор группового чата MAX: целое int64, у групп обычно отрицательное.
+_CHAT_ID = re.compile(r"-?[1-9]\d{0,18}")
 
 
 class _Success(BaseModel):
@@ -159,6 +178,30 @@ class HttpMaxMessagingProvider:
         try:
             result = _SendResponse.model_validate(data)
             if str(result.message.recipient.user_id) != destination:
+                raise ValueError("Wrong destination")
+        except (ValidationError, ValueError):
+            raise MessagingError("MAX_INVALID_RESPONSE", kind="unknown") from None
+        return SentMessage(result.message.body.mid)
+
+    async def send_chat_message(self, chat_id: str, message: PersonalMessage) -> SentMessage:
+        """Сообщение в групповой чат: тот же документированный `POST /messages`.
+
+        Отличие от личного сообщения — только параметр `chat_id` вместо
+        `user_id`. Ответ проверяется так же строго: созданное сообщение должно
+        лежать именно в этом групповом чате, иначе исход неизвестен.
+        """
+        if not _CHAT_ID.fullmatch(chat_id) or abs(int(chat_id)) > 2**63 - 1:
+            raise MessagingError("MAX_INVALID_DESTINATION", kind="permanent")
+        data = await self._request(
+            "POST",
+            "/messages",
+            {"chat_id": chat_id},
+            self._body(message, notify=True),
+            send=True,
+        )
+        try:
+            result = _ChatSendResponse.model_validate(data)
+            if str(result.message.recipient.chat_id) != chat_id:
                 raise ValueError("Wrong destination")
         except (ValidationError, ValueError):
             raise MessagingError("MAX_INVALID_RESPONSE", kind="unknown") from None

@@ -21,18 +21,36 @@ from domsignal.contracts.tickets import (
 )
 from domsignal.core.incidents import CATEGORY_TITLES
 from domsignal.db.models import (
+    ChatBinding,
+    House,
+    HouseManagement,
     Incident,
+    MAXChat,
     NotificationDelivery,
+    OrganizationMembership,
     OutboxMessage,
     Report,
     RouteOutcome,
+    Signal,
+    SignalEvent,
     Ticket,
     TicketEvent,
     User,
 )
+from domsignal.db.models.notifications import CHAT_PURPOSES, SIGNAL_ALERT_PURPOSE
 from domsignal.db.repositories.notifications import NotificationRepository
+from domsignal.db.repositories.passive import PassiveRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.db.repositories.tickets import TicketRepository
+from domsignal.services.chat_voice import (
+    ALERT_REF_PREFIX,
+    CHAT_MESSAGE_INTENT_KIND,
+    CHAT_REF_PREFIX,
+    ChatMessageIntent,
+    SignalAlertIntent,
+    chat_message,
+    operator_alert_message,
+)
 from domsignal.services.errors import AccessDenied, ResourceNotFound
 from domsignal.services.notification_render import actionable, render
 from domsignal.services.route_card_render import (
@@ -83,7 +101,90 @@ class TicketNotificationHandler:
     ) -> DeliverySnapshot:
         if delivery.purpose == ROUTE_CARD_PURPOSE:
             return await self._route_card_snapshot(session, delivery)
+        if delivery.purpose == SIGNAL_ALERT_PURPOSE:
+            return await self._signal_alert_snapshot(session, delivery)
+        if delivery.purpose in CHAT_PURPOSES:
+            return await self._chat_snapshot(session, delivery)
         return await self._ticket_snapshot(session, delivery)
+
+    async def _recipient(self, session: AsyncSession, delivery: NotificationDelivery) -> User:
+        """Получатель личной доставки. У сообщения в чат его нет."""
+        if delivery.recipient_user_id is None:
+            raise ResourceNotFound("ACCESS_REVOKED")
+        user = await session.get(User, delivery.recipient_user_id)
+        if user is None:
+            raise ResourceNotFound("ACCESS_REVOKED")
+        return user
+
+    async def _staff_context(self, session: AsyncSession, user: User, house_id: UUID) -> None:
+        """Сотрудник с доступом к дому по существующей политике доступа."""
+        context = await self.tickets.memberships.require_house(
+            session, user_id=user.id, house_id=house_id, source="worker"
+        )
+        if context.organization_role is None or "ticket.read" not in context.permissions:
+            raise ResourceNotFound("ACCESS_REVOKED")
+
+    async def _signal_alert_snapshot(
+        self,
+        session: AsyncSession,
+        delivery: NotificationDelivery,
+    ) -> DeliverySnapshot:
+        """Оповещение оператора: доступ к дому перепроверяется перед отправкой."""
+        user = await self._recipient(session, delivery)
+        signal = await session.get(Signal, delivery.signal_id)
+        if signal is None:
+            raise ResourceNotFound("ACCESS_REVOKED")
+        await self._staff_context(session, user, signal.house_id)
+        destination = await self._identity(user, delivery)
+        house = await session.get(House, signal.house_id)
+        quote = await PassiveRepository(session).first_quote(signal.id)
+        emergency = signal.emergency or {}
+        return DeliverySnapshot(
+            destination,
+            operator_alert_message(
+                house_address=house.address if house is not None else "",
+                danger_kinds=list(emergency.get("kinds", [])),
+                from_rules="rules" in emergency.get("sources", []),
+                quote=quote.text if quote else None,
+                quote_author=quote.author_ref if quote else None,
+                quote_sent_at=quote.sent_at if quote else None,
+            ),
+        )
+
+    async def _chat_snapshot(
+        self,
+        session: AsyncSession,
+        delivery: NotificationDelivery,
+    ) -> DeliverySnapshot:
+        """Сообщение в групповой чат: привязка должна по-прежнему читать чат."""
+        outbox = await session.get(OutboxMessage, delivery.outbox_message_id)
+        if outbox is None:
+            raise ResourceNotFound("INVALID_INTENT")
+        try:
+            intent = ChatMessageIntent.model_validate(outbox.payload)
+        except ValidationError as exc:
+            raise ResourceNotFound("INVALID_INTENT") from exc
+        binding = await session.scalar(
+            select(ChatBinding)
+            .where(ChatBinding.id == delivery.chat_binding_id)
+            .execution_options(populate_existing=True)
+        )
+        if (
+            binding is None
+            or binding.id != intent.chat_binding_id
+            or binding.status != "active"
+            or binding.binding_version != intent.binding_version
+            or not binding.passive_capture_enabled
+        ):
+            raise ResourceNotFound("CHAT_BINDING_INACTIVE")
+        chat = await session.scalar(
+            select(MAXChat)
+            .where(MAXChat.max_chat_id == binding.max_chat_id)
+            .execution_options(populate_existing=True)
+        )
+        if chat is None or not chat.bot_present:
+            raise ResourceNotFound("CHAT_BINDING_INACTIVE")
+        return DeliverySnapshot(binding.max_chat_id, chat_message(intent))
 
     async def _identity(self, user: User, delivery: NotificationDelivery) -> str:
         """Личная доставка возможна только в подтверждённую личность MAX."""
@@ -108,9 +209,9 @@ class TicketNotificationHandler:
         Формулировка фиксируется в момент разбора, поэтому повторная доставка
         не меняет текст и не зависит от обновления справочника.
         """
-        user = await session.get(User, delivery.recipient_user_id)
+        user = await self._recipient(session, delivery)
         outbox = await session.get(OutboxMessage, delivery.outbox_message_id)
-        if user is None or outbox is None:
+        if outbox is None:
             raise ResourceNotFound("ACCESS_REVOKED")
         try:
             intent = RouteCardIntent.model_validate(outbox.payload)
@@ -135,9 +236,7 @@ class TicketNotificationHandler:
         session: AsyncSession,
         delivery: NotificationDelivery,
     ) -> DeliverySnapshot:
-        user = await session.get(User, delivery.recipient_user_id)
-        if user is None:
-            raise ResourceNotFound("ACCESS_REVOKED")
+        user = await self._recipient(session, delivery)
         ticket = await session.get(Ticket, delivery.ticket_id)
         if ticket is None:
             raise ResourceNotFound("ACCESS_REVOKED")
@@ -316,6 +415,163 @@ class TicketNotificationHandler:
             await session.flush()
         return True
 
+    async def consume_chat_messages_once(self) -> bool:
+        """Сообщение в групповой чат из outbox → одна адресная доставка.
+
+        Тот же механизм, что у карточки маршрута: получатель — чат привязки,
+        а не человек. При `MAX_TRANSPORT=off` доставка остаётся в очереди и
+        никуда не уходит.
+        """
+        async with self.sessions() as session, session.begin():
+            repo = NotificationRepository(session)
+            outbox = await repo.intent(CHAT_MESSAGE_INTENT_KIND)
+            if outbox is None:
+                return False
+            try:
+                intent = ChatMessageIntent.model_validate(outbox.payload)
+            except ValidationError:
+                outbox.status, outbox.last_error = "processed", "INVALID_INTENT"
+                return True
+            if outbox.aggregate_id != intent.chat_binding_id:
+                outbox.status, outbox.last_error = "processed", "INVALID_INTENT"
+                return True
+            if not await repo.by_outbox(outbox.id):
+                delivery = NotificationDelivery(
+                    id=uuid4(),
+                    outbox_message_id=outbox.id,
+                    recipient_user_id=None,
+                    channel="max",
+                    purpose=intent.purpose,
+                    chat_binding_id=intent.chat_binding_id,
+                    launch_ref=CHAT_REF_PREFIX + secrets.token_urlsafe(24),
+                    status="pending",
+                    desired_version=0,
+                )
+                session.add(delivery)
+                try:
+                    snapshot = await self._snapshot(session, delivery)
+                    delivery.destination = snapshot.destination
+                except (AccessDenied, ResourceNotFound) as exc:
+                    self._stop(delivery, str(exc) or "CHAT_BINDING_INACTIVE", datetime.now(UTC))
+            outbox.status = "processed"
+            await session.flush()
+        return True
+
+    async def _staff_recipients(self, session: AsyncSession, house_id: UUID) -> list[User]:
+        """Сотрудники текущей УК дома с отображением в MAX и доступом к дому.
+
+        Новой модели доступа нет: кандидаты — активные участники компании,
+        управляющей домом сейчас, а доступ каждого проверяет та же политика,
+        что и HTTP-запросы сотрудников.
+        """
+        now = datetime.now(UTC)
+        management = await session.scalar(
+            select(HouseManagement).where(
+                HouseManagement.house_id == house_id,
+                HouseManagement.status == "active",
+                HouseManagement.valid_from <= now,
+                (HouseManagement.valid_to.is_(None)) | (HouseManagement.valid_to > now),
+            )
+        )
+        if management is None:
+            return []
+        candidates = list(
+            await session.scalars(
+                select(User)
+                .join(OrganizationMembership, OrganizationMembership.user_id == User.id)
+                .where(
+                    OrganizationMembership.tenant_id == management.tenant_id,
+                    OrganizationMembership.status == "active",
+                    User.max_user_id.is_not(None),
+                    User.max_identity_verified_at.is_not(None),
+                )
+                .order_by(User.id)
+                .distinct()
+            )
+        )
+        recipients: list[User] = []
+        for user in candidates:
+            try:
+                await self._staff_context(session, user, house_id)
+            except (AccessDenied, ResourceNotFound):
+                continue
+            recipients.append(user)
+        return recipients
+
+    async def fan_out_signal_alert(self, payload: dict[str, Any]) -> None:
+        """Операционная задача `signal.alert`: оповещение операторов дома.
+
+        Не зависит от AI-пула. Получателей нет — одна доставка `skipped` с
+        причиной `NO_RECIPIENTS`; сигнал всё равно остаётся в очереди.
+        """
+        outbox_id = UUID(str(payload["outbox_message_id"]))
+        recipients: list[User] = []
+        async with self.sessions() as session, session.begin():
+            outbox = await session.scalar(
+                select(OutboxMessage).where(OutboxMessage.id == outbox_id).with_for_update()
+            )
+            if outbox is None or outbox.status != "pending":
+                return
+            try:
+                intent = SignalAlertIntent.model_validate(outbox.payload)
+            except ValidationError:
+                outbox.status, outbox.last_error = "processed", "INVALID_INTENT"
+                return
+            signal = await session.get(Signal, intent.signal_id)
+            if signal is None or signal.house_id != intent.house_id:
+                outbox.status, outbox.last_error = "processed", "INVALID_INTENT"
+                return
+            now = datetime.now(UTC)
+            recipients = await self._staff_recipients(session, signal.house_id)
+            for user in recipients:
+                delivery = NotificationDelivery(
+                    id=uuid4(),
+                    outbox_message_id=outbox.id,
+                    recipient_user_id=user.id,
+                    channel="max",
+                    purpose=SIGNAL_ALERT_PURPOSE,
+                    signal_id=signal.id,
+                    launch_ref=ALERT_REF_PREFIX + secrets.token_urlsafe(24),
+                    status="pending",
+                    desired_version=0,
+                )
+                session.add(delivery)
+                try:
+                    snapshot = await self._snapshot(session, delivery)
+                    delivery.destination = snapshot.destination
+                except (AccessDenied, ResourceNotFound) as exc:
+                    self._stop(delivery, str(exc) or "ACCESS_REVOKED", now)
+            if not recipients:
+                session.add(
+                    NotificationDelivery(
+                        id=uuid4(),
+                        outbox_message_id=outbox.id,
+                        recipient_user_id=None,
+                        channel="max",
+                        purpose=SIGNAL_ALERT_PURPOSE,
+                        signal_id=signal.id,
+                        launch_ref=ALERT_REF_PREFIX + secrets.token_urlsafe(24),
+                        status="skipped",
+                        last_error_code="NO_RECIPIENTS",
+                        last_error_at=now,
+                        desired_version=0,
+                    )
+                )
+            session.add(
+                SignalEvent(
+                    house_id=signal.house_id,
+                    signal_id=signal.id,
+                    kind="operator_alert_queued" if recipients else "operator_alert_skipped",
+                    details=f"recipients={len(recipients)}" if recipients else "NO_RECIPIENTS",
+                )
+            )
+            outbox.status = "processed"
+            await session.flush()
+        logger.info(
+            "signal_alert_fanned_out",
+            extra={"signal_id": str(intent.signal_id), "recipients": len(recipients)},
+        )
+
     async def deliver_once(self, *, now: datetime | None = None) -> bool:
         if not self.enabled:
             return False
@@ -388,6 +644,7 @@ class TicketNotificationHandler:
             except (AccessDenied, ResourceNotFound):
                 denied = True
             message_id = delivery.provider_message_id
+            purpose = delivery.purpose
             operation = "edit" if message_id else "send"
             outbox_id, ticket_id, attempt_id = (
                 delivery.outbox_message_id,
@@ -399,6 +656,13 @@ class TicketNotificationHandler:
             try:
                 if message_id:
                     await self.provider.edit_message(message_id, snapshot.message)
+                elif purpose in CHAT_PURPOSES:
+                    # Тот же документированный POST /messages, но в чат.
+                    result = await self.provider.send_chat_message(
+                        snapshot.destination,
+                        snapshot.message,
+                    )
+                    message_id = result.message_id
                 else:
                     result = await self.provider.send_personal_message(
                         snapshot.destination,
@@ -560,6 +824,7 @@ class TicketNotificationHandler:
                 # Callbacks only reach ticket deliveries; `_callback_delivery`
                 # already rejects anything without a ticket and an attempt.
                 assert delivery.ticket_id is not None
+                assert delivery.recipient_user_id is not None
                 # Same lock order and A-16 observer checks as resident HTTP.
                 ticket, context = await self.tickets._context(
                     session,
