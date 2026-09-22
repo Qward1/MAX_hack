@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from sqlalchemy import (
     CheckConstraint,
@@ -31,6 +32,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domsignal.db.base import Base
@@ -147,6 +149,11 @@ class RouteOutcome(Base):
     signal_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("signals.id", ondelete="SET NULL"), index=True
     )
+    # Снимок маршрута в момент решения оператора: основание с источником и
+    # версия справочника. Справочник может обновиться, а решение остаётся
+    # принятым на том основании, которое было показано.
+    basis: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    directory_version: Mapped[str | None] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

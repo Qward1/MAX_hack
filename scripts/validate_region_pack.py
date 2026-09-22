@@ -9,7 +9,7 @@ import yaml
 from jsonschema import Draft202012Validator, FormatChecker
 
 from domsignal.ai.taxonomy import load_taxonomy
-from domsignal.contracts.routing import LOCATION_SCOPES
+from domsignal.contracts.routing import DANGER_KINDS, LOCATION_SCOPES
 from domsignal.services.routing import FEDERAL_DIR, RESPONSIBILITY_FILE, SAFETY_FILE
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,6 +55,34 @@ def identifiers(documents: Iterable[dict[str, Any]], key: str) -> set[str]:
     return found
 
 
+def danger_match_error(rule: dict[str, Any]) -> str | None:
+    """Почему правило не может совпадать по виду опасности, или `None`.
+
+    Опасность ортогональна маршруту (v3 §6.2 п. 5): блок безопасности
+    карточка получает при любом маршруте, а вид опасности может вести только в
+    экстренную службу. Иначе «затопило» уводило бы жителя от аварийной службы
+    УК к 112.
+    """
+    match = rule.get("match") or {}
+    kinds = match.get("danger_kinds") or []
+    if not kinds and not (match.get("subtypes") or []):
+        return "match needs subtypes or danger_kinds"
+    if kinds and rule.get("route_type") != "emergency_service":
+        return "danger_kinds are allowed only for emergency_service rules"
+    unknown = [kind for kind in kinds if kind not in DANGER_KINDS]
+    if unknown:
+        return f"unknown danger kinds {unknown}"
+    return None
+
+
+def check_danger_match(rule: dict[str, Any], path: Path, location: str) -> bool:
+    error = danger_match_error(rule)
+    if error is not None:
+        report(path, location, error)
+        return True
+    return False
+
+
 def check_references(document: dict[str, Any], path: Path, known: dict[str, set[str]]) -> bool:
     failed = False
     codes = set(load_taxonomy().codes)
@@ -83,6 +111,7 @@ def check_references(document: dict[str, Any], path: Path, known: dict[str, set[
                 if scope not in LOCATION_SCOPES:
                     report(path, location, f"unknown location scope {scope}")
                     failed = True
+            failed |= check_danger_match(rule, path, location)
     default = document.get("uk_default")
     if default:
         for code in default.get("subtypes") or []:

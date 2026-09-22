@@ -8,7 +8,8 @@
 найденная только моделью, даёт оповещение оператора, но не сообщение в чат.
 
 Оповещение оператора — личное сообщение сотруднику с доступом к дому. В нём
-только шаблон, подписи видов опасности и дословная цитата жителя.
+только шаблон, подписи видов опасности, дословная цитата жителя и ссылка на
+деталь сигнала в кабинете — обычным текстом, без кнопки.
 """
 
 from __future__ import annotations
@@ -51,6 +52,7 @@ _ALERT_TAIL = (
 )
 _ALERT_SOURCE_RULES = "Признак найден правилами ДомСигнала по словам жителя."
 _ALERT_SOURCE_WINDOW = "Признак найден при разборе переписки."
+_ALERT_LINK_LEAD = "Сигнал в кабинете:"
 
 
 class ChatMessageIntent(ContractModel):
@@ -120,6 +122,14 @@ def _moment(value: datetime) -> str:
     return value.astimezone(UTC).strftime("%d.%m.%Y %H:%M UTC")
 
 
+def signal_cabinet_url(public_base_url: str | None, signal_id: UUID) -> str | None:
+    """Ссылка на деталь сигнала в кабинете. Доступ проверяет сам кабинет."""
+    base = (public_base_url or "").strip().rstrip("/")
+    if not base:
+        return None
+    return f"{base}/admin/?section=signals&signal={signal_id}"
+
+
 def operator_alert_message(
     *,
     house_address: str,
@@ -128,8 +138,9 @@ def operator_alert_message(
     quote: str | None,
     quote_author: str | None,
     quote_sent_at: datetime | None,
+    cabinet_url: str | None = None,
 ) -> PersonalMessage:
-    """Личное сообщение оператору. Кнопки нет: экрана очереди ещё нет."""
+    """Личное сообщение оператору. Ссылка на кабинет — строкой текста, не кнопкой."""
     lines = [
         _ALERT_LEAD,
         f"Дом: {house_address}",
@@ -141,6 +152,8 @@ def operator_alert_message(
         moment = f", {_moment(quote_sent_at)}" if quote_sent_at else ""
         lines.append(f"Цитата: «{quote}» — {author}{moment}")
     lines.append(_ALERT_TAIL)
+    if cabinet_url:
+        lines.append(f"{_ALERT_LINK_LEAD} {cabinet_url}")
     return PersonalMessage("\n".join(lines), ())
 
 
@@ -163,4 +176,5 @@ __all__ = [
     "operator_alert_message",
     "reading_notice_text",
     "safety_memo_text",
+    "signal_cabinet_url",
 ]

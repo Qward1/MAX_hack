@@ -17,5 +17,6 @@ async def me(current_user: CurrentUserDep, session: DbDep, container: ContainerD
             ai_analysis=container.ai_analysis_enabled,
             routes=container.routes_enabled,
             appeals=container.appeals_enabled,
+            passive_capture=container.settings.passive_capture_enabled,
         ),
     )

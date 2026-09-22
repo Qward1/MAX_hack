@@ -8,6 +8,8 @@ from domsignal.contracts.chat_connections import (
     ConnectionApprove,
     ConnectionCreate,
     ConnectionView,
+    PassiveCaptureChange,
+    PassiveCaptureView,
 )
 from domsignal.services.chat_connections import ChatConnectionError
 
@@ -102,3 +104,28 @@ async def cancel(
             target="cancelled",
         )
         return await container.chat_connections.view(session, request)
+
+
+@router.post("/chat-bindings/{binding_id}/passive-capture", response_model=PassiveCaptureView)
+async def passive_capture(
+    binding_id: UUID,
+    payload: PassiveCaptureChange,
+    user: CurrentUserDep,
+    session: DbDep,
+    container: ContainerDep,
+) -> PassiveCaptureView:
+    """Выключатель чтения чата в кабинете — то же право `chat.connect`, что у CLI.
+
+    Включение ставит сообщение о чтении чата один раз на версию привязки;
+    выключение сразу прекращает приём, собранные сигналы остаются.
+    """
+    async with session.begin():
+        toggle = await container.passive.set_capture(
+            session, binding_id=binding_id, actor_id=user.id, enabled=payload.enabled
+        )
+    return PassiveCaptureView(
+        binding_id=toggle.binding_id,
+        binding_version=toggle.binding_version,
+        passive_capture_enabled=toggle.passive_capture_enabled,
+        notice_queued=toggle.notice_queued,
+    )

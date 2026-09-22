@@ -21,6 +21,7 @@ from domsignal.api.routes import (
     incidents,
     max_ingress,
     me,
+    signals,
     system,
     tickets,
 )
@@ -68,6 +69,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(max_ingress.router)
     app.include_router(chat_connections.router)
     app.include_router(tickets.router)
+    app.include_router(signals.router)
 
     def problem_openapi() -> dict[str, Any]:
         if app.openapi_schema is None:

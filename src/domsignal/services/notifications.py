@@ -50,6 +50,7 @@ from domsignal.services.chat_voice import (
     SignalAlertIntent,
     chat_message,
     operator_alert_message,
+    signal_cabinet_url,
 )
 from domsignal.services.errors import AccessDenied, ResourceNotFound
 from domsignal.services.notification_render import actionable, render
@@ -88,11 +89,14 @@ class TicketNotificationHandler:
         tickets: TicketService,
         provider: MaxMessagingProvider,
         enabled: bool,
+        public_base_url: str | None = None,
     ) -> None:
         self.sessions = session_factory
         self.tickets = tickets
         self.provider = provider
         self.enabled = enabled
+        # Адрес кабинета для ссылки в оповещении оператора. Пусто — без ссылки.
+        self.public_base_url = public_base_url
 
     async def _snapshot(
         self,
@@ -148,6 +152,7 @@ class TicketNotificationHandler:
                 quote=quote.text if quote else None,
                 quote_author=quote.author_ref if quote else None,
                 quote_sent_at=quote.sent_at if quote else None,
+                cabinet_url=signal_cabinet_url(self.public_base_url, signal.id),
             ),
         )
 

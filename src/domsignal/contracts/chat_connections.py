@@ -50,6 +50,20 @@ class BindingView(ContractModel):
     scope_value: str | None
 
 
+class PassiveCaptureChange(ContractModel):
+    """Включить или выключить чтение подключённого чата."""
+
+    enabled: bool
+
+
+class PassiveCaptureView(ContractModel):
+    binding_id: UUID
+    binding_version: int
+    passive_capture_enabled: bool
+    # Сообщение о чтении чата поставлено сейчас (один раз на версию привязки).
+    notice_queued: bool
+
+
 class GroupMessage(ContractModel):
     event_id: str
     chat_id: str

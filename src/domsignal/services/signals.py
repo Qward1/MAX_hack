@@ -82,6 +82,9 @@ class PassiveConfig:
     weak_daily_limit: int = 10
     dedupe_days: int = 7
     buffer_hours: int = 72
+    danger_group_minutes: int = 30
+    memo_pause_minutes: int = 30
+    fallback_seconds: int = 90
 
     @classmethod
     def from_settings(cls, settings: Settings) -> PassiveConfig:
@@ -95,7 +98,20 @@ class PassiveConfig:
             weak_daily_limit=settings.passive_weak_daily_limit,
             dedupe_days=settings.passive_dedupe_days,
             buffer_hours=settings.passive_buffer_hours,
+            danger_group_minutes=settings.passive_danger_group_minutes,
+            memo_pause_minutes=settings.passive_chat_memo_pause_minutes,
+            fallback_seconds=settings.passive_analysis_fallback_seconds,
         )
+
+    @property
+    def danger_group_window(self) -> timedelta:
+        """Окно склейки сообщений об опасности одного вида в одном доме."""
+        return timedelta(minutes=self.danger_group_minutes)
+
+    @property
+    def memo_pause(self) -> timedelta:
+        """Пауза памятки того же вида опасности в тот же чат."""
+        return timedelta(minutes=self.memo_pause_minutes)
 
 
 @dataclass
@@ -367,7 +383,7 @@ class SignalEngine:
         kinds = tuple(dict.fromkeys(hit.kind for hit in active))
         await repo.lock(f"signals:{house_id}")
         existing = await repo.recent_danger_signal(
-            house_id, kinds, seen_after=line.sent_at - DANGER_GROUP_WINDOW
+            house_id, kinds, seen_after=line.sent_at - self.config.danger_group_window
         )
         if existing is not None:
             emergency = dict(existing.emergency)
@@ -695,6 +711,7 @@ class SignalEngine:
         signal.flags = list(
             dict.fromkeys([*(flag for flag in signal.flags if flag != "preliminary"), "reconciled"])
         )
+        signal.version += 1
         self.event(
             session,
             house_id=signal.house_id,
@@ -705,15 +722,12 @@ class SignalEngine:
         )
 
 
-#: Окно склейки сообщений об опасности одного вида в одном доме при приёме.
-DANGER_GROUP_WINDOW = timedelta(minutes=30)
 DAY = timedelta(days=1)
 
 
 __all__ = [
     "ALERT_JOB",
     "ALERT_PRIORITY",
-    "DANGER_GROUP_WINDOW",
     "LineIndex",
     "PassiveConfig",
     "SignalEngine",

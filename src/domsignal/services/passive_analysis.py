@@ -1,4 +1,4 @@
-"""Разбор закрытого окна в AI-пуле: `ai.window.analyze`.
+"""Разбор закрытого окна: `ai.window.analyze` и сторож `chat.window.fallback`.
 
 Образец — `ExplicitReportService`: короткая транзакция захвата → чтение окна,
 контекста и открытых элементов дома → **один** вызов `WindowAnalyzer.analyze`
@@ -10,6 +10,14 @@
 транзакции, поэтому гонка двух задач и повторный запуск дают один набор
 сигналов. Отказ провайдера, таймаут или исчерпанный бюджет не ломают разбор:
 ядро отвечает результатом правил, окно закрывается с состоянием `fallback_*`.
+
+Сторож — по образцу `report.fallback` явного пути: при закрытии окна в
+операционный пул ставится `chat.window.fallback` с задержкой
+`PASSIVE_ANALYSIS_FALLBACK_SECONDS`. Он делает тот же атомарный захват и
+разбирает окно только правилами, без модели и без бюджета. Кто захватил
+первым, тот и обрабатывает; второй тихо выходит. Остановленный AI-пул поэтому
+задерживает сигналы окна не дольше задержки сторожа. В окне записывается, кто
+его разобрал (`analyzed_by = ai | fallback`).
 """
 
 from __future__ import annotations
@@ -21,7 +29,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from domsignal.ai import (
@@ -33,9 +41,11 @@ from domsignal.ai import (
     WindowLine,
 )
 from domsignal.core.incidents import ReportCategory
-from domsignal.db.models import ChatBinding, Signal
+from domsignal.db.models import ChatBinding, ConversationWindow, Signal
+from domsignal.db.models.passive import OPEN_SIGNAL_STATUSES
 from domsignal.db.repositories.passive import BufferedLine, PassiveRepository
 from domsignal.services.ai_budget import PostgresBudgetGuard
+from domsignal.services.errors import RescheduleJob
 from domsignal.services.signals import LineIndex, SignalEngine, versions_of
 
 logger = logging.getLogger(__name__)
@@ -48,6 +58,9 @@ MAX_OPEN_ITEMS = 10
 
 #: Предел реплик окна ядра вместе с контекстом.
 MAX_WINDOW_LINES = 40
+
+#: Через сколько сторож проверяет снова, если окно прямо сейчас разбирают.
+FALLBACK_RECHECK_SECONDS = 60
 
 _CLAIM = text(
     """
@@ -74,7 +87,8 @@ _SETTLE = text(
     """
     UPDATE conversation_windows
     SET state = 'done', completed_at = now(), analysis_mode = :mode,
-        execution_state = :state, analysis = CAST(:analysis AS jsonb)
+        execution_state = :state, analysis = CAST(:analysis AS jsonb),
+        analyzed_by = :analyzed_by
     WHERE id = :window_id AND state = 'analyzing' AND claimed_by = :worker
     RETURNING id
     """
@@ -89,6 +103,7 @@ class _LostClaim(Exception):
 class ClaimedWindow:
     id: uuid.UUID
     worker: str
+    analyzed_by: str
     house_id: uuid.UUID
     chat_binding_id: uuid.UUID
     binding_version: int
@@ -127,23 +142,49 @@ class PassiveWindowAnalysis:
         engine: SignalEngine,
         analyzer: WindowAnalyzer,
         budget: PostgresBudgetGuard | None = None,
+        rules_analyzer: WindowAnalyzer | None = None,
     ) -> None:
         self.sessions = session_factory
         self.engine = engine
         self.analyzer = analyzer
         self.budget = budget
+        # Сторож разбирает только правилами: анализатор без провайдера.
+        self.rules_analyzer = rules_analyzer or WindowAnalyzer()
 
     async def analyze_window(self, payload: dict[str, Any]) -> None:
+        """Задача AI-пула: разбор окна ядром (с моделью, если она включена)."""
+        await self._run(payload, analyzed_by="ai")
+
+    async def analyze_with_rules(self, payload: dict[str, Any]) -> None:
+        """Сторож операционного пула: то же окно, только правилами.
+
+        Окно уже разобрано — задача тихо выходит. Окно прямо сейчас разбирает
+        AI-пул — сторож проверит ещё раз позже: если тот захват окажется
+        брошенным, окно разберут правила, второго набора сигналов не будет.
+        """
+        if await self._run(payload, analyzed_by="fallback"):
+            return
         window_id = uuid.UUID(str(payload["window_id"]))
-        worker = f"ai.window.analyze:{uuid.uuid4().hex[:16]}"
-        claimed = await self._claim(window_id, worker)
+        async with self.sessions() as session:
+            state = await session.scalar(
+                select(ConversationWindow.state).where(ConversationWindow.id == window_id)
+            )
+        if state == "analyzing":
+            raise RescheduleJob(datetime.now(UTC) + timedelta(seconds=FALLBACK_RECHECK_SECONDS))
+
+    async def _run(self, payload: dict[str, Any], *, analyzed_by: str) -> bool:
+        """Захват → разбор → запись. `False`, если окно захватить не удалось."""
+        window_id = uuid.UUID(str(payload["window_id"]))
+        prefix = "ai.window.analyze" if analyzed_by == "ai" else "chat.window.fallback"
+        worker = f"{prefix}:{uuid.uuid4().hex[:16]}"
+        claimed = await self._claim(window_id, worker, analyzed_by=analyzed_by)
         if claimed is None:
-            return  # Окно уже разобрано или его разбирает другой воркер.
+            return False  # Окно уже разобрано или его разбирает другой воркер.
         try:
             snapshot = await self._read(claimed)
             if not snapshot.capturing or not snapshot.lines:
                 await self._settle_without_analysis(claimed, snapshot)
-                return
+                return True
             analysis = await self._analyze(claimed, snapshot)
             await self._write(claimed, snapshot, analysis)
         except _LostClaim:
@@ -151,10 +192,13 @@ class PassiveWindowAnalysis:
         except Exception:
             await self._release(claimed)
             raise
+        return True
 
     # ------------------------------------------------------------- захват
 
-    async def _claim(self, window_id: uuid.UUID, worker: str) -> ClaimedWindow | None:
+    async def _claim(
+        self, window_id: uuid.UUID, worker: str, *, analyzed_by: str
+    ) -> ClaimedWindow | None:
         async with self.sessions() as session, session.begin():
             row = (
                 await session.execute(
@@ -164,7 +208,7 @@ class PassiveWindowAnalysis:
             ).one_or_none()
         if row is None:
             return None
-        return ClaimedWindow(id=window_id, worker=worker, **row._mapping)
+        return ClaimedWindow(id=window_id, worker=worker, analyzed_by=analyzed_by, **row._mapping)
 
     async def _release(self, claimed: ClaimedWindow) -> None:
         async with self.sessions() as session, session.begin():
@@ -239,7 +283,8 @@ class PassiveWindowAnalysis:
     # --------------------------------------------------------------- разбор
 
     async def _analyze(self, claimed: ClaimedWindow, snapshot: WindowSnapshot) -> WindowAnalysis:
-        """Один вызов ядра вне транзакции БД."""
+        """Один вызов ядра вне транзакции БД. Сторож — только правила."""
+        analyzer = self.analyzer if claimed.analyzed_by == "ai" else self.rules_analyzer
         window = WindowInput(
             channel="group_passive",
             lines=(
@@ -268,12 +313,12 @@ class PassiveWindowAnalysis:
             open_items=snapshot.open_items,
             entrance_hint=snapshot.entrance_hint,
         )
-        if self.budget is None:
-            return await self.analyzer.analyze(window)
+        if self.budget is None or claimed.analyzed_by != "ai":
+            return await analyzer.analyze(window)
         # Единица бюджета списывается до обращения к провайдеру; исчерпанный
         # бюджет даёт `fallback_budget` и результат правил без вызова.
         async with self.budget.reserve(str(claimed.chat_binding_id)):
-            return await self.analyzer.analyze(window)
+            return await analyzer.analyze(window)
 
     # --------------------------------------------------------------- запись
 
@@ -291,6 +336,7 @@ class PassiveWindowAnalysis:
                     "mode": "manual",
                     "state": state,
                     "analysis": '{"provider_called": false}',
+                    "analyzed_by": claimed.analyzed_by,
                 },
             )
             if row.one_or_none() is None:
@@ -335,6 +381,7 @@ class PassiveWindowAnalysis:
                     "mode": analysis.mode,
                     "state": analysis.execution.state,
                     "analysis": json.dumps(summary, ensure_ascii=False),
+                    "analyzed_by": claimed.analyzed_by,
                 },
             )
             if settled.one_or_none() is None:
@@ -359,7 +406,11 @@ class PassiveWindowAnalysis:
                 touched.setdefault(signal.id, []).extend(index.lines(draft.line_ids))
             for signal_id in set(ingest.values()) - used:
                 prelim = await repo.signal_for_update(signal_id)
-                if prelim is not None and "preliminary" in prelim.flags:
+                if (
+                    prelim is not None
+                    and "preliminary" in prelim.flags
+                    and prelim.status in OPEN_SIGNAL_STATUSES
+                ):
                     await engine.keep_unmatched(session, prelim, window_id=claimed.id)
             await self._link_lines(session, claimed, analysis, index, by_ref, touched)
             for signal_id, lines in touched.items():
@@ -381,6 +432,7 @@ class PassiveWindowAnalysis:
             "passive_window_analyzed",
             extra={
                 "window_id": str(claimed.id),
+                "analyzed_by": claimed.analyzed_by,
                 "ai_mode": analysis.mode,
                 "ai_state": analysis.execution.state,
                 "signal_ids": [str(value) for value in dict.fromkeys(by_ref.values())],
@@ -410,6 +462,18 @@ class PassiveWindowAnalysis:
             if linked is not None and linked not in used:
                 used.add(linked)
                 signal = await repo.signal_for_update(linked)
+                if signal is not None and signal.status not in OPEN_SIGNAL_STATUSES:
+                    # Оператор уже решил предварительный сигнал: решение не
+                    # переписывается вердиктом окна, реплики лишь привязываются.
+                    engine.event(
+                        session,
+                        house_id=signal.house_id,
+                        signal_id=signal.id,
+                        window_id=claimed.id,
+                        kind="window_after_decision",
+                        details=signal.status,
+                    )
+                    return signal
                 if signal is not None:
                     if "preliminary" in signal.flags:
                         await engine.reconcile(
@@ -551,4 +615,4 @@ class PassiveWindowAnalysis:
                     )
 
 
-__all__ = ["CLAIM_STALE_SECONDS", "PassiveWindowAnalysis"]
+__all__ = ["CLAIM_STALE_SECONDS", "FALLBACK_RECHECK_SECONDS", "PassiveWindowAnalysis"]

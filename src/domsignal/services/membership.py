@@ -98,6 +98,16 @@ class MembershipService:
             )
         return result
 
+    async def contexts_with(
+        self, session: AsyncSession, *, user_id: UUID, permission: str
+    ) -> list[tuple[House, OperationContext]]:
+        """Все дома, где у пользователя есть право, — как «все дома» очереди заявок."""
+        return [
+            (house, context)
+            for house, context in await self._contexts(session, user_id=user_id)
+            if permission in context.permissions
+        ]
+
     async def require_house(
         self,
         session: AsyncSession,

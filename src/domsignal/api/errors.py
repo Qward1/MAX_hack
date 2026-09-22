@@ -64,6 +64,7 @@ def install_error_handlers(app: FastAPI) -> None:
             code=exc.code,
             trace_id=_request_id(request),
             retryable=getattr(exc, "retryable", False),
+            field_errors=getattr(exc, "field_errors", None),
         )
         return _problem_response(problem)
 

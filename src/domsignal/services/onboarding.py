@@ -360,13 +360,14 @@ class AdministrationService:
                         [
                             "overview",
                             "tickets",
+                            "signals",
                             "houses",
                             "staff",
                             "chat_connections",
                             "organization",
                         ]
                         if m.role == "company_admin"
-                        else ["tickets", "assigned_houses"]
+                        else ["tickets", "signals", "assigned_houses"]
                     ),
                 )
                 for c, m in rows
@@ -760,6 +761,7 @@ class AdministrationService:
                             scope_type=b.scope_type,
                             scope_value=b.scope_value,
                             suspension_reason=b.suspension_reason,
+                            passive_capture_enabled=b.passive_capture_enabled,
                         )
                         for b, title in bindings
                     ],

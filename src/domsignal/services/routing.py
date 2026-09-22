@@ -25,6 +25,7 @@ from domsignal.contracts.routing import (
     LocationScope,
     ResponsibilityRoute,
     RouteChannel,
+    RouteType,
     SafetyBlock,
     TerritoryPolicy,
 )
@@ -34,6 +35,7 @@ from domsignal.core.routing import (
     RoutingQuery,
     channel_dto,
     resolve_route,
+    route_of_type,
     safety_block,
     unavailable_route,
     visible_to_house,
@@ -192,6 +194,36 @@ class RoutingService:
                 today=(today or datetime.now(UTC)).date(),
             )
         except Exception as exc:  # noqa: BLE001 - маршрут не должен ронять путь жителя
+            logger.error("routing_resolve_failed", extra={"error_type": type(exc).__name__})
+            return unavailable_route()
+
+    def route_of_type(
+        self,
+        route_type: RouteType,
+        *,
+        subtype: str,
+        location_scope: LocationScope,
+        house: HouseRoutingContext,
+        danger_kinds: Sequence[DangerKind] = (),
+        today: datetime | None = None,
+    ) -> ResponsibilityRoute:
+        """Маршрут выбранного оператором типа; справочник подставляет канал."""
+        if self.directory is None:
+            return unavailable_route()
+        try:
+            return route_of_type(
+                route_type,
+                RoutingQuery(
+                    subtype=subtype,
+                    location_scope=location_scope,
+                    danger_kinds=tuple(danger_kinds),
+                    house=house,
+                ),
+                self.directory,
+                known_subtypes=self.known_subtypes,
+                today=(today or datetime.now(UTC)).date(),
+            )
+        except Exception as exc:  # noqa: BLE001 - маршрут не должен ронять очередь
             logger.error("routing_resolve_failed", extra={"error_type": type(exc).__name__})
             return unavailable_route()
 

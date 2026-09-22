@@ -19,6 +19,9 @@ class CapabilityFlags(ContractModel):
     admin: bool = False
     routes: bool = False
     appeals: bool = False
+    # Глобальный выключатель пассивного чтения чатов (`PASSIVE_CAPTURE_ENABLED`).
+    # Выключен — чтение отдельного чата включить нельзя.
+    passive_capture: bool = False
     reminders: bool = False
     media: bool = False
 

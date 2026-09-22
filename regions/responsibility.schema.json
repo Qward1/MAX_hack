@@ -114,12 +114,30 @@
         "match": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["subtypes"],
+          "description": "Правило совпадает по подтипу или по виду опасности; хотя бы один из списков непуст. danger_kinds допустимы только у правил emergency_service — это проверяет validate_region_pack.py.",
+          "anyOf": [
+            {"required": ["subtypes"], "properties": {"subtypes": {"minItems": 1}}},
+            {"required": ["danger_kinds"], "properties": {"danger_kinds": {"minItems": 1}}}
+          ],
           "properties": {
             "subtypes": {
               "type": "array",
-              "minItems": 1,
               "items": {"type": "string", "minLength": 1},
+              "uniqueItems": true
+            },
+            "danger_kinds": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "gas",
+                  "smoke_fire",
+                  "electric",
+                  "person_trapped",
+                  "flooding",
+                  "structural",
+                  "other_hazard"
+                ]
+              },
               "uniqueItems": true
             },
             "location_scopes": {

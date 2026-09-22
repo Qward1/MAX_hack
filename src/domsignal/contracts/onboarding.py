@@ -15,7 +15,14 @@ ReviewStatus = Literal[
     "submitted", "under_review", "needs_info", "approved", "rejected", "cancelled"
 ]
 Surface = Literal[
-    "overview", "tickets", "assigned_houses", "houses", "staff", "chat_connections", "organization"
+    "overview",
+    "tickets",
+    "signals",
+    "assigned_houses",
+    "houses",
+    "staff",
+    "chat_connections",
+    "organization",
 ]
 Plain = Annotated[str, Field(min_length=1, max_length=2000)]
 
@@ -203,6 +210,8 @@ class ChatSummary(ContractModel):
     scope_type: str
     scope_value: str | None
     suspension_reason: str | None
+    # Чтение чата включено у привязки. `None` — поверхность этого не сообщает.
+    passive_capture_enabled: bool | None = None
 
 
 class CompanyHouseView(ContractModel):
