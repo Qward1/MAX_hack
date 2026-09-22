@@ -56,25 +56,59 @@ merge в другие ветки не выполнялись; `origin/main` не
 свой контейнер на `55487`), отдельный стенд `domsignal-p3c-stand-db` на `55489`.
 Чужие БД фикстурами не очищались.
 
+Браузерный прогон требует на стенде четырёх переменных, иначе падают чужие
+спеки, а не этот срез: `APP_ENV=test` и `B14_BROWSER_FIXTURES=1` (иначе фикстура
+намеренно отказывается сеять — защита от очистки чужой базы), `PUBLIC_BASE_URL`,
+равный `PLAYWRIGHT_BASE_URL` (сверка `Origin` в CSRF), и валидный
+`AUTH_MFA_ENCRYPTION_KEY`, общий для сервера и фикстуры.
+
 | Команда | Результат |
 |---|---|
 | `uv run python scripts/check.py --scope backend` | PASS — ruff, mypy (132 файла), 477 unit/contract/ai тестов |
 | `uv run python scripts/check.py --scope contracts` | PASS — OpenAPI и сгенерированный TS без дрейфа, валидация `regions/` |
 | `uv run python scripts/check.py --scope frontend` | PASS — typecheck, 120 vitest, build |
 | `uv run python scripts/check.py --scope integration` | PASS — миграция до head и 264 PostgreSQL-теста (22 новых), 8 мин 33 с |
-| `npm --prefix=miniapp run test:browser` | 31 PASS, 2 skipped, 1 FAIL — `employee-auth.spec.ts`, причина ниже |
+| `npm --prefix=miniapp run test:browser` | PASS — 32 passed, 2 skipped, 0 failed, 1 мин 42 с (перепроверено 22.09.2026, см. уточнение ниже) |
 
 Новые тесты: 31 vitest (карточка 7, черновик 8, форма 10, навигация и резолвер
 6), 22 PostgreSQL (`tests/integration/test_resident_experience.py`), 9 contract
 (запреты формулировок на экранах жителя и форма новых DTO), 4 браузерных
 сценария (`miniapp/tests/browser/resident-experience.spec.ts`).
 
-**`employee-auth.spec.ts` не проходит на стенде по HTTP.** Кука
-`__Host-domsignal_preauth` ставится с `Secure`, поэтому обратно она не
-отправляется без HTTPS, и шаг входа получает «Invalid request origin or CSRF
-token». Это воспроизводится голым `curl` без единой строки frontend и не
-зависит от этого среза: `employee_auth.py`, `dependencies.py` и `src/admin/**`
-не изменялись. Поверхность A-10 требует HTTPS-стенда (Caddy overlay).
+**Перепроверка 22.09.2026 (независимый прогон).** Все четыре scope повторены с
+нуля: backend 477 тестов за 10,5 с, frontend 120 vitest плюс build, contracts
+без дрейфа, integration 264 теста за 13 мин 23 с. Браузерный прогон полностью
+зелёный: 32 passed, 2 skipped, 0 failed за 1 мин 42 с, все 11 скриншотов
+`p3c-*` на месте. Ручной прогон внешнего маршрута по API подтвердил по шагам:
+предпросмотр ничего не создаёт (`confident=true`, `lighting`,
+`municipal_territory`), `submit` даёт `decision=external` и **не создаёт
+заявку**, карточка автору `200` и соседу `404`, черновик содержит слова жителя,
+`url` канала `null` и переход выключен с подсказкой входа, устаревшая версия
+`409 stale_version`, сохранение `version=2`, отметка подачи
+`origin=user_reported` с выключенным редактированием.
+
+**Уточнение 22.09.2026: `employee-auth.spec.ts` проходит по HTTP.**
+Прежняя запись объясняла падение тем, что кука `__Host-domsignal_preauth`
+ставится с `Secure` и без HTTPS не возвращается. Это неверно: Chrome считает
+`127.0.0.1` доверенным источником, и `Secure`/`__Host-` куки там работают.
+Падали две незаданные переменные стенда:
+
+- `PUBLIC_BASE_URL` по умолчанию `http://localhost:8000`, а стенд поднят на
+  `:8025`. `EmployeeAuthService.require_csrf` сравнивает `Origin` именно с
+  `public_base_url`, поэтому каждый запрос отклонялся на первом же условии —
+  отсюда и «Invalid request origin or CSRF token» в голом `curl`;
+- `AUTH_MFA_ENCRYPTION_KEY` не задан, и привязка второго фактора поднимала
+  `FeatureUnavailable` на шаге QR-кода.
+
+Проверено по шагам: с одним исправленным `Origin` тест доходит с шага входа до
+шага QR-кода; с валидным ключом Fernet, общим для сервера и фикстуры, сценарий
+зелёный за 17,3 с по обычному HTTP. HTTPS-стенд и Caddy overlay для A-10 не
+нужны — вопрос 3 владельцу снимается.
+
+Отдельно: при повторных прогонах подряд сценарий падает по тайм-ауту на втором
+пользователе. Это ограничитель попыток входа (`auth_rate_threshold` 10 на
+идентификатор и 50 на IP в окне 300 с): все прогоны идут с одного `127.0.0.1`.
+Достаточно очистить `auth_rate_limits` на своём стенде перед полным прогоном.
 
 ### Ручная проверка на локальном стенде
 
@@ -131,9 +165,11 @@ token». Это воспроизводится голым `curl` без един
    в черновике выключен с подсказкой входа; имитации нет. Для показа «до
    официального сервиса» нужен проверенный адрес.
 2. **Живой прогон модели** ждёт ключ в локальном `.env`.
-3. **Стенд для A-10 по HTTPS**: `employee-auth.spec.ts` требует HTTPS-эджа,
-   иначе `__Host-` кука не возвращается. Нужно ли добавить Caddy в браузерный
-   прогон или спецификацию помечать skip без HTTPS?
+3. ~~**Стенд для A-10 по HTTPS**~~ — снято 22.09.2026. Причина была не в
+   HTTPS, а в незаданных `PUBLIC_BASE_URL` и `AUTH_MFA_ENCRYPTION_KEY` на
+   стенде; по HTTP сценарий зелёный. Остаётся продуктовый вопрос: закреплять ли
+   эти две переменные в документации браузерного прогона, чтобы следующий агент
+   не диагностировал это заново.
 
 ## P3b — явный путь `/report <свободный текст>` и черновик обращения — 20.09.2026
 
