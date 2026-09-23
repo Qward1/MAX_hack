@@ -38,6 +38,8 @@ services:
       PASSIVE_DANGER_GROUP_MINUTES: ${PASSIVE_DANGER_GROUP_MINUTES:-30}
       PASSIVE_CHAT_MEMO_PAUSE_MINUTES: ${PASSIVE_CHAT_MEMO_PAUSE_MINUTES:-30}
       PASSIVE_ANALYSIS_FALLBACK_SECONDS: ${PASSIVE_ANALYSIS_FALLBACK_SECONDS:-90}
+      # Время в сообщениях сотрудникам — в поясе показа, подпись «МСК».
+      DISPLAY_TIMEZONE: ${DISPLAY_TIMEZONE:-Europe/Moscow}
       PUBLIC_BASE_URL: https://${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN}
       CORS_ORIGINS: https://${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN}
     logging: *production-logging
