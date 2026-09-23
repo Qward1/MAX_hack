@@ -1,5 +1,25 @@
 # MAX live smoke — RESIDENT / GROUP / TICKET PRODUCT LOOP LIVE VERIFIED (MAX WEB)
 
+## P7b — выкладка P6 и проводки — 23 сентября 2026
+
+Живой прогон не повторялся; выкладка кода после слияния P6 и проводки
+`OpenItem.danger_kinds`. Время — UTC.
+
+| Параметр | Значение |
+|---|---|
+| `BUILD_COMMIT` | `286976a35832abca59fb51378d84ed43a39eb224` (`main` = `dev/b-experience` = `dev/a-core`, перенос бандлом) |
+| Образ `domsignal-backend:local` | `sha256:f9ba735759da5c518811d2211357d2df494e24cb7aff0c5ff42618f2b231031b` (api, worker, ai-worker) |
+| Откат | образ `domsignal-backend:pre-58b31f6`, прежний SHA `58b31f6` |
+| Миграции | нет (`migrate` exit 0) |
+| Резервная копия | `/var/backups/domsignal/domsignal-20260923T193049292440Z.dump`, 220 647 байт, mode 600, `pg_restore --list` — 369 строк |
+
+После выкладки (≈19:31): `/ready` 200 снаружи, `/version` = `286976a`,
+capabilities без изменений (`ai_analysis`, `routes`, `passive_capture` = true,
+`test_auth` = false); webhook без секрета 401; `list` — одна подписка, прежние
+URL и типы событий; `api`, `worker`, `ai-worker` без перезапусков и ошибок.
+Модель — прежняя `openai/gpt-5-mini` (профиль P6: reasoning minimal, промпт
+`window.v2`); таймаут в production — 60 с из `compose.prod.yaml`.
+
 ## P7b checkpoint — 23 сентября 2026: находки P7a, журналы без IP, основания ПОС
 
 Выкладка без P6 — решение владельца (DEV-A выкладывает обновлённую версию после
