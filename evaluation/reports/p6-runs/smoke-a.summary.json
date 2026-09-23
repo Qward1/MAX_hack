@@ -1,0 +1,164 @@
+{
+  "dataset": "d3_dev",
+  "config": "gpt5mini_v1_low",
+  "calls": {
+    "windows": 4,
+    "calls": 4,
+    "states": {
+      "ok": 4
+    },
+    "valid_json": {
+      "k": 4,
+      "n": 4,
+      "value": 1.0,
+      "ci95": [
+        0.5101,
+        1.0
+      ]
+    },
+    "timeouts": 0,
+    "provider_errors": 0,
+    "p50_ms": 25766,
+    "p95_ms": 36046,
+    "p99_ms": 36046,
+    "max_ms": 36046,
+    "rub_total": 1.3953,
+    "rub_per_window": 0.3488,
+    "tokens_in_mean": 7716,
+    "tokens_out_mean": 1000,
+    "reasoning_tokens_mean": 512,
+    "quotes": {
+      "k": 0,
+      "n": 21,
+      "value": 0.0,
+      "ci95": [
+        0.0,
+        0.1546
+      ]
+    },
+    "dropped_fields": 4,
+    "audit": {
+      "field_dropped": 4
+    },
+    "upstreams": {
+      "openrouter": 4
+    }
+  },
+  "d3": {
+    "incidents": 2,
+    "incident_capture": {
+      "k": 2,
+      "n": 2,
+      "value": 1.0,
+      "ci95": [
+        0.3424,
+        1.0
+      ]
+    },
+    "non_problem_signals": {
+      "k": 0,
+      "n": 3,
+      "value": 0.0,
+      "ci95": [
+        0.0,
+        0.5615
+      ]
+    },
+    "subtype_accuracy": {
+      "k": 2,
+      "n": 2,
+      "value": 1.0,
+      "ci95": [
+        0.3424,
+        1.0
+      ]
+    },
+    "category_accuracy": {
+      "k": 2,
+      "n": 2,
+      "value": 1.0,
+      "ci95": [
+        0.3424,
+        1.0
+      ]
+    },
+    "scope_accuracy": {
+      "k": 2,
+      "n": 2,
+      "value": 1.0,
+      "ci95": [
+        0.3424,
+        1.0
+      ]
+    },
+    "entrance_accuracy": {
+      "k": 2,
+      "n": 2,
+      "value": 1.0,
+      "ci95": [
+        0.3424,
+        1.0
+      ]
+    },
+    "route_end_to_end": {
+      "k": 2,
+      "n": 2,
+      "value": 1.0,
+      "ci95": [
+        0.3424,
+        1.0
+      ]
+    },
+    "d3_danger_found": {
+      "k": 1,
+      "n": 1,
+      "value": 1.0,
+      "ci95": [
+        0.2065,
+        1.0
+      ]
+    },
+    "role_accuracy": {
+      "k": 16,
+      "n": 24,
+      "value": 0.6667,
+      "ci95": [
+        0.4671,
+        0.8203
+      ]
+    },
+    "missed_incidents": [],
+    "route_details": [
+      {
+        "incident": "d003.I1",
+        "subtype": [
+          "elevator.stopped",
+          "elevator.stopped"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d043.I1",
+        "subtype": [
+          "elevator.stopped",
+          "elevator.stopped"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      }
+    ]
+  }
+}

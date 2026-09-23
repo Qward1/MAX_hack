@@ -25,7 +25,7 @@
           "max_lines": 10,
           "max_age_seconds": 300
         },
-        "total": 4514,
+        "total": 4512,
         "per_calendar_day_mean": 1.54,
         "per_active_day": {
           "p50": 5.0,
@@ -41,11 +41,11 @@
         }
       },
       "danger_rules_per_1000": {
-        "active": 15.06,
+        "active": 14.62,
         "displaced_only": 0.22,
         "negated_only": 1.54
       },
-      "recall_gate_share": 0.2514,
+      "recall_gate_share": 0.2512,
       "model_calls_per_day": {
         "mean_calendar_day": 1.54,
         "p90_active_day": 18.0
@@ -92,11 +92,11 @@
         }
       },
       "danger_rules_per_1000": {
-        "active": 16.52,
+        "active": 16.4,
         "displaced_only": 0.08,
         "negated_only": 2.51
       },
-      "recall_gate_share": 0.1409,
+      "recall_gate_share": 0.1408,
       "model_calls_per_day": {
         "mean_calendar_day": 6.67,
         "p90_active_day": 21.0

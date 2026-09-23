@@ -1,0 +1,94 @@
+{
+  "dataset": "d5",
+  "config": "gpt5mini_v2_minimal_flexfirst",
+  "calls": {
+    "windows": 70,
+    "calls": 70,
+    "states": {
+      "ok": 70
+    },
+    "valid_json": {
+      "k": 70,
+      "n": 70,
+      "value": 1.0,
+      "ci95": [
+        0.948,
+        1.0
+      ]
+    },
+    "timeouts": 0,
+    "provider_errors": 0,
+    "p50_ms": 4515,
+    "p95_ms": 5710,
+    "p99_ms": 6056,
+    "max_ms": 6589,
+    "rub_total": 2.5191,
+    "rub_per_window": 0.036,
+    "tokens_in_mean": 6066,
+    "tokens_out_mean": 199,
+    "reasoning_tokens_mean": 0,
+    "quotes": {
+      "k": 2,
+      "n": 224,
+      "value": 0.0089,
+      "ci95": [
+        0.0025,
+        0.032
+      ]
+    },
+    "dropped_fields": 1,
+    "audit": {
+      "field_dropped": 1
+    },
+    "upstreams": {
+      "openrouter": 70
+    }
+  },
+  "d5": {
+    "danger_found": {
+      "k": 29,
+      "n": 30,
+      "value": 0.9667,
+      "ci95": [
+        0.8333,
+        0.9941
+      ]
+    },
+    "contextual_found": {
+      "k": 10,
+      "n": 10,
+      "value": 1.0,
+      "ci95": [
+        0.7225,
+        1.0
+      ]
+    },
+    "trap_false_alarms": {
+      "k": 13,
+      "n": 30,
+      "value": 0.4333,
+      "ci95": [
+        0.2738,
+        0.608
+      ]
+    },
+    "misses": [
+      "d5-03"
+    ],
+    "false_alarms": [
+      "d5-33",
+      "d5-38",
+      "d5-39",
+      "d5-40",
+      "d5-42",
+      "d5-43",
+      "d5-44",
+      "d5-47",
+      "d5-51",
+      "d5-54",
+      "d5-56",
+      "d5-58",
+      "d5-59"
+    ]
+  }
+}
