@@ -68,8 +68,12 @@ def mask_ip(value: str | None) -> str:
 
 def _masked_or_same(match: re.Match[str], candidate: str) -> str:
     try:
-        ipaddress.ip_address(candidate)
+        address = ipaddress.ip_address(candidate)
     except ValueError:
+        return match.group(0)
+    if address.is_loopback or address.is_unspecified:
+        # Адрес привязки сервера («running on http://0.0.0.0:8000») и
+        # локальные проверки — не адрес клиента: строка остаётся как есть.
         return match.group(0)
     return mask_ip(candidate)
 

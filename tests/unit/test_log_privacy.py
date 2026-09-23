@@ -93,6 +93,11 @@ def test_scrub_replaces_every_address_and_leaves_other_tokens() -> None:
     assert scrub_ips(scrubbed) == scrubbed
 
 
+def test_server_bind_and_loopback_addresses_are_not_client_data() -> None:
+    line = "Uvicorn running on http://0.0.0.0:8000; probe 127.0.0.1:51234 and [::1]:8000"
+    assert scrub_ips(line) == line
+
+
 def test_secret_path_segments_are_not_logged() -> None:
     assert safe_path("/admin/invite/secret-token?x=1") == "/admin/invite/[redacted]"
     assert (
