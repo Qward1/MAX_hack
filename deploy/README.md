@@ -251,7 +251,18 @@ credentials out of shell arguments and checking `success=true`, not only HTTP 20
 
 ## 6. Safe redeploy
 
+`up` runs the one-shot `migrate` service, so the database backup comes **first**:
+no backup — no redeploy with migrations. Record the deployed SHA and keep the
+previous image under its own tag for rollback.
+
 ```bash
+PREVIOUS="$(git rev-parse HEAD)"
+sudo docker tag domsignal-backend:local "domsignal-backend:pre-${PREVIOUS:0:7}"
+# Private directory outside the checkout; the script keeps seven copies.
+sudo sh -c 'umask 077; python3 scripts/backup_postgres.py \
+  --container domsignal-prod-db-1 --directory /var/backups/domsignal'
+sudo sh -c 'docker exec -i domsignal-prod-db-1 pg_restore --list < /var/backups/domsignal/<new>.dump | wc -l'
+
 git fetch origin --prune
 git merge --ff-only origin/dev/b-experience
 export BUILD_COMMIT="$(git rev-parse HEAD)"
@@ -261,8 +272,97 @@ docker compose --project-name domsignal-prod \
 curl --fail-with-body --silent --show-error "https://$(sed -n 's/^PUBLIC_DOMAIN=//p' deploy/.env.production)/ready"
 ```
 
+Without GitHub access on the VPS, move the commits as a verified bundle over the
+existing SSH key instead of `git fetch origin`:
+
+```bash
+# local
+git bundle create p7a.bundle <branch> ^<deployed-sha>
+scp -i ~/.ssh/domsignal_codex_ed25519 p7a.bundle user1@176.108.244.168:
+# VPS
+git bundle verify ~/p7a.bundle
+git fetch ~/p7a.bundle <branch>:refs/bundles/<branch>
+git merge --ff-only <exact-sha>
+```
+
+`BUILD_COMMIT` must equal that SHA; `/version` then shows it. Rollback: check out
+the previous SHA detached, retag `domsignal-backend:pre-<sha>` as
+`domsignal-backend:local` and `up -d --no-build`. Additive migrations stay; if a
+downgrade refuses, restore the backup into a **separate** database first — never
+over the live one.
+
 Do not run `down -v` in production. Normal `down`/`up` preserves named volumes;
 backup and restore must still be tested independently.
+
+### Model, passive reading and AI pool (P7a)
+
+Only `ai-worker` receives the model key: `api`, `worker`, `migrate` and `seed`
+stay on `LLM_PROVIDER=rules` (they analyse with rules only) and never get
+`LLM_API_KEY`. The API advertises `ai_analysis` from `AI_POOL_LLM_PROVIDER`,
+which Compose derives from the same `LLM_PROVIDER` value. Variables in
+`deploy/.env.production` (defaults are safe — rules, no key, reading off):
+
+| Variable | Service | Default | Demo/check value |
+|---|---|---|---|
+| `LLM_PROVIDER` | ai-worker (+ capability in api) | `rules` | `openai_compatible` |
+| `LLM_API_KEY` | ai-worker only | empty | provider key, appended on the VPS only |
+| `LLM_MODEL` | ai-worker | empty | `openai/gpt-5-mini` |
+| `LLM_TIMEOUT_SECONDS` | ai-worker | `60` | `60` (owner decision 2026-09-23; live windows took 10.8–28.7 s, one call exceeded 25 s) |
+| `LLM_DAILY_CALL_BUDGET` | ai-worker | `300` | `300` (≈0.37 ₽ per window) |
+| `LLM_CHAT_DAILY_SHARE` | ai-worker | `0.2` | `0.2` |
+| `AI_WORKER_LEASE_SECONDS` | ai-worker | `80` | `80`; must be ≥ model timeout + 20 s or the AI worker refuses to start |
+| `PASSIVE_CAPTURE_ENABLED` | api, worker, ai-worker | `false` | `true` |
+| `PASSIVE_WINDOW_SILENCE_SECONDS` | api, worker, ai-worker | `120` | `30` |
+
+Append the key without echoing it (stdin, not an argument), e.g. pipe the single
+`LLM_API_KEY=` line into `cat >> deploy/.env.production` over SSH; keep mode 600.
+`openai_compatible` without a key or model stops only `ai-worker` (settings
+validation); rules and the report/window watchdogs keep the product working.
+The operational lease stays 30 s; `report.fallback` (30 s) and
+`chat.window.fallback` (90 s) are unchanged.
+The 30 s `report.fallback` rules watchdog answers `/report` within 30 s only
+while the AI pool has not yet claimed the intake (pool stopped, backlog, no
+key); once `ai-worker` has claimed it, the watchdog exits quietly, so a slow
+model delays the answer up to the 60 s timeout, after which the same job
+settles with the rules result (`fallback_timeout`).
+Changing only model variables needs `up -d --no-deps ai-worker`; note that
+`docker compose start ai-worker` also starts its one-shot dependencies
+(`migrate`, `seed`), which are no-ops at head.
+
+### House routing profile, reading switch and live staff (P7a)
+
+Run inside the production API container (`docker compose ... run --rm --no-deps
+api python -m ...`). In production the routing-profile CLI accepts only the
+active audited live-test house and requires an operator and reason; it writes an
+`operator.house_routing_profile` receipt with the previous and new profile:
+
+```bash
+python -m domsignal.tools.house_routing_profile --house-id <live-house> \
+  --region RU-TA --municipality kazan --territory mixed \
+  --operator <name> --reason <authorization-reference>
+```
+
+Passive reading needs both the global `PASSIVE_CAPTURE_ENABLED=true` and the
+per-binding switch by a user with `chat.connect` (the scoped CLI company admin
+from §8). Enabling queues one reading notice in the chat per binding version:
+
+```bash
+python -m domsignal.tools.passive_capture --binding <binding-id> --actor <company-admin-id> --enable
+python -m domsignal.tools.signals_preview --house <live-house>   # read-only check
+```
+
+The product cannot link a web employee to a MAX account, so a danger alert has
+no personal MAX recipient until a staff member with a validated MAX identity
+exists. `live_staff grant` gives one MAX user (after a real mini app login, not
+the fixture resident) the `operator` role in the live-test company and an
+`operator` assignment to its house only — `ticket.read`/`ticket.work`, no
+`chat.connect`/`ticket.manage`. One grant per database, audited as
+`operator:live-smoke-staff:v1`; `revoke` ends both rows and keeps history:
+
+```bash
+python -m domsignal.tools.live_staff grant --user-id <validated-max-user> \
+  --operator <name> --reason <authorization-reference>
+```
 
 ## 7. Explicit isolated live resident scope
 

@@ -62,9 +62,11 @@ def resolve(directory: Any, subtype: str, scope: str, danger: tuple[str, ...] = 
         ("other.unspecified", "unknown", ("gas",), "emergency_service"),
         ("gas.smell", "house_common", (), "emergency_service"),
         ("gas.smell", "house_common", ("gas",), "emergency_service"),
+        # Дым или огонь — по п. 21 «а» Правил ПП РФ № 2071 (P7a).
+        ("other.unspecified", "unknown", ("smoke_fire",), "emergency_service"),
+        ("lighting.stairwell", "house_common", ("smoke_fire",), "emergency_service"),
         # Опасность ортогональна маршруту: у других видов правил нет.
         ("other.unspecified", "unknown", ("flooding",), "unknown"),
-        ("other.unspecified", "unknown", ("smoke_fire",), "unknown"),
         ("other.unspecified", "unknown", ("person_trapped",), "unknown"),
         ("water.leak", "house_common", ("flooding",), "uk_internal"),
         ("elevator.stopped", "house_common", ("person_trapped",), "uk_internal"),
@@ -79,7 +81,12 @@ def test_route_by_danger_kind_table(
     assert route.route_type == expected
     if expected == "emergency_service":
         assert [channel.id for channel in route.channels] == ["emergency_112"]
-        assert route.basis is not None and route.basis.rule_id == "federal.gas_smell.emergency"
+        rule_id = (
+            "federal.smoke_fire.emergency"
+            if danger == ("smoke_fire",)
+            else "federal.gas_smell.emergency"
+        )
+        assert route.basis is not None and route.basis.rule_id == rule_id
 
 
 def test_the_federal_gas_rule_matches_by_subtype_and_by_danger(packaged: Any) -> None:
@@ -89,13 +96,37 @@ def test_the_federal_gas_rule_matches_by_subtype_and_by_danger(packaged: Any) ->
     assert gas.matches("other.unspecified", "unknown", ("gas",))
     assert not gas.matches("other.unspecified", "unknown", ("flooding",))
     others = [item for item in packaged.federal.rules if item.danger_kinds]
-    assert [item.id for item in others] == ["federal.gas_smell.emergency"]
+    assert sorted(item.id for item in others) == [
+        "federal.gas_smell.emergency",
+        "federal.smoke_fire.emergency",
+    ]
+    assert all(item.route_type == "emergency_service" for item in others)
 
 
-def test_no_smoke_fire_rule_without_a_quoted_article() -> None:
+def test_smoke_fire_rule_quotes_the_official_text_and_matches_only_by_danger(
+    packaged: Any,
+) -> None:
     document = yaml.safe_load((REGIONS / "_federal" / "responsibility.yaml").read_text("utf-8"))
     kinds = [kind for item in document["rules"] for kind in item["match"].get("danger_kinds", [])]
-    assert kinds == ["gas"]
+    assert sorted(kinds) == ["gas", "smoke_fire"]
+    fire = next(item for item in document["rules"] if item["id"] == "federal.smoke_fire.emergency")
+    assert fire["match"] == {"subtypes": [], "danger_kinds": ["smoke_fire"], "location_scopes": []}
+    assert fire["route_type"] == "emergency_service" and fire["channel_ids"] == ["emergency_112"]
+    # Дословная цитата п. 21 «а» и официальная публикация, а не пересказ.
+    assert (
+        "привлечение службы пожарной охраны осуществляется при наличии открытых или "
+        "закрытых очагов пожара, сильного задымления" in fire["basis"]["text"]
+    )
+    for entry in (fire["basis"], fire["verification"]):
+        assert entry["source_url"] == "http://publication.pravo.gov.ru/document/0001202111300024"
+        assert "№ 2071" in entry["source_title"]
+    assert fire["verification"]["status"] == "verified"
+    parsed = next(
+        item for item in packaged.federal.rules if item.id == "federal.smoke_fire.emergency"
+    )
+    assert parsed.matches("other.unspecified", "unknown", ("smoke_fire",))
+    assert not parsed.matches("other.unspecified", "unknown", ())
+    assert not parsed.matches("other.unspecified", "unknown", ("flooding",))
 
 
 def test_location_scope_still_filters_a_danger_match() -> None:
@@ -204,6 +235,12 @@ def test_validator_allows_danger_kinds_only_on_emergency_rules() -> None:
     )
     assert flooding == "danger_kinds are allowed only for emergency_service rules"
     assert module.danger_match_error(schema_rule({})) == "match needs subtypes or danger_kinds"
+    # Правило пожара P7a не открывает danger_kinds неэкстренным маршрутам.
+    assert module.danger_match_error(schema_rule({"danger_kinds": ["smoke_fire"]})) is None
+    fire_elsewhere = module.danger_match_error(
+        schema_rule({"danger_kinds": ["smoke_fire"]}, route_type="uk_internal")
+    )
+    assert fire_elsewhere == "danger_kinds are allowed only for emergency_service rules"
 
 
 def test_the_loader_rejects_a_danger_rule_for_a_non_emergency_route(tmp_path: Path) -> None:

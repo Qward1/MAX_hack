@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import func, select, text, update
@@ -16,13 +16,14 @@ from domsignal.db.models import (
     House,
     HouseManagement,
     HouseRoutingProfile,
+    InboxReceipt,
     ManagementCompany,
     User,
 )
 from domsignal.db.repositories.routing import RoutingRepository
 from domsignal.db.session import create_engine, create_session_factory
 from domsignal.settings import Settings
-from domsignal.tools import house_routing_profile, route_preview
+from domsignal.tools import house_routing_profile, live_fixture, route_preview
 from domsignal.tools.seed_demo import DEMO_HOUSE_ID, OTHER_HOUSE_ID, seed
 from tests.integration.test_migrations import migrate
 
@@ -206,6 +207,106 @@ async def test_profile_cli_writes_region_and_audit(
             assert stored is not None
             assert stored.territory_policy == "municipal"
             assert stored.updated_by == actor
+    finally:
+        await engine.dispose()
+
+
+async def test_production_profile_is_confined_to_the_audited_live_house(
+    integration_settings: Settings,
+) -> None:
+    """P7a: в production профиль задаётся только дому live-стенда, с квитанцией."""
+    engine = create_engine(integration_settings.database_url)
+    factory = create_session_factory(engine)
+    resident = uuid4()
+    change = dict(region="RU-TA", municipality="kazan", territory="mixed", actor=None)
+    try:
+        async with factory() as session, session.begin():
+            session.add(
+                User(
+                    id=resident,
+                    display_name="Synthetic resident",
+                    max_user_id=f"profile-{resident}",
+                    max_identity_verified_at=datetime.now(UTC),
+                )
+            )
+        # Без стенда production ничего не пишет, даже для существующего дома.
+        async with factory() as session, session.begin():
+            with pytest.raises(ValueError, match="live-test house"):
+                await house_routing_profile.operate(
+                    session,
+                    house_id=DEMO_HOUSE_ID,
+                    production=True,
+                    operator="pytest",
+                    reason="deterministic test",
+                    **change,
+                )
+        async with factory() as session, session.begin():
+            fixture = await live_fixture.operate(
+                session,
+                action="create",
+                user_id=resident,
+                operator="pytest",
+                reason="deterministic test",
+            )
+        live_house = UUID(fixture["house_id"])
+        for operator, reason in ((None, "reason"), ("pytest", None), ("  ", "reason")):
+            async with factory() as session, session.begin():
+                with pytest.raises(ValueError, match="--operator and --reason"):
+                    await house_routing_profile.operate(
+                        session,
+                        house_id=live_house,
+                        production=True,
+                        operator=operator,
+                        reason=reason,
+                        **change,
+                    )
+        async with factory() as session, session.begin():
+            with pytest.raises(ValueError, match="live-test house"):
+                await house_routing_profile.operate(
+                    session,
+                    house_id=OTHER_HOUSE_ID,
+                    production=True,
+                    operator="pytest",
+                    reason="deterministic test",
+                    **change,
+                )
+            # Отказ ничего не записал.
+            assert await session.scalar(
+                select(func.count())
+                .select_from(InboxReceipt)
+                .where(InboxReceipt.event_type == house_routing_profile.PROFILE_AUDIT_TYPE)
+            ) == 0
+        async with factory() as session, session.begin():
+            result = await house_routing_profile.operate(
+                session,
+                house_id=live_house,
+                production=True,
+                operator="pytest",
+                reason="deterministic test",
+                **change,
+            )
+        assert result["territory_policy"] == "mixed" and result["region_code"] == "RU-TA"
+        async with factory() as session:
+            stored = await RoutingRepository(session).profile(live_house)
+            assert stored is not None
+            assert (stored.region_code, stored.municipality_code) == ("RU-TA", "kazan")
+            receipts = list(
+                await session.scalars(
+                    select(InboxReceipt).where(
+                        InboxReceipt.event_type == house_routing_profile.PROFILE_AUDIT_TYPE
+                    )
+                )
+            )
+            assert len(receipts) == 1
+            audit = receipts[0].payload
+            assert audit["house_id"] == str(live_house)
+            assert audit["previous"] is None
+            assert audit["profile"] == {
+                "region_code": "RU-TA",
+                "municipality_code": "kazan",
+                "territory_policy": "mixed",
+            }
+            assert (audit["operator"], audit["reason"]) == ("pytest", "deterministic test")
     finally:
         await engine.dispose()
 

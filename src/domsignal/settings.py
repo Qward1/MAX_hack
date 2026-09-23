@@ -80,6 +80,13 @@ class Settings(BaseSettings):
     llm_max_concurrency: int = Field(default=4, ge=1, le=64)
     llm_daily_call_budget: int = Field(default=1000, ge=0)
     llm_chat_daily_share: float = Field(default=0.2, gt=0, le=1)
+    # Провайдер AI-пула для процессов, которые модель не вызывают (api): они
+    # объявляют возможность разбора, не получая ключа. Не задан — возможность
+    # следует собственному `LLM_PROVIDER`, как в однопроцессном стенде.
+    ai_pool_llm_provider: LlmProvider | None = None
+    # Аренда задачи AI-пула: не меньше таймаута модели + 20 с, иначе второй
+    # воркер перехватит задачу посреди вызова. Операционный пул — 30 с.
+    ai_worker_lease_seconds: int = Field(default=60, ge=30, le=600)
     # Пассивное чтение подключённого чата (A-17/Product). Глобальный выключатель
     # по умолчанию выключен: без него реплики не сохраняются вовсе.
     passive_capture_enabled: bool = False
@@ -137,6 +144,7 @@ class Settings(BaseSettings):
         "max_webhook_secret",
         "llm_api_key",
         "llm_model",
+        "ai_pool_llm_provider",
         mode="before",
     )
     @classmethod

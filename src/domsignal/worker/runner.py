@@ -13,7 +13,7 @@ from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.services.errors import RescheduleJob
 from domsignal.services.notifications import DeferredNotification, TicketNotificationHandler
 from domsignal.worker.handlers import JobHandler
-from domsignal.worker.pools import DEFAULT_POOL, WorkerPool
+from domsignal.worker.pools import DEFAULT_POOL, OPERATIONAL_LEASE_SECONDS, WorkerPool
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class WorkerRunner:
         *,
         session_factory: async_sessionmaker[AsyncSession],
         handlers: dict[str, JobHandler],
-        lease_seconds: int = 30,
+        lease_seconds: int = OPERATIONAL_LEASE_SECONDS,
         max_attempts: int = 5,
         notifications: TicketNotificationHandler | None = None,
         pool: WorkerPool = DEFAULT_POOL,

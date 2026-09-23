@@ -28,6 +28,37 @@ AI_KIND_PREFIX = "ai."
 AI_JOB_KINDS: frozenset[str] = frozenset({"ai.report.analyze", "ai.window.analyze"})
 
 
+#: Аренда задачи операционного пула: его обработчики модель не ждут.
+OPERATIONAL_LEASE_SECONDS = 30
+
+#: Запас аренды AI-пула сверх таймаута вызова модели: чтение окна до вызова и
+#: запись результата после него идут под той же арендой.
+AI_LEASE_MARGIN_SECONDS = 20
+
+
+def lease_seconds_for(
+    pool: WorkerPool, *, ai_lease_seconds: int, model_timeout_seconds: float | None
+) -> int:
+    """Аренда задачи пула.
+
+    Аренда AI-пула короче вызова модели отдала бы задачу второму воркеру
+    посреди вызова: двойной расход бюджета и потерянная попытка. Такая
+    настройка — ошибка запуска, а не молчаливая поправка.
+    """
+    if pool != "ai":
+        return OPERATIONAL_LEASE_SECONDS
+    if (
+        model_timeout_seconds is not None
+        and ai_lease_seconds < model_timeout_seconds + AI_LEASE_MARGIN_SECONDS
+    ):
+        raise ValueError(
+            "AI_WORKER_LEASE_SECONDS must be at least the model timeout + "
+            f"{AI_LEASE_MARGIN_SECONDS} s ({model_timeout_seconds:g} + "
+            f"{AI_LEASE_MARGIN_SECONDS} > {ai_lease_seconds})"
+        )
+    return ai_lease_seconds
+
+
 def pool_for(kind: str) -> WorkerPool:
     """Какому пулу принадлежит вид задачи."""
     return "ai" if kind.startswith(AI_KIND_PREFIX) else DEFAULT_POOL
