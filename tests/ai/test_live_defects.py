@@ -435,3 +435,105 @@ async def test_rules_never_split_a_thread_on_the_e0c_stream() -> None:
     for window_input in build_windows(lines, channel="group_passive"):
         pairs = _non_danger_pairs(await analyzer.analyze(window_input))
         assert len(pairs) == len(set(pairs)), pairs
+
+
+# ------------------- 5. «свет горит» — не пожар (найдено на dev D3, P6)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "в лифте свет горит, а кнопки не реагируют",
+        "лампочка горит, но лифт стоит",
+        "фонарь горит только один",
+        "индикатор на кнопке горит",
+        "горит свет на пятом, а на шестом темно",
+        "у подъезда лампы горят весь день",
+    ],
+)
+def test_lights_that_are_on_are_not_a_fire(text: str) -> None:
+    from domsignal.ai import screen_message_for_danger
+
+    assert not [hit for hit in screen_message_for_danger(text) if hit.kind == "smoke_fire"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "проводка горит!",
+        "в подвале горит",
+        "в щитке горит проводка, свет мигает",
+        "горит мусоропровод, свет на площадке погас",
+        "из окна валит дым",
+    ],
+)
+def test_real_fire_is_still_a_fire(text: str) -> None:
+    from domsignal.ai import screen_message_for_danger
+
+    assert [hit for hit in screen_message_for_danger(text) if hit.kind == "smoke_fire"]
+
+
+# ---------- 6. место, которое модель не назвала, — из правил по репликам сигнала
+
+PLACE_TEXT = "во втором подъезде кнопка вызова лифта на первом этаже не работает"
+
+
+async def test_missing_model_place_is_taken_from_rules_on_signal_lines() -> None:
+    response = model_response(
+        [model_signal(subtype="elevator.button")],
+        roles={"m1": "new_problem"},
+        refs={"m1": ["new:1"]},
+    )
+    signal = (await analyse(response, window(PLACE_TEXT))).signals[0]
+    assert signal.entrance is not None and signal.entrance.value == "2"
+    assert signal.entrance.quote in PLACE_TEXT
+    assert signal.floor is not None and signal.floor.value == "1"
+    assert "place_from_rules" in signal.flags
+
+
+async def test_dropped_model_place_is_replaced_by_rules() -> None:
+    response = model_response(
+        [
+            model_signal(
+                subtype="elevator.button",
+                entrance={"value": "2", "quote": "во 2-м подъезде", "msg": "m1"},
+            )
+        ],
+        roles={"m1": "new_problem"},
+        refs={"m1": ["new:1"]},
+    )
+    analysis = await analyse(response, window(PLACE_TEXT))
+    signal = analysis.signals[0]
+    assert signal.entrance is not None and signal.entrance.quote in PLACE_TEXT
+    assert analysis.dropped_fields >= 1
+
+
+async def test_valid_model_place_is_kept_without_the_flag() -> None:
+    response = model_response(
+        [
+            model_signal(
+                subtype="elevator.button",
+                entrance={"value": "2", "quote": "во втором подъезде", "msg": "m1"},
+                floor={"value": "1", "quote": "на первом этаже", "msg": "m1"},
+            )
+        ],
+        roles={"m1": "new_problem"},
+        refs={"m1": ["new:1"]},
+    )
+    signal = (await analyse(response, window(PLACE_TEXT))).signals[0]
+    assert signal.entrance is not None and signal.entrance.value == "2"
+    assert "place_from_rules" not in signal.flags
+
+
+async def test_rules_place_never_comes_from_context_or_foreign_lines() -> None:
+    response = model_response(
+        [model_signal(), model_signal(ref="new:2", subtype="water.leak")],
+        roles={"m2": "new_problem", "m3": "new_problem"},
+        refs={"m2": ["new:1"], "m3": ["new:2"]},
+    )
+    analysis = await analyse(
+        response, with_context(CONTEXT, "лифт опять не работает", "в 4 подъезде течёт с потолка")
+    )
+    lift, leak = analysis.signals
+    assert lift.entrance is None
+    assert leak.entrance is not None and leak.entrance.value == "4"

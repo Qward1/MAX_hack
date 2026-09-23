@@ -131,6 +131,42 @@ _COMPILED: tuple[tuple[DangerKind, tuple[StemSet, ...]], ...] = tuple(
 )
 _DISPLACED_SET = StemSet(_DISPLACED)
 
+#: «Свет горит», «лампочка горит» — не пожар (найдено на dev D3 в P6: без этого
+#: правила давали критический сигнал и памятку в чат). Глагол горения
+#: пропускается, если рядом осветительный объект и нет объекта возгорания.
+_BURN_STEMS = frozenset({"горит", "горят", "горел"})
+_LIGHT_OBJECTS = StemSet(
+    ("свет", "ламп", "фонар", "индикатор", "кнопк", "табло", "подсветк", "светодиод")
+)
+_FIRE_OBJECTS = StemSet(
+    (
+        "проводк",
+        "провод",
+        "кабел",
+        "щит",
+        "подвал",
+        "мусор",
+        "балкон",
+        "квартир",
+        "крыш",
+        "чердак",
+        "машин",
+        "дым",
+        "огон",
+        "пламя",
+        "пожар",
+    )
+)
+_LIGHT_RADIUS = 3
+
+
+def _is_light_on(tokens: Sequence[Token], match: StemMatch) -> bool:
+    if match.stem not in _BURN_STEMS:
+        return False
+    low = max(0, match.first_token - _LIGHT_RADIUS)
+    near = tokens[low : match.last_token + _LIGHT_RADIUS + 1]
+    return bool(_LIGHT_OBJECTS.find_all(near)) and not _FIRE_OBJECTS.find_all(near)
+
 
 def _negated(tokens: Sequence[Token], matches: Sequence[StemMatch]) -> bool:
     for match in matches:
@@ -178,6 +214,17 @@ def _hits(normalized: NormalizedText, tokens: Sequence[Token], line_id: str) -> 
     seen: set[tuple[DangerKind, str]] = set()
     for kind, groups in _COMPILED:
         found = [group.find_all(tokens) for group in groups]
+        if kind == "smoke_fire":
+            # «Свет не горит» остаётся в журнале как отменённое отрицанием;
+            # отбрасывается только утвердительное «свет горит».
+            found = [
+                [
+                    match
+                    for match in group
+                    if not (_is_light_on(tokens, match) and not _negated(tokens, [match]))
+                ]
+                for group in found
+            ]
         if any(not item for item in found):
             continue
         combined = _combine(found)

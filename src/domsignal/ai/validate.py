@@ -86,6 +86,8 @@ CONTEXT_LINE = "реплика контекста, доказательства 
 
 #: Поля, значение которых — номер подъезда или этажа.
 _NUMBERED_FIELDS = frozenset({"entrance", "floor"})
+#: Поля места и времени сигнала: при отсутствии у модели — из правил.
+_PLACE_FIELDS = ("entrance", "floor", "since")
 
 
 class _Context:
@@ -389,15 +391,23 @@ def validate_output(
             observed=_facet(context, raw.facets.observed, collector, ref, "observed"),
         )
         strength, reason = decide_strength(emergency, facets)
+        place: dict[str, Evidence | None] = {}
+        from_rules = False
+        for name in _PLACE_FIELDS:
+            value = _evidence(context, getattr(raw, name), collector, ref, name)
+            if value is None:
+                value = _rules_place(rules, line_ids, name)
+                from_rules = from_rules or value is not None
+            place[name] = value
         signals.append(
             SignalDraft(
                 ref=ref,
                 subtype=code,
                 product_category=taxonomy.product_category(code),
                 object_label=raw.object.strip() or taxonomy.get(code).label,
-                entrance=_evidence(context, raw.entrance, collector, ref, "entrance"),
-                floor=_evidence(context, raw.floor, collector, ref, "floor"),
-                since=_evidence(context, raw.since, collector, ref, "since"),
+                entrance=place["entrance"],
+                floor=place["floor"],
+                since=place["since"],
                 location_scope=_scope(context, raw, collector, ref),
                 facets=facets,
                 emergency=emergency,
@@ -406,7 +416,7 @@ def validate_output(
                 disposition=disposition_for(strength),
                 line_ids=tuple(dict.fromkeys(line_ids)),
                 source="rules+model" if hits else "model",
-                flags=_flags(taxonomy, code, rules),
+                flags=_flags(taxonomy, code, rules) + (("place_from_rules",) if from_rules else ()),
                 clean_description=_text_block(
                     context, raw.clean_description, collector, ref, "clean_description", line_ids
                 ),
@@ -424,6 +434,25 @@ def validate_output(
         audit_events=tuple(collector.events),
         dropped_fields=collector.dropped,
     )
+
+
+def _rules_place(
+    rules: RulesOutcome, line_ids: Sequence[str], name: str
+) -> Evidence | None:
+    """Подъезд, этаж или «с какого времени» из правил — по репликам сигнала.
+
+    Модель при минимальных рассуждениях часто не заполняет необязательные поля
+    места (P6, dev D3). Правила дают значение с дословной цитатой по
+    построению; берётся первая по времени реплика самого сигнала, реплики
+    контекста и чужих сигналов не участвуют.
+    """
+    wanted = set(line_ids)
+    for facts in rules.facts:
+        if facts.line_id in wanted and not facts.line.is_context:
+            value: Evidence | None = getattr(facts.place, name)
+            if value is not None:
+                return value
+    return None
 
 
 def _flags(taxonomy: Taxonomy, code: str, rules: RulesOutcome) -> tuple[str, ...]:
