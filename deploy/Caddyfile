@@ -1,3 +1,23 @@
+{
+	# Журналы Caddy без полных IP клиентов. Журнала доступа нет (директивы log
+	# у сайта нет); ошибки прокси (`http.log.error`) несут объект запроса —
+	# адрес в нём усечён до /24 (IPv4) и /48 (IPv6), заголовки с адресами
+	# удалены, секретные сегменты пути скрыты.
+	log default {
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip ip_mask 24 48
+				request>client_ip ip_mask 24 48
+				request>headers>X-Forwarded-For delete
+				request>headers>X-Real-Ip delete
+				request>headers>Forwarded delete
+				request>uri regexp "^/(admin/invite|api/v1/notification-launch)/[^/?]+" "/$1/[redacted]"
+			}
+		}
+	}
+}
+
 {$PUBLIC_DOMAIN} {
 	encode zstd gzip
 

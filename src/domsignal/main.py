@@ -27,11 +27,13 @@ from domsignal.api.routes import (
 )
 from domsignal.bootstrap import build_container
 from domsignal.contracts.common import Problem
+from domsignal.logs import configure_logging
 from domsignal.settings import Settings, get_settings
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     resolved_settings = settings or get_settings()
+    configure_logging()
     container = build_container(resolved_settings)
 
     @asynccontextmanager

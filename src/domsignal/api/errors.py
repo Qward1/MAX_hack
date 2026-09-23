@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 import uuid
 from collections.abc import Awaitable, Callable
 
@@ -13,7 +14,13 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from domsignal.contracts.common import FieldError, Problem
+from domsignal.logs import access_fields
 from domsignal.services.errors import ServiceError
+
+access_logger = logging.getLogger("domsignal.access")
+
+#: Проверки живости Compose и Caddy не засоряют журнал доступа, пока успешны.
+_QUIET_PATHS = frozenset({"/health", "/ready"})
 
 
 class InvitationLogFilter(logging.Filter):
@@ -37,7 +44,26 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         # Correlation IDs are server generated; never echo arbitrary client/auth text.
         request.state.request_id = str(uuid.uuid4())
-        response = await call_next(request)
+        started = time.perf_counter()
+        status = 500
+        try:
+            response = await call_next(request)
+            status = response.status_code
+        finally:
+            # Журнал доступа приложения: идентификатор запроса вместо адреса,
+            # сеть клиента усечена, строки запроса нет.
+            if not (status < 400 and request.url.path in _QUIET_PATHS):
+                access_logger.info(
+                    "http_request",
+                    extra=access_fields(
+                        request_id=request.state.request_id,
+                        method=request.method,
+                        path=request.url.path,
+                        status=status,
+                        duration_ms=round((time.perf_counter() - started) * 1000),
+                        client_host=request.client.host if request.client else None,
+                    ),
+                )
         response.headers["X-Request-ID"] = request.state.request_id
         if request.url.path.startswith(("/api/", "/admin", "/platform-admin", "/company")):
             response.headers["Cache-Control"] = "no-store"
