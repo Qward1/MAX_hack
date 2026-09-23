@@ -16,6 +16,7 @@ from tests.integration.test_passive_signals import LIFT_FIRST, ago, conversation
 
 GAS = "Пахнет газом в третьем подъезде"
 FLOOD = "Затопило подвал, вода хлещет"
+FIRE = "В подъезде сильный дым, горит мусоропровод"
 
 
 # ------------------------------------------------------------------ сторож окна
@@ -136,6 +137,32 @@ async def test_gas_before_the_window_verdict_routes_to_the_emergency_service(pv)
     assert outcome.channel_id == "emergency_112"
     event = await pv.scalar(select(SignalEvent).where(SignalEvent.kind == "route_assigned"))
     assert event.details == "emergency_service (rule)"
+
+
+async def test_smoke_fire_before_the_window_verdict_routes_to_the_emergency_service(pv) -> None:  # noqa: F811
+    """P7a: дым или огонь — в 112 по п. 21 «а» Правил ПП РФ № 2071, до разбора окна."""
+    await pv.bind()
+    await pv.say(FIRE, at=ago(30))
+    signal = await pv.scalar(select(Signal))
+    assert signal.subtype == "other.unspecified" and "preliminary" in signal.flags
+    assert signal.emergency["kinds"] == ["smoke_fire"]
+    outcome = await pv.scalar(
+        select(RouteOutcome).where(RouteOutcome.id == signal.route_outcome_id)
+    )
+    assert outcome.route_type == "emergency_service" and outcome.decision == "external"
+    # Газа нет: в 112 ведёт только правило дыма/огня (его id проверяет unit-тест).
+    assert outcome.channel_id == "emergency_112"
+    event = await pv.scalar(select(SignalEvent).where(SignalEvent.kind == "route_assigned"))
+    assert event.details == "emergency_service (rule)"
+    assert (
+        await pv.scalar(select(func.count()).select_from(Job).where(Job.kind == "signal.alert"))
+        == 1
+    )
+    # Вердикт окна (здесь — правила) маршрут в экстренную службу не снимает.
+    await pv.drain_all()
+    signal = await pv.scalar(select(Signal))
+    final = await pv.scalar(select(RouteOutcome).where(RouteOutcome.id == signal.route_outcome_id))
+    assert final.route_type == "emergency_service" and final.channel_id == "emergency_112"
 
 
 async def test_flooding_before_the_verdict_is_not_routed_to_112(pv) -> None:  # noqa: F811
