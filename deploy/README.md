@@ -364,6 +364,36 @@ python -m domsignal.tools.live_staff grant --user-id <validated-max-user> \
   --operator <name> --reason <authorization-reference>
 ```
 
+### Logs without client IP addresses and log rotation (P7b)
+
+The API runs uvicorn with `--proxy-headers --no-access-log`: uvicorn's access
+log wrote the full client address from `X-Forwarded-For`. The application
+logs one `http_request` line per request instead — `request_id` (equal to the
+`X-Request-ID` response header), method, path without the query string and
+without invitation/launch secrets, status, duration and the client network
+truncated to /24 (IPv4) or /48 (IPv6). Every log line of `api`, `worker` and
+`ai-worker` is scrubbed of full addresses, including tracebacks. Caddy has no
+access log; its proxy error lines mask `remote_ip`/`client_ip` the same way
+and drop forwarding headers. The login rate limiter stores an HMAC slot
+number, never the address.
+
+Every production service uses the `json-file` driver with `max-size: 10m`
+and `max-file: 5`. The option applies when a container is (re)created, so the
+first deploy with it recreates `db` and `caddy` too (named volumes are kept);
+the old container logs, which contained full addresses, go away with the old
+containers. Check after the deploy without printing log contents:
+
+```bash
+for c in api worker ai-worker caddy db; do
+  sudo docker inspect -f '{{.Name}} {{.HostConfig.LogConfig.Type}} {{json .HostConfig.LogConfig.Config}}' "domsignal-prod-$c-1"
+done
+# Full IPv4 addresses per container (masked networks end in .0/24 and are not counted):
+sudo docker logs domsignal-prod-api-1 2>&1 | grep -cE '([0-9]{1,3}\.){3}[0-9]{1,3}(:[0-9]+)?([^/0-9]|$)'
+```
+
+`DISPLAY_TIMEZONE` (default `Europe/Moscow`) sets the time zone of staff
+messages in MAX; an unknown zone stops the process at settings validation.
+
 ## 7. Explicit isolated live resident scope
 
 SSH on the current host uses `user1@176.108.244.168` and the existing

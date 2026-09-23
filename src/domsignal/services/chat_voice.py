@@ -9,12 +9,14 @@
 
 Оповещение оператора — личное сообщение сотруднику с доступом к дому. В нём
 только шаблон, подписи видов опасности, дословная цитата жителя и ссылка на
-деталь сигнала в кабинете — обычным текстом, без кнопки.
+деталь сигнала в кабинете — обычным текстом, без кнопки. Цитата — та реплика,
+в которой найдена опасность, время — в поясе показа (`DISPLAY_TIMEZONE`).
+Новый вид опасности у уже открытого сигнала даёт отдельное оповещение.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -23,6 +25,7 @@ from pydantic import Field
 from domsignal.bot.messaging import PersonalMessage
 from domsignal.contracts.common import ContractModel
 from domsignal.contracts.routing import SafetyBlock
+from domsignal.core.display_time import DEFAULT_DISPLAY_TIMEZONE, staff_moment
 from domsignal.core.signals import DANGER_LABELS, author_label
 from domsignal.services.route_card_render import safety_lines
 
@@ -46,6 +49,7 @@ SAFETY_MEMO_PURPOSE: ChatPurpose = "chat_safety_memo"
 
 _MEMO_LEAD = "ДомСигнал: в чате написали о признаках опасности."
 _ALERT_LEAD = "ДомСигнал: возможная опасность в домовом чате."
+_ALERT_NEW_KIND_LEAD = "ДомСигнал: новый признак опасности в уже открытом сигнале."
 _ALERT_TAIL = (
     "Сигнал сохранён и ждёт проверки оператором. "
     "Сообщение в домовом чате не является официальным обращением."
@@ -71,10 +75,18 @@ class ChatMessageIntent(ContractModel):
 
 
 class SignalAlertIntent(ContractModel):
-    """Оповещение операторов дома о критическом сигнале."""
+    """Оповещение операторов дома о критическом сигнале.
+
+    `new_kinds` пуст у первого оповещения по сигналу и перечисляет новые виды
+    опасности у повторного. `evidence_mid` — реплика, в которой опасность
+    найдена: её текст берётся из цитат сигнала или буфера в момент отправки,
+    в outbox слов жителя нет.
+    """
 
     signal_id: UUID
     house_id: UUID
+    new_kinds: list[str] = Field(default_factory=list, max_length=7)
+    evidence_mid: str | None = Field(default=None, max_length=200)
 
 
 def _company(name: str | None) -> str:
@@ -118,10 +130,6 @@ def _labels(kinds: list[str] | tuple[str, ...]) -> str:
     return ", ".join(dict.fromkeys(labels)) or DANGER_LABELS["other_hazard"]
 
 
-def _moment(value: datetime) -> str:
-    return value.astimezone(UTC).strftime("%d.%m.%Y %H:%M UTC")
-
-
 def signal_cabinet_url(public_base_url: str | None, signal_id: UUID) -> str | None:
     """Ссылка на деталь сигнала в кабинете. Доступ проверяет сам кабинет."""
     base = (public_base_url or "").strip().rstrip("/")
@@ -139,17 +147,20 @@ def operator_alert_message(
     quote_author: str | None,
     quote_sent_at: datetime | None,
     cabinet_url: str | None = None,
+    new_kinds: list[str] | tuple[str, ...] = (),
+    display_timezone: str = DEFAULT_DISPLAY_TIMEZONE,
 ) -> PersonalMessage:
     """Личное сообщение оператору. Ссылка на кабинет — строкой текста, не кнопкой."""
-    lines = [
-        _ALERT_LEAD,
-        f"Дом: {house_address}",
-        f"Признаки: {_labels(danger_kinds)}",
-        _ALERT_SOURCE_RULES if from_rules else _ALERT_SOURCE_WINDOW,
-    ]
+    lines = [_ALERT_NEW_KIND_LEAD if new_kinds else _ALERT_LEAD, f"Дом: {house_address}"]
+    if new_kinds:
+        lines.append(f"Новый признак: {_labels(new_kinds)}")
+        lines.append(f"Все признаки сигнала: {_labels(danger_kinds)}")
+    else:
+        lines.append(f"Признаки: {_labels(danger_kinds)}")
+    lines.append(_ALERT_SOURCE_RULES if from_rules else _ALERT_SOURCE_WINDOW)
     if quote:
         author = author_label(quote_author) if quote_author else "житель"
-        moment = f", {_moment(quote_sent_at)}" if quote_sent_at else ""
+        moment = f", {staff_moment(quote_sent_at, display_timezone)}" if quote_sent_at else ""
         lines.append(f"Цитата: «{quote}» — {author}{moment}")
     lines.append(_ALERT_TAIL)
     if cabinet_url:

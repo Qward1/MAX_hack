@@ -414,6 +414,33 @@ class PassiveRepository:
     async def recount(self, signal_id: uuid.UUID) -> None:
         await self.session.execute(_RECOUNT, {"signal_id": signal_id})
 
+    async def evidence_line(
+        self, signal: Signal, mid: str
+    ) -> tuple[str, str, datetime] | None:
+        """Реплика-доказательство: цитата сигнала, иначе реплика буфера привязки.
+
+        Возвращает (текст, псевдоним автора, время). Буфер живёт не дольше
+        72 часов; после очистки остаются только цитаты сигнала.
+        """
+        quote = await self.session.scalar(
+            select(SignalQuote).where(
+                SignalQuote.signal_id == signal.id, SignalQuote.line_mid == mid
+            )
+        )
+        if quote is not None:
+            return quote.text, quote.author_ref, quote.sent_at
+        if signal.chat_binding_id is None:
+            return None
+        row = (
+            await self.session.execute(
+                select(ChatMessage.text, ChatMessage.author_ref, ChatMessage.sent_at).where(
+                    ChatMessage.chat_binding_id == signal.chat_binding_id,
+                    ChatMessage.mid == mid,
+                )
+            )
+        ).first()
+        return (row.text, row.author_ref, row.sent_at) if row is not None else None
+
     async def first_quote(self, signal_id: uuid.UUID) -> SignalQuote | None:
         return cast(
             SignalQuote | None,

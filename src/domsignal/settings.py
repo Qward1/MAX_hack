@@ -9,6 +9,8 @@ from urllib.parse import urlparse
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+from domsignal.core.display_time import display_zone
+
 
 class AppEnvironment(StrEnum):
     LOCAL = "local"
@@ -110,6 +112,8 @@ class Settings(BaseSettings):
     # Сторож разбора окна: если AI-пул не разобрал окно за это время, окно
     # разбирают правила в операционном пуле.
     passive_analysis_fallback_seconds: int = Field(default=90, ge=5, le=3600)
+    # Часовой пояс времени в сообщениях сотрудникам (кабинет показывает МСК).
+    display_timezone: str = "Europe/Moscow"
     build_commit: str = "dev"
     public_base_url: str = "http://localhost:8000"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
@@ -125,6 +129,12 @@ class Settings(BaseSettings):
     auth_rate_threshold: int = Field(default=10, ge=2, le=100)
     auth_rate_window_seconds: int = Field(default=300, ge=30, le=3600)
     auth_rate_backoff_seconds: int = Field(default=300, ge=30, le=3600)
+
+    @field_validator("display_timezone")
+    @classmethod
+    def validate_display_timezone(cls, value: str) -> str:
+        display_zone(value)  # неизвестный пояс — ошибка старта, а не UTC молча
+        return value
 
     @field_validator("auth_mfa_encryption_key")
     @classmethod

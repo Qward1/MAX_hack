@@ -5,6 +5,7 @@ import asyncio
 import logging
 
 from domsignal.bootstrap import build_container
+from domsignal.logs import configure_logging
 from domsignal.settings import get_settings
 from domsignal.worker.pools import DEFAULT_POOL, POOLS, WorkerPool, lease_seconds_for
 from domsignal.worker.runner import WorkerRunner
@@ -49,4 +50,5 @@ async def run(pool: WorkerPool = DEFAULT_POOL) -> None:
 
 
 if __name__ == "__main__":
+    configure_logging()
     asyncio.run(run(parse_pool()))

@@ -14,7 +14,9 @@
 - считает маршрут детерминированным Responsibility Router при создании сигнала
   и при смене подтипа;
 - ставит оповещение операторов о критическом сигнале — операционную задачу
-  наивысшего приоритета, не зависящую от AI-пула.
+  наивысшего приоритета, не зависящую от AI-пула; новый вид опасности у уже
+  открытого сигнала (был газ, добавился дым) даёт отдельное оповещение, тот
+  же вид — нет.
 
 Заявка УК или обращение из сигнала автоматически не создаются никогда.
 """
@@ -223,6 +225,37 @@ def draft_emergency(
     }
 
 
+def evidence_mid(evidence: Sequence[dict[str, Any]], kinds: Sequence[str]) -> str | None:
+    """Реплика, в которой найдена опасность этих видов.
+
+    Сначала срабатывание правил, затем подтверждённая цитата разбора, затем
+    любая другая: оператор видит реплику-доказательство, а не первую реплику
+    окна.
+    """
+    wanted = set(kinds)
+
+    def rank(item: dict[str, Any]) -> int:
+        if item.get("source") == "rules":
+            return 0
+        return 1 if item.get("quote_valid") else 2
+
+    found = sorted(
+        (
+            item
+            for item in evidence
+            if item.get("line_mid") and (not wanted or item.get("kind") in wanted)
+        ),
+        key=rank,
+    )
+    return str(found[0]["line_mid"]) if found else None
+
+
+def added_kinds(before: Sequence[str], after: Sequence[str]) -> list[str]:
+    """Виды опасности, которых у сигнала раньше не было, в порядке появления."""
+    known = set(before)
+    return [kind for kind in dict.fromkeys(after) if kind not in known]
+
+
 def versions_of(analysis: WindowAnalysis) -> dict[str, Any]:
     """Версии разбора для событий аудита: таксономия, правила, промпт, модель."""
     versions = analysis.versions
@@ -317,7 +350,20 @@ class SignalEngine:
 
     # ------------------------------------------------------------ оповещение
 
-    def queue_alert(self, session: AsyncSession, signal: Signal) -> uuid.UUID:
+    @staticmethod
+    def alert_key(signal_id: uuid.UUID, new_kinds: Sequence[str] = ()) -> str:
+        """Ключ дедупликации: одно первое оповещение и одно — на каждый новый вид."""
+        base = f"signal_alert:{signal_id}"
+        return f"{base}:{'+'.join(sorted(new_kinds))}"[:100] if new_kinds else base
+
+    def queue_alert(
+        self,
+        session: AsyncSession,
+        signal: Signal,
+        *,
+        new_kinds: Sequence[str] = (),
+        evidence: str | None = None,
+    ) -> uuid.UUID:
         """Оповещение операторов: outbox + операционная задача приоритета 10."""
         outbox_id = uuid.uuid4()
         session.add(
@@ -326,22 +372,50 @@ class SignalEngine:
                 kind=SIGNAL_ALERT_INTENT_KIND,
                 aggregate_id=signal.id,
                 payload=SignalAlertIntent(
-                    signal_id=signal.id, house_id=signal.house_id
+                    signal_id=signal.id,
+                    house_id=signal.house_id,
+                    new_kinds=list(new_kinds),
+                    evidence_mid=evidence,
                 ).model_dump(mode="json"),
                 status="pending",
-                dedupe_key=f"signal_alert:{signal.id}",
+                dedupe_key=self.alert_key(signal.id, new_kinds),
             )
         )
         return outbox_id
 
-    async def enqueue_alert(self, session: AsyncSession, signal: Signal) -> None:
-        outbox_id = self.queue_alert(session, signal)
+    async def enqueue_alert(
+        self,
+        session: AsyncSession,
+        signal: Signal,
+        *,
+        new_kinds: Sequence[str] = (),
+        evidence: str | None = None,
+    ) -> None:
+        """Поставить оповещение. Уже поставленное по тому же ключу не повторяется."""
+        if await PassiveRepository(session).outbox_exists(self.alert_key(signal.id, new_kinds)):
+            self.event(
+                session,
+                house_id=signal.house_id,
+                signal_id=signal.id,
+                kind="operator_alert_repeat_skipped",
+                details=",".join(new_kinds),
+            )
+            return
+        outbox_id = self.queue_alert(session, signal, new_kinds=new_kinds, evidence=evidence)
         await session.flush()
         await ReliabilityRepository(session).add_job(
             kind=ALERT_JOB,
             payload={"outbox_message_id": str(outbox_id), "signal_id": str(signal.id)},
             priority=ALERT_PRIORITY,
         )
+        if new_kinds:
+            self.event(
+                session,
+                house_id=signal.house_id,
+                signal_id=signal.id,
+                kind="danger_kind_added",
+                details=",".join(new_kinds),
+            )
         self.event(
             session, house_id=signal.house_id, signal_id=signal.id, kind="operator_alert_requested"
         )
@@ -387,6 +461,7 @@ class SignalEngine:
         )
         if existing is not None:
             emergency = dict(existing.emergency)
+            new_kinds = added_kinds(emergency.get("kinds", []), kinds)
             emergency["kinds"] = list(dict.fromkeys([*emergency.get("kinds", []), *kinds]))
             emergency["evidence"] = [*emergency.get("evidence", []), *map(_hit, active)]
             existing.emergency = emergency
@@ -406,6 +481,9 @@ class SignalEngine:
                 kind="danger_grouped",
                 details=",".join(kinds),
             )
+            if new_kinds:
+                # Тот же вид в окне склейки молчит, новый вид — повод оповестить.
+                await self.enqueue_alert(session, existing, new_kinds=new_kinds, evidence=line.mid)
             return existing, False
         displaced = all(hit.displaced for hit in active)
         signal = Signal(
@@ -458,7 +536,7 @@ class SignalEngine:
             details=",".join(kinds) + (" (displaced)" if displaced else ""),
         )
         await self.route(session, signal, danger_kinds=kinds)
-        await self.enqueue_alert(session, signal)
+        await self.enqueue_alert(session, signal, evidence=line.mid)
         return signal, True
 
     # ------------------------------------------------------ сигналы из окна
@@ -554,7 +632,11 @@ class SignalEngine:
         if draft.emergency.is_emergency:
             # Опасность, которую нашло окно, а не правила приёма: оператора
             # оповещаем, в чат не пишем.
-            await self.enqueue_alert(session, signal)
+            await self.enqueue_alert(
+                session,
+                signal,
+                evidence=evidence_mid(signal.emergency["evidence"], draft.emergency.kinds),
+            )
         return signal
 
     async def group(
@@ -571,6 +653,8 @@ class SignalEngine:
     ) -> None:
         """Ветка той же проблемы: растут счётчики, сила только растёт."""
         was_critical = signal.strength == "critical"
+        before = list((signal.emergency or {}).get("kinds", []))
+        fresh: dict[str, Any] | None = None
         if stronger(signal.strength, draft.strength):
             disposition, audit_reason = await self._placement(
                 session, signal.house_id, draft, now
@@ -597,8 +681,21 @@ class SignalEngine:
             kind="signal_grouped",
             details=reason,
         )
-        if draft.emergency.is_emergency and not was_critical:
-            await self.enqueue_alert(session, signal)
+        if fresh is None:
+            return
+        if not was_critical:
+            await self.enqueue_alert(
+                session, signal, evidence=evidence_mid(fresh["evidence"], fresh["kinds"])
+            )
+        elif new_kinds := added_kinds(before, fresh["kinds"]):
+            # Открытый критический сигнал получил вид опасности, которого у
+            # него не было (P7a: «человек не может выйти» у газового сигнала).
+            await self.enqueue_alert(
+                session,
+                signal,
+                new_kinds=new_kinds,
+                evidence=evidence_mid(fresh["evidence"], new_kinds),
+            )
 
     async def reconcile(
         self,
@@ -628,6 +725,7 @@ class SignalEngine:
             None,
         )
         emergency = dict(signal.emergency or {})
+        before = list(emergency.get("kinds", []))
         fresh = draft_emergency(draft, analysis, index)
         emergency["preliminary"] = False
         emergency["sources"] = list(
@@ -700,6 +798,14 @@ class SignalEngine:
             signal,
             danger_kinds=emergency.get("kinds", []) if signal.strength == "critical" else (),
         )
+        if decision.is_emergency and (new_kinds := added_kinds(before, fresh["kinds"])):
+            # Разбор окна нашёл у предварительного сигнала ещё один вид опасности.
+            await self.enqueue_alert(
+                session,
+                signal,
+                new_kinds=new_kinds,
+                evidence=evidence_mid(fresh["evidence"], new_kinds),
+            )
 
     async def keep_unmatched(
         self, session: AsyncSession, signal: Signal, *, window_id: uuid.UUID
@@ -731,6 +837,8 @@ __all__ = [
     "LineIndex",
     "PassiveConfig",
     "SignalEngine",
+    "added_kinds",
     "draft_emergency",
+    "evidence_mid",
     "versions_of",
 ]

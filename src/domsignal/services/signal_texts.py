@@ -54,6 +54,7 @@ DISMISS_REASON_LABELS: dict[str, str] = {
 EVENT_LABELS: dict[str, str] = {
     "preliminary_critical": "Правила нашли признак опасности",
     "danger_grouped": "Повторное сообщение об опасности присоединено к сигналу",
+    "danger_kind_added": "К сигналу добавился новый признак опасности",
     "chat_memo_queued": "Памятка безопасности поставлена в очередь в чат",
     "chat_memo_suppressed": "Памятка не повторена: недавно уже была",
     "operator_alert_requested": "Запрошено оповещение операторов",

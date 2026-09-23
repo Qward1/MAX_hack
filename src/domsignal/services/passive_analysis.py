@@ -45,6 +45,7 @@ from domsignal.db.models import ChatBinding, ConversationWindow, Signal
 from domsignal.db.models.passive import OPEN_SIGNAL_STATUSES
 from domsignal.db.repositories.passive import BufferedLine, PassiveRepository
 from domsignal.services.ai_budget import PostgresBudgetGuard
+from domsignal.services.ai_provenance import execution_provenance
 from domsignal.services.errors import RescheduleJob
 from domsignal.services.signals import LineIndex, SignalEngine, versions_of
 
@@ -356,14 +357,7 @@ class PassiveWindowAnalysis:
         index = LineIndex({_line_id(line): line for line in snapshot.lines})
         versions = versions_of(analysis)
         summary = {
-            "mode": analysis.mode,
-            "state": analysis.execution.state,
-            "provider_called": analysis.execution.provider_called,
-            "latency_ms": analysis.execution.latency_ms,
-            "model": analysis.execution.provider_model,
-            "tokens_in": analysis.execution.tokens_in,
-            "tokens_out": analysis.execution.tokens_out,
-            "cost_rub": analysis.execution.cost_rub,
+            **execution_provenance(analysis),
             "versions": versions,
             "signals": len(analysis.signals),
             "dropped_fields": analysis.dropped_fields,

@@ -130,20 +130,37 @@ def check_references(document: dict[str, Any], path: Path, known: dict[str, set[
 
 
 def check_verification(document: dict[str, Any], path: Path) -> bool:
-    """Проверенная запись обязана называть дату проверки и источник."""
+    """Проверенная запись обязана называть дату проверки и источник.
+
+    Источник — документ по ссылке (официальная публикация закона или
+    страница самого сервиса), а не пересказ: у проверенной записи, у
+    основания проверенного правила и у каждого факта канала нужен
+    `source_url` (решение владельца P7a).
+    """
     failed = False
     for where, section in sections(document):
         for key in ("organizations", "channels", "rules"):
             for index, entry in enumerate(section.get(key) or []):
+                location = f"{where}.{key}.{index}"
+                for position, fact in enumerate(entry.get("facts") or []):
+                    if not fact.get("source_url"):
+                        report(path, f"{location}.facts.{position}", "a fact needs a source_url")
+                        failed = True
                 verification = entry.get("verification") or {}
                 if verification.get("status") != "verified":
                     continue
                 if not verification.get("verified_at") or not verification.get("source_title"):
                     report(
                         path,
-                        f"{where}.{key}.{index}.verification",
+                        f"{location}.verification",
                         "verified record needs verified_at and source_title",
                     )
+                    failed = True
+                if not verification.get("source_url"):
+                    report(path, f"{location}.verification", "verified record needs a source_url")
+                    failed = True
+                if key == "rules" and not (entry.get("basis") or {}).get("source_url"):
+                    report(path, f"{location}.basis", "verified rule basis needs a source_url")
                     failed = True
     return failed
 

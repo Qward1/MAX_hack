@@ -57,7 +57,8 @@ async def test_draft_is_composed_from_verified_data_and_the_residents_words(ex) 
     # Канал и его проверенные факты приходят со ссылкой на источник.
     assert body["channel"]["id"] == "pos_gosuslugi"
     assert CHANNEL_FACTS_HEADING in text
-    assert "Срок рассмотрения" in text
+    assert "«рассматривается в течение 30 дней со дня регистрации письменного обращения»" in text
+    assert "59-ФЗ" in text and "календарных" not in text
     assert "gosuslugi.ru" in text
     assert SELF_FILING_NOTE in text
     lowered = text.lower()
@@ -68,9 +69,10 @@ async def test_draft_is_composed_from_verified_data_and_the_residents_words(ex) 
     actions = {item["code"]: item for item in body["allowed_actions"]}
     assert actions["copy_draft"]["enabled"] is True
     assert actions["mark_filed"]["enabled"] is True
-    # Ссылка входа ПОС ещё не заполнена владельцем — действие честно отключено.
-    assert actions["open_official_channel"]["enabled"] is False
-    assert actions["open_official_channel"]["reason"]
+    # Адрес входа ПОС подтверждён владельцем (P7b) — переход активен.
+    assert actions["open_official_channel"]["enabled"] is True
+    assert actions["open_official_channel"]["reason"] is None
+    assert body["channel"]["url"] == "https://www.gosuslugi.ru/help/obratitsya_v_pos"
 
 
 @pytest.mark.integration

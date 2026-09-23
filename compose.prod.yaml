@@ -1,8 +1,18 @@
+# Журналы контейнеров ограничены по объёму: не больше 5 файлов по 10 МБ на
+# контейнер (json-file), старые файлы Docker удаляет сам. Полных IP-адресов в
+# журналах нет: доступ журналирует приложение с усечённой сетью клиента.
+x-logging: &production-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   db:
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
     restart: unless-stopped
+    logging: *production-logging
 
   migrate:
     environment: &production-environment
@@ -28,15 +38,21 @@ services:
       PASSIVE_DANGER_GROUP_MINUTES: ${PASSIVE_DANGER_GROUP_MINUTES:-30}
       PASSIVE_CHAT_MEMO_PAUSE_MINUTES: ${PASSIVE_CHAT_MEMO_PAUSE_MINUTES:-30}
       PASSIVE_ANALYSIS_FALLBACK_SECONDS: ${PASSIVE_ANALYSIS_FALLBACK_SECONDS:-90}
+      # Время в сообщениях сотрудникам — в поясе показа, подпись «МСК».
+      DISPLAY_TIMEZONE: ${DISPLAY_TIMEZONE:-Europe/Moscow}
       PUBLIC_BASE_URL: https://${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN}
       CORS_ORIGINS: https://${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN}
+    logging: *production-logging
 
   seed:
     environment: *production-environment
+    logging: *production-logging
 
   api:
     # Only Caddy (private Docker network) or trusted host loopback reaches this port.
-    command: ["uvicorn", "domsignal.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    # Журнал доступа uvicorn выключен: он пишет полный адрес клиента из
+    # X-Forwarded-For. Запросы журналирует приложение (`http_request`).
+    command: ["uvicorn", "domsignal.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*", "--no-access-log"]
     environment:
       <<: *production-environment
       BUILD_COMMIT: ${BUILD_COMMIT:?set BUILD_COMMIT}
@@ -54,9 +70,11 @@ services:
       timeout: 3s
       start_period: 10s
       retries: 5
+    logging: *production-logging
 
   worker:
     environment: *production-environment
+    logging: *production-logging
 
   ai-worker:
     environment:
@@ -72,6 +90,7 @@ services:
       LLM_CHAT_DAILY_SHARE: ${LLM_CHAT_DAILY_SHARE:-0.2}
       # Аренда задачи AI-пула ≥ таймаут модели + 20 с, иначе воркер не стартует.
       AI_WORKER_LEASE_SECONDS: ${AI_WORKER_LEASE_SECONDS:-80}
+    logging: *production-logging
 
   caddy:
     image: caddy:2.10.2-alpine
@@ -93,6 +112,7 @@ services:
       api:
         condition: service_healthy
     restart: unless-stopped
+    logging: *production-logging
 
 volumes:
   caddy-data:

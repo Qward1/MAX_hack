@@ -2,11 +2,17 @@ from datetime import datetime, timedelta
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domsignal.db.models import MaxDestinationLimit, NotificationDelivery, OutboxMessage, Report
+from domsignal.db.models import (
+    MaxDestinationLimit,
+    NotificationDelivery,
+    OutboxMessage,
+    Report,
+    Signal,
+)
 
 #: Вид outbox-сообщения A-16, из которого рождается доставка по заявке.
 TICKET_INTENT_KIND = "ticket.notification_intent.v1"
@@ -31,12 +37,23 @@ class NotificationRepository:
             ),
         )
 
-    async def recipients(self, incident_id: UUID) -> list[UUID]:
-        return list(
-            await self.session.scalars(
-                select(Report.author_id).where(Report.incident_id == incident_id).distinct()
-            )
+    async def recipients(self, incident_id: UUID) -> list[tuple[UUID, bool]]:
+        """Авторы сообщений проблемы и признак «только решения по сигналу».
+
+        Сообщение, созданное оператором из сигнала чата (`create-ticket` или
+        `join`), пишется от имени сотрудника: жителя-получателя за ним нет.
+        Автор, у которого есть хоть одно собственное сообщение, — житель.
+        """
+        from_signal = (
+            select(Signal.id).where(Signal.report_id == Report.id).exists().correlate(Report)
         )
+        rows = await self.session.execute(
+            select(Report.author_id, func.bool_and(from_signal))
+            .where(Report.incident_id == incident_id)
+            .group_by(Report.author_id)
+            .order_by(Report.author_id)
+        )
+        return [(row[0], bool(row[1])) for row in rows]
 
     async def affected(self, ticket_id: UUID) -> list[NotificationDelivery]:
         return list(

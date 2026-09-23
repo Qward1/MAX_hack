@@ -85,9 +85,9 @@ export const route = {
       routes_to_competent_authority: true,
       facts: [
         {
-          text: "Срок рассмотрения — до 30 календарных дней.",
-          source_title: "Правила сервиса",
-          source_url: "https://example.org/pos",
+          text: "По закону письменное обращение «рассматривается в течение 30 дней со дня регистрации письменного обращения».",
+          source_title: "Федеральный закон № 59-ФЗ, ст. 12 ч. 1",
+          source_url: "https://example.org/law",
         },
       ],
       verification_status: "verified" as const,

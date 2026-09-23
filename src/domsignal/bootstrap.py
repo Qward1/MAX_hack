@@ -244,6 +244,7 @@ def build_container(settings: Settings) -> Container:
         ),
         enabled=settings.max_transport == MaxTransportMode.WEBHOOK,
         public_base_url=settings.public_base_url,
+        display_timezone=settings.display_timezone,
     )
     ai = build_ai(settings, session_factory)
     explicit_reports = ExplicitReportService(

@@ -14,6 +14,7 @@ from sqlalchemy import func, select, update
 from domsignal.db.models import (
     AppSession,
     AuthChallenge,
+    AuthRateLimit,
     EmployeeCredential,
     HouseAssignment,
     HouseManagement,
@@ -310,6 +311,50 @@ async def test_auth24_26_36_csrf_origins_and_rate_limit(auth):
     ]
     assert attempts[-1].status_code == 429
     assert attempts[-1].headers["content-type"].startswith("application/problem+json")
+
+
+async def test_p7b_ip_rate_limit_keeps_only_keyed_slot(auth):
+    """P7b §2: ограничитель по адресу работает, а адреса в базе нет.
+
+    Адрес превращается в номер ячейки — HMAC-SHA256 с `SESSION_SECRET` по
+    модулю 65 536; в таблице только номер, счётчик и время.
+    """
+    app, service = auth["app"], auth["service"]
+    blocked_ip, other_ip = "203.0.113.77", "198.51.100.23"
+    slot = int(service.digest(blocked_ip, "rate-ip")[:8], 16) % 65536
+    assert slot != int(service.digest(other_ip, "rate-ip")[:8], 16) % 65536
+    async with AsyncClient(
+        transport=ASGITransport(app=app, client=(blocked_ip, 40000)),
+        base_url="https://testserver",
+    ) as client:
+        d = {"client": client}
+        await state(d)
+        # Разные имена: ячейки имён не переполняются, срабатывает ячейка адреса
+        # (порог имени × 5 = 50 попыток за окно).
+        codes = [
+            (await post(d, "/login", {"login_name": f"nobody.{n}", "password": "wrong"}))
+            .status_code
+            for n in range(55)
+        ]
+    assert codes[0] == 401 and codes[-1] == 429
+    assert codes.index(429) == 49  # 1 запрос сессии + 49 входов = 50 разрешённых
+    async with AsyncClient(
+        transport=ASGITransport(app=app, client=(other_ip, 40001)),
+        base_url="https://testserver",
+    ) as client:
+        assert (await client.get(BASE + "/session")).status_code == 200
+    async with auth["container"].session_factory() as db:
+        columns = set(AuthRateLimit.__table__.columns.keys())
+        assert columns == {"slot", "attempts", "window_at", "locked_until"}
+        row = await db.get(AuthRateLimit, slot)
+        assert row is not None and row.locked_until is not None
+        receipts = [
+            json.dumps(item.payload)
+            for item in await db.scalars(
+                select(InboxReceipt).where(InboxReceipt.event_type.like("employee_auth.%"))
+            )
+        ]
+    assert all(blocked_ip not in item and other_ip not in item for item in receipts)
 
 
 async def test_auth31_concurrent_mfa_consumed_once(auth):

@@ -198,7 +198,12 @@ def test_the_memo_repeats_the_federal_safety_file() -> None:
 def test_chat_intents_have_no_field_for_model_prose() -> None:
     fields = set(chat_voice.ChatMessageIntent.model_fields)
     assert not fields & {"clean_description", "description", "summary"}
-    assert set(chat_voice.SignalAlertIntent.model_fields) == {"signal_id", "house_id"}
+    assert set(chat_voice.SignalAlertIntent.model_fields) == {
+        "signal_id",
+        "house_id",
+        "new_kinds",
+        "evidence_mid",
+    }
 
 
 def test_operator_alert_has_no_button_to_nowhere() -> None:
