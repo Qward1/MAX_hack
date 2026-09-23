@@ -103,3 +103,16 @@ def test_each_new_kind_has_its_own_alert_key() -> None:
     assert smoke == f"signal_alert:{signal_id}:smoke_fire"
     both = SignalEngine.alert_key(signal_id, ["smoke_fire", "gas"])  # type: ignore[arg-type]
     assert both == f"signal_alert:{signal_id}:gas+smoke_fire" and len(both) <= 100
+
+
+def test_open_signals_pass_their_danger_kinds_to_the_core() -> None:
+    from domsignal.services.signals import open_item_danger_kinds
+
+    assert open_item_danger_kinds({"is_emergency": True, "kinds": ["gas", "smoke_fire"]}) == (
+        "gas",
+        "smoke_fire",
+    )
+    # Опровергнутая опасность не передаётся: новый сигнал того же вида — отдельный.
+    assert open_item_danger_kinds({"is_emergency": False, "kinds": ["gas"]}) == ()
+    assert open_item_danger_kinds(None) == ()
+    assert open_item_danger_kinds({"kinds": ["unknown_kind"]}) == ()

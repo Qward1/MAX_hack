@@ -13,7 +13,6 @@
 
 from __future__ import annotations
 
-import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -127,10 +126,13 @@ async def test_smoke_after_gas_is_its_own_alert_with_the_112_route(pv) -> None: 
     assert len(pv.memos()) == 2
 
 
-async def test_the_model_adding_a_kind_to_an_open_signal_alerts_with_the_evidence_line(
-    pv,  # noqa: F811
-) -> None:
-    """P7a: модель отнесла «человек не может выйти» к открытому газовому сигналу."""
+async def test_a_new_kind_at_an_open_gas_signal_becomes_its_own_signal(pv) -> None:  # noqa: F811
+    """P7a + P6: «человек не может выйти» у открытого газового сигнала.
+
+    Продукт передаёт ядру виды опасности открытых сигналов
+    (`OpenItem.danger_kinds`), и инвариант P6 не даёт новому виду лечь в
+    элемент без него: получается отдельный сигнал со своим первым оповещением.
+    """
     await pv.bind()
     await pv.say(GAS_2, actor=NEIGHBOURS[0], at=ago(600))
     await settle(pv)
@@ -138,7 +140,7 @@ async def test_the_model_adding_a_kind_to_an_open_signal_alerts_with_the_evidenc
     gas = await pv.scalar(select(Signal))
     assert gas.emergency["kinds"] == ["gas"]
     # m1 — контекст (реплика про газ), m2..m4 — окно, open:1 — газовый сигнал.
-    use_model(
+    provider = use_model(
         pv,
         {
             "messages": [
@@ -149,8 +151,8 @@ async def test_the_model_adding_a_kind_to_an_open_signal_alerts_with_the_evidenc
             "signals": [
                 {
                     **model_signal(
-                        subtype="gas.smell",
-                        obj="газ",
+                        subtype="elevator.doors",
+                        obj="двери",
                         facets={
                             "current": facet("yes", "женщина стучит", "m3"),
                             "local": facet("unclear"),
@@ -177,17 +179,71 @@ async def test_the_model_adding_a_kind_to_an_open_signal_alerts_with_the_evidenc
     ]
     await settle(pv)
     await pv.deliver()
+    request = provider.requests[0]
+    assert [item.danger_kinds for item in request.open_items] == [("gas",)]
     stored = await pv.scalar(select(Signal).where(Signal.id == gas.id))
-    assert stored.emergency["kinds"] == ["gas", "person_trapped"]
+    assert stored.emergency["kinds"] == ["gas"], "газовый сигнал не поглотил новый вид"
+    trapped = await pv.scalar(select(Signal).where(Signal.id != gas.id))
+    assert trapped is not None and trapped.strength == "critical"
+    assert trapped.emergency["kinds"] == ["person_trapped"]
     intents = await alert_intents(pv)
-    assert intents[-1]["new_kinds"] == ["person_trapped"]
+    assert intents[-1]["signal_id"] == str(trapped.id)
+    assert intents[-1]["new_kinds"] == [], "это первое оповещение нового сигнала"
     assert intents[-1]["evidence_mid"] == mids[1], "доказательство, а не первая реплика окна"
     text = alerts(pv)[-1]
-    assert "Новый признак: человек не может выйти" in text
+    assert text.startswith("ДомСигнал: возможная опасность в домовом чате.")
+    assert "Признаки: человек не может выйти" in text
     assert f"«{TRAPPED[1]}»" in text and TRAPPED[0] not in text
-    assert "Признак найден при разборе переписки." in text
-    assert re.search(r"\d{2}\.\d{2}\.\d{4} \d{2}:\d{2} МСК", text)
+    assert f"{moscow(trapped_at)}" in text
     assert not pv.memos()[1:], "смысловая опасность в чат не пишет"
+
+
+async def test_the_window_adding_a_kind_to_a_preliminary_signal_alerts_again(
+    pv,  # noqa: F811
+) -> None:
+    """Примирение: правила нашли газ, разбор окна — ещё и запертого человека."""
+    await pv.bind()
+    line = "Пахнет газом, а в лифте застряла женщина"
+    use_model(
+        pv,
+        {
+            "messages": [verdict("m1", "new_problem", "new:1")],
+            "signals": [
+                model_signal(
+                    subtype="gas.smell",
+                    obj="газ",
+                    facets={
+                        "current": facet("yes", "Пахнет газом", "m1"),
+                        "local": facet("unclear"),
+                        "observed": facet("yes", "Пахнет газом", "m1"),
+                    },
+                    danger=[
+                        {
+                            "kind": "gas",
+                            "evidence": [{"msg": "m1", "quote": "Пахнет газом"}],
+                            "contextual": False,
+                        },
+                        {
+                            "kind": "person_trapped",
+                            "evidence": [{"msg": "m1", "quote": "в лифте застряла женщина"}],
+                            "contextual": False,
+                        },
+                    ],
+                )
+            ],
+        },
+    )
+    mid = await pv.say(line, actor=NEIGHBOURS[0], at=ago(60))
+    await settle(pv)
+    await pv.deliver()
+    signal = await pv.scalar(select(Signal))
+    assert signal.emergency["kinds"] == ["gas", "person_trapped"]
+    intents = await alert_intents(pv)
+    assert [item["new_kinds"] for item in intents] == [[], ["person_trapped"]]
+    assert intents[-1]["evidence_mid"] == mid
+    text = alerts(pv)[-1]
+    assert "Новый признак: человек не может выйти" in text
+    assert "Признак найден при разборе переписки." in text
 
 
 async def test_a_new_signal_from_the_window_quotes_the_evidence_line(pv) -> None:  # noqa: F811

@@ -140,6 +140,17 @@ def _known_scope(value: str) -> LocationScope:
     return "unknown"
 
 
+def open_item_danger_kinds(emergency: dict[str, Any] | None) -> tuple[DangerKind, ...]:
+    """Виды опасности открытого сигнала для ядра (`OpenItem.danger_kinds`).
+
+    Опровергнутая опасность (`is_emergency = false`) не передаётся: новый
+    сигнал того же вида должен стать отдельным, а не лечь в понижённый.
+    """
+    if not emergency or emergency.get("is_emergency") is False:
+        return ()
+    return _danger_kinds(emergency.get("kinds") or [])
+
+
 def _danger_kinds(values: Sequence[str]) -> tuple[DangerKind, ...]:
     known: tuple[DangerKind, ...] = (
         "gas",
@@ -840,5 +851,6 @@ __all__ = [
     "added_kinds",
     "draft_emergency",
     "evidence_mid",
+    "open_item_danger_kinds",
     "versions_of",
 ]
