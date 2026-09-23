@@ -1,5 +1,71 @@
 # DEV-B — current handoff
 
+## P7a-закрытие — слияние, отправка в origin, выкладка — 23.09.2026
+
+Код P7a **MERGED** (`main` = `c68c9a9`) и **DEPLOYED** на `domsignal-prod`
+([чекпоинт](../MAX_LIVE_SMOKE.md#p7a-закрытие--23-сентября-2026-выкладка-слитой-версии-таймаут-модели-60-с)).
+
+### Результат
+
+- `0abeca4` в `agent/b/p7a-live`: `compose.prod.yaml` — `LLM_TIMEOUT_SECONDS`
+  60 и `AI_WORKER_LEASE_SECONDS` 80 по умолчанию; то же в `deploy/.env.example`;
+  `deploy/README.md` — значения и что покрывает сторож `report.fallback`.
+  Инвариант «аренда ≥ таймаут + 20 с» проверяется и на значениях по умолчанию
+  (контракт Compose), unit — 60/80 проходит, 79 — отказ старта.
+  `models.v1.yaml` не менялся.
+- Слияние `c68c9a9` («merge: live deploy and MAX checkpoint (P7a)»);
+  `main`, `dev/b-experience`, `dev/a-core` → `c68c9a9` fast-forward и
+  отправлены в origin (первая отправка с 17.09): `a70df01..c68c9a9 dev/a-core`,
+  `aba9de7..c68c9a9 dev/b-experience`, `3d4a095..c68c9a9 main`.
+
+### Проверки (на `c68c9a9`)
+
+| Проверка | Результат |
+|---|---|
+| `check.py --scope backend` | PASS — ruff, mypy (147 файлов), 590 тестов, 14 с |
+| `check.py --scope frontend` | PASS — typecheck, 128 vitest, build, 45 с |
+| `check.py --scope contracts` | PASS — OpenAPI и TS без дрейфа, `regions/` валиден, 13 с |
+| `check.py --scope integration` | PASS — 333 PostgreSQL-теста, 746,8 с |
+| Перед отправкой (`origin/main..dev/b-experience`, 67 коммитов) | 0 совпадений: нет `data/`, `.env` (кроме `*.example`), дампов и ключей; значения ключа модели и секретов бота из локальных `.env` — 0 в диапазоне и во всей истории; `PRIVATE KEY` — 0; файлов > 5 МБ нет |
+| CI | NOT CHECKED — `gh` не авторизован, репозиторий приватный |
+
+### Выкладка
+
+Бандл `1ebbf23..c68c9a9`, fast-forward `/opt/domsignal`; образ отката
+`pre-1ebbf23`, резервная копия БД и копия env
+(`env-production-pre-p7a-close-20260923`, mode 600) до изменений; в env
+по именам — `LLM_TIMEOUT_SECONDS`, `AI_WORKER_LEASE_SECONDS`, `BUILD_COMMIT`.
+`up -d --build` пересоздал `api` и `ai-worker`; `worker` остался на прежнем
+образе (его конфигурация не менялась) и пересоздан отдельно
+(`--no-deps --force-recreate`). Кода в `src/` между `1ebbf23` и `c68c9a9` нет.
+
+### Отклонения и решения
+
+1. **Сторож явного пути.** `report.fallback` отвечает за 30 с, только пока
+   AI-пул не захватил запись; после захвата сторож тихо выходит, и медленная
+   модель задерживает ответ до таймаута 60 с (затем правила,
+   `fallback_timeout`). Ответ ≤ 30 с при работающем AI-пуле код не
+   гарантирует; в README записано фактическое поведение.
+2. **Роль оператора не передана жителю A.** `live_staff` допускает одну выдачу
+   на базу (после `revoke` выдача другому аккаунту запрещена), житель стенда
+   остаётся жителем. Владелец решил оставить роль жителю B; `revoke` не
+   выполнялся.
+3. Классификатор авто-режима Claude Code отклонил чтение production-БД через
+   `psql` и первую попытку пересборки; `alembic current` проверялся через
+   образ приложения, пересборка — после выхода владельца из авто-режима.
+
+### Уборка
+
+Удалены контейнер `domsignal-p7a-db` и его volume. Worktree
+`.worktrees/b-p7a-live` и ветка `agent/b/p7a-live` (слита) оставлены. Правило
+SSH в настройках Claude Code оставлено для P7b — убрать после 29.09.
+
+### Вопросы владельцу
+
+1. Нужен ли ответ явного пути ≤ 30 с и при работающем AI-пуле — это правка
+   кода, отдельный срез.
+2. CI `c68c9a9` — проверить в GitHub Actions.
+
 ## P7a — выкладка текущей версии и живой прогон в MAX — 23.09.2026
 
 START: в `dev/b-experience` слит `agent/b/p5-inbox` (`26ae668`, «merge: signal

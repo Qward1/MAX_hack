@@ -1,5 +1,26 @@
 # MAX live smoke — RESIDENT / GROUP / TICKET PRODUCT LOOP LIVE VERIFIED (MAX WEB)
 
+## P7a-закрытие — 23 сентября 2026: выкладка слитой версии, таймаут модели 60 с
+
+Выкладка кода, слитого в `main`; новой функциональности нет, живой прогон в MAX
+не повторялся. Время — UTC.
+
+| Параметр | Значение |
+|---|---|
+| `BUILD_COMMIT` | `c68c9a9b414341f8ec40d51777ebf2985807b7e7` (`main` = `dev/b-experience`, перенос бандлом) |
+| Образ `domsignal-backend:local` | `sha256:8d2b4e17c2b1611784cc20fb859dd8b4712d6d8a981a0eb1179d5f2807b95170` (api, worker, ai-worker) |
+| Откат | образ `domsignal-backend:pre-1ebbf23`, прежний SHA `1ebbf23` |
+| Миграции | нет; `alembic current` = `20260923_0009 (head)` до и после |
+| Резервная копия | `/var/backups/domsignal/domsignal-20260923T123258073085Z.dump`, 210 030 байт, mode 600, `pg_restore --list` — 369 строк |
+| Таймаут модели / аренда AI-пула | **60 с / 80 с** (было 45 / 65); те же значения — по умолчанию в `compose.prod.yaml` |
+| Оператор в MAX | без изменений: роль `live_staff` у жителя B (решение владельца) |
+
+После выкладки (≈13:08): `/ready` 200 снаружи, `/version` = `c68c9a9`,
+capabilities без изменений (`ai_analysis`, `routes`, `passive_capture` = true,
+`test_auth` = false); webhook без секрета 401; `list` — одна подписка, прежний
+URL и шесть типов событий (не менялась); `ai-worker` работает без перезапусков
+(аренда 80 ≥ 60 + 20 прошла проверку старта).
+
 ## P7a checkpoint — 23 сентября 2026: пассивное чтение, Signal Inbox, модель, явный путь
 
 Этот чекпоинт относится к функциям с 20.09 (роутер, явный путь, экраны жителя,
