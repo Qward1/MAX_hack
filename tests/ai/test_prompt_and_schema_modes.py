@@ -234,7 +234,7 @@ def test_messages_are_system_few_shot_pairs_and_the_window() -> None:
 
 
 def test_prompt_version_is_the_one_reported_to_the_product() -> None:
-    assert PROMPT_VERSION == "window.v1"
+    assert PROMPT_VERSION == "window.v2"
 
 
 # ------------------------------------------------------------- few-shot
@@ -294,8 +294,9 @@ def test_prompt_v2_is_compact_and_uses_a_subset_of_v1_examples() -> None:
     request, _ = build_request(window("Лифт во 2 подъезде не работает", "у нас тоже"))
     messages = build_messages(request, version="window.v2")
     v2 = load_examples("window.v2")
-    assert 3 <= len(v2) < len(load_examples())
-    assert {example.id for example in v2} <= {example.id for example in load_examples()}
+    v1 = load_examples("window.v1")
+    assert 3 <= len(v2) < len(v1)
+    assert {example.id for example in v2} <= {example.id for example in v1}
     assert len(messages) == 2 + 2 * len(v2)
     assert "\n" not in messages[-1]["content"]
     assert "is_context" in messages[0]["content"]

@@ -99,3 +99,13 @@ def test_shipped_resource_excludes_the_forbidden_providers() -> None:
         assert "open-inference" not in lowered and "openinference" not in lowered
         assert "preview" not in lowered
         assert "free" not in lowered
+
+
+def test_shipped_default_profile_follows_the_p6_measurement() -> None:
+    """Профиль P6: минимальные рассуждения, flex первым, таймаут ≤ production."""
+    default = load_models().default
+    assert default is not None
+    assert default.extra_body["reasoning"] == {"effort": "minimal"}
+    assert default.extra_body["provider"]["order"][0] == "openai/flex"
+    assert default.extra_body["provider"]["allow_fallbacks"] is True
+    assert 20.0 < default.timeout_seconds <= 60.0

@@ -1,6 +1,7 @@
-"""Промпт окна v1: детерминированный рендер, независимый от провайдера.
+"""Промпт окна: детерминированный рендер, независимый от провайдера.
 
-Системное сообщение собирается из шаблона `prompts/window.v1.md` и живых
+Версии: `window.v1` (P2) и `window.v2` (P6, по умолчанию). Системное
+сообщение собирается из шаблона версии `prompts/window.vN.md` и живых
 значений контракта: коды таксономии, территории, признаки, роли, виды
 опасности и причины опровержения. Расхождение между контрактом и промптом
 невозможно — при рассинхронизации модуль не импортируется.
@@ -34,7 +35,8 @@ from domsignal.ai.schema_modes import SchemaMode, schema_in_prompt, strict_schem
 from domsignal.ai.taxonomy import Taxonomy, load_taxonomy
 
 #: Версия промпта по умолчанию, попадающая в `WindowAnalysis.versions.prompt`.
-PROMPT_VERSION = "window.v1"
+#: P6 (23.09): window.v2 — измерено на dev D3, решение и числа в docs/decisions.md.
+PROMPT_VERSION = "window.v2"
 
 PROMPT_RESOURCE = "prompts/window.v1.md"
 EXAMPLES_RESOURCE = "prompts/window.v1.examples.jsonl"
@@ -71,6 +73,7 @@ def prompt_spec(version: str | None = None) -> PromptSpec:
     if name not in PROMPT_SPECS:
         raise ValueError(f"unknown prompt version {name!r}")
     return PROMPT_SPECS[name]
+
 
 SCOPE_GUIDE: dict[LocationScope, str] = {
     "apartment": "внутри квартиры: «у меня в ванной», «в моей квартире», «у соседа сверху»",

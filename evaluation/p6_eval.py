@@ -92,6 +92,7 @@ class ModelConfig:
     few_shot: bool = True
     effort: str | None = "low"
     provider_only: tuple[str, ...] = ()
+    provider_order: tuple[str, ...] = ()
     temperature: float | None = None
     max_tokens: int = 1600
     timeout_seconds: float = 60.0
@@ -102,6 +103,8 @@ class ModelConfig:
             body["reasoning"] = {"effort": self.effort}
         if self.provider_only:
             body["provider"] = {"only": list(self.provider_only), "allow_fallbacks": False}
+        elif self.provider_order:
+            body["provider"] = {"order": list(self.provider_order), "allow_fallbacks": True}
         return body
 
 
@@ -147,6 +150,14 @@ CONFIGS: dict[str, ModelConfig] = {
         prompt="window.v2",
         effort="minimal",
         provider_only=("openai",),
+    ),
+    # F: итоговый кандидат — flex первым, при отказе flex — обычный уровень.
+    "gpt5mini_v2_minimal_flexfirst": ModelConfig(
+        name="gpt5mini_v2_minimal_flexfirst",
+        model="openai/gpt-5-mini",
+        prompt="window.v2",
+        effort="minimal",
+        provider_order=("openai/flex", "openai"),
     ),
     # E: резервная модель на тех же окнах.
     "gemini_v1": ModelConfig(
