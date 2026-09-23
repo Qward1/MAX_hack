@@ -33,11 +33,44 @@ from domsignal.ai.resources import read_resource
 from domsignal.ai.schema_modes import SchemaMode, schema_in_prompt, strict_schema
 from domsignal.ai.taxonomy import Taxonomy, load_taxonomy
 
-#: Версия промпта, попадающая в `WindowAnalysis.versions.prompt`.
+#: Версия промпта по умолчанию, попадающая в `WindowAnalysis.versions.prompt`.
 PROMPT_VERSION = "window.v1"
 
 PROMPT_RESOURCE = "prompts/window.v1.md"
 EXAMPLES_RESOURCE = "prompts/window.v1.examples.jsonl"
+
+
+@dataclass(frozen=True)
+class PromptSpec:
+    """Версия промпта окна: шаблон, примеры и форма сериализации.
+
+    `compact` — JSON без отступов в сообщениях и схема ответа без `title`:
+    те же данные меньшим числом токенов (P6, разбор размера запроса).
+    """
+
+    version: str
+    template: str
+    examples: str
+    compact: bool = False
+
+
+PROMPT_SPECS: dict[str, PromptSpec] = {
+    "window.v1": PromptSpec("window.v1", PROMPT_RESOURCE, EXAMPLES_RESOURCE),
+    "window.v2": PromptSpec(
+        "window.v2",
+        "prompts/window.v2.md",
+        "prompts/window.v2.examples.jsonl",
+        compact=True,
+    ),
+}
+
+
+def prompt_spec(version: str | None = None) -> PromptSpec:
+    """Спецификация версии промпта; неизвестная версия — ошибка сборки."""
+    name = version or PROMPT_VERSION
+    if name not in PROMPT_SPECS:
+        raise ValueError(f"unknown prompt version {name!r}")
+    return PROMPT_SPECS[name]
 
 SCOPE_GUIDE: dict[LocationScope, str] = {
     "apartment": "внутри квартиры: «у меня в ванной», «в моей квартире», «у соседа сверху»",
@@ -134,10 +167,14 @@ def _subtype_bullets(taxonomy: Taxonomy) -> str:
 
 
 def render_system_prompt(
-    taxonomy: Taxonomy | None = None, *, mode: SchemaMode = "json_schema_strict"
+    taxonomy: Taxonomy | None = None,
+    *,
+    mode: SchemaMode = "json_schema_strict",
+    version: str | None = None,
 ) -> str:
-    """Системное сообщение промпта окна для выбранного режима схемы."""
+    """Системное сообщение промпта окна для выбранного режима схемы и версии."""
     tax = taxonomy or load_taxonomy()
+    spec = prompt_spec(version)
     if schema_in_prompt(mode):
         schema = json.dumps(strict_schema(tax), ensure_ascii=False, indent=2, sort_keys=True)
         schema_block = f"Схема ответа (JSON Schema):\n\n```json\n{schema}\n```"
@@ -155,7 +192,7 @@ def render_system_prompt(
         "{{REFUTATIONS}}": _bullets(refutations, REFUTATION_REASONS),
         "{{SCHEMA}}": schema_block,
     }
-    rendered = read_resource(PROMPT_RESOURCE)
+    rendered = read_resource(spec.template)
     for placeholder, block in substitutions.items():
         rendered = rendered.replace(placeholder, block)
     if "{{" in rendered:
@@ -163,21 +200,32 @@ def render_system_prompt(
     return rendered.strip() + "\n"
 
 
-def render_user_message(request: ProviderRequest) -> str:
-    """Пользовательское сообщение: сам запрос окна в JSON.
-
-    Список кодов подтипов не дублируется: он уже перечислен с описаниями в
-    системном сообщении.
-    """
-    payload = request.model_dump(mode="json", exclude={"subtype_codes"})
+def _dumps(payload: Any, *, compact: bool) -> str:
+    if compact:
+        return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)
 
 
-@lru_cache(maxsize=1)
-def load_examples() -> tuple[FewShotExample, ...]:
+def render_user_message(request: ProviderRequest, *, compact: bool = False) -> str:
+    """Пользовательское сообщение: сам запрос окна в JSON.
+
+    Список кодов подтипов не дублируется: он уже перечислен с описаниями в
+    системном сообщении. Пустой `danger_kinds` открытого элемента не выводится:
+    формат запроса без опасности остаётся прежним.
+    """
+    payload = request.model_dump(mode="json", exclude={"subtype_codes"})
+    for item in payload.get("open_items", []):
+        if not item.get("danger_kinds"):
+            item.pop("danger_kinds", None)
+    return _dumps(payload, compact=compact)
+
+
+@lru_cache(maxsize=4)
+def load_examples(version: str | None = None) -> tuple[FewShotExample, ...]:
     """Few-shot примеры промпта: синтетические окна, написанные для промпта."""
+    spec = prompt_spec(version)
     examples: list[FewShotExample] = []
-    for raw in read_resource(EXAMPLES_RESOURCE).splitlines():
+    for raw in read_resource(spec.examples).splitlines():
         if not raw.strip():
             continue
         row = cast(dict[str, Any], json.loads(raw))
@@ -185,8 +233,12 @@ def load_examples() -> tuple[FewShotExample, ...]:
         examples.append(
             FewShotExample(
                 id=str(row["id"]),
-                user=render_user_message(request),
-                assistant=json.dumps(row["response"], ensure_ascii=False, sort_keys=True),
+                user=render_user_message(request, compact=spec.compact),
+                assistant=(
+                    _dumps(row["response"], compact=True)
+                    if spec.compact
+                    else json.dumps(row["response"], ensure_ascii=False, sort_keys=True)
+                ),
             )
         )
     if not examples:
@@ -200,14 +252,21 @@ def build_messages(
     *,
     mode: SchemaMode = "json_schema_strict",
     few_shot: bool = True,
+    version: str | None = None,
 ) -> list[dict[str, str]]:
     """Сообщения одного вызова: system, few-shot парами и разбираемое окно."""
+    spec = prompt_spec(version)
     messages: list[dict[str, str]] = [
-        {"role": "system", "content": render_system_prompt(taxonomy, mode=mode)}
+        {
+            "role": "system",
+            "content": render_system_prompt(taxonomy, mode=mode, version=spec.version),
+        }
     ]
     if few_shot:
-        for example in load_examples():
+        for example in load_examples(spec.version):
             messages.append({"role": "user", "content": example.user})
             messages.append({"role": "assistant", "content": example.assistant})
-    messages.append({"role": "user", "content": render_user_message(request)})
+    messages.append(
+        {"role": "user", "content": render_user_message(request, compact=spec.compact)}
+    )
     return messages

@@ -67,13 +67,45 @@ def _strictify(node: Any) -> None:
         _strictify(value)
 
 
-def strict_schema(taxonomy: Taxonomy | None = None) -> dict[str, Any]:
-    """JSON Schema ответа модели в форме строгого режима."""
-    return normalize_for_strict(build_json_schema(taxonomy))
+def strict_schema(taxonomy: Taxonomy | None = None, *, compact: bool = False) -> dict[str, Any]:
+    """JSON Schema ответа модели в форме строгого режима.
+
+    `compact` убирает `title` у свойств: pydantic пишет их везде, модели они
+    ничего не сообщают, а в запросе стоят сотни токенов. Валидация от этого не
+    меняется — источник истины по-прежнему наш валидатор.
+    """
+    schema = normalize_for_strict(build_json_schema(taxonomy))
+    if compact:
+        _drop_titles(schema)
+    return schema
+
+
+def _drop_titles(node: Any) -> None:
+    if isinstance(node, list):
+        for item in node:
+            _drop_titles(item)
+        return
+    if not isinstance(node, dict):
+        return
+    mapping = cast(dict[str, Any], node)
+    title = mapping.get("title")
+    if isinstance(title, str) and title != SCHEMA_ID:
+        mapping.pop("title")
+    properties = mapping.get("properties")
+    for key, value in mapping.items():
+        if key == "properties" and isinstance(properties, dict):
+            for item in cast(dict[str, Any], properties).values():
+                _drop_titles(item)
+        elif key != "properties":
+            _drop_titles(value)
 
 
 def response_format(
-    mode: SchemaMode, taxonomy: Taxonomy | None = None, *, name: str = SCHEMA_ID
+    mode: SchemaMode,
+    taxonomy: Taxonomy | None = None,
+    *,
+    name: str = SCHEMA_ID,
+    compact: bool = False,
 ) -> dict[str, Any]:
     """Значение поля `response_format` запроса для выбранного режима.
 
@@ -89,7 +121,7 @@ def response_format(
         "json_schema": {
             "name": name.replace(".", "_"),
             "strict": mode == "json_schema_strict",
-            "schema": strict_schema(taxonomy),
+            "schema": strict_schema(taxonomy, compact=compact),
         },
     }
 

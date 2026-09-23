@@ -44,6 +44,10 @@ SELECTION_DATASETS = (
     "scope_and_danger.v1.jsonl",
     "chat_stream.v1.jsonl",
     "dedup.v1.jsonl",
+    # Наборы оценки P6: примеры промпта не должны совпадать с их репликами.
+    "d3_dialogs.v1.dev.jsonl",
+    "d3_dialogs.v1.holdout.jsonl",
+    "d5_danger.v1.jsonl",
 )
 
 STRICT_FORM_ANSWER: dict[str, Any] = {
@@ -281,3 +285,38 @@ def test_examples_do_not_overlap_with_the_selection_datasets() -> None:
             assert light_normalize(line["text"]) not in dataset_texts, (
                 f"{example.id}: реплика совпадает со строкой набора отбора"
             )
+
+
+# ------------------------------------------------------ версии промпта
+
+
+def test_prompt_v2_is_compact_and_uses_a_subset_of_v1_examples() -> None:
+    request, _ = build_request(window("Лифт во 2 подъезде не работает", "у нас тоже"))
+    messages = build_messages(request, version="window.v2")
+    v2 = load_examples("window.v2")
+    assert 3 <= len(v2) < len(load_examples())
+    assert {example.id for example in v2} <= {example.id for example in load_examples()}
+    assert len(messages) == 2 + 2 * len(v2)
+    assert "\n" not in messages[-1]["content"]
+    assert "is_context" in messages[0]["content"]
+    compact = json.dumps(response_format("json_schema_strict", compact=True), ensure_ascii=False)
+    full = json.dumps(response_format("json_schema_strict"), ensure_ascii=False)
+    assert len(compact) < len(full)
+    assert compact.count('"title"') == 1
+
+
+def test_prompt_v1_request_format_is_unchanged_without_open_item_danger() -> None:
+    from domsignal.ai.contracts import OpenItem
+    from domsignal.core.incidents import ReportCategory
+
+    item = OpenItem(ref="x", kind="signal", category=ReportCategory.OTHER, title="газ")
+    plain, _ = build_request(window("и у нас", open_items=(item,)))
+    assert "danger_kinds" not in render_user_message(plain)
+    danger = item.model_copy(update={"danger_kinds": ("gas",)})
+    marked, _ = build_request(window("и у нас", open_items=(danger,)))
+    assert '"danger_kinds"' in render_user_message(marked)
+
+
+def test_unknown_prompt_version_is_rejected() -> None:
+    with pytest.raises(ValueError):
+        build_messages(build_request(single("лифт"))[0], version="window.v9")

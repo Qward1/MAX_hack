@@ -28,7 +28,7 @@ from typing import Any, cast
 
 import httpx
 
-from domsignal.ai.prompts import PROMPT_VERSION, build_messages
+from domsignal.ai.prompts import PROMPT_VERSION, build_messages, prompt_spec
 from domsignal.ai.providers.base import (
     ProviderInvalidOutput,
     ProviderRequest,
@@ -52,8 +52,6 @@ _FENCE = "```"
 class OpenAICompatibleProvider:
     """Провайдер разбора окна через OpenAI-совместимый `/chat/completions`."""
 
-    prompt_version = PROMPT_VERSION
-
     def __init__(
         self,
         *,
@@ -68,6 +66,7 @@ class OpenAICompatibleProvider:
         few_shot: bool = True,
         extra_body: Mapping[str, Any] | None = None,
         client: httpx.AsyncClient | None = None,
+        prompt_version: str = PROMPT_VERSION,
     ) -> None:
         if not api_key:
             raise ValueError("api key is required")
@@ -80,6 +79,7 @@ class OpenAICompatibleProvider:
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.few_shot = few_shot
+        self.prompt_version = prompt_spec(prompt_version).version
         self.extra_body = dict(extra_body or {})
         self._api_key = api_key
         self._taxonomy = taxonomy
@@ -115,13 +115,20 @@ class OpenAICompatibleProvider:
 
     def build_payload(self, request: ProviderRequest) -> dict[str, Any]:
         """Тело запроса. Отдельный метод, чтобы его можно было проверить тестом."""
+        spec = prompt_spec(self.prompt_version)
         payload: dict[str, Any] = {
             "model": self.model,
             "messages": build_messages(
-                request, self._taxonomy, mode=self.schema_mode, few_shot=self.few_shot
+                request,
+                self._taxonomy,
+                mode=self.schema_mode,
+                few_shot=self.few_shot,
+                version=spec.version,
             ),
             "max_tokens": self.max_tokens,
-            "response_format": response_format(self.schema_mode, self._taxonomy),
+            "response_format": response_format(
+                self.schema_mode, self._taxonomy, compact=spec.compact
+            ),
         }
         if self.temperature is not None:
             payload["temperature"] = self.temperature
