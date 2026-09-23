@@ -1,10 +1,14 @@
 """Черновик обращения: собрать, отредактировать, отметить подачу (A-04).
 
-Текст собирается детерминированно. Каркас — из проверенного справочника
-(адресат, канал, обязательные поля, факты канала с источником). Абзац
-описания — деловая переформулировка модели, если она есть и прошла guard
-`no_new_facts`, иначе исходные слова жителя. Адрес дома, подъезд, этаж и
-«с какого времени» берутся только из проверенных данных и значений с цитатой.
+Текст собирается детерминированно, и в нём только то, что житель вставит
+в форму сервиса: адресат (если справочник его называет), суть проблемы и
+место. Абзац описания — деловая переформулировка модели, если она есть и
+прошла guard `no_new_facts`, иначе исходные слова жителя. Адрес дома,
+подъезд, этаж и «с какого времени» берутся только из проверенных данных и
+значений с цитатой. Канал, его факты с источниками, пометка «подготовлено с
+помощью ИИ» и напоминание, что отправляет сам житель, показывает экран рядом
+с текстом (`AppealDraftView.channel`, `ai_assisted`) — в обращение ведомству
+они не попадают (решение владельца, P7b).
 
 Продукт **не отправляет** обращение: житель открывает официальный канал сам.
 `mark-filed` записывает его отметку как `user_reported` и не утверждает, что
@@ -37,6 +41,7 @@ from domsignal.services.errors import ResourceNotFound, ServiceError
 from domsignal.services.membership import MembershipService
 from domsignal.services.routing import RoutingService
 
+#: Напоминания экрана черновика. В текст обращения они не входят.
 AI_NOTE = "Абзац описания подготовлен с помощью ИИ — проверьте его перед отправкой."
 SELF_FILING_NOTE = "ДомСигнал не отправляет обращения за вас — вы отправляете его сами."
 PROBLEM_HEADING = "Суть проблемы или предложения:"
@@ -47,8 +52,6 @@ _ENTRANCE_LABEL = "Подъезд"
 _FLOOR_LABEL = "Этаж"
 _SINCE_LABEL = "Наблюдается с"
 _RECIPIENT_LABEL = "Адресат"
-_CHANNEL_LABEL = "Официальный канал"
-_SOURCE_PREFIX = "Источник: "
 
 
 class StaleDraftVersion(ServiceError):
@@ -239,7 +242,7 @@ class AppealDraftService:
         self, session: AsyncSession, outcome: RouteOutcome, context: OperationContext
     ) -> tuple[str, bool]:
         house, address = await self._house_context(session, outcome.house_id)
-        organization, channel = self.routing.directory_entry(
+        organization, _ = self.routing.directory_entry(
             house,
             organization_id=outcome.organization_id,
             channel_id=outcome.channel_id,
@@ -249,10 +252,6 @@ class AppealDraftService:
         blocks: list[str] = []
         if organization:
             blocks.append(f"{_RECIPIENT_LABEL}: {organization}")
-        if channel is not None:
-            entry = channel.url or channel.entry_hint
-            label = f"{_CHANNEL_LABEL}: {channel.label}"
-            blocks.append(f"{label} ({entry})" if entry else label)
         blocks.append(f"{PROBLEM_HEADING}\n{clean or original}".rstrip())
         facts: list[str] = []
         if address:
@@ -266,14 +265,6 @@ class AppealDraftService:
                 facts.append(f"{_SINCE_LABEL}: {incident.observed_since}")
         if facts:
             blocks.append("\n".join(facts))
-        if channel is not None and channel.facts:
-            lines = [
-                f"— {fact.text} ({_SOURCE_PREFIX}{fact.source_title})" for fact in channel.facts
-            ]
-            blocks.append(CHANNEL_FACTS_HEADING + "\n" + "\n".join(lines))
-        if clean:
-            blocks.append(AI_NOTE)
-        blocks.append(SELF_FILING_NOTE)
         return "\n\n".join(blocks), clean is not None
 
     # ------------------------------------------------------------------ чтение

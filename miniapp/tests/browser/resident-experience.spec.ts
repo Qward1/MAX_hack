@@ -119,6 +119,12 @@ test("external route: form → review → card → draft → copy → I sent it"
   const draft = page.getByRole("textbox", { name: "Обращение" });
   await expect(draft).toContainText("Суть проблемы или предложения:");
   await expect(draft).toContainText("на улице у остановки не горят фонари");
+  // P7b: факты канала с источниками — на экране рядом, в текст обращения не входят.
+  await expect(draft).not.toContainText("Источник");
+  await expect(page.getByRole("heading", { name: "Что известно о канале" })).toBeVisible();
+  await expect(
+    page.getByText("ДомСигнал не отправляет обращения за вас — вы отправляете его сами."),
+  ).toBeVisible();
 
   // Порядок действий на экране черновика закреплён продуктом.
   const labels = await page
