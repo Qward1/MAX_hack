@@ -103,11 +103,12 @@ test("external route: form → review → card → draft → copy → I sent it"
 
   await sendAsNew(page);
   await expect(page.getByRole("heading", { name: "Что дальше" })).toBeVisible();
-  // Непроверенная ссылка — выключенная кнопка с причиной, а не ссылка в никуда.
-  const transition = page.getByRole("button", { name: /^Перейти: / });
-  await expect(transition).toBeDisabled();
-  await expect(page.getByText(/ссылка входа ещё не заполнена/)).toBeVisible();
-  await expect(page.getByRole("link", { name: /^Перейти: / })).toHaveCount(0);
+  // Адрес входа ПОС подтверждён владельцем (P7b): переход — настоящая ссылка
+  // на официальный сервис; по ней не переходим, проверяем только адрес.
+  const transition = page.getByRole("link", { name: /^Перейти: Госуслуги\. Решаем вместе/ });
+  await expect(transition).toHaveAttribute("href", "https://www.gosuslugi.ru/help/obratitsya_v_pos");
+  await expect(transition).toHaveAttribute("target", "_blank");
+  await expect(page.getByRole("button", { name: /^Перейти: / })).toHaveCount(0);
   await page.screenshot({ path: "test-results/p3c-external-card-390.png", fullPage: true });
   await noOverflow(page);
   await axeCheck(page);
@@ -121,17 +122,17 @@ test("external route: form → review → card → draft → copy → I sent it"
 
   // Порядок действий на экране черновика закреплён продуктом.
   const labels = await page
-    .locator(".draft-actions button")
+    .locator(".draft-actions button, .draft-actions a")
     .evaluateAll((nodes) => nodes.map((node) => node.textContent?.trim()));
   expect(labels).toEqual([
     "Скопировать текст",
-    "Открыть официальный сервис",
+    "Открыть официальный сервис ↗",
     "Я отправил(а) обращение",
   ]);
   await expect(
-    page.getByRole("button", { name: "Открыть официальный сервис" }),
-  ).toBeDisabled();
-  await expect(page.getByText(/^Вход: /)).toBeVisible();
+    page.getByRole("link", { name: "Открыть официальный сервис" }),
+  ).toHaveAttribute("href", "https://www.gosuslugi.ru/help/obratitsya_v_pos");
+  await expect(page.getByText(/^Вход: /)).toHaveCount(0);
 
   await page.screenshot({ path: "test-results/p3c-draft-390.png", fullPage: true });
   await noOverflow(page);

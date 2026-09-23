@@ -113,12 +113,23 @@ def test_municipal_card_offers_the_official_channel_without_naming_an_authority(
 
 def test_missing_url_disables_the_transition_with_a_reason(packaged: Any) -> None:
     route = resolve(packaged, "street_lighting.failure", "municipal_territory", kazan())
-    action = card(route).actions[0]
+    without_url = route.model_copy(
+        update={"channels": [item.model_copy(update={"url": None}) for item in route.channels]}
+    )
+    action = card(without_url).actions[0]
     assert action.type == "open_official_channel"
     assert action.enabled is False
     assert action.url is None
     assert action.reason is not None
     assert "Госуслуги" in action.reason
+
+
+def test_the_confirmed_pos_url_enables_the_transition(packaged: Any) -> None:
+    route = resolve(packaged, "street_lighting.failure", "municipal_territory", kazan())
+    action = card(route).actions[0]
+    assert action.type == "open_official_channel"
+    assert action.enabled is True and action.reason is None
+    assert action.url == "https://www.gosuslugi.ru/help/obratitsya_v_pos"
 
 
 def test_route_without_verified_channel_falls_back_to_manual_decision(packaged: Any) -> None:
