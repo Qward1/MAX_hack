@@ -88,6 +88,9 @@ class ExplicitIntake(Base):
     # описания, который правит человек. Текст модели не попадает ни в одно
     # сообщение от имени системы.
     clean_description: Mapped[str | None] = mapped_column(Text)
+    # Провенанс разбора для любого исхода (P7b): режим, состояние, задержка,
+    # модель, токены и ₽ с причиной `null`. Текста реплики здесь нет.
+    analysis: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     state: Mapped[str] = mapped_column(String(20), default="pending", server_default="pending")
     claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     claimed_by: Mapped[str | None] = mapped_column(String(100))

@@ -61,6 +61,7 @@ from domsignal.db.repositories.incidents import IncidentRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.services.action_cards import ActionCardBuilder
 from domsignal.services.ai_budget import PostgresBudgetGuard
+from domsignal.services.ai_provenance import execution_provenance
 from domsignal.services.chat_connections import ChatConnectionError, ChatConnectionService
 from domsignal.services.context import OperationContext
 from domsignal.services.errors import AccessDenied, ResourceNotFound
@@ -508,6 +509,9 @@ class ExplicitReportService:
 
         # Вызов модели — вне транзакции БД.
         analysis = await self._analyze(intake, entrance=entrance, use_model=use_model)
+        # Учёт вызова пишется сразу, до решения: у внешнего маршрута заявки
+        # нет, а задержка и стоимость нужны метрикам при любом исходе.
+        await self._record(intake.event_id, analysis)
         decision = decide_explicit_report(analysis)
 
         async with self.sessions() as session, session.begin():
@@ -524,6 +528,15 @@ class ExplicitReportService:
                 card_dedupe_ref=intake.event_id,
             )
             return await self._apply(session, origin, context, analysis, decision)
+
+    async def _record(self, event_id: str, analysis: WindowAnalysis) -> None:
+        """Провенанс разбора в записи приёма: без текста, для любого исхода."""
+        async with self.sessions() as session, session.begin():
+            await session.execute(
+                update(ExplicitIntake)
+                .where(ExplicitIntake.event_id == event_id)
+                .values(analysis=intake_provenance(analysis))
+            )
 
     async def _context(self, intake: ClaimedIntake) -> tuple[UUID, UUID, str | None] | None:
         """Кто автор и к какому дому относится чат. Блокировки здесь не держим."""
@@ -836,6 +849,24 @@ def guarded_clean_description(analysis: WindowAnalysis, source: str) -> str | No
     return None
 
 
+def intake_provenance(analysis: WindowAnalysis) -> dict[str, Any]:
+    """Провенанс записи приёма: учёт вызова и версии, без решения и текста."""
+    versions = analysis.versions
+    return {
+        **execution_provenance(analysis),
+        "versions": {
+            "taxonomy": versions.taxonomy,
+            "rules": versions.rules,
+            "schema_id": versions.schema_id,
+            "prompt": versions.prompt,
+            "model": versions.model,
+            "input_sha256": versions.input_sha256,
+        },
+        "dropped_fields": analysis.dropped_fields,
+        "recorded_at": datetime.now(UTC).isoformat(),
+    }
+
+
 def analysis_provenance(
     analysis: WindowAnalysis,
     decision: ExplicitReportDecision,
@@ -849,17 +880,9 @@ def analysis_provenance(
     отброшенных полей и идентификатор модели: по этой записи видно, чем и как
     был получен результат, но не что именно написал житель.
     """
-    execution = analysis.execution
     return {
-        "mode": analysis.mode,
+        **execution_provenance(analysis),
         "classification_mode": "model" if analysis.mode == "model" else "rules",
-        "state": execution.state,
-        "provider_called": execution.provider_called,
-        "latency_ms": execution.latency_ms,
-        "model": execution.provider_model,
-        "tokens_in": execution.tokens_in,
-        "tokens_out": execution.tokens_out,
-        "cost_rub": execution.cost_rub,
         "versions": {
             "taxonomy": analysis.versions.taxonomy,
             "rules": analysis.versions.rules,
@@ -900,4 +923,5 @@ __all__ = [
     "ReportOrigin",
     "analysis_provenance",
     "guarded_clean_description",
+    "intake_provenance",
 ]
