@@ -30,6 +30,8 @@ services:
       # Пассивное чтение чата выключено, пока его не включат явно. Локальный
       # стенд показа закрывает окно после 20 секунд тишины, а не 120.
       PASSIVE_CAPTURE_ENABLED: ${PASSIVE_CAPTURE_ENABLED:-false}
+      # Модель в разборе окон чата; false — правила (явный путь не меняется).
+      PASSIVE_LLM_ENABLED: ${PASSIVE_LLM_ENABLED:-true}
       PASSIVE_WINDOW_SILENCE_SECONDS: ${PASSIVE_WINDOW_SILENCE_SECONDS:-20}
       # Склейка опасности, пауза памятки и сторож разбора окна — настройки стенда.
       PASSIVE_DANGER_GROUP_MINUTES: ${PASSIVE_DANGER_GROUP_MINUTES:-30}

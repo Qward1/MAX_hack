@@ -266,11 +266,16 @@ def build_container(settings: Settings) -> Container:
         connections=chat_connections,
         engine=signals,
     )
+    # Выключатель модели пассивного режима (P6-DECISION): окна идут в правила,
+    # бюджет модели не списывается; явный путь сохраняет модель.
+    passive_llm = settings.passive_llm_enabled
+    if not passive_llm and ai.provider is not None:
+        logger.info("passive_llm_disabled", extra={"ai_model": settings.llm_model})
     passive_analysis = PassiveWindowAnalysis(
         session_factory=session_factory,
         engine=signals,
-        analyzer=ai.analyzer,
-        budget=ai.budget,
+        analyzer=ai.analyzer if passive_llm else ai.rules_analyzer,
+        budget=ai.budget if passive_llm else None,
         rules_analyzer=ai.rules_analyzer,
     )
     worker_handlers = WorkerHandlers(

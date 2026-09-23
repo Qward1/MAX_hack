@@ -364,6 +364,26 @@ python -m domsignal.tools.live_staff grant --user-id <validated-max-user> \
   --operator <name> --reason <authorization-reference>
 ```
 
+### Passive model switch and D2 export (P7b)
+
+`PASSIVE_LLM_ENABLED` (default `true`) keeps the model in chat-window analysis.
+Set it to `false` in `deploy/.env.production` and recreate only `ai-worker`
+(`up -d --no-deps ai-worker`) to analyse chat windows with rules only; the
+explicit `/report` path keeps the model. This is the switch recommended by
+P6-DECISION; it is off only by an owner decision.
+
+After a D2 role-play session (participants' consent, TEST_MAX), export the
+session lines from the buffer (≤ 72 h) inside the API container, read-only:
+
+```bash
+python -m domsignal.tools.d2_export --binding <test-max-binding> --session S1 \
+  --since 2026-09-24T19:00:00+03:00 --until 2026-09-24T19:40:00+03:00 \
+  --operator <name> --reason <authorization-reference> > d2-S1.jsonl
+```
+
+The file holds no MAX ids or people ids (hashed message ids, buffer aliases);
+hand it to DEV-A outside git.
+
 ### Logs without client IP addresses and log rotation (P7b)
 
 The API runs uvicorn with `--proxy-headers --no-access-log`: uvicorn's access

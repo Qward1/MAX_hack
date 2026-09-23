@@ -342,6 +342,8 @@ class UkDefault:
     resource_supplier_alternatives: tuple[str, ...]
     basis: Basis
     verification: Verification
+    #: Подтипы, которые житель видит в квартире, но система общедомовая.
+    apartment_subtypes: tuple[str, ...] = ()
 
     @classmethod
     def parse(cls, raw: Any, where: str) -> UkDefault:
@@ -356,6 +358,7 @@ class UkDefault:
             ),
             basis=Basis.parse(entry.get("basis"), f"{where}.basis"),
             verification=Verification.parse(entry.get("verification"), f"{where}.verification"),
+            apartment_subtypes=_codes(entry, "apartment_subtypes", where),
         )
 
 

@@ -92,6 +92,9 @@ class Settings(BaseSettings):
     # Пассивное чтение подключённого чата (A-17/Product). Глобальный выключатель
     # по умолчанию выключен: без него реплики не сохраняются вовсе.
     passive_capture_enabled: bool = False
+    # Модель в разборе окон чата (P6-DECISION): `false` — окна разбирают правила
+    # без вызова модели и без бюджета; явный путь `/report` и форма не меняются.
+    passive_llm_enabled: bool = True
     # Политика окна по умолчанию совпадает с `domsignal.ai.WindowPolicy`; на
     # показе стенд поднимается с короткой тишиной, 120 секунд там ждать нельзя.
     passive_window_silence_seconds: int = Field(default=120, ge=5, le=3600)
