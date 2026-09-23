@@ -97,6 +97,76 @@ def load_allowed_jsonl(
     return rows
 
 
+class SliceBudgetExceeded(RuntimeError):
+    """Лимит вызовов модели или рублей на срез исчерпан: вызова не будет."""
+
+
+class SliceBudget:
+    """Жёсткий общий лимит вызовов модели на весь срез, общий для всех прогонов.
+
+    Счётчик живёт в JSON-файле, поэтому лимит действует на сумму всех запусков
+    скриптов, а не на один процесс. Место резервируется **до** вызова: вызов,
+    которому не хватило места, не делается. Рубли учитываются по факту
+    (`usage.cost_rub` провайдера); неизвестная стоимость считается нулём и
+    отдельно подсчитывается в `unknown_cost_calls`.
+    """
+
+    def __init__(self, path: pathlib.Path, *, max_calls: int, max_rub: float) -> None:
+        self.path = path
+        self.max_calls = max_calls
+        self.max_rub = max_rub
+        self.state: dict[str, Any] = {
+            "max_calls": max_calls,
+            "max_rub": max_rub,
+            "calls": 0,
+            "rub": 0.0,
+            "unknown_cost_calls": 0,
+            "runs": {},
+        }
+        if path.exists():
+            self.state.update(json.loads(path.read_text(encoding="utf-8")))
+            self.state["max_calls"], self.state["max_rub"] = max_calls, max_rub
+        self._pending = 0
+
+    @property
+    def calls(self) -> int:
+        return int(self.state["calls"])
+
+    @property
+    def rub(self) -> float:
+        return float(self.state["rub"])
+
+    def reserve(self) -> None:
+        """Занять место под один вызов или остановиться."""
+        if self.calls + self._pending >= self.max_calls:
+            raise SliceBudgetExceeded(f"лимит вызовов среза: {self.calls}/{self.max_calls}")
+        if self.rub >= self.max_rub:
+            raise SliceBudgetExceeded(f"лимит рублей среза: {self.rub:.2f}/{self.max_rub:.0f}")
+        self._pending += 1
+
+    def commit(self, run: str, cost_rub: float | None) -> None:
+        """Учесть сделанный вызов (даже неудачный: он мог быть оплачен)."""
+        self._pending = max(0, self._pending - 1)
+        self.state["calls"] = self.calls + 1
+        self.state["rub"] = round(self.rub + (cost_rub or 0.0), 6)
+        if cost_rub is None:
+            self.state["unknown_cost_calls"] = int(self.state["unknown_cost_calls"]) + 1
+        runs = self.state["runs"]
+        entry = runs.setdefault(run, {"calls": 0, "rub": 0.0})
+        entry["calls"] += 1
+        entry["rub"] = round(entry["rub"] + (cost_rub or 0.0), 6)
+        self.save()
+
+    def release(self) -> None:
+        """Отменить резерв: вызов не состоялся."""
+        self._pending = max(0, self._pending - 1)
+
+    def save(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        body = json.dumps(self.state, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        self.path.write_bytes(body.encode("utf-8"))
+
+
 def ensure_request_is_synthetic(texts: Iterable[str], allowed: Iterable[str]) -> None:
     """Последняя проверка перед вызовом модели: тексты взяты из разрешённых строк.
 

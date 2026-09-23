@@ -16,6 +16,8 @@ from domsignal.ai.contracts import (
     EmergencyDecision,
     ExplicitReportDecision,
     Facets,
+    LineVerdict,
+    OpenItem,
     SignalDraft,
     SignalStrength,
     WindowAnalysis,
@@ -55,6 +57,44 @@ def disposition_for(strength: SignalStrength) -> Disposition:
     return "audit_pool" if strength == "filtered" else "inbox"
 
 
+def may_join_open_item(emergency: EmergencyDecision, item: OpenItem) -> bool:
+    """Инвариант привязки: опасность вида K — только к элементу, где K уже есть.
+
+    Живой прогон P7a: «женщина стучит, двери не открываются» ушло в открытый
+    сигнал о газе, и новый вид опасности растворился в старом сигнале. Такой
+    черновик становится новым сигналом. Проверка в коде, а не в промпте.
+    """
+    if not emergency.is_emergency:
+        return True
+    return all(kind in item.danger_kinds for kind in emergency.kinds)
+
+
+def rename_refs(
+    verdicts: Sequence[LineVerdict], renamed: dict[str, str]
+) -> tuple[LineVerdict, ...]:
+    """Переписать ссылки реплик на сигналы после переименования черновиков."""
+    if not renamed:
+        return tuple(verdicts)
+
+    def resolve(ref: str) -> str:
+        seen: set[str] = set()
+        while ref in renamed and ref not in seen:
+            seen.add(ref)
+            ref = renamed[ref]
+        return ref
+
+    return tuple(
+        verdict.model_copy(
+            update={
+                "signal_refs": tuple(dict.fromkeys(resolve(ref) for ref in verdict.signal_refs))
+            }
+        )
+        if any(ref in renamed for ref in verdict.signal_refs)
+        else verdict
+        for verdict in verdicts
+    )
+
+
 def input_sha256(window: WindowInput) -> str:
     """Стабильный отпечаток входа окна: одинаковый вход — одинаковый хэш."""
     payload = {
@@ -79,6 +119,9 @@ def input_sha256(window: WindowInput) -> str:
                 "subtype": item.subtype,
                 "entrance": item.entrance,
                 "title": item.title,
+                # Новое поле попадает в отпечаток, только когда задано: прежние
+                # окна сохраняют прежний хэш.
+                **({"danger_kinds": list(item.danger_kinds)} if item.danger_kinds else {}),
             }
             for item in window.open_items
         ],

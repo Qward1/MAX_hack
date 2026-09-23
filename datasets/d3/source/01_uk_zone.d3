@@ -1,0 +1,451 @@
+# D3, партия 1: проблемы общего имущества дома (зона УК). Синтетика, автор — агент P6.
+
+=== d001 s01 typical
+@I1 elevator.stopped house_common entrance=2 since="с обеда" cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: Соседи, во втором подъезде лифт опять встал | new_problem | I1
++35 B>1: у нас тоже, я пешком с пятого спускалась | me_too | I1
++20 C: да, с обеда ещё стоит | more_info | I1
++40 D: всем добрый вечер | chatter
++15 A: кто-нибудь уже звонил в управляйку? | status_question | I1
++30 E: я не звонила, думала кто-то уже | discussion | I1
++25 B: у меня ребёнок с коляской, это жесть | me_too | I1
++50 F: на табло пишет что-то непонятное и не реагирует на кнопку | more_info | I1
++30 C>8: там всегда так когда он встаёт | discussion | I1
++60 D: ладно, я вечером ещё раз проверю | chatter
++20 A: спасибо всем | chatter
+
+=== d002 s01 voice
+@I1 elevator.stopped house_common entrance=1 since="с утра" cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: доброе утро а лифт в первом подъезде вообще работает кто знает а то я жму жму и ничего | new_problem | I1
++40 B: не работает с утра | more_info | I1
++15 C: подтверждаю не едет | me_too | I1
++30 D: 😡😡😡 | chatter
++20 E: а в чём дело то опять | discussion | I1
++45 B>5: без понятия, свет на кнопке есть, а он стоит | more_info | I1
++25 F: у меня бабушка на девятом живёт она не спустится | me_too | I1
++60 G: я бы доставку отменила если бы знала | chatter
++30 A: напишите кто-нибудь когда поедет | status_question | I1
++15 C: ок | chatter
++90 H: может его просто перезагрузить надо | discussion | I1
++20 B>11: вряд ли, там мастер нужен | discussion | I1
+
+=== d003 s02 typical
+@I1 elevator.stopped house_common entrance=3 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: Лифт в третьем подъезде не работает, кто-нибудь в курсе? | new_problem | I1
++30 B: а в четвёртом работает | more_info | I1
++20 C: во втором тоже нормально | discussion | I1
++25 D>1: в третьем с ночи стоит, я в час ночи уже пешком шла | more_info | I1
++40 E: странно, вчера ездил | discussion | I1
++30 A: двери открываются, а внутри темно и не едет | more_info | I1
++20 F: у нас в третьем на седьмом этаже слышно как он гудит | more_info | I1
++50 G: всем привет, кто завтра на субботник? | chatter
++15 H>8: я приду | chatter
++40 D: так а по лифту кто-то сообщил? | status_question | I1
++30 E: сейчас напишу им | discussion | I1
+
+=== d004 s02 emoji
+@I1 elevator.stopped house_common entrance=4 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: лифт в 4м опять 🙈 | new_problem | I1
++20 B: а что с ним | discussion | I1
++15 A>2: стоит на 1 этаже, двери закрыты, кнопка не реагирует | more_info | I1
++30 C: в первом работает если что | discussion
++20 D: подтверждаю, 4 подъезд не ездит 👎 | me_too | I1
++40 E: у меня кот сегодня разбил кружку 😂 | chatter
++15 F>6: 😂😂 | chatter
++45 G: я на 11 этаже, мне это не смешно | me_too | I1
++30 D: держитесь 💪 | chatter
++60 A: пишу в чат ук | discussion | I1
+
+=== d005 s03 typical
+@I1 elevator.button house_common entrance=2 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: Во втором подъезде кнопка вызова лифта на первом этаже не горит | new_problem | I1
++30 B: да, я тоже заметила, жмёшь и ничего | me_too | I1
++20 C: а лифт сам ездит? | discussion | I1
++25 A>3: если вызвать с другого этажа, то приезжает | more_info | I1
++40 D: значит кнопку менять надо | discussion | I1
++30 E: на третьем этаже кнопка тоже западает | more_info | I1
++20 F: у меня с утра так же было | me_too | I1
++60 G: кто продаёт велосипед детский, писали вчера? | out_of_scope
++15 H>8: я, в личку | out_of_scope
++45 B: так по кнопке кто-то сообщил в ук? | status_question | I1
+
+=== d006 s03 noisy
+@I1 elevator.button house_common entrance=1 floor=6 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: в 1 подъезде на 6 этаже кнопку лифта вдавило внутрь | new_problem | I1
++25 B: это кто так постарался | discussion | I1
++20 C: дети наверно | discussion | I1
++30 A: теперь лифт на 6й не вызвать вообще | more_info | I1
++40 D: жесть, у меня там мама | me_too | I1
++20 E: я сфоткала, могу скинуть | more_info | I1
++35 F: спасибо что написали | chatter
++60 G>4: а сверху вызывается нормально | more_info | I1
++30 H: вечером собрание по парковке не забудьте | announcement
++20 A: помню | chatter
++40 B: по кнопке заявку оставили? | status_question | I1
+
+=== d007 s04 typical
+@I1 elevator.doors house_common entrance=3 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: В 3 подъезде у лифта двери не закрываются, он так и стоит открытый | new_problem | I1
++30 B: с какого этажа? | discussion | I1
++15 A>2: на первом стоит, двери туда-сюда дёргаются | more_info | I1
++40 C: ещё утром так было | more_info | I1
++25 D: опасно, дети туда лезут | more_info | I1
++30 E: я подпёр дверь подъезда, извините, мебель заносим | chatter
++20 F>6: надолго? | chatter
++15 E: минут 20 | chatter
++45 B: по лифту звонил кто-нибудь? | status_question | I1
++30 G: я звонила, сказали приедут | status_question | I1
++20 C: спасибо | chatter
+
+=== d008 s04 short
+@I1 elevator.doors house_common entrance=1 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: лифт в первом двери зажимает, аккуратнее | new_problem | I1
++20 B: меня сегодня тоже прищемило чуть | me_too | I1
++25 C: да, створки резко закрываются | more_info | I1
++30 D: а раньше такое было? | discussion | I1
++20 A>4: нет, первый раз | more_info | I1
++40 E: с сумками вообще не зайти | me_too | I1
++30 F: доброе утро всем ☀️ | chatter
++20 G: доброе | chatter
++60 B: надо написать в ук | discussion | I1
++15 C: пишу | discussion | I1
+
+=== d009 s05 typical
+@I1 roof.leak house_common entrance=4 floor=9 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: У нас на девятом этаже в 4 подъезде с потолка течёт после дождя | new_problem | I1
++40 B: крыша опять? | discussion | I1
++20 A>2: видимо, над лестницей уже лужа | more_info | I1
++30 C: у меня на кухне тоже пятно появилось, я на девятом | me_too | I1
++25 D: мы в прошлом году ремонт кровли просили | discussion | I1
++45 E: вёдра поставьте хоть | discussion | I1
++30 A: поставила, капает прям на площадку | more_info | I1
++50 F: а на чердак кто-то может подняться? | discussion | I1
++20 G: там замок | discussion | I1
++40 C: пишем в ук вместе, так быстрее | discussion | I1
++30 H: поддерживаю | me_too | I1
+
+=== d010 s05 voice
+@I1 roof.leak house_common entrance=1 floor=5 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: соседи с последнего этажа у вас не течёт с крыши у меня в первом подъезде на пятом этаже возле лифта вода капает с потолка | new_problem | I1
++50 B: у нас пятиэтажка, так что это крыша | discussion | I1
++20 C: у меня в прихожей мокро по углу | me_too | I1
++40 D: а давно? | discussion | I1
++15 A>4: с ночи наверно, утром увидела | more_info | I1
++30 E: да там кровля старая вся | discussion | I1
++45 F: кстати кто нашёл ключи у второго подъезда? | chatter
++20 G>7: я повесил на доску объявлений | chatter
++30 C: по крыше срочно надо что-то делать, штукатурка мокрая | more_info | I1
++40 H: присоединяюсь | me_too | I1
+
+=== d011 s06 typical
+@I1 water.leak house_common cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: В подвале вода стоит, из окошка видно | new_problem | I1
++30 B: давно? | discussion | I1
++20 A>2: не знаю, заметил сегодня | more_info | I1
++35 C: и пахнет сыростью у входа | more_info | I1
++40 D: видимо труба где-то подтекает | discussion | I1
++25 E: у нас в прошлом году так же было, стояк | discussion
++30 F: я сегодня видел слесаря, может он в курсе | discussion | I1
++50 G: всем спасибо за помощь с потерянным котом, нашёлся! | chatter
++20 H>8: ура! | chatter
++40 C: по подвалу надо написать | discussion | I1
+
+=== d012 s06 noisy
+@I1 water.leak house_common entrance=2 floor=3 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: во 2 подъезде между 3 и 4 этажом с потолка капает на лестницу | new_problem | I1
++25 B: я видела, там пятно огромное | me_too | I1
++30 C: может сверху кто-то заливает? | discussion | I1
++20 D>3: я на 4 живу, у меня сухо | objection | I1
++35 A: тогда стояк наверно | discussion | I1
++40 E: скользко там, аккуратнее с детьми | more_info | I1
++30 F: поставлю тряпку пока | chatter
++50 G: вечером будет собрание по капремонту | announcement
++20 B: капает всё сильнее | more_info | I1
++40 C: пишите в аварийку | discussion | I1
+
+=== d013 s07 typical
+@I1 water.hot_outage house_common since="со вчера" cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: У кого есть горячая вода? У меня со вчера только холодная | new_problem | I1
++30 B: нету, я думала только у меня | me_too | I1
++20 C: и у нас нет | me_too | I1
++25 D: объявлений вроде не было | more_info | I1
++40 E: в соседнем доме есть, я у сестры спрашивала | more_info | I1
++30 F: значит у нас что-то | discussion | I1
++20 G: греем чайником, как в девяностые 🙃 | chatter
++45 A: кто может позвонить в ук? я на работе | status_question | I1
++30 H>8: я наберу в обед | discussion | I1
++40 B: отпишитесь потом пожалуйста | status_question | I1
+
+=== d014 s07 short
+@I1 water.hot_outage house_common entrance=3 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: в 3 подъезде горячей воды нет | new_problem | I1
++20 B: подтверждаю | me_too | I1
++20 C: в 1 есть | more_info | I1
++15 D: во 2 тоже есть | more_info | I1
++30 E: значит только у нас стояк | discussion | I1
++40 F: утром было норм | more_info | I1
++25 G: кто-то вчера в подвале что-то крутил | discussion | I1
++30 A: не знаю | chatter
++45 H: у меня еле тёплая идёт | me_too | I1
++20 B: заявку кидаю | discussion | I1
+
+=== d015 s08 typical
+@I1 heating.cold_radiators house_common since="третий день" cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: Уже октябрь, а батареи холодные третий день | new_problem | I1
++40 B: у нас еле тёплые | me_too | I1
++25 C: отопление вроде 1 октября дали в городе | discussion
++30 D: в нашем доме стояк на кухне ледяной | more_info | I1
++20 E: в комнате 17 градусов, дети в кофтах | more_info | I1
++50 F: может воздух в системе? | discussion | I1
++30 G>6: у меня из крана воздух спускали, не помогло | more_info | I1
++40 H: кто-то писал в ук? | status_question | I1
++20 A: я писала вчера, пока тишина | status_question | I1
++30 B: давайте все напишем | discussion | I1
++25 C: поддерживаю | me_too | I1
+
+=== d016 s08 sarcasm
+@I1 heating.cold_radiators house_common entrance=1 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: у нас в первом подъезде отопление в режиме «закаливание» 🥶 батареи ледяные | new_problem | I1
++30 B: 😂 у нас тоже | me_too | I1
++25 C: а в третьем горячие | more_info | I1
++20 D: значит у первого какая-то беда | discussion | I1
++35 E: я в пуховике дома сижу | me_too | I1
++40 F: кто-нибудь знает телефон мастера по окнам? | out_of_scope
++20 G>6: скину в личку | out_of_scope
++30 A: по батареям надо звонить | discussion | I1
++25 H: я позвоню | discussion | I1
++40 B: спасибо | chatter
+
+=== d017 s09 typical
+@I1 lighting.stairwell house_common entrance=2 floor=5 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: Во 2 подъезде на 5 этаже свет не горит уже неделю | new_problem | I1
++30 B: и на 6 тоже темно | more_info | I1
++20 C: лампочку наверно поменять надо | discussion | I1
++40 D: я с фонариком на телефоне хожу | me_too | I1
++25 E: а датчик движения там есть? | discussion | I1
++20 A>5: есть, но не реагирует | more_info | I1
++45 F: кстати, кто оставил самокат на площадке? | chatter
++15 G>7: мой, уберу | chatter
++30 B: по свету я могу заявку в приложении оставить | discussion | I1
++20 A: давайте, спасибо | chatter
+
+=== d018 s09 voice
+@I1 lighting.stairwell house_common entrance=3 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: слушайте а у нас в третьем подъезде опять темно на лестнице вообще ни одна лампочка не горит от первого до четвёртого | new_problem | I1
++40 B: да вчера вечером уже так было | more_info | I1
++20 C: я чуть не упала на ступеньках | me_too | I1
++30 D: может автомат выбило в щитке | discussion | I1
++25 E: в соседнем подъезде светло | more_info | I1
++50 F: доброе утро, у кого есть стремянка на пару часов? | chatter
++20 G>6: у меня есть | chatter
++30 A: надо электрика вызывать | discussion | I1
++40 H: поддерживаю темно реально страшно | me_too | I1
++20 B: я пишу диспетчеру | discussion | I1
+
+=== d019 s10 typical
+@I1 waste.chute house_common entrance=1 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: В первом подъезде мусоропровод забит, пакеты до седьмого этажа | new_problem | I1
++35 B: и запах на всю площадку | more_info | I1
++20 C: я уже вниз выносила | me_too | I1
++40 D: а мусорщик сегодня был? | discussion | I1
++25 E>4: не видела | discussion | I1
++30 F: ужас, с утра воняет | me_too | I1
++45 G: кто-то кидает туда коробки целиком | more_info | I1
++30 H: давайте табличку повесим | discussion | I1
++20 A: сначала пусть прочистят | discussion | I1
++40 B: я позвоню в ук | discussion | I1
+
+=== d020 s10 noisy
+@I1 waste.chute house_common entrance=2 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: мусорпровод во 2 опять засор | new_problem | I1
++20 B: снова? неделю назад чистили | discussion | I1
++25 C: да, до 5 этажа мусор стоит | more_info | I1
++30 D: тараканы полезут скоро | discussion | I1
++40 E: кто сегодня едет в центр, подвезите до метро? | chatter
++20 F>5: я в 8:30, пишите | chatter
++30 A: по мусоропроводу кто-то звонил? | status_question | I1
++25 G: нет пока | status_question | I1
++40 C: я вечером наберу | discussion | I1
++20 B: ок | chatter
+
+=== d021 s11 typical
+@I1 intercom.broken house_common entrance=1 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: Домофон в 1 подъезде сломался | new_problem | I1
++30 B: дверь не открывается с ключа | more_info | I1
++20 C: у меня тоже не пускает | me_too | I1
++25 D: изнутри кнопка работает, снаружи никак | more_info | I1
++40 E: мне курьер не может дозвониться | me_too | I1
++30 F: а когда сломался? | discussion | I1
++20 A>6: минут 30 назад уже | more_info | I1
++45 G: я дверь подпёр пока, извините | discussion | I1
++30 H: вызовите мастера домофонного | discussion | I1
++20 B: номер на двери написан, позвоню | discussion | I1
+
+=== d022 s11 short
+@I1 intercom.broken house_common entrance=2 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: во 2 подъезде домофон пищит и дверь не открывает | new_problem | I1
++25 B: у меня ключ не срабатывает | me_too | I1
++20 C: трубка в квартире тоже молчит | more_info | I1
++30 D: вчера работало | more_info | I1
++40 E: я теперь не могу гостей впустить | me_too | I1
++30 F: всем привет, у кого-то есть зарядка для самоката? | chatter
++20 G: нет | chatter
++35 A: сделайте что-нибудь с дверью | discussion | I1
++25 B: пишу в ук | discussion | I1
++30 C: спасибо | chatter
+
+=== d023 s12 typical
+@I1 entrance_door.broken house_common entrance=3 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: В 3 подъезде входная дверь не закрывается, доводчик сломан | new_problem | I1
++30 B: да, хлопает на ветру | more_info | I1
++20 C: зимой так всё выстудит | discussion | I1
++40 D: посторонние заходят, вчера кто-то курил на лестнице | more_info | I1
++25 E: я видела доводчик висит на одном болте | more_info | I1
++30 F: доброй ночи всем | chatter
++50 G: кто может посмотреть? | discussion | I1
++20 H: это к ук | discussion | I1
++30 A: написала им | discussion | I1
++40 B: спасибо | chatter
+
+=== d024 s12 noisy
+@I1 entrance_door.broken house_common entrance=1 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: дверь в 1 подъезд не закрываеться вообще | new_problem | I1
++25 B: замок заедает, я еле открыл | me_too | I1
++20 C: там петля отошла | more_info | I1
++35 D: кто её так хлопает постоянно | discussion | I1
++40 E: у меня кошка выбежала из-за открытой двери 😿 | more_info | I1
++20 F>5: найдётся, не переживайте | chatter
++30 G: давайте в ук, пусть починят | discussion | I1
++25 A: я уже оставил заявку | discussion | I1
++30 H: 👍 | chatter
++45 B: сегодня опять нараспашку | more_info | I1
+
+=== d025 s13 typical
+@I1 cleaning.stairwell house_common entrance=4 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: В 4 подъезде не убирали уже недели две, грязь на лестнице | new_problem | I1
++35 B: и окурки на площадке | more_info | I1
++20 C: уборщица вообще приходит? | status_question | I1
++30 D: я её давно не видела | more_info | I1
++40 E: а за уборку в квитанции исправно берут | out_of_scope
++25 F: полы липкие, дети босиком не пройдут | me_too | I1
++30 G: давайте коллективную жалобу | discussion | I1
++20 H: поддерживаю | me_too | I1
++40 A: пишу в ук | discussion | I1
++30 B: спасибо | chatter
+
+=== d026 s13 voice
+@I1 cleaning.stairwell house_common entrance=2 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: соседи а у нас во втором подъезде кто-то вообще моет полы а то песок и грязь с первого по последний и лифт внутри тоже грязный | new_problem | I1
++45 B: давно никто не моет | me_too | I1
++20 C: после ремонта в 45 квартире вообще всё в штукатурке | more_info | I1
++30 D: ремонтники должны за собой убирать | discussion | I1
++40 E: у меня аллергия на пыль, реально тяжело | me_too | I1
++25 F: кто-нибудь видел мою посылку у почтовых ящиков? | chatter
++20 G>6: там была коробка утром | chatter
++35 A: надо уборку заказать через ук | discussion | I1
++30 H: давно пора | me_too | I1
++20 B: я напишу | discussion | I1
+
+=== d027 s14 typical
+@I1 water.quality house_common since="с утра" cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: У кого вода из крана ржавая? У меня коричневая с утра | new_problem | I1
++30 B: у меня тоже, прям жёлтая | me_too | I1
++20 C: я пока фильтр поставила | chatter
++25 D: может трубы меняли где-то | discussion | I1
++40 E: в холодной нормальная, а в горячей мутная | more_info | I1
++30 F: стирать страшно | me_too | I1
++45 G: кто-то уже спрашивал у ук? | status_question | I1
++20 H: я звонила, сказали разберутся | status_question | I1
++30 A: пусть скажут когда | status_question | I1
++40 B: спасибо за инфу | chatter
+
+=== d028 s14 short
+@I1 water.quality house_common entrance=1 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: в первом подъезде вода с песком идёт | new_problem | I1
++20 B: у нас осадок в чайнике после кипячения | me_too | I1
++30 C: у меня норм | objection | I1
++25 A>3: у вас какой этаж? | discussion | I1
++20 C: второй | discussion | I1
++35 D: у меня на восьмом мутная | me_too | I1
++40 E: а кто завтра в магазин, купите хлеба бабушке с 7 этажа? | chatter
++20 F>7: я куплю | chatter
++30 A: по воде напишу в ук | discussion | I1
++25 D: спасибо | chatter
+
+=== d029 s15 typical
+@I1 water.pressure house_common floor=9 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: На девятом этаже напор воды почти нулевой | new_problem | I1
++30 B: у меня на восьмом тоже еле течёт | me_too | I1
++20 C: на третьем нормально | more_info | I1
++35 D: вечером особенно плохо | more_info | I1
++40 E: стиралка ошибку выдаёт из-за давления | more_info | I1
++25 F: насосы наверно не справляются | discussion | I1
++30 G: мы в прошлом году уже писали про это | discussion
++45 H: давайте снова напишем | discussion | I1
++20 A: я за | chatter
++30 B: коллективно лучше | discussion | I1
+
+=== d030 s15 noisy
+@I1 water.pressure house_common entrance=4 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: в 4ом подъезде вода еле идет, душ не принять | new_problem | I1
++25 B: подтверждаю(( | me_too | I1
++20 C: а холодная или горячая? | discussion | I1
++15 A>3: обе слабые | more_info | I1
++40 D: у меня в 1 подъезде норм | more_info | I1
++30 E: всем доброе утро | chatter
++20 F: доброе | chatter
++45 G: пусть проверят насос | discussion | I1
++30 A: пишу в ук | discussion | I1
++25 B: спасибо | chatter
+
+=== d031 s16 typical
+@I1 structure.damage house_common entrance=2 floor=3 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: Во втором подъезде на 3 этаже по стене пошла трещина и сыплется штукатурка | new_problem | I1
++40 B: я видела, куски на полу | me_too | I1
++25 C: это опасно? | discussion | I1
++30 D: трещина вроде неглубокая, штукатурка просто старая | more_info | I1
++20 E: всё равно надо показать специалисту | discussion | I1
++50 F: у кого-нибудь есть номер сантехника? | out_of_scope
++20 G>6: скину | out_of_scope
++30 A: сфоткала трещину, отправлю в ук | discussion | I1
++40 B: давайте | chatter
++25 H: заметил, что трещина за неделю стала длиннее | more_info | I1
+
+=== d032 s16 short
+@I1 structure.damage house_common entrance=1 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: в первом подъезде над входом плитка отваливается с козырька | new_problem | I1
++30 B: да, уже кусок упал рядом с дверью | more_info | I1
++25 C: хорошо что никого не задело | discussion | I1
++40 D: надо огородить | discussion | I1
++20 E: я видел, там ещё висит кусок | more_info | I1
++35 F: всем привет | chatter
++30 G: кто в ук пишет? | status_question | I1
++20 A: я | discussion | I1
++45 H: присоединяюсь к жалобе | me_too | I1
++30 B: 👍 | chatter
+
+=== d033 s17 typical
+@I1 water.supply_outage house_common since="с 10 утра" cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: У кого есть холодная вода? У меня вообще нет воды с 10 утра | new_problem | I1
++30 B: нету | me_too | I1
++20 C: и у нас | me_too | I1
++25 D: а в соседнем доме есть, я спрашивала | more_info | I1
++40 E: объявления на двери не было | more_info | I1
++30 F: может в подвале перекрыли | discussion | I1
++45 G: воды нет ни холодной ни горячей | more_info | I1
++30 H: звоню в аварийку | discussion | I1
++20 A: отпишитесь | status_question | I1
++40 H: сказали работают, сроков не назвали | status_question | I1
+
+=== d034 s17 voice
+@I1 water.supply_outage house_common entrance=3 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: у меня в третьем подъезде воды нет совсем кран открываю и шипит только это у всех или только у нас | new_problem | I1
++40 B: у всех в третьем | me_too | I1
++20 C: в первом есть | more_info | I1
++30 D: значит стояк перекрыли | discussion | I1
++25 E: ремонтников в подвале видела | more_info | I1
++45 F: хоть бы предупредили | discussion | I1
++30 G: у меня дети из школы придут, а воды нет | me_too | I1
++20 H: я узнаю у диспетчера | discussion | I1
++40 A: спасибо | chatter
++30 B: ждём | chatter

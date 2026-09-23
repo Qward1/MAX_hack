@@ -66,6 +66,7 @@ class ProviderOpenItem(Strict):
     subtype: str | None = None
     entrance: str | None = None
     title: str
+    danger_kinds: tuple[str, ...] = ()
 
 
 class ProviderRequest(Strict):
@@ -149,6 +150,7 @@ def build_request(
                 subtype=item.subtype,
                 entrance=item.entrance,
                 title=mask_text(item.title),
+                danger_kinds=tuple(item.danger_kinds),
             )
         )
     request = ProviderRequest(

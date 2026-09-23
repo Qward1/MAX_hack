@@ -1,0 +1,332 @@
+{
+  "dataset": "d3_dev",
+  "config": "gpt5mini_v1_minimal_flex",
+  "calls": {
+    "windows": 30,
+    "calls": 30,
+    "states": {
+      "ok": 30
+    },
+    "valid_json": {
+      "k": 30,
+      "n": 30,
+      "value": 1.0,
+      "ci95": [
+        0.8865,
+        1.0
+      ]
+    },
+    "timeouts": 0,
+    "provider_errors": 0,
+    "p50_ms": 5113,
+    "p95_ms": 7649,
+    "p99_ms": 9002,
+    "max_ms": 9002,
+    "rub_total": 2.0038,
+    "rub_per_window": 0.0668,
+    "tokens_in_mean": 7719,
+    "tokens_out_mean": 360,
+    "reasoning_tokens_mean": 0,
+    "quotes": {
+      "k": 8,
+      "n": 110,
+      "value": 0.0727,
+      "ci95": [
+        0.0373,
+        0.137
+      ]
+    },
+    "dropped_fields": 12,
+    "audit": {
+      "field_dropped": 12,
+      "no_new_facts_violation": 3
+    },
+    "upstreams": {
+      "openrouter": 30
+    }
+  },
+  "d3": {
+    "incidents": 14,
+    "incident_capture": {
+      "k": 13,
+      "n": 14,
+      "value": 0.9286,
+      "ci95": [
+        0.6853,
+        0.9873
+      ]
+    },
+    "non_problem_signals": {
+      "k": 1,
+      "n": 21,
+      "value": 0.0476,
+      "ci95": [
+        0.0085,
+        0.2267
+      ]
+    },
+    "subtype_accuracy": {
+      "k": 13,
+      "n": 13,
+      "value": 1.0,
+      "ci95": [
+        0.7719,
+        1.0
+      ]
+    },
+    "category_accuracy": {
+      "k": 13,
+      "n": 13,
+      "value": 1.0,
+      "ci95": [
+        0.7719,
+        1.0
+      ]
+    },
+    "scope_accuracy": {
+      "k": 12,
+      "n": 13,
+      "value": 0.9231,
+      "ci95": [
+        0.6669,
+        0.9863
+      ]
+    },
+    "entrance_accuracy": {
+      "k": 3,
+      "n": 11,
+      "value": 0.2727,
+      "ci95": [
+        0.0975,
+        0.5656
+      ]
+    },
+    "route_end_to_end": {
+      "k": 11,
+      "n": 13,
+      "value": 0.8462,
+      "ci95": [
+        0.5777,
+        0.9567
+      ]
+    },
+    "d3_danger_found": {
+      "k": 4,
+      "n": 4,
+      "value": 1.0,
+      "ci95": [
+        0.5101,
+        1.0
+      ]
+    },
+    "role_accuracy": {
+      "k": 125,
+      "n": 208,
+      "value": 0.601,
+      "ci95": [
+        0.5332,
+        0.6651
+      ]
+    },
+    "missed_incidents": [
+      "d117.I1"
+    ],
+    "route_details": [
+      {
+        "incident": "d003.I1",
+        "subtype": [
+          "elevator.stopped",
+          "elevator.stopped"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d005.I1",
+        "subtype": [
+          "elevator.button",
+          "elevator.button"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d006.I1",
+        "subtype": [
+          "elevator.button",
+          "elevator.button"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d010.I1",
+        "subtype": [
+          "roof.leak",
+          "roof.leak"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d015.I1",
+        "subtype": [
+          "heating.cold_radiators",
+          "heating.cold_radiators"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d024.I1",
+        "subtype": [
+          "entrance_door.broken",
+          "entrance_door.broken"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d029.I1",
+        "subtype": [
+          "water.pressure",
+          "water.pressure"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d035.I1",
+        "subtype": [
+          "gas.smell",
+          "gas.smell"
+        ],
+        "scope": [
+          "house_common",
+          "unknown"
+        ],
+        "route": [
+          "emergency_service",
+          "emergency_service"
+        ]
+      },
+      {
+        "incident": "d043.I1",
+        "subtype": [
+          "elevator.stopped",
+          "elevator.stopped"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d050.I1",
+        "subtype": [
+          "other.unspecified",
+          "other.unspecified"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "emergency_service",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d051.I1",
+        "subtype": [
+          "other.unspecified",
+          "other.unspecified"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "emergency_service",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d104.I1",
+        "subtype": [
+          "entrance_door.broken",
+          "entrance_door.broken"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d110.I1",
+        "subtype": [
+          "roof.leak",
+          "roof.leak"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      }
+    ]
+  }
+}

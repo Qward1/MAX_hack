@@ -1,0 +1,270 @@
+# D3, партия 2: опасность — словами правил и без них, в том числе видимая только из нескольких реплик.
+
+=== d035 s18 typical
+@I1 gas.smell house_common entrance=2 cur=yes loc=yes obs=yes uk=yes danger=gas expect=yes
++0 A: Соседи, во втором подъезде сильно пахнет газом на третьем этаже | new_problem | I1 | !gas
++20 B: я тоже почувствовала, когда поднималась | me_too | I1 | !gas
++15 C: звоните 104 срочно! | discussion | I1
++20 D: не включайте свет и не звоните в звонки | discussion | I1
++25 A>3: уже звоню | discussion | I1
++30 E: окна на площадке открыла | more_info | I1
++20 F: на четвёртом тоже пахнет | more_info | I1 | !gas
++40 G: может из 12 квартиры, там бабушка одна живёт | discussion | I1
++30 H: постучал к ней, не открывает | more_info | I1
++45 A: газовщики едут, сказали выйти на улицу | discussion | I1
++30 B: вышли с детьми | chatter
++60 C: что там сейчас? | status_question | I1
++40 A: приехали, ищут утечку | status_question | I1
++90 D: отбой, плита была открыта, перекрыли | resolved_claim | I1
+
+=== d036 s18 noisy
+@I1 gas.smell house_common entrance=4 floor=1 cur=yes loc=yes obs=yes uk=yes danger=gas expect=yes
++0 A: у нас в 4 подъезде на 1 этаже воняет газом(( | new_problem | I1 | !gas
++30 B: серьёзно? | discussion | I1
++15 A>2: да, прям у почтовых ящиков | more_info | I1
++20 C: я утром шла, ничего не было | objection | I1
++25 D: сейчас спущусь проверю | discussion | I1
++60 D: да, запах газа есть, не сильный | me_too | I1 | !gas
++20 E: не курите там никто | discussion | I1
++30 F: вызвала газовую службу | discussion | I1
++40 G: а 112 тоже можно | discussion | I1
++25 H: у меня дети спят, выводить? | discussion | I1
++20 A>10: лучше выйти на улицу пока | discussion | I1
++50 B: держите в курсе | status_question | I1
++30 F: сказали через 20 минут будут | status_question | I1
++40 C: спасибо что быстро среагировали | chatter
++20 E: 🙏 | chatter
+
+=== d037 s18 voice
+@I1 gas.smell house_common entrance=1 cur=yes loc=yes obs=yes uk=yes danger=gas expect=yes
++0 A: народ срочно в первом подъезде запах газа прям по всей лестнице кто-нибудь позвоните в газовую я не могу у меня ребёнок на руках | new_problem | I1 | !gas
++15 B: звоню | discussion | I1
++10 C: я тоже чувствую на пятом | me_too | I1 | !gas
++20 D: выходим все на улицу | discussion | I1
++25 E: лифтом не пользуйтесь | discussion | I1
++30 B: вызвала, едут | discussion | I1
++40 F: в каком месте сильнее всего? | discussion | I1
++20 C>7: между третьим и четвёртым | more_info | I1
++35 G: я с собакой гуляю, не заходите пока | chatter
++60 H: а что случилось? | discussion | I1
++20 A>10: газом пахнет в подъезде | more_info | I1 | !gas
++45 D: машина газовой приехала | status_question | I1
++30 E: отлично | chatter
++60 B: всё, сказали утечка у стояка, перекрыли | resolved_claim | I1
+
+=== d038 s19 typical
+@I1 other.unspecified house_common entrance=3 cur=yes loc=yes obs=yes uk=yes danger=smoke_fire expect=yes
++0 A: В 3 подъезде из подвала идёт дым! | new_problem | I1 | !smoke_fire
++15 B: вижу, валит из окошка у входа | me_too | I1 | !smoke_fire
++15 C: звоните 112! | discussion | I1
++20 A: звоню | discussion | I1
++25 D: пахнет гарью уже на втором этаже | more_info | I1 | !smoke_fire
++20 E: все выходите из подъезда | discussion | I1
++30 F: у меня пожилые родители на 6, помогите спуститься кто может | more_info | I1
++20 G>7: иду | chatter
++40 H: пожарные едут, слышно сирену | status_question | I1
++30 B: окна закройте чтобы дым не тянуло | discussion | I1
++60 C: приехали | status_question | I1
++45 A: говорят мусор в подвале подожгли | more_info | I1
++90 D: потушили, дым ещё стоит | resolved_claim | I1
++30 E: спасибо пожарным | chatter
+
+=== d039 s19 short
+@I1 waste.chute house_common entrance=1 floor=4 cur=yes loc=yes obs=yes uk=yes danger=smoke_fire expect=yes
++0 A: в мусоропроводе в 1 подъезде что-то горит, дым на 4 этаже | new_problem | I1 | !smoke_fire
++15 B: чувствую запах гари | me_too | I1 | !smoke_fire
++15 C: кто-то окурок кинул наверно | discussion | I1
++20 D: воду туда лить? | discussion | I1
++15 E>4: не надо, вызывайте 112 | discussion | I1
++20 A: вызвала | discussion | I1
++30 F: дым сильнее становится | more_info | I1 | !smoke_fire
++20 G: выходим | chatter
++40 H: я закрыл заслонку на своём этаже | more_info | I1
++60 B: пожарные приехали | status_question | I1
++45 A: потушили, спасибо всем | resolved_claim | I1
++30 C: надо запретить туда окурки кидать | discussion | I1
++20 D: табличку повесим | discussion | I1
+
+=== d040 s20 typical
+@I1 elevator.stopped house_common entrance=2 cur=yes loc=yes obs=yes uk=yes danger=person_trapped expect=yes
++0 A: В лифте во втором подъезде застрял ребёнок! | new_problem | I1 | !person_trapped
++15 B: между какими этажами? | discussion | I1
++10 A>2: между 5 и 6, он плачет | more_info | I1
++15 C: звоните в лифтовую аварийку, номер в кабине | discussion | I1
++20 D: я знаю номер диспетчерской, звоню | discussion | I1
++15 E: поговорите с ним через двери, чтобы не боялся | discussion | I1
++30 A: мама его уже тут | more_info | I1
++40 F: диспетчер сказал бригада 20 минут | status_question | I1
++30 G: может сами двери разжать? | discussion | I1
++15 H>9: нельзя, ждите мастера | discussion | I1
++60 B: как там? | status_question | I1
++45 A: мастер приехал | status_question | I1
++60 A: вытащили, всё хорошо 🙏 | resolved_claim | I1
++20 C: слава богу | chatter
+
+=== d041 s20 noisy
+@I1 elevator.stopped house_common entrance=4 cur=yes loc=yes obs=yes uk=yes danger=person_trapped expect=yes
++0 A: люди застряли в лифте в 4 подъезде!! | new_problem | I1 | !person_trapped
++10 B: сколько человек? | discussion | I1
++15 A>2: двое, соседка с сыном | more_info | I1
++20 C: я звоню диспетчеру | discussion | I1
++20 D: лифт вообще встал между этажами | more_info | I1
++25 E: кнопка связи в кабине работает? | discussion | I1
++15 A>6: говорят не отвечает никто | more_info | I1
++30 F: давайте в 112 тогда | discussion | I1
++40 C: диспетчер ответил, едут | status_question | I1
++30 G: я постою у лифта | chatter
++60 B: что там? | status_question | I1
++50 G: мастер открыл, всех вывели | resolved_claim | I1
++20 D: лифт отключили пока | more_info | I1
++30 H: сколько можно этот лифт чинить | discussion | I1
+
+=== d042 s21 typical
+@I1 elevator.doors house_common cur=yes loc=yes obs=yes uk=yes danger=person_trapped expect=yes
++0 A: лифт стоит на первом с закрытыми дверями уже минут десять | new_problem | I1
++20 B: там кто-нибудь внутри? | discussion | I1
++15 C: да, женщина стучит | more_info | I1 | !person_trapped
++15 A: двери вообще не открываются | more_info | I1 | !person_trapped
++20 D: я сейчас спущусь | chatter
++25 E: номер диспетчерской на стенке в лифте, но изнутри его видно, а снаружи нет | discussion | I1
++30 D: поговорила с ней, она нормально, но выйти не может | more_info | I1 | !person_trapped
++20 F: звоню в аварийку | discussion | I1
++40 G: у кого есть номер лифтёров? | discussion | I1
++15 F>9: уже дозвонилась, едут | status_question | I1
++60 B: как она там? | status_question | I1
++30 D: сидит на сумке, ждёт, я рядом | more_info | I1
++90 A: мастер открыл двери, всё ок | resolved_claim | I1
+
+=== d043 s21 voice
+@I1 elevator.stopped house_common entrance=3 cur=yes loc=yes obs=yes uk=yes danger=person_trapped expect=yes
++0 A: в третьем подъезде лифт встал где-то между этажами и оттуда голоса | new_problem | I1 | !person_trapped
++20 B: это дети наверно из соседнего подъезда катались | discussion | I1
++15 C: я слышу, кто-то кричит помогите | more_info | I1 | !person_trapped
++20 D: там ребёнок и бабушка, я по голосу поняла | more_info | I1 | !person_trapped
++25 E: кто звонит в аварийную? | discussion | I1
++15 A: я звоню | discussion | I1
++30 F: скажите им чтобы не пытались сами выбраться | discussion | I1
++40 B: сказал, они сидят ждут | more_info | I1
++30 G: как долго ехать мастеру? | status_question | I1
++20 A>9: сказали 15 минут | status_question | I1
++60 H: я воды принёс, через щель не передать | chatter
++50 C: мастер пришёл | status_question | I1
++40 D: открыли, все вышли | resolved_claim | I1
+
+=== d044 s21 short
+@I1 elevator.doors house_common entrance=1 cur=yes loc=yes obs=yes uk=yes danger=person_trapped expect=yes
++0 A: в первом подъезде лифт открылся на полметра и так стоит | new_problem | I1
++20 B: а он пустой? | discussion | I1
++15 A>2: нет, там мужчина, не пролезает | more_info | I1 | !person_trapped
++20 C: вызывайте мастера | discussion | I1
++15 D: сейчас позвоню | discussion | I1
++30 E: он говорит ему плохо, душно | more_info | I1 | !person_trapped
++20 F: может скорую тоже | discussion | I1
++25 A: воду ему дала через щель | more_info | I1
++40 D: мастер через 10 минут | status_question | I1
++30 G: держимся | chatter
++60 A: вытащили, скорую не надо | resolved_claim | I1
++20 B: слава богу | chatter
+
+=== d045 s22 typical
+@I1 electrical.panel house_common entrance=2 floor=7 cur=yes loc=yes obs=yes uk=yes danger=electric expect=yes
++0 A: Во 2 подъезде на 7 этаже в щитке искрит! | new_problem | I1 | !electric
++15 B: не трогайте его | discussion | I1
++20 C: я слышу треск даже через дверь | me_too | I1 | !electric
++20 D: у меня свет мигает в квартире | more_info | I1
++25 E: звоните в аварийку ук | discussion | I1
++20 A: звоню | discussion | I1
++30 F: пахнет палёным? | discussion | I1
++15 A>7: немного | more_info | I1
++40 G: выключите автоматы если можете, только аккуратно | discussion | I1
++20 H>9: лучше не лезть, пусть электрик | discussion | I1
++60 A: электрик едет | status_question | I1
++50 B: как там? | status_question | I1
++40 A: электрик сказал контакт отгорел, починил | resolved_claim | I1
+
+=== d046 s22 noisy
+@I1 electrical.panel house_common entrance=1 cur=yes loc=yes obs=yes uk=yes danger=electric expect=yes
++0 A: в 1 подъезде щиток коротит, свет у всех мигает | new_problem | I1 | !electric
++20 B: у меня тоже мигает | me_too | I1
++15 C: и холодильник выключился | more_info | I1
++25 D: там провода оплавились, я смотрел | more_info | I1 | !electric
++20 E: не трогай ничего | discussion | I1
++30 F: вызвал аварийную службу | discussion | I1
++40 G: а в каком этаже щиток? | discussion | I1
++15 D>7: на 3 | more_info | I1
++50 H: у меня интернет пропал | more_info | I1
++30 A: приехали, отключили подъезд | status_question | I1
++60 B: надолго? | status_question | I1
++20 A: сказали час | status_question | I1
+
+=== d047 s23 typical
+@I1 water.leak house_common entrance=3 cur=yes loc=yes obs=yes uk=yes danger=flooding expect=yes
++0 A: В 3 подъезде в подвале прорвало трубу, вода хлещет! | new_problem | I1 | !flooding
++15 B: вижу, уже на ступеньки выливается | me_too | I1 | !flooding
++20 C: звоните в аварийку | discussion | I1
++15 A: звоню | discussion | I1
++25 D: горячая? пар идёт | more_info | I1
++15 B>5: да, парит сильно | more_info | I1
++30 E: не подходите близко, там кипяток | discussion | I1
++20 F: у меня кладовка в подвале, там всё затопит | more_info | I1
++40 G: аварийка едет | status_question | I1
++30 H: воду перекроют? | status_question | I1
++60 A: перекрыли, но вода стоит по щиколотку | more_info | I1
++50 C: насос нужен откачать | discussion | I1
++30 D: пусть ук разбирается | discussion | I1
+
+=== d048 s23 voice
+@I1 water.leak house_common entrance=2 floor=5 cur=yes loc=yes obs=yes uk=yes danger=flooding expect=yes
++0 A: срочно у нас во втором подъезде на пятом этаже с потолка льётся вода прям потоком на лестницу | new_problem | I1 | !flooding
++15 B: это сверху заливает | more_info | I1 | !flooding
++20 C: на шестом дверь открыта у кого-то? | discussion | I1
++15 D: я на шестом, у меня сухо | objection | I1
++20 E: значит стояк | discussion | I1
++25 A: вода уже по лестнице к четвёртому бежит | more_info | I1 | !flooding
++20 F: звоните в аварийную ук | discussion | I1
++15 G: звоню | discussion | I1
++40 H: в лифт вода не попадёт? | discussion | I1
++30 G: едут, сказали перекрыть стояк в подвале нельзя самим | status_question | I1
++50 B: лифт отключите на всякий случай | discussion | I1
++60 A: приехали, перекрыли | resolved_claim | I1
+
+=== d049 s24 typical
+@I1 electrical.panel house_common entrance=4 cur=yes loc=yes obs=yes uk=yes danger=electric expect=yes
++0 A: в 4 подъезде в щитке на площадке вспышки и треск | new_problem | I1 | !electric
++20 B: лучше не подходите туда | discussion | I1
++15 C: я тоже слышала хлопок | me_too | I1 | !electric
++25 D: у меня свет пропал на секунду | more_info | I1
++20 E: дверца щитка горячая | more_info | I1 | !electric
++30 F: кто может позвонить электрикам? | discussion | I1
++15 G: я | discussion | I1
++40 H: не трогайте руками ничего | discussion | I1
++30 G: электрик будет через полчаса | status_question | I1
++60 A: треск прекратился, но пахнет жжёным | more_info | I1
++50 B: пусть всё равно посмотрят | discussion | I1
+
+=== d050 s24 short
+@I1 other.unspecified house_common entrance=2 cur=yes loc=yes obs=yes uk=yes danger=other_hazard expect=yes
++0 A: на лестнице во втором едкий запах, глаза режет | new_problem | I1 | !other_hazard
++20 B: у меня тоже, окна открыла | me_too | I1 | !other_hazard
++15 C: что это может быть? | discussion | I1
++20 D: кто-то травил тараканов наверно | discussion | I1
++25 E: у меня ребёнок кашляет | more_info | I1 | !other_hazard
++20 F: выйдите пока на улицу | discussion | I1
++30 G: запах как от хлорки только сильнее | more_info | I1
++40 H: давайте позвоним в аварийку ук | discussion | I1
++20 A: звоню | discussion | I1
++60 B: сказали пришлют мастера посмотреть | status_question | I1
++45 C: проветриваем | chatter
+
+=== d051 s24 voice
+@I1 other.unspecified house_common entrance=1 cur=yes loc=yes obs=yes uk=yes danger=other_hazard expect=yes
++0 A: в первом подъезде второй день голова болит от запаха непонятного особенно у мусоропровода | new_problem | I1 | !other_hazard
++30 B: да у меня тоже тошнит когда захожу | me_too | I1 | !other_hazard
++20 C: детей туда не пускаю | more_info | I1
++30 D: я думала это только мне кажется | me_too | I1
++25 E: может крыса сдохла | discussion | I1
++40 F: нет это химический какой-то | objection | I1
++30 G: надо чтобы проверили | discussion | I1
++20 H: я напишу в ук | discussion | I1
++50 A: у соседки с 3 этажа давление подскочило | more_info | I1 | !other_hazard
++30 B: срочно пусть едут | discussion | I1

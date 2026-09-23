@@ -1,0 +1,57 @@
+{
+  "calls": 660,
+  "max_calls": 700,
+  "max_rub": 300.0,
+  "rub": 75.910493,
+  "runs": {
+    "d5-final": {
+      "calls": 70,
+      "rub": 2.519093
+    },
+    "dev-A-v1low-default": {
+      "calls": 138,
+      "rub": 36.309324
+    },
+    "dev-F-v2min-flexfirst": {
+      "calls": 138,
+      "rub": 8.503699
+    },
+    "dev-F2-target": {
+      "calls": 61,
+      "rub": 2.867349
+    },
+    "holdout-final": {
+      "calls": 98,
+      "rub": 5.343671
+    },
+    "probe-flex": {
+      "calls": 1,
+      "rub": 0.300567
+    },
+    "smoke-a": {
+      "calls": 4,
+      "rub": 1.39529
+    },
+    "sub-gemini_v1": {
+      "calls": 30,
+      "rub": 6.596137
+    },
+    "sub-gpt5mini_v1_low_flex": {
+      "calls": 30,
+      "rub": 4.018056
+    },
+    "sub-gpt5mini_v1_minimal_flex": {
+      "calls": 30,
+      "rub": 2.003829
+    },
+    "sub-gpt5mini_v2_minimal_flex": {
+      "calls": 30,
+      "rub": 2.012648
+    },
+    "sub-gpt5mini_v2_minimal_standard": {
+      "calls": 30,
+      "rub": 4.04083
+    }
+  },
+  "unknown_cost_calls": 5
+}

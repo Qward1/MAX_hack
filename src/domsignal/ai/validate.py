@@ -36,7 +36,12 @@ from domsignal.ai.contracts import (
     TextBlock,
     WindowInput,
 )
-from domsignal.ai.engine import decide_strength, disposition_for
+from domsignal.ai.engine import (
+    decide_strength,
+    disposition_for,
+    may_join_open_item,
+    rename_refs,
+)
 from domsignal.ai.facts import check_no_new_facts
 from domsignal.ai.fallback import RulesOutcome
 from domsignal.ai.fusion import Refutation, fuse_emergency
@@ -49,6 +54,7 @@ from domsignal.ai.model_output import (
 )
 from domsignal.ai.normalize import contains_quote
 from domsignal.ai.providers.base import WindowMapping
+from domsignal.ai.rules.location import normalize_place_number
 from domsignal.ai.taxonomy import UNSPECIFIED, Taxonomy
 
 _UNCLEAR = Facet(value="unclear")
@@ -75,6 +81,15 @@ class ValidatedWindow:
     dropped_fields: int
 
 
+#: Причина отказа для цитаты из реплики контекста (`is_context`).
+CONTEXT_LINE = "реплика контекста, доказательства берутся только из реплик окна"
+
+#: Поля, значение которых — номер подъезда или этажа.
+_NUMBERED_FIELDS = frozenset({"entrance", "floor"})
+#: Поля места и времени сигнала: при отсутствии у модели — из правил.
+_PLACE_FIELDS = ("entrance", "floor", "since")
+
+
 class _Context:
     def __init__(self, window: WindowInput, mapping: WindowMapping) -> None:
         self.texts = {line.line_id: line.text for line in window.lines}
@@ -87,6 +102,20 @@ class _Context:
         line_id = self.mapping.line_id(msg)
         return line_id if line_id in self.texts else None
 
+    def own_line(self, msg: str | None) -> tuple[str | None, str]:
+        """Реплика окна по номеру `m…` или причина, по которой её нет.
+
+        Реплики контекста — фон прошлого разговора: место, время, территория и
+        доказательства опасности из них не берутся (дефект P7a: подъезд из
+        реплики прошлого разговора).
+        """
+        line_id = self.line_id(msg)
+        if line_id is None:
+            return None, f"реплика {msg} не существует"
+        if line_id not in self.own:
+            return None, f"{msg} — {CONTEXT_LINE}"
+        return line_id, ""
+
     def quote_valid(self, line_id: str, quote: str) -> bool:
         return contains_quote(self.texts.get(line_id, ""), quote)
 
@@ -96,14 +125,15 @@ def _evidence(
 ) -> Evidence | None:
     if raw is None:
         return None
-    line_id = context.line_id(raw.msg)
+    line_id, reason = context.own_line(raw.msg)
     if line_id is None:
-        collector.drop(ref, f"{name}: реплика {raw.msg} не существует")
+        collector.drop(ref, f"{name}: {reason}")
         return None
     if not context.quote_valid(line_id, raw.quote):
         collector.drop(ref, f"{name}: цитата не найдена в {raw.msg}")
         return None
-    return Evidence(value=raw.value, quote=raw.quote, line_id=line_id)
+    value = normalize_place_number(raw.value) if name in _NUMBERED_FIELDS else raw.value
+    return Evidence(value=value, quote=raw.quote, line_id=line_id)
 
 
 def _facet(context: _Context, raw: ModelFacet, collector: _Collector, ref: str, name: str) -> Facet:
@@ -111,7 +141,7 @@ def _facet(context: _Context, raw: ModelFacet, collector: _Collector, ref: str, 
     if value is None:
         collector.drop(ref, f"facets.{name}: неизвестное значение {raw.v!r}")
         return _UNCLEAR
-    line_id = context.line_id(raw.msg)
+    line_id, _reason = context.own_line(raw.msg)
     valid = (
         bool(raw.quote)
         and line_id is not None
@@ -138,9 +168,12 @@ def _scope(
         return LocationEvidence(value="unknown")
     if value == "unknown":
         return LocationEvidence(value="unknown")
-    line_id = context.line_id(raw.location_scope.msg)
+    line_id, reason = context.own_line(raw.location_scope.msg)
     quote = raw.location_scope.quote or ""
-    if line_id is None or not context.quote_valid(line_id, quote):
+    if line_id is None:
+        collector.drop(ref, f"location_scope: {reason}")
+        return LocationEvidence(value="unknown")
+    if not context.quote_valid(line_id, quote):
         collector.drop(ref, "location_scope: без валидной цитаты")
         return LocationEvidence(value="unknown")
     scope: LocationScope = value
@@ -156,10 +189,12 @@ def _semantic(
             collector.drop(ref, f"danger: неизвестный вид {danger.kind!r}")
             continue
         evidence: list[SemanticEvidence] = []
+        from_context = False
         for item in danger.evidence:
-            line_id = context.line_id(item.msg)
+            line_id, reason = context.own_line(item.msg)
             if line_id is None:
-                collector.drop(ref, f"danger: реплика {item.msg} не существует")
+                from_context = from_context or context.line_id(item.msg) is not None
+                collector.drop(ref, f"danger: {reason}")
                 continue
             evidence.append(
                 SemanticEvidence(
@@ -168,6 +203,11 @@ def _semantic(
                     quote_valid=context.quote_valid(line_id, item.quote),
                 )
             )
+        if from_context and not evidence:
+            # Опасность, доказанная только прошлым разговором, к этому окну не
+            # относится: её уже разбирало предыдущее окно.
+            collector.drop(ref, f"danger: {danger.kind} без реплик окна в доказательствах")
+            continue
         kind: DangerKind = danger.kind
         result.append(
             SemanticDanger(kind=kind, evidence=tuple(evidence), contextual=danger.contextual)
@@ -184,7 +224,8 @@ def _refutation(
     if refutation.reason not in REFUTATION_REASONS:
         collector.drop(ref, f"danger_refutation: неизвестная причина {refutation.reason!r}")
         return None
-    line_id = context.line_id(refutation.msg)
+    # Опровержение из реплики контекста не может понизить опасность окна.
+    line_id, _reason = context.own_line(refutation.msg)
     valid = line_id is not None and context.quote_valid(line_id, refutation.quote)
     reason: RefutationReason = refutation.reason
     return Refutation(
@@ -205,7 +246,9 @@ def _text_block(
 ) -> TextBlock | None:
     if raw is None or not raw.text.strip():
         return None
-    sources = [line_id for line_id in (context.line_id(msg) for msg in raw.sources) if line_id]
+    # Источники текста — только реплики окна: иначе проверка `no_new_facts`
+    # пропустила бы факт из прошлого разговора (номер подъезда, срок).
+    sources = [line_id for line_id in (context.own_line(msg)[0] for msg in raw.sources) if line_id]
     if not sources:
         sources = list(default_lines)
     texts = [context.texts[line_id] for line_id in sources if line_id in context.texts]
@@ -312,6 +355,8 @@ def validate_output(
         if not hit.negated and hit.line_id not in covered and hit.line_id in context.own
     ]
 
+    open_items = {item.ref: item for item in window.open_items}
+    renamed: dict[str, str] = {}
     signals: list[SignalDraft] = []
     semantic_all: list[SemanticDanger] = []
     for index, (ref, raw) in enumerate(drafts):
@@ -330,21 +375,39 @@ def validate_output(
             hits, semantic, _refutation(context, raw, collector, ref), signal_ref=ref
         )
         collector.events.extend(events)
+        item = open_items.get(ref)
+        if item is not None and not may_join_open_item(emergency, item):
+            new_ref = f"new:{len(drafts) + len(renamed) + 1}"
+            collector.drop(
+                new_ref,
+                f"ref: {raw.ref} — у открытого элемента нет опасности "
+                f"{'/'.join(emergency.kinds)}, это новый сигнал",
+            )
+            renamed[ref] = new_ref
+            ref = new_ref
         facets = Facets(
             current=_facet(context, raw.facets.current, collector, ref, "current"),
             local=_facet(context, raw.facets.local, collector, ref, "local"),
             observed=_facet(context, raw.facets.observed, collector, ref, "observed"),
         )
         strength, reason = decide_strength(emergency, facets)
+        place: dict[str, Evidence | None] = {}
+        from_rules = False
+        for name in _PLACE_FIELDS:
+            value = _evidence(context, getattr(raw, name), collector, ref, name)
+            if value is None:
+                value = _rules_place(rules, line_ids, name)
+                from_rules = from_rules or value is not None
+            place[name] = value
         signals.append(
             SignalDraft(
                 ref=ref,
                 subtype=code,
                 product_category=taxonomy.product_category(code),
                 object_label=raw.object.strip() or taxonomy.get(code).label,
-                entrance=_evidence(context, raw.entrance, collector, ref, "entrance"),
-                floor=_evidence(context, raw.floor, collector, ref, "floor"),
-                since=_evidence(context, raw.since, collector, ref, "since"),
+                entrance=place["entrance"],
+                floor=place["floor"],
+                since=place["since"],
                 location_scope=_scope(context, raw, collector, ref),
                 facets=facets,
                 emergency=emergency,
@@ -353,7 +416,7 @@ def validate_output(
                 disposition=disposition_for(strength),
                 line_ids=tuple(dict.fromkeys(line_ids)),
                 source="rules+model" if hits else "model",
-                flags=_flags(taxonomy, code, rules),
+                flags=_flags(taxonomy, code, rules) + (("place_from_rules",) if from_rules else ()),
                 clean_description=_text_block(
                     context, raw.clean_description, collector, ref, "clean_description", line_ids
                 ),
@@ -365,12 +428,31 @@ def validate_output(
         signals.extend(_signals_from_rules(rules, orphan_hits))
 
     return ValidatedWindow(
-        lines=tuple(verdicts),
+        lines=rename_refs(verdicts, renamed),
         signals=tuple(signals),
         semantic_danger=tuple(semantic_all),
         audit_events=tuple(collector.events),
         dropped_fields=collector.dropped,
     )
+
+
+def _rules_place(
+    rules: RulesOutcome, line_ids: Sequence[str], name: str
+) -> Evidence | None:
+    """Подъезд, этаж или «с какого времени» из правил — по репликам сигнала.
+
+    Модель при минимальных рассуждениях часто не заполняет необязательные поля
+    места (P6, dev D3). Правила дают значение с дословной цитатой по
+    построению; берётся первая по времени реплика самого сигнала, реплики
+    контекста и чужих сигналов не участвуют.
+    """
+    wanted = set(line_ids)
+    for facts in rules.facts:
+        if facts.line_id in wanted and not facts.line.is_context:
+            value: Evidence | None = getattr(facts.place, name)
+            if value is not None:
+                return value
+    return None
 
 
 def _flags(taxonomy: Taxonomy, code: str, rules: RulesOutcome) -> tuple[str, ...]:

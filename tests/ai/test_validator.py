@@ -37,7 +37,11 @@ async def test_quote_from_another_line_drops_the_field() -> None:
         refs={"m1": ["new:1"], "m2": ["new:1"]},
     )
     analysis = await analyse(response)
-    assert analysis.signals[0].entrance is None
+    # Цитата модели из чужой реплики отброшена; подъезд восстанавливают правила
+    # из реплики самого сигнала (P6), с дословной цитатой именно из неё.
+    entrance = analysis.signals[0].entrance
+    assert entrance is not None and entrance.line_id == "line-1"
+    assert "place_from_rules" in analysis.signals[0].flags
     assert analysis.dropped_fields >= 1
     assert "field_dropped" in {event.kind for event in analysis.audit_events}
 

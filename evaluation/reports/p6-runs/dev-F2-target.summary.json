@@ -1,0 +1,326 @@
+{
+  "dataset": "d3_dev",
+  "config": "gpt5mini_v2_minimal_flexfirst",
+  "calls": {
+    "windows": 61,
+    "calls": 61,
+    "states": {
+      "ok": 61
+    },
+    "valid_json": {
+      "k": 61,
+      "n": 61,
+      "value": 1.0,
+      "ci95": [
+        0.9408,
+        1.0
+      ]
+    },
+    "timeouts": 0,
+    "provider_errors": 0,
+    "p50_ms": 4116,
+    "p95_ms": 9022,
+    "p99_ms": 20604,
+    "max_ms": 25992,
+    "rub_total": 2.8673,
+    "rub_per_window": 0.047,
+    "tokens_in_mean": 6322,
+    "tokens_out_mean": 258,
+    "reasoning_tokens_mean": 0,
+    "quotes": {
+      "k": 5,
+      "n": 93,
+      "value": 0.0538,
+      "ci95": [
+        0.0232,
+        0.1197
+      ]
+    },
+    "dropped_fields": 20,
+    "audit": {
+      "field_dropped": 20
+    },
+    "upstreams": {
+      "openrouter": 61
+    }
+  },
+  "d3": {
+    "incidents": 13,
+    "incident_capture": {
+      "k": 13,
+      "n": 13,
+      "value": 1.0,
+      "ci95": [
+        0.7719,
+        1.0
+      ]
+    },
+    "non_problem_signals": {
+      "k": 6,
+      "n": 29,
+      "value": 0.2069,
+      "ci95": [
+        0.0985,
+        0.3839
+      ]
+    },
+    "subtype_accuracy": {
+      "k": 11,
+      "n": 13,
+      "value": 0.8462,
+      "ci95": [
+        0.5777,
+        0.9567
+      ]
+    },
+    "category_accuracy": {
+      "k": 13,
+      "n": 13,
+      "value": 1.0,
+      "ci95": [
+        0.7719,
+        1.0
+      ]
+    },
+    "scope_accuracy": {
+      "k": 6,
+      "n": 13,
+      "value": 0.4615,
+      "ci95": [
+        0.2321,
+        0.7086
+      ]
+    },
+    "entrance_accuracy": {
+      "k": 3,
+      "n": 4,
+      "value": 0.75,
+      "ci95": [
+        0.3006,
+        0.9544
+      ]
+    },
+    "route_end_to_end": {
+      "k": 6,
+      "n": 13,
+      "value": 0.4615,
+      "ci95": [
+        0.2321,
+        0.7086
+      ]
+    },
+    "d3_danger_found": {
+      "k": 0,
+      "n": 0,
+      "value": null,
+      "ci95": null
+    },
+    "role_accuracy": {
+      "k": 229,
+      "n": 392,
+      "value": 0.5842,
+      "ci95": [
+        0.5348,
+        0.6319
+      ]
+    },
+    "missed_incidents": [],
+    "route_details": [
+      {
+        "incident": "d056.I1",
+        "subtype": [
+          "waste.removal_regional",
+          "waste.container_site"
+        ],
+        "scope": [
+          "house_territory",
+          "house_territory"
+        ],
+        "route": [
+          "regional_operator",
+          "operator_choice"
+        ]
+      },
+      {
+        "incident": "d057.I1",
+        "subtype": [
+          "waste.removal_regional",
+          "waste.removal_regional"
+        ],
+        "scope": [
+          "house_territory",
+          "house_common"
+        ],
+        "route": [
+          "regional_operator",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d058.I1",
+        "subtype": [
+          "snow.street",
+          "snow.street"
+        ],
+        "scope": [
+          "municipal_territory",
+          "unknown"
+        ],
+        "route": [
+          "municipality",
+          "unknown"
+        ]
+      },
+      {
+        "incident": "d059.I1",
+        "subtype": [
+          "snow.street",
+          "snow.street"
+        ],
+        "scope": [
+          "municipal_territory",
+          "municipal_territory"
+        ],
+        "route": [
+          "municipality",
+          "municipality"
+        ]
+      },
+      {
+        "incident": "d061.I1",
+        "subtype": [
+          "power.grid_outage",
+          "power.grid_outage"
+        ],
+        "scope": [
+          "external_network",
+          "external_network"
+        ],
+        "route": [
+          "resource_supplier",
+          "resource_supplier"
+        ]
+      },
+      {
+        "incident": "d063.I1",
+        "subtype": [
+          "water.hot_outage",
+          "water.hot_outage"
+        ],
+        "scope": [
+          "external_network",
+          "external_network"
+        ],
+        "route": [
+          "resource_supplier",
+          "unknown"
+        ]
+      },
+      {
+        "incident": "d064.I1",
+        "subtype": [
+          "playground.damaged",
+          "playground.damaged"
+        ],
+        "scope": [
+          "house_territory",
+          "house_territory"
+        ],
+        "route": [
+          "operator_choice",
+          "operator_choice"
+        ]
+      },
+      {
+        "incident": "d065.I1",
+        "subtype": [
+          "playground.damaged",
+          "playground.damaged"
+        ],
+        "scope": [
+          "house_territory",
+          "unknown"
+        ],
+        "route": [
+          "operator_choice",
+          "unknown"
+        ]
+      },
+      {
+        "incident": "d068.I1",
+        "subtype": [
+          "gas.supply_outage",
+          "gas.supply_outage"
+        ],
+        "scope": [
+          "house_common",
+          "unknown"
+        ],
+        "route": [
+          "resource_supplier",
+          "resource_supplier"
+        ]
+      },
+      {
+        "incident": "d069.I1",
+        "subtype": [
+          "gas.supply_outage",
+          "gas.supply_outage"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "resource_supplier",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d115.I1",
+        "subtype": [
+          "elevator.stopped",
+          "elevator.stopped"
+        ],
+        "scope": [
+          "house_common",
+          "unknown"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d117.I1",
+        "subtype": [
+          "intercom.broken",
+          "intercom.broken"
+        ],
+        "scope": [
+          "house_common",
+          "unknown"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d120.I1",
+        "subtype": [
+          "lighting.yard",
+          "street_lighting.failure"
+        ],
+        "scope": [
+          "house_territory",
+          "unknown"
+        ],
+        "route": [
+          "operator_choice",
+          "unknown"
+        ]
+      }
+    ]
+  }
+}

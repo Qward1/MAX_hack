@@ -1,0 +1,980 @@
+{
+  "dataset": "d3_dev",
+  "config": "gpt5mini_v1_low",
+  "calls": {
+    "windows": 138,
+    "calls": 138,
+    "states": {
+      "fallback_invalid_output": 7,
+      "fallback_timeout": 3,
+      "ok": 128
+    },
+    "valid_json": {
+      "k": 128,
+      "n": 135,
+      "value": 0.9481,
+      "ci95": [
+        0.8968,
+        0.9747
+      ]
+    },
+    "timeouts": 3,
+    "provider_errors": 0,
+    "p50_ms": 21992,
+    "p95_ms": 35201,
+    "p99_ms": 45460,
+    "max_ms": 47533,
+    "rub_total": 36.3093,
+    "rub_per_window": 0.269,
+    "tokens_in_mean": 7696,
+    "tokens_out_mean": 916,
+    "reasoning_tokens_mean": 492,
+    "quotes": {
+      "k": 0,
+      "n": 446,
+      "value": 0.0,
+      "ci95": [
+        0.0,
+        0.0085
+      ]
+    },
+    "dropped_fields": 47,
+    "audit": {
+      "field_dropped": 47,
+      "no_new_facts_violation": 12
+    },
+    "upstreams": {
+      "openrouter": 135,
+      "None": 3
+    }
+  },
+  "d3": {
+    "incidents": 57,
+    "incident_capture": {
+      "k": 56,
+      "n": 57,
+      "value": 0.9825,
+      "ci95": [
+        0.9071,
+        0.9969
+      ]
+    },
+    "non_problem_signals": {
+      "k": 5,
+      "n": 90,
+      "value": 0.0556,
+      "ci95": [
+        0.024,
+        0.1235
+      ]
+    },
+    "subtype_accuracy": {
+      "k": 55,
+      "n": 56,
+      "value": 0.9821,
+      "ci95": [
+        0.9055,
+        0.9968
+      ]
+    },
+    "category_accuracy": {
+      "k": 56,
+      "n": 56,
+      "value": 1.0,
+      "ci95": [
+        0.9358,
+        1.0
+      ]
+    },
+    "scope_accuracy": {
+      "k": 43,
+      "n": 56,
+      "value": 0.7679,
+      "ci95": [
+        0.6423,
+        0.859
+      ]
+    },
+    "entrance_accuracy": {
+      "k": 30,
+      "n": 41,
+      "value": 0.7317,
+      "ci95": [
+        0.5807,
+        0.8431
+      ]
+    },
+    "route_end_to_end": {
+      "k": 45,
+      "n": 56,
+      "value": 0.8036,
+      "ci95": [
+        0.6816,
+        0.8866
+      ]
+    },
+    "d3_danger_found": {
+      "k": 9,
+      "n": 10,
+      "value": 0.9,
+      "ci95": [
+        0.5958,
+        0.9821
+      ]
+    },
+    "role_accuracy": {
+      "k": 568,
+      "n": 915,
+      "value": 0.6208,
+      "ci95": [
+        0.5889,
+        0.6516
+      ]
+    },
+    "missed_incidents": [
+      "d063.I1"
+    ],
+    "route_details": [
+      {
+        "incident": "d003.I1",
+        "subtype": [
+          "elevator.stopped",
+          "elevator.stopped"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d005.I1",
+        "subtype": [
+          "elevator.button",
+          "elevator.button"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d006.I1",
+        "subtype": [
+          "elevator.button",
+          "elevator.button"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d007.I1",
+        "subtype": [
+          "elevator.doors",
+          "elevator.doors"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d008.I1",
+        "subtype": [
+          "elevator.doors",
+          "elevator.doors"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d009.I1",
+        "subtype": [
+          "roof.leak",
+          "roof.leak"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d010.I1",
+        "subtype": [
+          "roof.leak",
+          "roof.leak"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d011.I1",
+        "subtype": [
+          "water.leak",
+          "water.leak"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d012.I1",
+        "subtype": [
+          "water.leak",
+          "water.leak"
+        ],
+        "scope": [
+          "house_common",
+          "unknown"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d013.I1",
+        "subtype": [
+          "water.hot_outage",
+          "water.hot_outage"
+        ],
+        "scope": [
+          "house_common",
+          "other_building"
+        ],
+        "route": [
+          "uk_internal",
+          "unknown"
+        ]
+      },
+      {
+        "incident": "d015.I1",
+        "subtype": [
+          "heating.cold_radiators",
+          "heating.cold_radiators"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d016.I1",
+        "subtype": [
+          "heating.cold_radiators",
+          "heating.cold_radiators"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d020.I1",
+        "subtype": [
+          "waste.chute",
+          "waste.chute"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d021.I1",
+        "subtype": [
+          "intercom.broken",
+          "intercom.broken"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d022.I1",
+        "subtype": [
+          "intercom.broken",
+          "intercom.broken"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d023.I1",
+        "subtype": [
+          "entrance_door.broken",
+          "entrance_door.broken"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d024.I1",
+        "subtype": [
+          "entrance_door.broken",
+          "entrance_door.broken"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d025.I1",
+        "subtype": [
+          "cleaning.stairwell",
+          "cleaning.stairwell"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d027.I1",
+        "subtype": [
+          "water.quality",
+          "water.quality"
+        ],
+        "scope": [
+          "house_common",
+          "apartment"
+        ],
+        "route": [
+          "uk_internal",
+          "unknown"
+        ]
+      },
+      {
+        "incident": "d029.I1",
+        "subtype": [
+          "water.pressure",
+          "water.pressure"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d032.I1",
+        "subtype": [
+          "structure.damage",
+          "structure.damage"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d035.I1",
+        "subtype": [
+          "gas.smell",
+          "gas.smell"
+        ],
+        "scope": [
+          "house_common",
+          "unknown"
+        ],
+        "route": [
+          "emergency_service",
+          "emergency_service"
+        ]
+      },
+      {
+        "incident": "d036.I1",
+        "subtype": [
+          "gas.smell",
+          "gas.smell"
+        ],
+        "scope": [
+          "house_common",
+          "unknown"
+        ],
+        "route": [
+          "emergency_service",
+          "emergency_service"
+        ]
+      },
+      {
+        "incident": "d037.I1",
+        "subtype": [
+          "gas.smell",
+          "gas.smell"
+        ],
+        "scope": [
+          "house_common",
+          "unknown"
+        ],
+        "route": [
+          "emergency_service",
+          "emergency_service"
+        ]
+      },
+      {
+        "incident": "d043.I1",
+        "subtype": [
+          "elevator.stopped",
+          "elevator.stopped"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d044.I1",
+        "subtype": [
+          "elevator.doors",
+          "elevator.doors"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d045.I1",
+        "subtype": [
+          "electrical.panel",
+          "electrical.panel"
+        ],
+        "scope": [
+          "house_common",
+          "unknown"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d048.I1",
+        "subtype": [
+          "water.leak",
+          "water.leak"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d049.I1",
+        "subtype": [
+          "electrical.panel",
+          "electrical.panel"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d050.I1",
+        "subtype": [
+          "other.unspecified",
+          "other.unspecified"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "emergency_service",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d051.I1",
+        "subtype": [
+          "other.unspecified",
+          "other.unspecified"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "emergency_service",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d056.I1",
+        "subtype": [
+          "waste.removal_regional",
+          "waste.container_site"
+        ],
+        "scope": [
+          "house_territory",
+          "house_territory"
+        ],
+        "route": [
+          "regional_operator",
+          "operator_choice"
+        ]
+      },
+      {
+        "incident": "d057.I1",
+        "subtype": [
+          "waste.removal_regional",
+          "waste.removal_regional"
+        ],
+        "scope": [
+          "house_territory",
+          "house_territory"
+        ],
+        "route": [
+          "regional_operator",
+          "operator_choice"
+        ]
+      },
+      {
+        "incident": "d058.I1",
+        "subtype": [
+          "snow.street",
+          "snow.street"
+        ],
+        "scope": [
+          "municipal_territory",
+          "unknown"
+        ],
+        "route": [
+          "municipality",
+          "unknown"
+        ]
+      },
+      {
+        "incident": "d059.I1",
+        "subtype": [
+          "snow.street",
+          "snow.street"
+        ],
+        "scope": [
+          "municipal_territory",
+          "municipal_territory"
+        ],
+        "route": [
+          "municipality",
+          "municipality"
+        ]
+      },
+      {
+        "incident": "d061.I1",
+        "subtype": [
+          "power.grid_outage",
+          "power.grid_outage"
+        ],
+        "scope": [
+          "external_network",
+          "external_network"
+        ],
+        "route": [
+          "resource_supplier",
+          "resource_supplier"
+        ]
+      },
+      {
+        "incident": "d064.I1",
+        "subtype": [
+          "playground.damaged",
+          "playground.damaged"
+        ],
+        "scope": [
+          "house_territory",
+          "house_territory"
+        ],
+        "route": [
+          "operator_choice",
+          "operator_choice"
+        ]
+      },
+      {
+        "incident": "d065.I1",
+        "subtype": [
+          "playground.damaged",
+          "playground.damaged"
+        ],
+        "scope": [
+          "house_territory",
+          "house_territory"
+        ],
+        "route": [
+          "operator_choice",
+          "operator_choice"
+        ]
+      },
+      {
+        "incident": "d068.I1",
+        "subtype": [
+          "gas.supply_outage",
+          "gas.supply_outage"
+        ],
+        "scope": [
+          "house_common",
+          "external_network"
+        ],
+        "route": [
+          "resource_supplier",
+          "resource_supplier"
+        ]
+      },
+      {
+        "incident": "d069.I1",
+        "subtype": [
+          "gas.supply_outage",
+          "gas.supply_outage"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "resource_supplier",
+          "emergency_service"
+        ]
+      },
+      {
+        "incident": "d097.I1",
+        "subtype": [
+          "elevator.stopped",
+          "elevator.stopped"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "emergency_service"
+        ]
+      },
+      {
+        "incident": "d098.I1",
+        "subtype": [
+          "water.hot_outage",
+          "water.hot_outage"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d099.I1",
+        "subtype": [
+          "cleaning.stairwell",
+          "cleaning.stairwell"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d102.I1",
+        "subtype": [
+          "street_lighting.failure",
+          "street_lighting.failure"
+        ],
+        "scope": [
+          "municipal_territory",
+          "municipal_territory"
+        ],
+        "route": [
+          "municipality",
+          "municipality"
+        ]
+      },
+      {
+        "incident": "d102.I2",
+        "subtype": [
+          "lighting.stairwell",
+          "lighting.stairwell"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d103.I1",
+        "subtype": [
+          "heating.cold_radiators",
+          "heating.cold_radiators"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d104.I1",
+        "subtype": [
+          "entrance_door.broken",
+          "entrance_door.broken"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d108.I1",
+        "subtype": [
+          "lighting.stairwell",
+          "lighting.stairwell"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d110.I1",
+        "subtype": [
+          "roof.leak",
+          "roof.leak"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d112.I1",
+        "subtype": [
+          "elevator.stopped",
+          "elevator.stopped"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d113.I1",
+        "subtype": [
+          "water.leak",
+          "water.leak"
+        ],
+        "scope": [
+          "house_common",
+          "unknown"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d114.I1",
+        "subtype": [
+          "street_lighting.failure",
+          "street_lighting.failure"
+        ],
+        "scope": [
+          "municipal_territory",
+          "unknown"
+        ],
+        "route": [
+          "municipality",
+          "unknown"
+        ]
+      },
+      {
+        "incident": "d115.I1",
+        "subtype": [
+          "elevator.stopped",
+          "elevator.stopped"
+        ],
+        "scope": [
+          "house_common",
+          "unknown"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d117.I1",
+        "subtype": [
+          "intercom.broken",
+          "intercom.broken"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d119.I1",
+        "subtype": [
+          "intercom.broken",
+          "intercom.broken"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      },
+      {
+        "incident": "d120.I1",
+        "subtype": [
+          "lighting.yard",
+          "lighting.yard"
+        ],
+        "scope": [
+          "house_territory",
+          "unknown"
+        ],
+        "route": [
+          "operator_choice",
+          "unknown"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,80 @@
+{"card": "S1-C01", "card_type": "complain", "expected_role": "new_problem", "incident": "S1.I1", "minute": 0, "participant": "P01", "session": "S1", "synthetic": true}
+{"card": "S1-C02", "card_type": "support", "expected_role": "me_too", "incident": "S1.I1", "minute": 1, "participant": "P02", "session": "S1", "synthetic": true}
+{"card": "S1-C03", "card_type": "detail", "expected_role": "more_info", "incident": "S1.I1", "minute": 2, "participant": "P03", "session": "S1", "synthetic": true}
+{"card": "S1-C04", "card_type": "sell", "expected_role": "out_of_scope", "incident": null, "minute": 3, "participant": "P04", "session": "S1", "synthetic": true}
+{"card": "S1-C05", "card_type": "ask", "expected_role": "status_question", "incident": "S1.I1", "minute": 4, "participant": "P05", "session": "S1", "synthetic": true}
+{"card": "S1-C06", "card_type": "one_word", "expected_role": "chatter", "incident": null, "minute": 5, "participant": "P06", "session": "S1", "synthetic": true}
+{"card": "S1-C07", "card_type": "complain", "expected_role": "new_problem", "incident": "S1.I2", "minute": 7, "participant": "P07", "session": "S1", "synthetic": true}
+{"card": "S1-C08", "card_type": "support", "expected_role": "me_too", "incident": "S1.I2", "minute": 8, "participant": "P08", "session": "S1", "synthetic": true}
+{"card": "S1-C09", "card_type": "object", "expected_role": "objection", "incident": "S1.I2", "minute": 9, "participant": "P09", "session": "S1", "synthetic": true}
+{"card": "S1-C10", "card_type": "news", "expected_role": "announcement", "incident": null, "minute": 10, "participant": "P10", "session": "S1", "synthetic": true}
+{"card": "S1-C11", "card_type": "detail", "expected_role": "more_info", "incident": "S1.I2", "minute": 11, "participant": "P11", "session": "S1", "synthetic": true}
+{"card": "S1-C12", "card_type": "joke", "expected_role": "chatter", "incident": null, "minute": 12, "participant": "P12", "session": "S1", "synthetic": true}
+{"card": "S1-C13", "card_type": "complain", "expected_role": "new_problem", "incident": "S1.I3", "minute": 14, "participant": "P03", "session": "S1", "synthetic": true}
+{"card": "S1-C14", "card_type": "support", "expected_role": "me_too", "incident": "S1.I3", "minute": 15, "participant": "P05", "session": "S1", "synthetic": true}
+{"card": "S1-C15", "card_type": "tariff", "expected_role": "out_of_scope", "incident": null, "minute": 16, "participant": "P01", "session": "S1", "synthetic": true}
+{"card": "S1-C16", "card_type": "detail", "expected_role": "more_info", "incident": "S1.I3", "minute": 17, "participant": "P09", "session": "S1", "synthetic": true}
+{"card": "S1-C17", "card_type": "complain", "expected_role": "new_problem", "incident": "S1.I4", "minute": 19, "participant": "P02", "session": "S1", "synthetic": true}
+{"card": "S1-C18", "card_type": "support", "expected_role": "me_too", "incident": "S1.I4", "minute": 19, "participant": "P04", "session": "S1", "synthetic": true}
+{"card": "S1-C19", "card_type": "detail", "expected_role": "more_info", "incident": "S1.I4", "minute": 20, "participant": "P06", "session": "S1", "synthetic": true}
+{"card": "S1-C20", "card_type": "sell", "expected_role": "out_of_scope", "incident": null, "minute": 22, "participant": "P11", "session": "S1", "synthetic": true}
+{"card": "S1-C21", "card_type": "ask", "expected_role": "status_question", "incident": "S1.I2", "minute": 23, "participant": "P08", "session": "S1", "synthetic": true}
+{"card": "S1-C22", "card_type": "complain", "expected_role": "new_problem", "incident": "S1.I5", "minute": 25, "participant": "P10", "session": "S1", "synthetic": true}
+{"card": "S1-C23", "card_type": "support", "expected_role": "me_too", "incident": "S1.I5", "minute": 26, "participant": "P12", "session": "S1", "synthetic": true}
+{"card": "S1-C24", "card_type": "one_word", "expected_role": "chatter", "incident": null, "minute": 27, "participant": "P07", "session": "S1", "synthetic": true}
+{"card": "S1-C25", "card_type": "detail", "expected_role": "more_info", "incident": "S1.I5", "minute": 28, "participant": "P01", "session": "S1", "synthetic": true}
+{"card": "S1-C26", "card_type": "complain", "expected_role": "new_problem", "incident": "S1.I6", "minute": 30, "participant": "P04", "session": "S1", "synthetic": true}
+{"card": "S1-C27", "card_type": "detail", "expected_role": "more_info", "incident": "S1.I6", "minute": 30, "participant": "P03", "session": "S1", "synthetic": true}
+{"card": "S1-C28", "card_type": "detail", "expected_role": "more_info", "incident": "S1.I6", "minute": 31, "participant": "P06", "session": "S1", "synthetic": true}
+{"card": "S1-C29", "card_type": "ask", "expected_role": "status_question", "incident": "S1.I6", "minute": 32, "participant": "P09", "session": "S1", "synthetic": true}
+{"card": "S1-C30", "card_type": "news", "expected_role": "announcement", "incident": null, "minute": 33, "participant": "P11", "session": "S1", "synthetic": true}
+{"card": "S1-C31", "card_type": "joke", "expected_role": "chatter", "incident": null, "minute": 35, "participant": "P05", "session": "S1", "synthetic": true}
+{"card": "S1-C32", "card_type": "ask", "expected_role": "status_question", "incident": "S1.I3", "minute": 36, "participant": "P12", "session": "S1", "synthetic": true}
+{"card": "S1-C33", "card_type": "object", "expected_role": "objection", "incident": "S1.I5", "minute": 37, "participant": "P02", "session": "S1", "synthetic": true}
+{"card": "S1-C34", "card_type": "one_word", "expected_role": "chatter", "incident": null, "minute": 38, "participant": "P08", "session": "S1", "synthetic": true}
+{"danger_kind": null, "entrance": "2", "expected_route_type": "uk_internal", "incident": "S1.I1", "location_scope": "house_common", "session": "S1", "signal_expected": true, "subtype": "elevator.stopped", "synthetic": true, "title": "Лифт во 2 подъезде стоит с утра"}
+{"danger_kind": null, "entrance": "3", "expected_route_type": "uk_internal", "incident": "S1.I2", "location_scope": "house_common", "session": "S1", "signal_expected": true, "subtype": "water.hot_outage", "synthetic": true, "title": "В 3 подъезде нет горячей воды"}
+{"danger_kind": null, "entrance": null, "expected_route_type": "municipality", "incident": "S1.I3", "location_scope": "municipal_territory", "session": "S1", "signal_expected": true, "subtype": "street_lighting.failure", "synthetic": true, "title": "На улице у остановки не горят фонари"}
+{"danger_kind": "gas", "entrance": "4", "expected_route_type": "emergency_service", "incident": "S1.I4", "location_scope": "house_common", "session": "S1", "signal_expected": true, "subtype": "gas.smell", "synthetic": true, "title": "В 4 подъезде на 1 этаже пахнет газом"}
+{"danger_kind": null, "entrance": null, "expected_route_type": "regional_operator", "incident": "S1.I5", "location_scope": "house_territory", "session": "S1", "signal_expected": true, "subtype": "waste.removal_regional", "synthetic": true, "title": "Мусор на контейнерной площадке не вывозят несколько дней"}
+{"danger_kind": "person_trapped", "entrance": "1", "expected_route_type": "uk_internal", "incident": "S1.I6", "location_scope": "house_common", "session": "S1", "signal_expected": true, "subtype": "elevator.doors", "synthetic": true, "title": "Лифт в 1 подъезде стоит с закрытыми дверями, внутри кто-то есть (не называть слово «застрял»)"}
+{"card": "S2-C01", "card_type": "complain", "expected_role": "new_problem", "incident": "S2.I1", "minute": 0, "participant": "P01", "session": "S2", "synthetic": true}
+{"card": "S2-C02", "card_type": "support", "expected_role": "me_too", "incident": "S2.I1", "minute": 1, "participant": "P02", "session": "S2", "synthetic": true}
+{"card": "S2-C03", "card_type": "detail", "expected_role": "more_info", "incident": "S2.I1", "minute": 2, "participant": "P03", "session": "S2", "synthetic": true}
+{"card": "S2-C04", "card_type": "sell", "expected_role": "out_of_scope", "incident": null, "minute": 3, "participant": "P04", "session": "S2", "synthetic": true}
+{"card": "S2-C05", "card_type": "ask", "expected_role": "status_question", "incident": "S2.I1", "minute": 4, "participant": "P05", "session": "S2", "synthetic": true}
+{"card": "S2-C06", "card_type": "one_word", "expected_role": "chatter", "incident": null, "minute": 5, "participant": "P06", "session": "S2", "synthetic": true}
+{"card": "S2-C07", "card_type": "complain", "expected_role": "new_problem", "incident": "S2.I2", "minute": 7, "participant": "P07", "session": "S2", "synthetic": true}
+{"card": "S2-C08", "card_type": "support", "expected_role": "me_too", "incident": "S2.I2", "minute": 8, "participant": "P08", "session": "S2", "synthetic": true}
+{"card": "S2-C09", "card_type": "object", "expected_role": "objection", "incident": "S2.I2", "minute": 9, "participant": "P09", "session": "S2", "synthetic": true}
+{"card": "S2-C10", "card_type": "news", "expected_role": "announcement", "incident": null, "minute": 10, "participant": "P10", "session": "S2", "synthetic": true}
+{"card": "S2-C11", "card_type": "detail", "expected_role": "more_info", "incident": "S2.I2", "minute": 11, "participant": "P11", "session": "S2", "synthetic": true}
+{"card": "S2-C12", "card_type": "joke", "expected_role": "chatter", "incident": null, "minute": 12, "participant": "P12", "session": "S2", "synthetic": true}
+{"card": "S2-C13", "card_type": "complain", "expected_role": "new_problem", "incident": "S2.I3", "minute": 14, "participant": "P03", "session": "S2", "synthetic": true}
+{"card": "S2-C14", "card_type": "support", "expected_role": "me_too", "incident": "S2.I3", "minute": 15, "participant": "P05", "session": "S2", "synthetic": true}
+{"card": "S2-C15", "card_type": "tariff", "expected_role": "out_of_scope", "incident": null, "minute": 16, "participant": "P01", "session": "S2", "synthetic": true}
+{"card": "S2-C16", "card_type": "detail", "expected_role": "more_info", "incident": "S2.I3", "minute": 17, "participant": "P09", "session": "S2", "synthetic": true}
+{"card": "S2-C17", "card_type": "complain", "expected_role": "new_problem", "incident": "S2.I4", "minute": 19, "participant": "P02", "session": "S2", "synthetic": true}
+{"card": "S2-C18", "card_type": "support", "expected_role": "me_too", "incident": "S2.I4", "minute": 19, "participant": "P04", "session": "S2", "synthetic": true}
+{"card": "S2-C19", "card_type": "detail", "expected_role": "more_info", "incident": "S2.I4", "minute": 20, "participant": "P06", "session": "S2", "synthetic": true}
+{"card": "S2-C20", "card_type": "sell", "expected_role": "out_of_scope", "incident": null, "minute": 22, "participant": "P11", "session": "S2", "synthetic": true}
+{"card": "S2-C21", "card_type": "ask", "expected_role": "status_question", "incident": "S2.I2", "minute": 23, "participant": "P08", "session": "S2", "synthetic": true}
+{"card": "S2-C22", "card_type": "complain", "expected_role": "new_problem", "incident": "S2.I5", "minute": 25, "participant": "P10", "session": "S2", "synthetic": true}
+{"card": "S2-C23", "card_type": "support", "expected_role": "me_too", "incident": "S2.I5", "minute": 26, "participant": "P12", "session": "S2", "synthetic": true}
+{"card": "S2-C24", "card_type": "one_word", "expected_role": "chatter", "incident": null, "minute": 27, "participant": "P07", "session": "S2", "synthetic": true}
+{"card": "S2-C25", "card_type": "detail", "expected_role": "more_info", "incident": "S2.I5", "minute": 28, "participant": "P01", "session": "S2", "synthetic": true}
+{"card": "S2-C26", "card_type": "complain", "expected_role": "new_problem", "incident": "S2.I6", "minute": 30, "participant": "P04", "session": "S2", "synthetic": true}
+{"card": "S2-C27", "card_type": "detail", "expected_role": "more_info", "incident": "S2.I6", "minute": 30, "participant": "P03", "session": "S2", "synthetic": true}
+{"card": "S2-C28", "card_type": "detail", "expected_role": "more_info", "incident": "S2.I6", "minute": 31, "participant": "P06", "session": "S2", "synthetic": true}
+{"card": "S2-C29", "card_type": "ask", "expected_role": "status_question", "incident": "S2.I6", "minute": 32, "participant": "P09", "session": "S2", "synthetic": true}
+{"card": "S2-C30", "card_type": "news", "expected_role": "announcement", "incident": null, "minute": 33, "participant": "P11", "session": "S2", "synthetic": true}
+{"card": "S2-C31", "card_type": "joke", "expected_role": "chatter", "incident": null, "minute": 35, "participant": "P05", "session": "S2", "synthetic": true}
+{"card": "S2-C32", "card_type": "ask", "expected_role": "status_question", "incident": "S2.I3", "minute": 36, "participant": "P12", "session": "S2", "synthetic": true}
+{"card": "S2-C33", "card_type": "object", "expected_role": "objection", "incident": "S2.I5", "minute": 37, "participant": "P02", "session": "S2", "synthetic": true}
+{"card": "S2-C34", "card_type": "one_word", "expected_role": "chatter", "incident": null, "minute": 38, "participant": "P08", "session": "S2", "synthetic": true}
+{"danger_kind": null, "entrance": "3", "expected_route_type": "uk_internal", "incident": "S2.I1", "location_scope": "house_common", "session": "S2", "signal_expected": true, "subtype": "roof.leak", "synthetic": true, "title": "На 9 этаже 3 подъезда с потолка течёт после дождя"}
+{"danger_kind": null, "entrance": "1", "expected_route_type": "uk_internal", "incident": "S2.I2", "location_scope": "house_common", "session": "S2", "signal_expected": true, "subtype": "intercom.broken", "synthetic": true, "title": "Домофон в 1 подъезде не открывает дверь"}
+{"danger_kind": null, "entrance": null, "expected_route_type": "municipality", "incident": "S2.I3", "location_scope": "municipal_territory", "session": "S2", "signal_expected": true, "subtype": "road.damage", "synthetic": true, "title": "Яма на дороге у выезда со двора"}
+{"danger_kind": null, "entrance": null, "expected_route_type": "operator_choice", "incident": "S2.I4", "location_scope": "house_territory", "session": "S2", "signal_expected": true, "subtype": "lighting.yard", "synthetic": true, "title": "Во дворе не горит фонарь у детской площадки"}
+{"danger_kind": null, "entrance": "2", "expected_route_type": "uk_internal", "incident": "S2.I5", "location_scope": "house_common", "session": "S2", "signal_expected": true, "subtype": "heating.cold_radiators", "synthetic": true, "title": "Батареи холодные в 2 подъезде"}
+{"danger_kind": "smoke_fire", "entrance": "4", "expected_route_type": "emergency_service", "incident": "S2.I6", "location_scope": "house_common", "session": "S2", "signal_expected": true, "subtype": "other.unspecified", "synthetic": true, "title": "Из подвала 4 подъезда идёт дым"}

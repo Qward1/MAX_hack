@@ -128,7 +128,7 @@ async def test_facade_records_model_prompt_and_accounting() -> None:
     assert analysis.execution.tokens_in == 2480
     assert analysis.execution.cost_rub == pytest.approx(0.04131306)
     assert analysis.versions.model == MODEL
-    assert analysis.versions.prompt == "window.v1"
+    assert analysis.versions.prompt == "window.v2"
 
 
 async def test_answer_wrapped_in_a_markdown_fence_is_accepted() -> None:
@@ -238,7 +238,10 @@ async def test_request_body_carries_only_masked_texts_and_aliases() -> None:
     assert "resident-1" not in body and "resident-2" not in body
     assert "8 927 123 45 67" not in body
     assert "кв. 45" not in body
-    assert '\\"id\\": \\"m1\\"' in body or '"id": "m1"' in body
+    assert any(
+        marker in body
+        for marker in ('\\"id\\": \\"m1\\"', '\\"id\\":\\"m1\\"', '"id": "m1"')
+    )
 
 
 async def test_open_item_refs_are_replaced_by_window_numbers() -> None:

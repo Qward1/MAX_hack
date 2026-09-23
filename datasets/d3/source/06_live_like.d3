@@ -1,0 +1,58 @@
+# D3, партия 6: ветки, похожие на окна живого прогона P7a (тексты синтетические).
+
+=== d118 s03 live_like
+@I1 elevator.button house_common entrance=2 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: во втором подъезде лифт не приезжает | new_problem | I1
++20 B: кнопка вызова не горит на первом | more_info | I1
++15 C>2: да, жму — не загорается | me_too | I1
++30 D: а сверху вызывается? | discussion | I1
++20 A>4: с пятого приехал | more_info | I1
++40 E: значит только кнопка внизу | discussion | I1
++25 F: у меня с утра так | me_too | I1
++30 G: в третьем подъезде нормально | more_info | I1
++45 H: давно пора эти кнопки поменять | discussion | I1
++20 B: я оставлю заявку | discussion | I1
++30 C: спасибо | chatter
++40 D: 👍 | chatter
++25 E: вечером проверю | chatter
++20 F: 🙂 | chatter
++30 A: заявку приняли | status_question | I1
++20 B: отлично | chatter
+
+=== d119 s11 live_like
+@I1 intercom.broken house_common entrance=1 cur=yes loc=yes obs=yes uk=yes expect=yes
++0 A: домофон в первом подъезде не звонит в квартиры | new_problem | I1
++20 B: и не открывает дверь ключом | more_info | I1
++15 C: у меня тоже ключ не срабатывает | me_too | I1
++30 D: я с сумками минут пять стояла, пока кто-то не вышел | me_too | I1
++25 E: табло тёмное, не светится | more_info | I1
++40 F: вчера вечером работал | more_info | I1
++20 G: может электричество в щитке | discussion | I1
++30 H: номер домофонной службы на двери | discussion | I1
++45 A: звоню им | discussion | I1
++20 B: отпишитесь | status_question | I1
++30 A: сказали мастер сегодня до 18 | status_question | I1
++40 C: спасибо | chatter
++25 D: 👍 | chatter
++20 E: ждём | chatter
++30 F: 🙂 | chatter
++20 G: ок | chatter
+
+=== d120 s32 live_like
+@I1 lighting.yard house_territory entrance=3 cur=yes loc=yes obs=yes uk=unclear expect=yes
++0 A: фонарь у третьего подъезда не горит | new_problem | I1
++20 B: и освещения во дворе вообще нет, сплошная темнота | more_info | I1
++15 C: темно, страшно ходить | me_too | I1
++30 D: вчера об бордюр споткнулась | me_too | I1
++25 E: лампа перегорела наверно | discussion | I1
++40 F: или провод оборвали, когда деревья пилили | discussion | I1
++20 G: а фонарь на доме или на столбе? | discussion | I1
++30 A>7: на столбе у входа | more_info | I1
++45 H: напишу в ук | discussion | I1
++20 B: и я поддержу | me_too | I1
++30 C: спасибо | chatter
++40 D: 🙏 | chatter
++25 E: ждём | chatter
++20 F: 👍 | chatter
++30 H: заявку приняли | status_question | I1
++20 G: отлично | chatter

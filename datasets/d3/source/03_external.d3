@@ -1,0 +1,277 @@
+# D3, партия 3: внешние маршруты — улица, дорога, регоператор, сети, придомовая территория.
+
+=== d052 s25 typical
+@I1 street_lighting.failure municipal_territory cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: На улице у остановки не горят фонари уже третий вечер | new_problem | I1
++30 B: да, идёшь с автобуса в полной темноте | me_too | I1
++20 C: и на переходе тоже темно, машины не видят людей | more_info | I1
++40 D: это же не ук, это город | discussion | I1
++25 E: а куда тогда писать? | discussion | I1
++20 F>5: через госуслуги можно | discussion | I1
++30 G: у меня ребёнок из секции поздно возвращается, страшно | me_too | I1
++45 H: всем добрый вечер, кто потерял перчатки у подъезда? | chatter
++20 A>8: не мои | chatter
++40 B: по фонарям давайте кто-то один напишет, а мы поддержим | discussion | I1
++25 C: я напишу | discussion | I1
++30 D: там три столба подряд не светят | more_info | I1
++50 E: спасибо | chatter
+
+=== d053 s25 voice
+@I1 street_lighting.failure municipal_territory cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: слушайте а вдоль дороги от нашего дома до магазина вообще фонари не работают идёшь как в лесу | new_problem | I1
++30 B: с прошлой недели так | more_info | I1
++25 C: я думала только мне кажется | me_too | I1
++40 D: на улице это не ук, это муниципальное | discussion | I1
++20 E: мне всё равно чьё, лишь бы светило | discussion | I1
++30 F: вчера женщина упала там, лёд и темно | more_info | I1
++45 G: сфоткаю сегодня вечером | discussion | I1
++20 H: в приложение города можно отправить | discussion | I1
++30 A: давайте | chatter
++60 B: кстати кто продаёт санки? | out_of_scope
++20 C>10: я, 500 р | out_of_scope
++40 D: по фонарям отпишитесь потом | status_question | I1
++30 G: ок | chatter
+
+=== d054 s26 typical
+@I1 road.damage municipal_territory cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: На дороге у выезда со двора на улицу огромная яма, колесо чуть не пробил | new_problem | I1
++30 B: я там вчера подвеску убил | me_too | I1
++20 C: после дождя её вообще не видно, лужа | more_info | I1
++40 D: это дорога города, не двор | discussion | I1
++25 E: а кто ремонтирует? | discussion | I1
++20 D>5: муниципалитет, через госуслуги | discussion | I1
++35 F: давайте поставим хоть что-то рядом, чтобы видели | discussion | I1
++50 G: всем привет, кто в субботу едет на дачу по трассе? | chatter
++20 H>8: я, могу взять одного | chatter
++30 A: по яме я напишу обращение | discussion | I1
++25 B: поддерживаю | me_too | I1
++40 C: там ещё трещины рядом пошли | more_info | I1
++30 A: спасибо | chatter
+
+=== d055 s26 noisy
+@I1 road.damage municipal_territory cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: на проспекте у поворота к нам яма на всю полосу, аккуратнее | new_problem | I1
++25 B: да видел, машины объезжают по встречке | more_info | I1
++20 C: кошмар 😱 | chatter
++40 D: кто-нибудь знает куда писать про дороги? | discussion | I1
++25 E: в госуслуги решаем вместе | discussion | I1
++30 F: я там вчера колесо пробил, 5 тыс ремонт | me_too | I1
++45 G: давно пора асфальт переложить | discussion | I1
++20 H: доброе утро | chatter
++30 A: скинул фото в обращение | discussion | I1
++60 B: ответили? | status_question | I1
++20 A: пока нет | status_question | I1
++40 D: ждём | chatter
++25 C: 👍 | chatter
+
+=== d056 s27 typical
+@I1 waste.removal_regional house_territory since="четвёртый день" cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: На контейнерной площадке мусор не вывозят уже четвёртый день | new_problem | I1
++30 B: баки переполнены, пакеты на земле | more_info | I1
++20 C: собаки растаскивают | more_info | I1
++40 D: это не ук, это регоператор вывозит | discussion | I1
++25 E: а телефон у них есть? | discussion | I1
++20 F>5: на табличке на площадке | discussion | I1
++30 G: запах уже до окон доходит | me_too | I1
++45 H: кто-нибудь видел белую кошку у второго подъезда? | chatter
++20 A>8: вчера бегала | chatter
++30 B: по мусору позвоню регоператору | discussion | I1
++40 C: и в ук тоже скажите, пусть надавят | discussion | I1
++30 D: хорошо | chatter
+
+=== d057 s27 short
+@I1 waste.removal_regional house_territory cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: мусорку не вывезли опять, всё через край | new_problem | I1
++20 B: крупногабарит тоже стоит неделю | more_info | I1
++25 C: машина вчера приезжала, но только половину забрала | more_info | I1
++30 D: вывоз по графику во вторник и пятницу же | discussion | I1
++20 E>4: сегодня пятница, и никого | more_info | I1
++40 F: надо жаловаться регоператору | discussion | I1
++30 G: я звонила им в прошлый раз, помогло | discussion | I1
++20 H: давайте опять | discussion | I1
++45 A: позвоню после обеда | discussion | I1
++30 B: спасибо | chatter
++60 C: вороны уже всё растащили | more_info | I1
++20 D: ужас | chatter
++30 A: дозвонилась, обещали сегодня | status_question | I1
+
+=== d058 s28 typical
+@I1 snow.street municipal_territory cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: Тротуар вдоль улицы до остановки вообще не чистят, сплошной лёд | new_problem | I1
++30 B: я сегодня упала там | me_too | I1
++20 C: с колясками не пройти | more_info | I1
++40 D: это городская улица, не наш двор | discussion | I1
++25 E: а двор наш дворник почистил | more_info
++20 F: да, во дворе нормально | discussion
++30 G: надо в город писать | discussion | I1
++45 H: кто-нибудь знает где купить реагент? | chatter
++20 A>8: в строительном | chatter
++40 B: по тротуару я напишу | discussion | I1
++25 C: поддержу | me_too | I1
++30 D: бабушки из дома не выходят из-за льда | more_info | I1
++20 E: спасибо | chatter
+
+=== d059 s28 noisy
+@I1 snow.street municipal_territory cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: снег на остановке по колено, никто не убирает ❄️ | new_problem | I1
++25 B: и на переходе каша | more_info | I1
++20 C: трактор только проезжую часть чистит | more_info | I1
++30 D: а тротуар кто? | discussion | I1
++20 E>4: город | discussion | I1
++40 F: сегодня вообще метёт с утра | chatter
++30 G: ну хоть бы к вечеру почистили | discussion | I1
++25 H: люди по дороге идут, опасно | more_info | I1
++45 A: отправлю фото в ПОС | discussion | I1
++30 B: 👍 | chatter
++20 C: я тоже отправлю | me_too | I1
++50 D: доброй ночи | chatter
++30 E: и вам | chatter
+
+=== d060 s29 typical
+@I1 power.grid_outage external_network cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: У кого есть свет? У нас во всём квартале отключили электричество | new_problem | I1
++20 B: нету, и в соседних домах тоже темно | me_too | I1
++20 C: светофоры на перекрёстке не работают | more_info | I1
++30 D: это сети, не ук | discussion | I1
++25 E: в сетевую компанию звонили? | discussion | I1
++20 F>5: там занято постоянно | more_info | I1
++40 G: на сайте написано авария на подстанции | more_info | I1
++30 H: сроки не пишут? | status_question | I1
++20 G>8: до 18:00 | status_question | I1
++45 A: хорошо что не зима | chatter
++30 B: холодильник жалко | chatter
++40 C: дали! | resolved_claim | I1
++20 D: у нас тоже дали | resolved_claim | I1
+
+=== d061 s29 short
+@I1 power.grid_outage external_network cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: света нет во всём районе, даже магазины закрыты | new_problem | I1
++20 B: у нас тоже | me_too | I1
++20 C: я видел машину электросетей у трансформаторной | more_info | I1
++25 D: значит авария на линии | discussion | I1
++40 E: лифты стоят, никто не застрял? | discussion | I1
++20 F>5: вроде нет | more_info | I1
++30 G: у меня холодильник потечёт | chatter
++45 H: дайте номер электросетей | discussion | I1
++20 A>8: скину | discussion | I1
++50 B: уже два часа без света | more_info | I1
++30 C: ждём | chatter
++40 D: говорят к вечеру | status_question | I1
+
+=== d062 s30 typical
+@I1 water.supply_outage external_network cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: Без воды весь район, на магистрали авария | new_problem | I1
++30 B: да, у всех соседних домов нет воды | me_too | I1
++20 C: водоканал пишет что ремонт до вечера | more_info | I1
++30 D: а бочку с водой привезут? | status_question | I1
++25 E: в прошлый раз привозили к школе | discussion
++40 F: у меня даже чайник не набрать | me_too | I1
++30 G: в магазине вода закончилась | more_info | I1
++45 H: хоть бы предупредили заранее | discussion | I1
++20 A: авария же, не плановое | discussion | I1
++60 B: машина с водой стоит у школы | more_info | I1
++30 C: спасибо! | chatter
++40 D: вечером обещают дать | status_question | I1
+
+=== d063 s30 voice
+@I1 water.hot_outage external_network cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: слушайте а горячей воды нет во всём квартале я у знакомых в соседнем доме спрашивала тоже нет | new_problem | I1
++30 B: да, говорят на теплотрассе прорыв | more_info | I1
++25 C: видела раскопки у дороги | more_info | I1
++20 D: это не ук, это теплосети | discussion | I1
++40 E: у меня тоже нет | me_too | I1
++30 F: а надолго? | status_question | I1
++20 B>6: на сайте написано до пятницы | status_question | I1
++45 G: ну хоть холодная есть | chatter
++30 H: будем греть | chatter
++20 A: жалобу теплосетям кто пишет? | discussion | I1
++40 E: я напишу | discussion | I1
++30 C: присоединюсь | me_too | I1
+
+=== d064 s31 typical
+@I1 playground.damaged house_territory cur=yes loc=yes obs=yes uk=unclear expect=yes
++0 A: Во дворе на детской площадке качели сломаны, сиденье висит на одной цепи | new_problem | I1
++30 B: дети всё равно качаются, опасно | more_info | I1
++20 C: и горка треснула | more_info | I1
++40 D: площадка чья, ук или город? | discussion | I1
++25 E: вроде ук ставила | discussion | I1
++20 F>5: нет, её город ставил по программе | objection | I1
++30 G: я замотала качели скотчем, чтобы не садились | more_info | I1
++45 H: всем доброго дня | chatter
++20 A: пусть уберут или починят | discussion | I1
++40 B: надо написать и туда и туда | discussion | I1
++25 C: я сфотографировала | more_info | I1
++30 D: спасибо | chatter
+
+=== d065 s31 short
+@I1 playground.damaged house_territory cur=yes loc=yes obs=yes uk=unclear expect=yes
++0 A: у нас во дворе песочница развалилась, доски торчат с гвоздями | new_problem | I1
++25 B: мой сын поцарапался вчера | me_too | I1
++20 C: давно уже так | more_info | I1
++30 D: кто отвечает за площадку? | discussion | I1
++20 E: не знаю, надо узнать | discussion | I1
++40 F: я гвозди загнула, но доски гнилые | more_info | I1
++30 G: соседи, у кого есть лишний стул? | chatter
++20 H>7: есть табуретка | chatter
++45 A: напишу в ук, пусть скажут чья | discussion | I1
++30 B: 👍 | chatter
++20 C: спасибо | chatter
+
+=== d066 s32 typical
+@I1 lighting.yard house_territory cur=yes loc=yes obs=yes uk=unclear expect=yes
++0 A: Во дворе фонарь у детской площадки не горит, темнота | new_problem | I1
++30 B: и у парковки тоже темно | more_info | I1
++20 C: вечером страшно ходить | me_too | I1
++40 D: этот фонарь на доме висит или на столбе? | discussion | I1
++25 A>4: на столбе у площадки | more_info | I1
++30 E: тогда может город | discussion | I1
++20 F: нет, это наш столб, ук ставила | objection | I1
++45 G: кто сегодня гулял с собакой у гаражей? | chatter
++20 H>8: я | chatter
++30 B: давайте спросим у ук | discussion | I1
++40 C: пишу | discussion | I1
++25 D: спасибо | chatter
+
+=== d067 s32 noisy
+@I1 lighting.yard house_territory cur=yes loc=yes obs=yes uk=unclear expect=yes
++0 A: освещения во дворе нет совсем, ни одного фонаря 😡 | new_problem | I1
++25 B: неделю уже | more_info | I1
++20 C: машину поцарапали вчера в темноте | more_info | I1
++30 D: камеры хоть работают? | discussion | I1
++20 E>4: не знаю | discussion | I1
++40 F: у подъезда лампа горит | more_info | I1
++30 G: это на доме, а во дворе столбы | discussion | I1
++45 H: давайте жалобу | discussion | I1
++20 A: пишу | discussion | I1
++30 B: и я | me_too | I1
++60 C: ответили что передали электрикам | status_question | I1
++20 D: 👍 | chatter
+
+=== d068 s33 typical
+@I1 gas.supply_outage house_common cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: У кого есть газ? Плита не зажигается с утра | new_problem | I1
++30 B: у меня тоже нет газа | me_too | I1
++20 C: и у нас, газом не пахнет, просто не идёт | me_too | I1
++30 D: объявлений не было | more_info | I1
++25 E: может проверка какая-то | discussion | I1
++40 F: звонила в газовую, сказали работы на линии | more_info | I1
++30 G: а надолго? | status_question | I1
++20 F>7: до вечера | status_question | I1
++45 H: хорошо что есть микроволновка | chatter
++30 A: могли бы предупредить | discussion | I1
++40 B: напишем претензию | discussion | I1
++25 C: поддерживаю | me_too | I1
+
+=== d069 s33 short
+@I1 gas.supply_outage house_common entrance=2 cur=yes loc=yes obs=yes uk=no expect=yes
++0 A: во 2 подъезде газ отключили без предупреждения | new_problem | I1
++20 B: подтверждаю, плита не работает | me_too | I1
++25 C: у нас в 1 есть газ | more_info | I1
++30 D: значит стояк перекрыли | discussion | I1
++20 E: видела газовщиков в подъезде | more_info | I1
++40 F: они сказали утечку ищут у кого-то | more_info | I1
++30 G: а когда дадут? | status_question | I1
++45 H: к вечеру вроде | status_question | I1
++30 A: хоть бы бумажку повесили | discussion | I1
++20 B: 😤 | chatter
++40 C: удачи вам | chatter

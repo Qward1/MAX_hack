@@ -1,0 +1,458 @@
+# D3, партия 4: отрицательные семейства — тема дома есть, проблемы дома сейчас нет.
+# Темы размечены инцидентами с expect=no: сигнал на них — «сигнал-непроблема».
+
+=== d070 n01 typical
+@I1 other.unspecified other_building cur=yes loc=no obs=no uk=no expect=no
++0 A: Видели новости? В другом районе дом сгорел, по телевизору показывали | announcement | I1
++30 B: ужас, люди хоть живы? | discussion | I1
++20 A>2: вроде все выбрались | discussion | I1
++40 C: это где-то на окраине, не у нас | discussion | I1
++25 D: у нас в доме хоть огнетушители есть? | discussion
++20 E>5: на каждом этаже висят | discussion
++30 F: надо проверить срок годности | discussion
++45 G: всем добрый вечер | chatter
++20 H: добрый | chatter
++30 B: страшно такое читать | chatter
++40 C: давайте лучше про субботник, кто идёт? | chatter
++20 D>11: я | chatter
++25 E: и я | chatter
++30 F: во сколько сбор? | chatter
++20 C: в 10 у первого подъезда | chatter
+
+=== d071 n01 short
+@I1 water.supply_outage external_network cur=yes loc=no obs=no uk=no expect=no
++0 A: пишут в городском паблике, что в центре авария на водопроводе, полрайона без воды | announcement | I1
++25 B: это не наш район же? | discussion | I1
++20 A>2: нет, на другом берегу | discussion | I1
++30 C: у нас вода есть, только что проверила | objection | I1
++40 D: на всякий случай наберу ванну 😅 | chatter
++20 E: паникёры 😂 | chatter
++30 F: кто-нибудь знает, завтра рынок работает? | chatter
++20 G>7: с 8 утра | chatter
++45 H: спасибо | chatter
++30 A: вот ещё пишут что к вечеру починят | announcement | I1
++20 B: ну и хорошо | chatter
++40 C: всем хорошего вечера | chatter
++25 D: и вам | chatter
++30 E: 👋 | chatter
+
+=== d072 n02 typical
+@I1 elevator.stopped house_common entrance=2 cur=no loc=yes obs=yes uk=yes expect=no
++0 A: Помните, в прошлом месяце лифт во втором подъезде неделю стоял? | discussion | I1
++30 B: да, я тогда пешком на девятый ходила | discussion | I1
++20 C: сейчас вроде нормально ездит | objection | I1
++40 D: после ремонта даже быстрее стал | discussion | I1
++25 E: а кто тогда добился, чтобы починили? | discussion | I1
++20 A>5: коллективную жалобу писали | discussion | I1
++30 F: хорошо сработало | discussion | I1
++45 G: надо так же и с дверью сделать | discussion
++20 H: с какой дверью? | discussion
++30 G>9: в подвал, она давно без замка, но это не срочно | discussion
++40 B: ладно, потом обсудим | chatter
++25 C: всем пока | chatter
++20 D: пока | chatter
++30 E: 👋 | chatter
+
+=== d073 n02 voice
+@I1 water.hot_outage house_common cur=no loc=yes obs=yes uk=yes expect=no
++0 A: вспоминаю как в позапрошлом году у нас три недели горячей воды не было летом вот это было весело | discussion | I1
++40 B: ой да, мы тогда к бабушке мыться ездили | discussion | I1
++25 C: в этом году хоть две недели всего | discussion | I1
++30 D: сейчас всё нормально, тьфу-тьфу | objection | I1
++20 E: не сглазь 😄 | chatter
++45 F: кстати кто-нибудь знает хорошего мастера по стиралкам? | out_of_scope
++20 G>6: у меня есть номер, скину | out_of_scope
++30 H: спасибо, мне тоже скиньте | out_of_scope
++40 A: вообще раньше было хуже | discussion | I1
++25 B: согласна | chatter
++30 C: ладно, спокойной ночи | chatter
++20 D: спокойной | chatter
++15 E: 😴 | chatter
++30 F: доброй | chatter
+
+=== d074 n03 typical
+@I1 water.supply_outage house_common cur=unclear loc=yes obs=no uk=yes expect=no
++0 A: Вопрос: если отключат воду, куда звонить? В ук или в водоканал? | discussion | I1
++30 B: в ук сначала, у них диспетчерская | discussion | I1
++20 C: если весь район — то водоканал | discussion | I1
++40 D: а телефон диспетчерской где взять? | discussion | I1
++20 E>4: на доске объявлений в подъезде | discussion | I1
++30 F: и в приложении ук есть | discussion | I1
++45 A: спасибо, просто на всякий случай спросил | chatter
++20 G: полезно знать | chatter
++30 H: а если газ — то 104 | discussion
++25 B: или 112 | discussion
++40 C: запишу себе | chatter
++20 D: я тоже | chatter
++30 E: 👍 | chatter
++20 F: всем удачи | chatter
+
+=== d075 n03 short
+@I1 elevator.stopped house_common cur=unclear loc=yes obs=no uk=yes expect=no
++0 A: а если лифт застрянет, что делать? У меня мама боится ездить | discussion | I1
++25 B: нажать кнопку связи с диспетчером | discussion | I1
++20 C: и не пытаться самой вылезти | discussion | I1
++30 D: номер аварийки должен быть в кабине | discussion | I1
++40 E: у нас лифт нормальный, не переживайте | objection | I1
++20 A>5: да я просто на всякий случай | chatter
++30 F: можно ещё 112 если что | discussion | I1
++45 G: в соседнем подъезде вешали памятку | discussion
++20 H: надо и у нас повесить | discussion
++30 B: предложу ук | discussion
++40 C: хорошая идея | chatter
++25 D: 👍 | chatter
++20 E: спасибо | chatter
++30 A: успокоила маму 🙂 | chatter
+
+=== d076 n04 typical
+@I1 water.leak other_building cur=yes loc=no obs=yes uk=no expect=no
++0 A: У мамы в доме на соседней улице трубу прорвало, всё залило | discussion | I1
++25 B: ой, сочувствую | chatter
++20 C: а у неё какая ук? | discussion | I1
++30 A>3: другая, не наша | discussion | I1
++40 D: пусть сразу в аварийку звонит | discussion | I1
++20 A: уже приехали | discussion | I1
++30 E: у нас хоть трубы в прошлом году меняли | discussion
++45 F: в нашем доме всё сухо? | discussion
++20 G>8: да, всё нормально | objection
++30 H: тьфу-тьфу | chatter
++40 B: маме привет, пусть держится | chatter
++25 A: спасибо | chatter
++20 C: 🙏 | chatter
++30 D: если помощь нужна, пишите | chatter
+
+=== d077 n04 voice
+@I1 heating.cold_radiators other_building cur=yes loc=no obs=yes uk=no expect=no
++0 A: а у сестры в новостройке батареи до сих пор холодные представляете а у нас дали ещё неделю назад | discussion | I1
++40 B: в новостройках всегда так | discussion | I1
++25 C: у нас горячие, даже жарко | objection | I1
++30 D: пусть в свою ук жалуется | discussion | I1
++20 A>4: жалуется, толку ноль | discussion | I1
++45 E: а у нас кто-то проветривает подъезд, окно на пятом открыто | discussion
++20 F>6: это я, краской пахло после ремонта, сейчас закрою | discussion
++30 G: ок | chatter
++40 H: всем тёплого вечера 😊 | chatter
++20 B: и вам | chatter
++30 C: спасибо | chatter
++25 D: 🙂 | chatter
++20 A: спасибо всем | chatter
++30 E: 👋 | chatter
+
+=== d078 n05 typical
+@I1 other.unspecified apartment cur=unclear loc=yes obs=no uk=no expect=no
++0 A: Посоветуйте хорошего сантехника, хочу смеситель на кухне поменять | out_of_scope | I1
++30 B: у меня есть контакт, недорого берёт | out_of_scope | I1
++20 A>2: скиньте пожалуйста | out_of_scope | I1
++25 C: а электрика хорошего кто знает? розетки переделать | out_of_scope | I1
++40 D: мне делал парень из соседнего дома, аккуратно | out_of_scope | I1
++20 E: только не берите того, что на столбах объявления клеит | out_of_scope | I1
++30 F: 😂 | chatter
++45 G: а плиточника? | out_of_scope | I1
++20 H: у меня есть | out_of_scope | I1
++30 A: спасибо всем | chatter
++40 B: обращайтесь | chatter
++25 C: 👍 | chatter
++20 D: удачи с ремонтом | chatter
++30 E: 🔨 | chatter
+
+=== d079 n05 short
+@I1 other.unspecified apartment cur=unclear loc=yes obs=no uk=no expect=no
++0 A: где лучше заказать окна пластиковые? | out_of_scope | I1
++25 B: мы через знакомых ставили | out_of_scope | I1
++20 C: я в прошлом году заказывала, до сих пор дует | discussion | I1
++30 D>3: надо было регулировать | discussion | I1
++40 E: а балкон кто стеклил? | out_of_scope | I1
++20 F>5: я, могу скинуть фирму | out_of_scope | I1
++30 G: и мне скиньте | out_of_scope | I1
++45 H: сейчас скидки у многих фирм | out_of_scope | I1
++20 A: спасибо | chatter
++30 B: удачи | chatter
++40 C: у кого есть дрель на денёк? | chatter
++25 D>11: у меня есть | chatter
++20 C: спасибо, зайду | chatter
++30 D: 👍 | chatter
+
+=== d080 n06 typical
+@I1 other.unspecified house_common cur=unclear loc=yes obs=no uk=yes expect=no
++0 A: Кто разобрался в новой квитанции? Откуда строка «содержание общего имущества» подорожала? | out_of_scope | I1
++30 B: тарифы с июля выросли | out_of_scope | I1
++20 C: на сайте ук есть расшифровка | out_of_scope | I1
++40 D: а за вывоз мусора теперь по количеству жильцов | out_of_scope | I1
++25 E: у меня пересчитали за воду непонятно как | out_of_scope | I1
++20 F>5: показания счётчиков вовремя сдавали? | out_of_scope | I1
++30 E: да | out_of_scope | I1
++45 G: надо в ук идти разбираться | discussion | I1
++20 H: приёмные часы по вторникам | announcement | I1
++30 A: спасибо | chatter
++40 B: и за капремонт тоже подняли | out_of_scope | I1
++25 C: везде подняли | chatter
++20 D: эх | chatter
++30 E: 😔 | chatter
+
+=== d081 n06 short
+@I1 other.unspecified apartment cur=unclear loc=yes obs=no uk=no expect=no
++0 A: когда сдавать показания воды? до 25? | out_of_scope | I1
++20 B: до 25 числа | out_of_scope | I1
++25 C: через госуслуги удобно | out_of_scope | I1
++30 D: а поверка счётчиков когда у кого? | out_of_scope | I1
++20 E>4: у меня в следующем году | out_of_scope | I1
++40 F: мне звонили, предлагали поверку за 3 тыс, это мошенники? | out_of_scope | I1
++20 G>6: скорее всего, ук сама объявляет | out_of_scope | I1
++30 H: не пускайте никого без объявления | out_of_scope | I1
++45 A: спасибо | chatter
++20 B: 👍 | chatter
++30 C: всем хорошего дня | chatter
++25 D: и вам | chatter
++20 E: ☀️ | chatter
++30 F: спасибо что предупредили | chatter
+
+=== d082 n07 typical
+@I1 elevator.stopped house_common cur=unclear loc=yes obs=no uk=yes expect=no
++0 A: Наш лифт как ракета: пока доедет, можно в космос слетать 🚀 | discussion | I1
++30 B: 😂😂 | chatter
++20 C: зато музыка внутри как в кино | discussion | I1
++25 D: он сегодня норм ездит, если что | objection | I1
++40 E: я пешком хожу, фитнес бесплатно | chatter
++20 F: ахаха | chatter
++30 G: а лестница у нас как стадион | chatter
++45 H: всем хорошего вечера, юмористы | chatter
++20 A: 😄 | chatter
++30 B: спокойной ночи | chatter
++40 C: 🌙 | chatter
++25 D: доброй | chatter
++20 E: 👋 | chatter
++30 F: до завтра | chatter
+
+=== d083 n07 short
+@I1 water.hot_outage house_common cur=unclear loc=yes obs=no uk=yes expect=no
++0 A: горячая вода у нас как зарплата: вроде есть, а вроде и нет 😅 | discussion | I1
++25 B: ахах точно | chatter
++20 C: сейчас идёт нормальная, проверил | objection | I1
++30 D: это шутка была, не переживайте | discussion | I1
++40 E: 😂 | chatter
++20 F: у вас хоть чувство юмора есть | chatter
++30 G: кто завтра за хлебом, возьмите на меня | chatter
++45 H>7: возьму | chatter
++20 A: спасибо | chatter
++30 B: 🍞 | chatter
++40 C: всем хорошего дня | chatter
++25 D: 🙂 | chatter
++20 E: и вам | chatter
++30 F: 👋 | chatter
+
+=== d084 n08 typical
+@I1 water.hot_outage house_common since="с 1 по 14 июля" cur=no loc=yes obs=no uk=yes expect=no
++0 A: Уважаемые жители! С 1 по 14 июля плановое отключение горячей воды в связи с ремонтом теплосети | announcement | I1
++30 B: опять на две недели? | discussion | I1
++20 C: каждый год одно и то же | discussion | I1
++40 D: в прошлый раз до ночи не дали после срока | discussion | I1
++25 E: надо водонагреватель покупать | discussion | I1
++20 F>5: у меня есть, очень выручает | discussion | I1
++30 G: а холодная будет? | discussion | I1
++45 A>7: холодная без изменений | announcement | I1
++20 H: спасибо за предупреждение | chatter
++30 B: ладно, переживём | chatter
++40 C: в баню пойдём 😄 | chatter
++25 D: 😂 | chatter
++20 E: 👍 | chatter
++30 F: всем терпения | chatter
+
+=== d085 n08 short
+@I1 power.grid_outage house_common cur=no loc=yes obs=no uk=yes expect=no
++0 A: Объявление: завтра с 10 до 14 отключение электроэнергии в доме, плановые работы | announcement | I1
++25 B: спасибо, что заранее | chatter
++20 C: лифт тоже не будет работать? | discussion | I1
++30 A>3: да, лифты будут отключены | announcement | I1
++40 D: у меня удалёнка, пойду в кафе | chatter
++20 E: а холодильники выдержат? | discussion | I1
++30 F: 4 часа нормально | discussion | I1
++45 G: хоть бы не затянули | discussion | I1
++20 H: в прошлый раз вовремя дали | discussion | I1
++30 B: ок | chatter
++40 C: всем удачи завтра | chatter
++25 D: 👍 | chatter
++20 E: спасибо | chatter
++30 F: 🙂 | chatter
+
+=== d086 n09 typical
++0 A: Продаю детскую коляску 3 в 1, в хорошем состоянии, 5000 | out_of_scope
++30 B: фото можно? | out_of_scope
++20 A>2: в личку скинула | out_of_scope
++40 C: отдам даром кресло, самовывоз с 5 этажа | out_of_scope
++25 D>4: я заберу, можно вечером? | out_of_scope
++20 C: да, после 19 | out_of_scope
++30 E: кто-нибудь продаёт зимнюю резину 16? | out_of_scope
++45 F>7: есть, б/у один сезон | out_of_scope
++20 E: сколько? | out_of_scope
++30 F: 8 тыс за комплект | out_of_scope
++40 G: объявления лучше в отдельную группу | discussion
++25 H: да ладно, удобно же | chatter
++20 A: коляску забрали, спасибо | out_of_scope
++30 B: 👍 | chatter
+
+=== d087 n09 short
++0 A: отдам котят в добрые руки 🐱 | out_of_scope
++25 B: сколько им? | out_of_scope
++20 A>2: 2 месяца, к лотку приучены | out_of_scope
++30 C: какие милые | chatter
++40 D: я бы взяла одного, можно посмотреть? | out_of_scope
++20 A>5: конечно, 3 подъезд, пишите в личку | out_of_scope
++30 E: а продам велосипед взрослый недорого | out_of_scope
++45 F: фото? | out_of_scope
++20 E>8: скину | out_of_scope
++30 G: всем добрый вечер | chatter
++40 H: добрый | chatter
++25 D: котёнка забрала, спасибо! | out_of_scope
++20 A: 😊 | chatter
++30 C: 🥰 | chatter
+
+=== d088 n10 typical
+@I1 other.unspecified house_common cur=unclear loc=yes obs=no uk=yes expect=no
++0 A: Уважаемые собственники! 5 октября в 18:00 во дворе общее собрание по капитальному ремонту кровли | announcement | I1
++30 B: а бюллетени раздадут? | discussion | I1
++20 A>2: да, в почтовые ящики | announcement | I1
++40 C: я не смогу прийти, можно заочно? | discussion | I1
++25 A>4: да, заполните бюллетень и опустите в ящик ук | announcement | I1
++30 D: сколько будет стоить? | discussion | I1
++45 E: из фонда капремонта же | discussion | I1
++20 F: приду | chatter
++30 G: и я | chatter
++40 H: спасибо за информацию | chatter
++25 B: во сколько точно? | discussion | I1
++20 A: в 18:00 | announcement | I1
++30 C: 👍 | chatter
++20 D: ок | chatter
+
+=== d089 n10 short
+@I1 cleaning.stairwell house_territory cur=unclear loc=yes obs=no uk=yes expect=no
++0 A: Друзья, в субботу субботник во дворе, инвентарь выдаст ук | announcement | I1
++25 B: во сколько? | discussion | I1
++20 A>2: в 10 утра | announcement | I1
++30 C: я с детьми приду | chatter
++40 D: будем красить скамейки? | discussion | I1
++20 A>5: да, и сажать цветы | announcement | I1
++30 E: круто | chatter
++45 F: а перчатки дадут? | discussion | I1
++20 A>8: дадут | announcement | I1
++30 G: я возьму свои грабли | chatter
++40 H: отлично | chatter
++25 B: до субботы | chatter
++20 C: 🌷 | chatter
++30 D: 👍 | chatter
+
+=== d090 n11 typical
+@I1 other.unspecified other_building cur=unclear loc=no obs=no uk=no expect=no
++0 A: В соседнем доме вчера горело на балконе, пожарные приезжали | discussion | I1
++30 B: да, видела дым из окна | discussion | I1
++20 C: всё потушили, никто не пострадал | discussion | I1
++40 D: у нас всё спокойно? | discussion
++20 E>4: да, у нас всё нормально | objection
++30 F: говорят кто-то окурок кинул | discussion | I1
++45 G: надо на балконах не хранить хлам | discussion
++20 H: согласна | chatter
++30 A: у нас в доме запрещено курить на балконах? | discussion
++25 B: вроде нет такого правила | discussion
++40 C: жалко людей | chatter
++20 D: да | chatter
++30 E: всем спокойной ночи | chatter
++20 F: 🌙 | chatter
+
+=== d091 n11 negation
+@I1 gas.smell house_common entrance=1 cur=no loc=yes obs=yes uk=yes expect=no
++0 A: Соседи, в первом подъезде пахнет краской, это маляры работают | discussion | I1
++30 B: а я уж подумала газ | discussion | I1
++20 A>2: нет, газом не пахнет, именно краска | objection | I1
++25 C: подтверждаю, красят перила | discussion | I1
++40 D: сколько они ещё будут? | discussion
++20 E: сказали до пятницы | discussion
++30 F: окна откройте, дышать нечем | discussion
++45 G: я открыла на третьем | chatter
++20 H: спасибо | chatter
++30 A: скоро выветрится | chatter
++40 B: цвет хоть красивый? | chatter
++25 C: зелёный 😄 | chatter
++20 D: классика | chatter
++30 E: 😂 | chatter
+
+=== d092 n11 drill
+@I1 other.unspecified house_common cur=no loc=yes obs=no uk=yes expect=no
++0 A: Внимание! Сегодня в 11:00 в доме пройдёт учебная пожарная тревога, сирена — это учения | announcement | I1
++30 B: спасибо что предупредили | chatter
++20 C: а выходить надо? | discussion | I1
++25 A>3: по желанию, это проверка оповещения | announcement | I1
++40 D: сирена орёт уже, это учения, не пугайтесь | announcement | I1
++20 E: ребёнок испугался 😢 | chatter
++30 F: всё, закончилась | discussion | I1
++45 G: громко очень | chatter
++20 H: зато работает | chatter
++30 B: 👍 | chatter
++40 C: хорошо что предупредили | chatter
++25 D: да | chatter
++20 E: успокоила сына | chatter
++30 F: 🙂 | chatter
+
+=== d093 n12 typical
++0 A: Потерялась кошка, серая, с белым пятном на груди, из 2 подъезда 😿 | chatter
++30 B: видела похожую у гаражей утром | chatter
++20 A>2: спасибо, бегу | chatter
++40 C: удачи! | chatter
++25 D: поспрашиваю у своих | chatter
++30 E: кто-то опять поставил машину на газон у 3 подъезда | out_of_scope
++45 F>6: это не наш, гости к кому-то | out_of_scope
++20 G: газон уже весь в колеях | out_of_scope
++30 A: нашлась! сидела в подвале у окна | chatter
++40 H: ура 🎉 | chatter
++25 B: 🥰 | chatter
++20 C: слава богу | chatter
++30 D: 🐱 | chatter
++20 E: 👍 | chatter
+
+=== d094 n12 noise
++0 A: соседи сверху опять шумят после 23, стучат и музыка | out_of_scope
++30 B: какая квартира? | out_of_scope
++20 A>2: над 17, но не буду показывать пальцем | out_of_scope
++40 C: может день рождения | chatter
++25 D: можно участкового вызвать | out_of_scope
++30 E: давайте сначала поговорим по-соседски | out_of_scope
++45 F: у нас сверху ремонт третий месяц, перфоратор с 8 утра | out_of_scope
++20 G: ремонт до 19 можно по закону | out_of_scope
++30 H: всем терпения | chatter
++40 A: ладно, уже тихо | chatter
++25 B: 👍 | chatter
++20 C: спокойной ночи | chatter
++30 D: 🌙 | chatter
++20 E: 😴 | chatter
+
+=== d095 n13 typical
+@I1 elevator.stopped house_common entrance=3 cur=no loc=yes obs=yes uk=yes expect=no
++0 A: Лифт в третьем подъезде починили, ездит! Спасибо ук | resolved_claim | I1
++30 B: ура, наконец-то | chatter
++20 C: неделю пешком ходили | discussion | I1
++40 D: мастер сказал плату управления меняли | discussion | I1
++25 E: надеюсь надолго | discussion | I1
++30 F: спасибо тем, кто писал жалобы | chatter
++45 G: теперь бы ещё свет на пятом | discussion
++20 H>7: его вчера поменяли, горит | resolved_claim
++30 A: отлично | chatter
++40 B: всё налаживается 😊 | chatter
++25 C: 👍 | chatter
++20 D: 🙂 | chatter
++30 E: спасибо | chatter
++20 F: 🎉 | chatter
+
+=== d096 n13 short
+@I1 water.hot_outage house_common cur=no loc=yes obs=yes uk=yes expect=no
++0 A: горячую воду дали! | resolved_claim | I1
++20 B: да, уже идёт горячая | resolved_claim | I1
++25 C: наконец-то, после двух недель | discussion | I1
++30 D: сначала ржавая немного, спустите | discussion | I1
++40 E: у меня уже чистая | discussion | I1
++20 F: пойду стирку ставить | chatter
++30 G: 🛁 | chatter
++45 H: спасибо что сообщили | chatter
++20 A: 😊 | chatter
++30 B: всем хорошего вечера | chatter
++40 C: и вам | chatter
++25 D: 👍 | chatter
++20 E: 🙂 | chatter
++30 F: 👋 | chatter
