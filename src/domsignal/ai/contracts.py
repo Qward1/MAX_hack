@@ -137,7 +137,12 @@ class WindowLine(Frozen):
 
 
 class OpenItem(Frozen):
-    """Открытый сигнал или заявка дома, к которым окно может относиться."""
+    """Открытый сигнал или заявка дома, к которым окно может относиться.
+
+    `danger_kinds` — виды опасности, уже известные у открытого элемента.
+    Сигнал с опасностью вида K присоединяется только к элементу, у которого
+    вид K уже есть; пустой кортеж означает «опасности нет».
+    """
 
     ref: str = Field(min_length=1, max_length=128)
     kind: OpenItemKind
@@ -145,6 +150,7 @@ class OpenItem(Frozen):
     subtype: str | None = None
     entrance: str | None = None
     title: str = Field(max_length=200)
+    danger_kinds: tuple[DangerKind, ...] = ()
 
 
 class WindowInput(Frozen):

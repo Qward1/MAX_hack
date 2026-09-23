@@ -16,33 +16,79 @@ from domsignal.ai.matching import Token
 from domsignal.ai.normalize import NormalizedText
 from domsignal.ai.rules.lexicon import Lexicon, load_lexicon
 
-_NUM_WORDS = {
-    "перв": "1",
-    "втор": "2",
-    "трет": "3",
-    "четверт": "4",
-    "пят": "5",
-    "шест": "6",
-    "седьм": "7",
-    "восьм": "8",
-    "девят": "9",
-    "десят": "10",
+#: Основы порядковых числительных 1–20. Составные — раньше простых:
+#: «пятнадцатом» не должно читаться как «пят…».
+_ORDINAL_STEMS: tuple[tuple[str, int], ...] = (
+    ("одиннадцат", 11),
+    ("двенадцат", 12),
+    ("тринадцат", 13),
+    ("четырнадцат", 14),
+    ("пятнадцат", 15),
+    ("шестнадцат", 16),
+    ("семнадцат", 17),
+    ("восемнадцат", 18),
+    ("девятнадцат", 19),
+    ("двадцат", 20),
+    ("перв", 1),
+    ("втор", 2),
+    ("трет", 3),
+    ("четверт", 4),
+    ("пят", 5),
+    ("шест", 6),
+    ("седьм", 7),
+    ("восьм", 8),
+    ("девят", 9),
+    ("десят", 10),
+)
+_ADJECTIVE_ENDINGS = frozenset(
+    {
+        "ый", "ий", "ой", "ая", "яя", "ое", "ее", "ые", "ие", "ого", "его", "ому",
+        "ему", "ым", "им", "ом", "ем", "ую", "юю", "ей", "ых", "их", "ыми", "ими",
+    }
+)
+#: «третий» склоняется с мягким знаком: третьего, третьем, третью…
+_THIRD_ENDINGS = frozenset(
+    {"ий", "ья", "ье", "ьи", "ьего", "ьей", "ьему", "ьим", "ьем", "ью", "ьих", "ьими"}
+)
+_CARDINAL_FORMS: dict[str, int] = {
+    **dict.fromkeys(
+        ("один", "одна", "одно", "одни", "одного", "одной", "одному", "одним", "одном",
+         "одну", "одних"),
+        1,
+    ),
+    **dict.fromkeys(("два", "две", "двух", "двум", "двумя"), 2),
+    **dict.fromkeys(("три", "трех", "трем", "тремя"), 3),
+    **dict.fromkeys(("четыре", "четырех", "четырем", "четырьмя"), 4),
+    **dict.fromkeys(("семь", "семи", "семью"), 7),
+    **dict.fromkeys(("восемь", "восьми", "восемью"), 8),
+    **{
+        f"{stem}{ending}": value
+        for stem, value in (
+            ("пят", 5), ("шест", 6), ("девят", 9), ("десят", 10), ("одиннадцат", 11),
+            ("двенадцат", 12), ("тринадцат", 13), ("четырнадцат", 14), ("пятнадцат", 15),
+            ("шестнадцат", 16), ("семнадцат", 17), ("восемнадцат", 18),
+            ("девятнадцат", 19), ("двадцат", 20),
+        )
+        for ending in ("ь", "и", "ью")
+    },
 }
-_ORDINAL = "|".join(_NUM_WORDS)
+_NUMBER_TOKEN = re.compile(r"\d+|[а-яa-z]+")
+_ORDINAL = "|".join(stem for stem, _ in _ORDINAL_STEMS)
+_ORDINAL_WORD = rf"(?<![а-я])((?:{_ORDINAL})[а-я]*)"
 
 _ENTRANCE_PATTERNS = (
     re.compile(r"(\d{1,2})\s*-?\s*(?:м|й|ом|ем|ый|ой|го)?\s*(?:подъезд|подьезд|под\.|парадн)"),
     re.compile(r"(?:подъезд|подьезд|парадн)[а-я]*\s*№?\s*(\d{1,2})"),
     re.compile(r"(?<![а-я])п\.\s*(\d{1,2})"),
-    re.compile(rf"({_ORDINAL})[а-я]*\s+(?:подъезд|подьезд|парадн)"),
-    re.compile(rf"(?:^|\s)в[о]?\s+({_ORDINAL})[а-я]*\s*$"),
+    re.compile(rf"{_ORDINAL_WORD}\s+(?:подъезд|подьезд|парадн)"),
+    re.compile(rf"(?:^|\s)в[о]?\s+{_ORDINAL_WORD}\s*$"),
 )
 
 _FLOOR_PATTERNS = (
     re.compile(r"между\s+(\d{1,2})\s*и\s*(\d{1,2})"),
     re.compile(r"(\d{1,2})\s*-?\s*(?:м|й|ом|ем|ый|ой|го)?\s*этаж"),
     re.compile(r"этаж[а-я]*\s*№?\s*(\d{1,2})"),
-    re.compile(rf"на\s+({_ORDINAL})[а-я]*\s+этаж"),
+    re.compile(rf"на\s+{_ORDINAL_WORD}\s+этаж"),
 )
 
 _SINCE_PATTERNS = (
@@ -77,20 +123,47 @@ def _evidence(
     )
 
 
-def _digits_or_word(raw: str) -> str:
-    if raw.isdigit():
-        return raw.lstrip("0") or raw
-    for stem, digit in _NUM_WORDS.items():
-        if raw.startswith(stem):
-            return digit
-    return raw
+def _word_number(word: str) -> int | None:
+    """Числительное 1–20 словом в любом падеже, иначе `None` («пятно» — не 5)."""
+    if word in _CARDINAL_FORMS:
+        return _CARDINAL_FORMS[word]
+    for stem, value in _ORDINAL_STEMS:
+        if word.startswith(stem):
+            ending = word[len(stem) :]
+            endings = _THIRD_ENDINGS if stem == "трет" else _ADJECTIVE_ENDINGS
+            return value if ending in endings else None
+    return None
+
+
+def normalize_place_number(value: str) -> str:
+    """Номер подъезда или этажа цифрами: «третьем», «3-м», «№3», «3й» → «3».
+
+    Одна функция и для правил, и для ответа модели. Меняется только значение —
+    цитата остаётся дословной. «Между третьим и четвёртым» → «между 3 и 4».
+    Значение без числа («крайний», «последний») возвращается как написано.
+    """
+    folded = value.lower().replace("ё", "е")
+    tokens = _NUMBER_TOKEN.findall(folded)
+    numbers: list[str] = []
+    for token in tokens:
+        if token.isdigit():
+            numbers.append(token.lstrip("0") or token)
+            continue
+        number = _word_number(token)
+        if number is not None:
+            numbers.append(str(number))
+    if not numbers:
+        return value
+    if "между" in tokens and len(numbers) >= 2:
+        return f"между {numbers[0]} и {numbers[1]}"
+    return numbers[0]
 
 
 def find_entrance(normalized: NormalizedText, line_id: str) -> Evidence | None:
     for pattern in _ENTRANCE_PATTERNS:
         match = pattern.search(normalized.text)
         if match:
-            return _evidence(normalized, match, _digits_or_word(match.group(1)), line_id)
+            return _evidence(normalized, match, normalize_place_number(match.group(1)), line_id)
     return None
 
 
@@ -102,7 +175,7 @@ def find_floor(normalized: NormalizedText, line_id: str) -> Evidence | None:
         if match.re.groups == 2:
             value = f"между {match.group(1)} и {match.group(2)}"
         else:
-            value = _digits_or_word(match.group(1))
+            value = normalize_place_number(match.group(1))
         return _evidence(normalized, match, value, line_id)
     return None
 

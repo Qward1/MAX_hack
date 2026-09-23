@@ -30,7 +30,12 @@ from domsignal.ai.contracts import (
     WindowInput,
     WindowLine,
 )
-from domsignal.ai.engine import decide_strength, disposition_for
+from domsignal.ai.engine import (
+    decide_strength,
+    disposition_for,
+    may_join_open_item,
+    rename_refs,
+)
 from domsignal.ai.fusion import fuse_emergency
 from domsignal.ai.matching import Token, tokenize
 from domsignal.ai.normalize import NormalizedText, normalize
@@ -211,6 +216,74 @@ def _merge_place(draft: _Draft, facts: LineFacts) -> None:
         draft.scope = place.scope
 
 
+def _entrances_agree(left: Evidence | None, right: Evidence | None) -> bool:
+    """Подъезды совместимы, если хотя бы один не назван или они совпадают."""
+    return left is None or right is None or left.value == right.value
+
+
+def _same_thread(first: _Draft, second: _Draft) -> bool:
+    """Одна ветка: та же категория (или подтип не определён) и тот же подъезд."""
+    same_category = first.product_category == second.product_category or UNSPECIFIED in (
+        first.subtype,
+        second.subtype,
+    )
+    both_open = not first.ref.startswith("new:") and not second.ref.startswith("new:")
+    return (
+        same_category
+        and _entrances_agree(first.entrance, second.entrance)
+        and not (both_open and first.ref != second.ref)
+    )
+
+
+def _has_danger(draft: _Draft) -> bool:
+    return any(not hit.negated for hit in draft.danger)
+
+
+def _merge_threads(
+    drafts: Sequence[_Draft], window: WindowInput
+) -> tuple[list[_Draft], dict[str, str]]:
+    """Инвариант режима правил: одна ветка окна — один сигнал.
+
+    Живой прогон P7a: без модели одно окно дало два слабых сигнала на одну
+    поломку («не горит» и «освещение»). В одном окне остаётся не больше одного
+    сигнала на пару (продуктовая категория, подъезд); неназванный подъезд и
+    неопределённый подтип совместимы с любыми. Сигналы с опасностью не
+    сливаются ни между собой, ни с обычными: опасность не должна раствориться.
+    """
+    order = {line.line_id: index for index, line in enumerate(window.lines)}
+    kept: list[_Draft] = []
+    renamed: dict[str, str] = {}
+    for draft in drafts:
+        target = None
+        if not _has_danger(draft):
+            target = next(
+                (item for item in kept if not _has_danger(item) and _same_thread(item, draft)),
+                None,
+            )
+        if target is None:
+            kept.append(draft)
+            continue
+        if target.subtype == UNSPECIFIED and draft.subtype != UNSPECIFIED:
+            target.subtype = draft.subtype
+            target.product_category = draft.product_category
+            target.object_label = draft.object_label
+        if target.ref.startswith("new:") and not draft.ref.startswith("new:"):
+            renamed[target.ref] = draft.ref
+            target.ref = draft.ref
+        else:
+            renamed[draft.ref] = target.ref
+        target.line_ids = sorted(
+            dict.fromkeys(target.line_ids + draft.line_ids), key=lambda item: order[item]
+        )
+        target.danger.extend(draft.danger)
+        for name in ("entrance", "floor", "since"):
+            if getattr(target, name) is None:
+                setattr(target, name, getattr(draft, name))
+        if target.scope.value == "unknown":
+            target.scope = draft.scope
+    return kept, renamed
+
+
 def _passed_lines(facts: Sequence[LineFacts]) -> dict[str, bool]:
     """Вариант C: гейт, ответ на прошедшую реплику и горячее окно."""
     passed: dict[str, bool] = {}
@@ -247,7 +320,6 @@ def analyze_with_rules(
     passed = _passed_lines(own)
 
     drafts: list[_Draft] = []
-    by_subtype: dict[str, _Draft] = {}
     verdicts: list[LineVerdict] = []
     danger_hits: list[DangerHit] = []
     counter = 0
@@ -264,6 +336,17 @@ def analyze_with_rules(
             # даже если по эвристикам сама по себе выглядит болтовнёй.
             role = "more_info" if facts.place.has_any and not facts.subtypes else "me_too"
             certainty = "sure" if facts.gate else "unsure"
+
+        if (
+            role in _ATTACHING_ROLES
+            and joined
+            and drafts
+            and facts.subtypes
+            and not _entrances_agree(drafts[-1].entrance, facts.place.entrance)
+        ):
+            # «А во 2 подъезде тоже лифт стоит» — та же поломка в другом
+            # подъезде: это отдельная проблема, а не подтверждение первой.
+            role = "new_problem"
 
         if role == "new_problem" and joined:
             matches = _distinct_subtypes(facts)
@@ -282,7 +365,15 @@ def analyze_with_rules(
                     for match in matches
                 ]
             for code, category, label in candidates:
-                draft = by_subtype.get(code)
+                draft = next(
+                    (
+                        item
+                        for item in drafts
+                        if item.subtype == code
+                        and _entrances_agree(item.entrance, facts.place.entrance)
+                    ),
+                    None,
+                )
                 if draft is None:
                     counter += 1
                     ref = _open_item_ref(code, category, facts.place.entrance, window.open_items)
@@ -294,7 +385,6 @@ def analyze_with_rules(
                         scope=LocationEvidence(value="unknown"),
                     )
                     drafts.append(draft)
-                    by_subtype[code] = draft
                 draft.line_ids.append(facts.line_id)
                 draft.danger.extend(facts.danger)
                 _merge_place(draft, facts)
@@ -319,9 +409,17 @@ def analyze_with_rules(
             )
         )
 
+    drafts, renamed = _merge_threads(drafts, window)
+    open_items = {item.ref: item for item in window.open_items}
     signals: list[SignalDraft] = []
     audit_events: list[AuditEvent] = []
     for draft in drafts:
+        emergency, _events = fuse_emergency(draft.danger)
+        item = open_items.get(draft.ref)
+        if item is not None and not may_join_open_item(emergency, item):
+            counter += 1
+            renamed[draft.ref] = f"new:{counter}"
+            draft.ref = renamed[draft.ref]
         emergency, events = fuse_emergency(draft.danger, signal_ref=draft.ref)
         audit_events.extend(events)
         strength, reason = decide_strength(emergency, _UNCLEAR_FACETS)
@@ -346,7 +444,7 @@ def analyze_with_rules(
         )
     return RulesOutcome(
         facts=all_facts,
-        lines=tuple(verdicts),
+        lines=rename_refs(verdicts, renamed),
         signals=tuple(signals),
         danger_hits=tuple(danger_hits),
         audit_events=tuple(audit_events),
