@@ -47,7 +47,12 @@ from domsignal.db.repositories.passive import BufferedLine, PassiveRepository
 from domsignal.services.ai_budget import PostgresBudgetGuard
 from domsignal.services.ai_provenance import execution_provenance
 from domsignal.services.errors import RescheduleJob
-from domsignal.services.signals import LineIndex, SignalEngine, versions_of
+from domsignal.services.signals import (
+    LineIndex,
+    SignalEngine,
+    open_item_danger_kinds,
+    versions_of,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -249,6 +254,8 @@ class PassiveWindowAnalysis:
                             subtype=signal.subtype,
                             entrance=(signal.entrance or {}).get("value"),
                             title=signal.object_label[:200],
+                            # P6: опасность вида K не ляжет в элемент без K.
+                            danger_kinds=open_item_danger_kinds(signal.emergency),
                         ),
                     )
                 )
