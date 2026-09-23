@@ -16,7 +16,7 @@
 | Резервная копия | `/var/backups/domsignal/domsignal-20260923T145459117596Z.dump`, 210 109 байт, mode 600, `pg_restore --list` — 369 строк; копия env `env-production-pre-p7b-20260923` (mode 600) |
 | Журналы | у всех семи контейнеров `json-file`, `max-size 10m`, `max-file 5`; контейнеры пересозданы (включая `db` и `caddy`, тома сохранены) |
 
-После выкладки (≈17:35): `/ready` 200 снаружи, `/version` = `58b31f6`,
+После выкладки (контейнеры запущены в 14:56 UTC; живой прогон — 17:37–18:10 UTC): `/ready` 200 снаружи, `/version` = `58b31f6`,
 capabilities без изменений (`ai_analysis`, `routes`, `passive_capture` = true,
 `test_auth` = false); webhook без секрета 401; `list` — одна подписка, прежний
 URL (не менялась); `ai-worker` работает, перезапусков 0. Журналы после

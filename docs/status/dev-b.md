@@ -6,6 +6,10 @@
 (P7b)»), отправлен в origin (`main`, `dev/b-experience`, `dev/a-core`) и
 **DEPLOYED** на `domsignal-prod`; живые шаги 1–5 — **LIVE VERIFIED**
 ([чекпоинт P7b](../MAX_LIVE_SMOKE.md#p7b-checkpoint--23-сентября-2026-находки-p7a-журналы-без-ip-основания-пос)).
+После выкладки DEV-A слил P6 поверх `58b31f6` (`01c9fad`, «merge: AI quality
+fixes and evaluation (P6)») и отправил в origin; **на VPS P6 не выложен** —
+живой прогон шёл на `58b31f6` без P6. Проводка P6 (§1.5) — в ветке
+`agent/b/p7b-p6-wiring` (см. «Вопросы владельцу»).
 
 START: `origin/main` = `5beed1a` (содержит «merge: live deploy and MAX checkpoint
 (P7a)»); worktree `.worktrees/b-p7b-fixes`, ветка `agent/b/p7b-fixes` от
@@ -158,9 +162,13 @@ mode 600, `pg_restore --list` — 369 строк) и копия env
    источниками, ссылка, пометка ИИ и напоминание — на экране рядом с полем
    (контракт `AppealDraftView.text` меняет содержимое, схема та же). Нужно
    ваше «да» — это смена формы черновика.
-3. **P6:** после слияния DEV-A — проводка `OpenItem.danger_kinds` (§1.5,
-   `passive_analysis`: виды опасности открытых сигналов) и повторная выкладка
-   (решение владельца: DEV-A выкладывает сам).
+3. **P6 слит, не выложен.** DEV-A пишет, что его задание запрещает VPS, и
+   спрашивает, кто выкладывает. Проводка `OpenItem.danger_kinds` (§1.5) готова
+   в `agent/b/p7b-p6-wiring` (backend PASS 732), integration не прогнан:
+   локальный Docker Desktop завис, а после перезапуска не поднимает свою VM
+   (`bootstrapping wsl … formatting disk: running mkfs: exit status 1`).
+   Предложение: после починки Docker — integration, слияние, выкладка P6 +
+   проводки мной по «Safe redeploy» (вместе с решением по модели, п. 1).
 4. Шаг 5: подтвердите, что кнопка «Открыть официальный сервис ↗» в черновике
    открыла сценарий «Сообщите, что вас волнует».
 
