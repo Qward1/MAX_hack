@@ -98,7 +98,9 @@ def test_the_federal_gas_rule_matches_by_subtype_and_by_danger(packaged: Any) ->
     others = [item for item in packaged.federal.rules if item.danger_kinds]
     assert sorted(item.id for item in others) == [
         "federal.gas_smell.emergency",
+        "federal.other_hazard.emergency",
         "federal.smoke_fire.emergency",
+        "federal.structural.emergency",
     ]
     assert all(item.route_type == "emergency_service" for item in others)
 
@@ -108,7 +110,7 @@ def test_smoke_fire_rule_quotes_the_official_text_and_matches_only_by_danger(
 ) -> None:
     document = yaml.safe_load((REGIONS / "_federal" / "responsibility.yaml").read_text("utf-8"))
     kinds = [kind for item in document["rules"] for kind in item["match"].get("danger_kinds", [])]
-    assert sorted(kinds) == ["gas", "smoke_fire"]
+    assert sorted(kinds) == ["gas", "other_hazard", "smoke_fire", "structural"]
     fire = next(item for item in document["rules"] if item["id"] == "federal.smoke_fire.emergency")
     assert fire["match"] == {"subtypes": [], "danger_kinds": ["smoke_fire"], "location_scopes": []}
     assert fire["route_type"] == "emergency_service" and fire["channel_ids"] == ["emergency_112"]

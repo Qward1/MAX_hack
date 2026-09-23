@@ -183,6 +183,12 @@
           "items": {"type": "string", "minLength": 1},
           "uniqueItems": true
         },
+        "apartment_subtypes": {
+          "type": "array",
+          "description": "Подтипы uk_default, которые житель видит в квартире, но система общедомовая: маршрут УК и при территории apartment.",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
         "basis": {"$ref": "#/$defs/basis"},
         "verification": {"$ref": "#/$defs/verification"}
       }

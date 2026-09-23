@@ -328,6 +328,22 @@ def resolve_route(
     if emergency:
         return _from_rules(emergency, effective, house, today)
 
+    # Правило справочника, названное по подтипу, точнее типового распределения:
+    # «газ не подаётся» остаётся газоснабжающей организации и в подъезде,
+    # вывоз ТКО — региональному оператору и во дворе (P6, эталон маршрутов).
+    # Приоритет — только перед ветками общего имущества и двора; муниципальные
+    # правила зависят от территории, их по-прежнему решает профиль дома.
+    if scope in {"house_common", "house_territory"}:
+        specific = [rule for rule in matched if subtype in rule.subtypes]
+        if specific and all(rule.route_type != "municipality" for rule in specific):
+            return _from_rules(specific, effective, house, today)
+
+    default = effective.uk_default
+    uk_subtype = default is not None and subtype in default.subtypes
+
+    # Общее имущество с подключённой УК — её зона, и для неопределённого
+    # подтипа тоже: форма с категорией создаёт заявку УК без подтипа, и её
+    # карточка не может говорить «ответственный не определён».
     if scope == "house_common" and house.has_active_connected_uk:
         return _uk_route(subtype, effective, house, today)
 
@@ -337,11 +353,19 @@ def resolve_route(
     if matched:
         return _from_rules(matched, effective, house, today)
 
-    default = effective.uk_default
-    if default is not None and subtype in default.subtypes and scope in {"house_common", "unknown"}:
+    if uk_subtype and scope in {"house_common", "unknown"}:
         if house.has_active_connected_uk:
             return _uk_route(subtype, effective, house, today)
         return _unknown_route(effective, today)
+
+    # Проблема видна в квартире, но система общедомовая (холодные батареи).
+    if (
+        scope == "apartment"
+        and default is not None
+        and subtype in default.apartment_subtypes
+        and house.has_active_connected_uk
+    ):
+        return _uk_route(subtype, effective, house, today)
 
     return _unknown_route(effective, today)
 

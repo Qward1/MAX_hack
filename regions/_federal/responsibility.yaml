@@ -186,6 +186,54 @@ rules:
       source_title: Постановление Правительства РФ от 27.11.2021 № 2071, п. 21 «а» Правил; официальное опубликование 30.11.2021, 0001202111300024
       source_url: http://publication.pravo.gov.ru/document/0001202111300024
 
+  # Угроза обрушения и иная опасность для жизни и здоровья ведут в 112 по
+  # тем же Правилам, что и дым (п. 21 «б» и «г»), — только по виду опасности.
+  - id: federal.structural.emergency
+    priority: 10
+    match:
+      subtypes: []
+      danger_kinds:
+        - structural
+      location_scopes: []
+    route_type: emergency_service
+    organization_id: null
+    channel_ids:
+      - emergency_112
+    can_prepare_appeal: false
+    basis:
+      text: "При вызове по 112 службу реагирования в чрезвычайных ситуациях привлекают по п. 21 «б» Правил: «привлечение службы реагирования в чрезвычайных ситуациях осуществляется при необходимости проведения аварийно-спасательных работ, а также угрозе чрезвычайной ситуации или происшествия, в результате которых может потребоваться проведение таких работ»."
+      source_title: "Постановление Правительства РФ от 27.11.2021 № 2071 «Об утверждении Правил взаимодействия сил и средств систем обеспечения вызова экстренных оперативных служб по единому номеру \"112\"», п. 21 «б» Правил; официальное опубликование 30.11.2021, 0001202111300024"
+      source_url: http://publication.pravo.gov.ru/document/0001202111300024
+    verification:
+      status: verified
+      verified_at: "2026-09-23"
+      verified_by: DEV-B (текст официальной публикации, PDF publication.pravo.gov.ru, с. 8)
+      source_title: "Постановление Правительства РФ от 27.11.2021 № 2071 «Об утверждении Правил взаимодействия сил и средств систем обеспечения вызова экстренных оперативных служб по единому номеру \"112\"», п. 21 «б» Правил; официальное опубликование 30.11.2021, 0001202111300024"
+      source_url: http://publication.pravo.gov.ru/document/0001202111300024
+
+  - id: federal.other_hazard.emergency
+    priority: 10
+    match:
+      subtypes: []
+      danger_kinds:
+        - other_hazard
+      location_scopes: []
+    route_type: emergency_service
+    organization_id: null
+    channel_ids:
+      - emergency_112
+    can_prepare_appeal: false
+    basis:
+      text: "При вызове по 112 скорую медицинскую помощь привлекают по п. 21 «г» Правил: «привлечение службы скорой медицинской помощи осуществляется при сообщениях об угрозе жизни и (или) здоровью, о наличии на месте происшествия погибших, больных или пострадавших людей, об угрозе чрезвычайной ситуации или происшествия, результаты которых могут быть опасны для жизни и здоровья людей»."
+      source_title: "Постановление Правительства РФ от 27.11.2021 № 2071 «Об утверждении Правил взаимодействия сил и средств систем обеспечения вызова экстренных оперативных служб по единому номеру \"112\"», п. 21 «г» Правил; официальное опубликование 30.11.2021, 0001202111300024"
+      source_url: http://publication.pravo.gov.ru/document/0001202111300024
+    verification:
+      status: verified
+      verified_at: "2026-09-23"
+      verified_by: DEV-B (текст официальной публикации, PDF publication.pravo.gov.ru, с. 9)
+      source_title: "Постановление Правительства РФ от 27.11.2021 № 2071 «Об утверждении Правил взаимодействия сил и средств систем обеспечения вызова экстренных оперативных служб по единому номеру \"112\"», п. 21 «г» Правил; официальное опубликование 30.11.2021, 0001202111300024"
+      source_url: http://publication.pravo.gov.ru/document/0001202111300024
+
   - id: federal.municipal_territory.default
     priority: 100
     match:
@@ -243,6 +291,8 @@ rules:
       subtypes:
         - external_network.outage
         - power.grid_outage
+        - water.hot_outage
+        - water.supply_outage
       location_scopes:
         - external_network
     route_type: resource_supplier
@@ -303,6 +353,10 @@ uk_default:
   resource_supplier_alternatives:
     - water.hot_outage
     - water.supply_outage
+  # Батареи в квартире — часть внутридомовой системы отопления: заявка в УК и
+  # при территории «квартира». Типовое распределение, как и весь uk_default.
+  apartment_subtypes:
+    - heating.cold_radiators
   basis:
     text: Общее имущество многоквартирного дома, типовое распределение; первая линия — управляющая компания дома.
     source_title: Справочник ДомСигнала — типовое распределение по общему имуществу МКД
