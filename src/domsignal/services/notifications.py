@@ -19,7 +19,9 @@ from domsignal.contracts.tickets import (
     ResidentWorkStatus,
     TicketNotificationIntent,
 )
+from domsignal.core.display_time import DEFAULT_DISPLAY_TIMEZONE
 from domsignal.core.incidents import CATEGORY_TITLES
+from domsignal.core.signals import quote_text
 from domsignal.db.models import (
     ChatBinding,
     House,
@@ -60,12 +62,19 @@ from domsignal.services.route_card_render import (
     RouteCardIntent,
     render_route_card,
 )
+from domsignal.services.signals import evidence_mid
 from domsignal.services.tickets import TicketService
 
 logger = logging.getLogger(__name__)
 
 #: Назначение доставки для карточки маршрута.
 ROUTE_CARD_PURPOSE = "route_action_card"
+
+#: Автор сообщения проблемы — сотрудник, создавший его из сигнала чата.
+NO_RESIDENT_RECIPIENT = "NO_RESIDENT_RECIPIENT"
+
+#: Коды, при которых доставка пропускается, а не считается несостоявшейся.
+SKIPPED_CODES = frozenset({"NO_MAX_IDENTITY", NO_RESIDENT_RECIPIENT})
 
 
 @dataclass(frozen=True)
@@ -90,6 +99,7 @@ class TicketNotificationHandler:
         provider: MaxMessagingProvider,
         enabled: bool,
         public_base_url: str | None = None,
+        display_timezone: str = DEFAULT_DISPLAY_TIMEZONE,
     ) -> None:
         self.sessions = session_factory
         self.tickets = tickets
@@ -97,6 +107,8 @@ class TicketNotificationHandler:
         self.enabled = enabled
         # Адрес кабинета для ссылки в оповещении оператора. Пусто — без ссылки.
         self.public_base_url = public_base_url
+        # Пояс времени в сообщениях сотрудникам (кабинет показывает МСК).
+        self.display_timezone = display_timezone
 
     async def _snapshot(
         self,
@@ -141,20 +153,73 @@ class TicketNotificationHandler:
         await self._staff_context(session, user, signal.house_id)
         destination = await self._identity(user, delivery)
         house = await session.get(House, signal.house_id)
-        quote = await PassiveRepository(session).first_quote(signal.id)
+        intent = await self._alert_intent(session, delivery)
         emergency = signal.emergency or {}
+        new_kinds = intent.new_kinds if intent else []
+        quote, from_rules = await self._alert_evidence(
+            session, signal, intent.evidence_mid if intent else None, new_kinds
+        )
         return DeliverySnapshot(
             destination,
             operator_alert_message(
                 house_address=house.address if house is not None else "",
                 danger_kinds=list(emergency.get("kinds", [])),
-                from_rules="rules" in emergency.get("sources", []),
-                quote=quote.text if quote else None,
-                quote_author=quote.author_ref if quote else None,
-                quote_sent_at=quote.sent_at if quote else None,
+                from_rules=from_rules,
+                quote=quote[0] if quote else None,
+                quote_author=quote[1] if quote else None,
+                quote_sent_at=quote[2] if quote else None,
                 cabinet_url=signal_cabinet_url(self.public_base_url, signal.id),
+                new_kinds=new_kinds,
+                display_timezone=self.display_timezone,
             ),
         )
+
+    @staticmethod
+    async def _alert_intent(
+        session: AsyncSession, delivery: NotificationDelivery
+    ) -> SignalAlertIntent | None:
+        outbox = await session.get(OutboxMessage, delivery.outbox_message_id)
+        if outbox is None:
+            return None
+        try:
+            return SignalAlertIntent.model_validate(outbox.payload)
+        except ValidationError:
+            return None
+
+    @staticmethod
+    async def _alert_evidence(
+        session: AsyncSession,
+        signal: Signal,
+        mid: str | None,
+        new_kinds: list[str],
+    ) -> tuple[tuple[str, str, datetime] | None, bool]:
+        """Цитата оповещения — реплика, в которой найдена опасность.
+
+        Источник признака («правила» или «разбор») берётся у того же
+        доказательства. Старое намерение без реплики получает доказательство
+        из сигнала; первая реплика окна — только если доказательства нет вовсе.
+        """
+        repo = PassiveRepository(session)
+        emergency = signal.emergency or {}
+        evidence = [item for item in emergency.get("evidence", []) if isinstance(item, dict)]
+        chosen = mid or evidence_mid(evidence, new_kinds)
+        sources = {
+            item.get("source")
+            for item in evidence
+            if chosen
+            and item.get("line_mid") == chosen
+            and (not new_kinds or item.get("kind") in new_kinds)
+        }
+        source = "rules" if "rules" in sources else next(iter(sources), None)
+        from_rules = source == "rules" if source else "rules" in emergency.get("sources", [])
+        if chosen:
+            found = await repo.evidence_line(signal, chosen)
+            if found is not None:
+                return (quote_text(found[0]), found[1], found[2]), from_rules
+        first = await repo.first_quote(signal.id)
+        if first is None:
+            return None, from_rules
+        return (first.text, first.author_ref, first.sent_at), from_rules
 
     async def _chat_snapshot(
         self,
@@ -282,7 +347,8 @@ class TicketNotificationHandler:
 
     @staticmethod
     def _stop(delivery: NotificationDelivery, code: str, now: datetime) -> None:
-        delivery.status = "skipped" if code == "NO_MAX_IDENTITY" else "superseded"
+        # «Некому доставить» — не ошибка и не отзыв доступа: доставка пропущена.
+        delivery.status = "skipped" if code in SKIPPED_CODES else "superseded"
         delivery.superseded_at = now if delivery.status == "superseded" else None
         delivery.last_error_code = code
         delivery.last_error_at = now
@@ -332,7 +398,7 @@ class TicketNotificationHandler:
             purposes = {"accepted": "ticket_accepted", "work_reported": "work_verification"}
             purpose = purposes.get(event.kind)
             if purpose:
-                for user_id in await repo.recipients(ticket.incident_id):
+                for user_id, signal_only in await repo.recipients(ticket.incident_id):
                     if any(
                         d.outbox_message_id == outbox.id and d.recipient_user_id == user_id
                         for d in existing
@@ -351,6 +417,12 @@ class TicketNotificationHandler:
                         desired_version=ticket.version,
                     )
                     session.add(delivery)
+                    if signal_only:
+                        # Автор — сотрудник, создавший заявку из сигнала чата.
+                        # Жителей чата к заявке не привязать, пока они сами не
+                        # присоединятся; это не отзыв доступа.
+                        self._stop(delivery, NO_RESIDENT_RECIPIENT, datetime.now(UTC))
+                        continue
                     try:
                         snapshot = await self._snapshot(session, delivery)
                         delivery.destination = snapshot.destination
