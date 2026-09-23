@@ -6,7 +6,7 @@ import logging
 
 from domsignal.bootstrap import build_container
 from domsignal.settings import get_settings
-from domsignal.worker.pools import DEFAULT_POOL, POOLS, WorkerPool
+from domsignal.worker.pools import DEFAULT_POOL, POOLS, WorkerPool, lease_seconds_for
 from domsignal.worker.runner import WorkerRunner
 
 logger = logging.getLogger(__name__)
@@ -28,13 +28,18 @@ async def run(pool: WorkerPool = DEFAULT_POOL) -> None:
             await container.passive.ensure_purge_scheduled()
         except Exception as exc:  # noqa: BLE001
             logger.error("buffer_purge_not_scheduled", extra={"error_type": type(exc).__name__})
-    runner = WorkerRunner(
-        session_factory=container.session_factory,
-        handlers=container.worker_handlers.mapping,
-        notifications=container.notifications,
-        pool=pool,
-    )
     try:
+        runner = WorkerRunner(
+            session_factory=container.session_factory,
+            handlers=container.worker_handlers.mapping,
+            lease_seconds=lease_seconds_for(
+                pool,
+                ai_lease_seconds=container.settings.ai_worker_lease_seconds,
+                model_timeout_seconds=container.ai_timeout_seconds,
+            ),
+            notifications=container.notifications,
+            pool=pool,
+        )
         while True:
             handled = await runner.run_once()
             if not handled:

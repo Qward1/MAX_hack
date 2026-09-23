@@ -226,3 +226,15 @@ def test_empty_llm_values_are_read_as_missing() -> None:
     settings = Settings(llm_api_key="", llm_model="", _env_file=None)
     assert settings.llm_api_key is None
     assert settings.llm_model is None
+
+
+def test_ai_pool_provider_is_a_capability_without_credentials() -> None:
+    """Процесс без ключа (api) объявляет модель AI-пула, но сам её не вызывает."""
+    settings = Settings(ai_pool_llm_provider="openai_compatible", _env_file=None)
+    assert settings.llm_provider is LlmProvider.RULES
+    assert settings.ai_pool_llm_provider is LlmProvider.OPENAI_COMPATIBLE
+    assert settings.llm_api_key is None
+    assert Settings(ai_pool_llm_provider="", _env_file=None).ai_pool_llm_provider is None
+    assert Settings(_env_file=None).ai_pool_llm_provider is None
+    with pytest.raises(ValidationError):
+        Settings(ai_pool_llm_provider="another", _env_file=None)

@@ -74,11 +74,20 @@ class Container:
     signal_inbox: SignalInboxService
     ai_budget: PostgresBudgetGuard | None = None
     ai_provider: OpenAICompatibleProvider | None = field(default=None, repr=False)
+    #: Таймаут одного вызова модели; `None` — модель не подключена.
+    ai_timeout_seconds: float | None = None
 
     @property
     def ai_analysis_enabled(self) -> bool:
-        """Есть ли внешний провайдер разбора. Правила работают всегда."""
-        return self.ai_provider is not None
+        """Есть ли внешний провайдер разбора. Правила работают всегда.
+
+        Процесс без ключа (api) узнаёт о провайдере AI-пула из
+        `AI_POOL_LLM_PROVIDER`: модель вызывает только ai-worker.
+        """
+        return (
+            self.ai_provider is not None
+            or self.settings.ai_pool_llm_provider is LlmProvider.OPENAI_COMPATIBLE
+        )
 
     @property
     def routes_enabled(self) -> bool:
@@ -105,6 +114,7 @@ class AiComposition:
     rules_analyzer: WindowAnalyzer
     budget: PostgresBudgetGuard | None = None
     provider: OpenAICompatibleProvider | None = None
+    timeout_seconds: float | None = None
 
 
 def _profile(settings: Settings) -> ModelProfile | None:
@@ -181,7 +191,11 @@ def build_ai(
         },
     )
     return AiComposition(
-        analyzer=analyzer, rules_analyzer=rules_only, budget=budget, provider=provider
+        analyzer=analyzer,
+        rules_analyzer=rules_only,
+        budget=budget,
+        provider=provider,
+        timeout_seconds=timeout,
     )
 
 
@@ -299,4 +313,5 @@ def build_container(settings: Settings) -> Container:
         ),
         ai_budget=ai.budget,
         ai_provider=ai.provider,
+        ai_timeout_seconds=ai.timeout_seconds,
     )

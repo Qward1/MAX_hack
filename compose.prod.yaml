@@ -19,6 +19,8 @@ services:
       MAX_API_BASE_URL: https://platform-api2.max.ru
       MAX_API_TIMEOUT_SECONDS: ${MAX_API_TIMEOUT_SECONDS:-5}
       CHAT_CONNECTION_TTL_SECONDS: ${CHAT_CONNECTION_TTL_SECONDS:-900}
+      # Модель вызывает только ai-worker (задачи ai.*); остальные процессы
+      # разбирают правилами и ключа не получают — см. ai-worker ниже.
       LLM_PROVIDER: rules
       # Пассивное чтение выключено по умолчанию; для показа тишину окна задают явно.
       PASSIVE_CAPTURE_ENABLED: ${PASSIVE_CAPTURE_ENABLED:-false}
@@ -38,6 +40,8 @@ services:
     environment:
       <<: *production-environment
       BUILD_COMMIT: ${BUILD_COMMIT:?set BUILD_COMMIT}
+      # Возможность разбора моделью объявляется по провайдеру AI-пула — без ключа.
+      AI_POOL_LLM_PROVIDER: ${LLM_PROVIDER:-rules}
     healthcheck:
       test:
         [
@@ -55,7 +59,19 @@ services:
     environment: *production-environment
 
   ai-worker:
-    environment: *production-environment
+    environment:
+      <<: *production-environment
+      # Единственный процесс с ключом модели. По умолчанию — правила без ключа;
+      # openai_compatible без ключа или модели не проходит проверку настроек.
+      LLM_PROVIDER: ${LLM_PROVIDER:-rules}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      # Живой прогон P5: 21,4 с на окно при профиле 12 с — в production 25 с.
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-25}
+      LLM_DAILY_CALL_BUDGET: ${LLM_DAILY_CALL_BUDGET:-300}
+      LLM_CHAT_DAILY_SHARE: ${LLM_CHAT_DAILY_SHARE:-0.2}
+      # Аренда задачи AI-пула ≥ таймаут модели + 20 с, иначе воркер не стартует.
+      AI_WORKER_LEASE_SECONDS: ${AI_WORKER_LEASE_SECONDS:-60}
 
   caddy:
     image: caddy:2.10.2-alpine
