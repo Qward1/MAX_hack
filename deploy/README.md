@@ -307,10 +307,10 @@ which Compose derives from the same `LLM_PROVIDER` value. Variables in
 | `LLM_PROVIDER` | ai-worker (+ capability in api) | `rules` | `openai_compatible` |
 | `LLM_API_KEY` | ai-worker only | empty | provider key, appended on the VPS only |
 | `LLM_MODEL` | ai-worker | empty | `openai/gpt-5-mini` |
-| `LLM_TIMEOUT_SECONDS` | ai-worker | `25` | `45` on the VPS since P7a (live windows took 10.8–28.7 s, one call exceeded 25 s) |
+| `LLM_TIMEOUT_SECONDS` | ai-worker | `60` | `60` (owner decision 2026-09-23; live windows took 10.8–28.7 s, one call exceeded 25 s) |
 | `LLM_DAILY_CALL_BUDGET` | ai-worker | `300` | `300` (≈0.37 ₽ per window) |
 | `LLM_CHAT_DAILY_SHARE` | ai-worker | `0.2` | `0.2` |
-| `AI_WORKER_LEASE_SECONDS` | ai-worker | `60` | `65` with the 45 s timeout; must be ≥ model timeout + 20 s or the AI worker refuses to start |
+| `AI_WORKER_LEASE_SECONDS` | ai-worker | `80` | `80`; must be ≥ model timeout + 20 s or the AI worker refuses to start |
 | `PASSIVE_CAPTURE_ENABLED` | api, worker, ai-worker | `false` | `true` |
 | `PASSIVE_WINDOW_SILENCE_SECONDS` | api, worker, ai-worker | `120` | `30` |
 
@@ -320,6 +320,11 @@ Append the key without echoing it (stdin, not an argument), e.g. pipe the single
 validation); rules and the report/window watchdogs keep the product working.
 The operational lease stays 30 s; `report.fallback` (30 s) and
 `chat.window.fallback` (90 s) are unchanged.
+The 30 s `report.fallback` rules watchdog answers `/report` within 30 s only
+while the AI pool has not yet claimed the intake (pool stopped, backlog, no
+key); once `ai-worker` has claimed it, the watchdog exits quietly, so a slow
+model delays the answer up to the 60 s timeout, after which the same job
+settles with the rules result (`fallback_timeout`).
 Changing only model variables needs `up -d --no-deps ai-worker`; note that
 `docker compose start ai-worker` also starts its one-shot dependencies
 (`migrate`, `seed`), which are no-ops at head.

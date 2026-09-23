@@ -107,10 +107,19 @@ def test_without_model_variables_everything_stays_on_rules(
     worker = settings_of("ai-worker", SYNTHETIC_VPS, monkeypatch)
     assert worker.llm_provider is LlmProvider.RULES
     assert worker.llm_api_key is None and worker.llm_model is None
-    assert worker.llm_timeout_seconds == 25
+    assert worker.llm_timeout_seconds == 60
     assert worker.llm_daily_call_budget == 300
     assert worker.llm_chat_daily_share == 0.2
-    assert worker.ai_worker_lease_seconds == 60
+    assert worker.ai_worker_lease_seconds == 80
+    # Аренда по умолчанию покрывает таймаут по умолчанию с запасом 20 с.
+    assert (
+        lease_seconds_for(
+            "ai",
+            ai_lease_seconds=worker.ai_worker_lease_seconds,
+            model_timeout_seconds=worker.llm_timeout_seconds,
+        )
+        == 80
+    )
     api = settings_of("api", SYNTHETIC_VPS, monkeypatch)
     assert api.ai_pool_llm_provider is LlmProvider.RULES
     assert not api.passive_capture_enabled
@@ -122,9 +131,9 @@ def test_model_configuration_reaches_the_ai_worker_and_the_lease_covers_it(
     env = {
         **SYNTHETIC_VPS,
         **MODEL,
-        "LLM_TIMEOUT_SECONDS": "25",
+        "LLM_TIMEOUT_SECONDS": "60",
         "LLM_DAILY_CALL_BUDGET": "300",
-        "AI_WORKER_LEASE_SECONDS": "60",
+        "AI_WORKER_LEASE_SECONDS": "80",
         "PASSIVE_CAPTURE_ENABLED": "true",
         "PASSIVE_WINDOW_SILENCE_SECONDS": "30",
     }
@@ -139,7 +148,7 @@ def test_model_configuration_reaches_the_ai_worker_and_the_lease_covers_it(
             ai_lease_seconds=worker.ai_worker_lease_seconds,
             model_timeout_seconds=worker.llm_timeout_seconds,
         )
-        == 60
+        == 80
     )
     for service in ("api", "worker", "ai-worker"):
         passive = settings_of(service, env, monkeypatch)

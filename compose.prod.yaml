@@ -66,12 +66,12 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-rules}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-}
-      # Живой прогон P5: 21,4 с на окно при профиле 12 с — в production 25 с.
-      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-25}
+      # Живые окна P7a — 10,8–28,7 с при профиле 12 с; владелец утвердил 60 с.
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
       LLM_DAILY_CALL_BUDGET: ${LLM_DAILY_CALL_BUDGET:-300}
       LLM_CHAT_DAILY_SHARE: ${LLM_CHAT_DAILY_SHARE:-0.2}
       # Аренда задачи AI-пула ≥ таймаут модели + 20 с, иначе воркер не стартует.
-      AI_WORKER_LEASE_SECONDS: ${AI_WORKER_LEASE_SECONDS:-60}
+      AI_WORKER_LEASE_SECONDS: ${AI_WORKER_LEASE_SECONDS:-80}
 
   caddy:
     image: caddy:2.10.2-alpine

@@ -86,6 +86,10 @@ def test_ai_lease_shorter_than_the_model_call_refuses_to_start() -> None:
     # Прежняя аренда 30 с не покрывает таймаут production 25 с.
     with pytest.raises(ValueError, match="AI_WORKER_LEASE_SECONDS"):
         lease_seconds_for("ai", ai_lease_seconds=30, model_timeout_seconds=25)
+    # Production: таймаут 60 с требует аренды не меньше 80 с.
+    assert lease_seconds_for("ai", ai_lease_seconds=80, model_timeout_seconds=60) == 80
+    with pytest.raises(ValueError, match="AI_WORKER_LEASE_SECONDS"):
+        lease_seconds_for("ai", ai_lease_seconds=79, model_timeout_seconds=60)
 
 
 def test_ai_lease_setting_rejects_impossible_values() -> None:
