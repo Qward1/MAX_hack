@@ -1,0 +1,53 @@
+{"id": "s01", "family": "uk_zone", "title": "Лифт встал: жалоба, «у нас тоже», «с обеда»", "synthetic": true}
+{"id": "s02", "family": "uk_zone", "title": "Лифт: «а в четвёртом работает» — уточнение подъезда", "synthetic": true}
+{"id": "s03", "family": "uk_zone", "title": "Кнопка вызова лифта не горит/не нажимается (ветка из живого прогона P7a)", "synthetic": true}
+{"id": "s04", "family": "uk_zone", "title": "Двери лифта не закрываются, лифт стоит с открытыми дверями", "synthetic": true}
+{"id": "s05", "family": "uk_zone", "title": "Протечка с крыши на последнем этаже после дождя", "synthetic": true}
+{"id": "s06", "family": "uk_zone", "title": "Течь в подвале/на лестнице: мокрое пятно, капает с потолка", "synthetic": true}
+{"id": "s07", "family": "uk_zone", "title": "Нет горячей воды без объявления, «у всех так?»", "synthetic": true}
+{"id": "s08", "family": "uk_zone", "title": "Холодные батареи в отопительный сезон", "synthetic": true}
+{"id": "s09", "family": "uk_zone", "title": "Не горит свет в подъезде на этаже, темно на лестнице", "synthetic": true}
+{"id": "s10", "family": "uk_zone", "title": "Мусоропровод забит, запах на площадке", "synthetic": true}
+{"id": "s11", "family": "uk_zone", "title": "Домофон сломался и дверь не открывается (одна ветка, два объекта)", "synthetic": true}
+{"id": "s12", "family": "uk_zone", "title": "Входная дверь не закрывается, доводчик сломан", "synthetic": true}
+{"id": "s13", "family": "uk_zone", "title": "В подъезде грязно, давно не убирали", "synthetic": true}
+{"id": "s14", "family": "uk_zone", "title": "Ржавая/мутная вода из крана", "synthetic": true}
+{"id": "s15", "family": "uk_zone", "title": "Слабый напор воды на верхних этажах", "synthetic": true}
+{"id": "s16", "family": "uk_zone", "title": "Трещина в стене подъезда, осыпается штукатурка", "synthetic": true}
+{"id": "s17", "family": "uk_zone", "title": "Нет холодной воды во всём доме", "synthetic": true}
+{"id": "s18", "family": "danger", "title": "Запах газа в подъезде", "synthetic": true}
+{"id": "s19", "family": "danger", "title": "Дым/гарь из подвала или мусоропровода", "synthetic": true}
+{"id": "s20", "family": "danger", "title": "Человек застрял в лифте (словами правил)", "synthetic": true}
+{"id": "s21", "family": "danger", "title": "Контекстная опасность в лифте: «там кто-то внутри?» — «да, стучит»", "synthetic": true}
+{"id": "s22", "family": "danger", "title": "Искрит щиток на этаже", "synthetic": true}
+{"id": "s23", "family": "danger", "title": "Прорвало трубу, вода хлещет (затопление)", "synthetic": true}
+{"id": "s24", "family": "danger", "title": "Опасность без словаря: треск и вспышки в щитке, едкий запах", "synthetic": true}
+{"id": "s25", "family": "external", "title": "Фонари на улице у остановки не горят", "synthetic": true}
+{"id": "s26", "family": "external", "title": "Яма на дороге у выезда со двора", "synthetic": true}
+{"id": "s27", "family": "external", "title": "Контейнерная площадка: мусор не вывозят несколько дней", "synthetic": true}
+{"id": "s28", "family": "external", "title": "Снег/гололёд на тротуаре улицы не убирают", "synthetic": true}
+{"id": "s29", "family": "external", "title": "Во всём квартале нет света", "synthetic": true}
+{"id": "s30", "family": "external", "title": "Авария на магистрали: без воды весь район", "synthetic": true}
+{"id": "s31", "family": "external", "title": "Во дворе сломаны качели на детской площадке", "synthetic": true}
+{"id": "s32", "family": "external", "title": "Во дворе не горит освещение", "synthetic": true}
+{"id": "s33", "family": "external", "title": "Газ отключили во всём доме без объявления", "synthetic": true}
+{"id": "n01", "family": "negative", "title": "Новости: авария/пожар в другом районе", "synthetic": true}
+{"id": "n02", "family": "negative", "title": "Прошлое: «в прошлом месяце лифт неделю стоял»", "synthetic": true}
+{"id": "n03", "family": "negative", "title": "Гипотезы и правила: «если отключат воду, куда звонить?»", "synthetic": true}
+{"id": "n04", "family": "negative", "title": "У родственников: «у мамы в доме трубу прорвало»", "synthetic": true}
+{"id": "n05", "family": "negative", "title": "Советы: посоветуйте сантехника/электрика", "synthetic": true}
+{"id": "n06", "family": "negative", "title": "Тарифы и квитанции, счётчики", "synthetic": true}
+{"id": "n07", "family": "negative", "title": "Шутки и сарказм без наблюдения проблемы", "synthetic": true}
+{"id": "n08", "family": "negative", "title": "Объявление УК о плановом отключении и обсуждение", "synthetic": true}
+{"id": "n09", "family": "negative", "title": "Барахолка: продам коляску, отдам кресло", "synthetic": true}
+{"id": "n10", "family": "negative", "title": "Объявление УК: собрание, субботник, поверка", "synthetic": true}
+{"id": "n11", "family": "negative", "title": "Ловушки опасности: «в соседнем доме горело», «газом не пахнет», учения", "synthetic": true}
+{"id": "n12", "family": "negative", "title": "Болтовня: потерялся кот, поздравления, парковка, шум соседей", "synthetic": true}
+{"id": "n13", "family": "negative", "title": "Сообщение об устранении: «лифт починили, спасибо»", "synthetic": true}
+{"id": "m01", "family": "mixed", "title": "Переплетение двух тем: проблема дома + барахолка/болтовня", "synthetic": true}
+{"id": "m02", "family": "mixed", "title": "Два разных инцидента в одном диалоге", "synthetic": true}
+{"id": "m03", "family": "mixed", "title": "Стиль голосового ввода: без пунктуации, «короче», длинные фразы", "synthetic": true}
+{"id": "m04", "family": "mixed", "title": "Опечатки, транслит, эмодзи в жалобе", "synthetic": true}
+{"id": "m05", "family": "mixed", "title": "Сарказм о реальной проблеме («лифт опять на каникулах»)", "synthetic": true}
+{"id": "m06", "family": "mixed", "title": "Ветка продолжается после паузы (второе окно той же проблемы)", "synthetic": true}
+{"id": "m07", "family": "mixed", "title": "Объявление УК «починили» и возражение «всё равно не работает»", "synthetic": true}
