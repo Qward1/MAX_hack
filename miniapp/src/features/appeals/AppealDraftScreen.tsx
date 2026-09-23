@@ -9,6 +9,7 @@ import {
 } from "../../shared/api/client";
 import { maxBridge, safeUrl } from "../../shared/max/bridge";
 import { SourceChip } from "../../shared/ui/semantic";
+import { SourceLink } from "../../shared/ui/SourceLink";
 import { actionLabels, formatDate, formatDay, knownActions } from "../incidents/presentation";
 
 /** Порядок закреплён продуктом: сначала текст в буфер, потом сервис, потом отметка. */
@@ -21,6 +22,8 @@ const FILED_NOTE =
   "Вы отметили, что отправили обращение. ДомСигнал не подтверждает регистрацию во внешней системе.";
 const CONFLICT_NOTE = "Черновик изменился. Ваш текст сохранён на экране.";
 const UNVERIFIED_CHANNEL = "Канал ещё не проверен в справочнике.";
+const SELF_FILING_NOTE = "ДомСигнал не отправляет обращения за вас — вы отправляете его сами.";
+const TEXT_HINT = "В текст входит только то, что нужно вставить в форму сервиса.";
 
 export function AppealDraftScreen({
   draft,
@@ -115,6 +118,22 @@ export function AppealDraftScreen({
         <SourceChip source={draft.provenance} />
       </Panel>
 
+      {(channel?.facts ?? []).length > 0 && (
+        <Panel className="detail-section draft-channel-facts">
+          <Typography.Title asChild>
+            <h2>Что известно о канале</h2>
+          </Typography.Title>
+          <ul>
+            {(channel?.facts ?? []).map((fact) => (
+              <li key={fact.text}>
+                <span className="full-text">{fact.text}</span>
+                <SourceLink url={fact.source_url} title={fact.source_title} />
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
+
       <Panel className="detail-section draft-editor">
         <Typography.Title asChild>
           <h2>Текст обращения</h2>
@@ -124,6 +143,7 @@ export function AppealDraftScreen({
             {AI_NOTE}
           </p>
         )}
+        <p className="muted">{TEXT_HINT}</p>
         <label htmlFor={`${id}-text`}>Обращение</label>
         <Textarea
           id={`${id}-text`}
@@ -188,6 +208,7 @@ export function AppealDraftScreen({
         <Typography.Title asChild>
           <h2 id={`${id}-next`}>Что делать сейчас</h2>
         </Typography.Title>
+        <p className="muted">{SELF_FILING_NOTE}</p>
         <Flex direction="column" gap={12}>
           {ACTION_ORDER.map((code) => {
             const action = descriptor(code);

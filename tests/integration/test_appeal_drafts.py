@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from domsignal.db.models import AppealDraft, RouteOutcome
 from domsignal.services.action_cards import FORBIDDEN_PHRASES
 from domsignal.services.appeal_drafts import (
+    AI_NOTE,
     CHANNEL_FACTS_HEADING,
     PROBLEM_HEADING,
     SELF_FILING_NOTE,
@@ -54,13 +55,23 @@ async def test_draft_is_composed_from_verified_data_and_the_residents_words(ex) 
     assert PROBLEM_HEADING in text
     assert STREET_LIGHT in text
     assert "Казань, Синтетическая улица, 1" in text
-    # Канал и его проверенные факты приходят со ссылкой на источник.
+    # P7b: в тексте только то, что житель вставит в форму сервиса. Канал, его
+    # факты с источниками и напоминания показывает экран, а не обращение.
+    assert text.split("\n\n") == [
+        f"{PROBLEM_HEADING}\n{STREET_LIGHT}",
+        "Адрес: Казань, Синтетическая улица, 1",
+    ]
+    for screen_only in (CHANNEL_FACTS_HEADING, SELF_FILING_NOTE, AI_NOTE, "Источник", "gosuslugi"):
+        assert screen_only not in text, screen_only
     assert body["channel"]["id"] == "pos_gosuslugi"
-    assert CHANNEL_FACTS_HEADING in text
-    assert "«рассматривается в течение 30 дней со дня регистрации письменного обращения»" in text
-    assert "59-ФЗ" in text and "календарных" not in text
-    assert "gosuslugi.ru" in text
-    assert SELF_FILING_NOTE in text
+    facts = body["channel"]["facts"]
+    assert facts and all(fact["source_title"] and fact["source_url"] for fact in facts)
+    assert any(
+        "«рассматривается в течение 30 дней со дня регистрации письменного обращения»"
+        in fact["text"]
+        and "59-ФЗ" in fact["source_title"]
+        for fact in facts
+    )
     lowered = text.lower()
     for phrase in FORBIDDEN_PHRASES:
         assert phrase not in lowered, phrase

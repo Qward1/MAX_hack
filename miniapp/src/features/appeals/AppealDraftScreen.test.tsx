@@ -57,6 +57,23 @@ describe("appeal draft", () => {
     expect(screen.getByText(/ссылка входа ещё не заполнена/)).toBeTruthy();
   });
 
+  it("shows channel facts with sources and the self-filing note beside the text", () => {
+    show();
+    expect(screen.getByRole("heading", { name: "Что известно о канале" })).toBeTruthy();
+    const fact = draft.channel?.facts?.[0];
+    expect(fact).toBeTruthy();
+    expect(screen.getByText(fact?.text ?? "")).toBeTruthy();
+    const source = screen.getByRole("link", { name: /^Источник: / });
+    expect(source.getAttribute("href")).toBe(fact?.source_url);
+    expect(
+      screen.getByText("ДомСигнал не отправляет обращения за вас — вы отправляете его сами."),
+    ).toBeTruthy();
+    // В сам текст обращения факты канала и напоминания не входят.
+    const area = screen.getByRole("textbox", { name: "Обращение" }) as HTMLTextAreaElement;
+    expect(area.value).not.toContain("Источник");
+    expect(area.value).not.toContain("не отправляет");
+  });
+
   it("marks the ai-assisted paragraph so the resident checks it", () => {
     show();
     expect(screen.getByText(/подготовлен с помощью ИИ/)).toBeTruthy();

@@ -7,6 +7,7 @@ import type {
 } from "../../shared/api/client";
 import { maxBridge, safeUrl } from "../../shared/max/bridge";
 import { DemoBadge } from "../../shared/ui/semantic";
+import { SourceLink } from "../../shared/ui/SourceLink";
 import { formatDay } from "../incidents/presentation";
 import {
   type CardActionType,
@@ -18,23 +19,6 @@ import {
 const UNVERIFIED_NOTE = "Сведения требуют сверки.";
 
 /** Ссылка на проверенный источник. Непроверенный адрес ссылкой не становится. */
-function SourceLink({ url, title }: { url?: string | null; title?: string | null }) {
-  const safe = safeUrl(url);
-  if (!safe) return title ? <span className="muted">Источник: {title}</span> : null;
-  return (
-    <a
-      href={safe}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(event) => {
-        if (maxBridge.openLink(safe)) event.preventDefault();
-      }}
-    >
-      Источник: {title || "официальная страница"} ↗
-    </a>
-  );
-}
-
 /** Памятка безопасности. При любом маршруте она стоит первой на экране. */
 function SafetyPanel({ safety }: { safety: SafetyBlock }) {
   const verified = formatDay(safety.verified_at);
