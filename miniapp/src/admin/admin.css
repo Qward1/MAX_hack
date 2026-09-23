@@ -264,3 +264,150 @@ body {
 .manual-secret { overflow-wrap: anywhere; user-select: all; }
 .recovery-codes { display: grid; gap: 8px; padding-left: 20px; }
 .employee-session-bar { display: flex; justify-content: flex-end; align-items: center; gap: 16px; padding: 8px 24px; background: white; }
+/* Очередь сигналов (P5): те же токены, панели и бейджи, что у заявок. */
+.signal-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.signal-filters .house-select {
+  flex: 1 1 260px;
+}
+.signal-banner {
+  display: grid;
+  gap: 10px;
+  margin-block: 16px;
+  padding: 20px 24px;
+  border: 1px solid var(--ds-line);
+  border-inline-start: 6px solid var(--icon-negative);
+  border-radius: 16px;
+  background: var(--background-card);
+}
+.signal-banner h2,
+.signal-banner p {
+  margin: 0;
+}
+.signal-banner .ticket-button {
+  justify-self: start;
+  text-decoration: none;
+}
+.signal-group {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+.signal-group h2 {
+  margin: 0;
+}
+.weak-group p {
+  margin: 0;
+}
+.signal-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.signal-row.critical {
+  border-inline-start: 4px solid var(--icon-negative);
+}
+.signal-row h3,
+.signal-row p {
+  margin: 0;
+}
+.signal-quote {
+  margin: 0;
+  padding: 10px 14px;
+  border-inline-start: 3px solid var(--ds-line);
+  background: var(--background-secondary);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.signal-quote footer {
+  margin-top: 4px;
+  font-size: 13px;
+}
+.ticket-panel .signal-quote + .signal-quote {
+  margin-top: -8px;
+}
+.signal-danger p,
+.signal-safety p,
+.signal-safety h3 {
+  margin: 0;
+}
+.signal-safety {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ds-line);
+}
+.signal-evidence {
+  overflow-wrap: anywhere;
+}
+.action-reason {
+  margin: 6px 0 0;
+  max-width: 34ch;
+  font-size: 13px;
+}
+.signal-contacts .ticket-button {
+  text-decoration: none;
+}
+.signal-form {
+  padding: 20px;
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  background: var(--background-secondary);
+}
+.signal-form h3,
+.signal-form p {
+  margin: 0;
+}
+.signal-form h3:focus {
+  outline: 3px solid var(--text-themed);
+  outline-offset: 3px;
+}
+.signal-choices {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.signal-choices legend {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.signal-form .signal-choice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-weight: 400;
+}
+.signal-form .signal-choice input {
+  width: auto;
+  margin-top: 4px;
+}
+.signal-events {
+  margin: 0;
+}
+.passive-switch {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.passive-switch p {
+  margin: 0;
+}
+.ticket-panel :where(button, a, select, textarea, input):focus-visible,
+.signal-banner a:focus-visible {
+  outline: 3px solid var(--text-themed);
+  outline-offset: 3px;
+}
+/* Ссылка в виде кнопки сохраняет цвет кнопки, а не общий цвет ссылок. */
+.signal-banner a.ticket-button {
+  color: #fff;
+}
+.signal-contacts a.ticket-button {
+  color: var(--text-primary);
+}

@@ -33,6 +33,7 @@ export const capabilities: Capabilities = {
     admin: false,
     routes: true,
     appeals: true,
+    passive_capture: false,
     reminders: false,
     media: false,
   },

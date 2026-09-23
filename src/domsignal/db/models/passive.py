@@ -13,7 +13,8 @@
 
 `signals` — сигнал из окна: что, где, насколько похоже на проблему дома и куда
 ведёт маршрут. Сигнал не является ни `Report`, ни `Incident`, ни `Ticket`:
-заявку из него создаёт только оператор (срез P5). После срока хранения буфера
+заявку из него создаёт только оператор (очередь сигналов P5), и его решение
+записывается вместе с автором, временем и причиной. После срока хранения буфера
 от разговора остаются только цитаты сигнала (не больше трёх, с псевдонимом
 автора и временем) и счётчики реплик и уникальных авторов.
 """
@@ -48,11 +49,20 @@ WINDOW_STATES = ("open", "closed", "analyzing", "done")
 #: Почему окно закрылось. Названия повторяют условия политики ядра.
 WINDOW_CLOSE_REASONS = ("silence", "max_lines", "max_age", "danger")
 
-#: Статусы сигнала. Решения оператора появятся в срезе P5.
+#: Статусы сигнала. `in_review` — оператор выбрал маршрут, но ещё не решил.
 SIGNAL_STATUSES = ("new", "in_review", "converted", "routed_external", "dismissed")
 
-#: Открытые статусы: сигнал ещё может собирать ветку.
+#: Открытые статусы: сигнал ещё может собирать ветку и ждёт решения оператора.
 OPEN_SIGNAL_STATUSES = ("new", "in_review")
+
+#: Решённые статусы: сигнал больше не решается повторно.
+DECIDED_SIGNAL_STATUSES = ("converted", "routed_external", "dismissed")
+
+#: Почему оператор закрыл сигнал. Причина — данные для оценки качества (P6).
+DISMISS_REASONS = ("not_a_problem", "duplicate", "resolved", "out_of_scope", "spam")
+
+#: Кто разобрал окно: AI-пул или сторож правил в операционном пуле.
+WINDOW_ANALYZERS = ("ai", "fallback")
 
 SIGNAL_STRENGTHS = ("critical", "strong", "medium", "weak", "filtered")
 SIGNAL_DISPOSITIONS = ("inbox", "audit_pool")
@@ -132,6 +142,9 @@ class ConversationWindow(Base):
         ),
         CheckConstraint("(state = 'open') = (closed_at IS NULL)", name="closed_at"),
         CheckConstraint("line_count >= 0", name="line_count"),
+        CheckConstraint(
+            "analyzed_by IS NULL OR analyzed_by IN ('ai', 'fallback')", name="analyzed_by"
+        ),
         # Одно открытое окно на привязку.
         Index(
             "uq_conversation_window_open",
@@ -160,6 +173,9 @@ class ConversationWindow(Base):
     claimed_by: Mapped[str | None] = mapped_column(String(100))
     analysis_mode: Mapped[str | None] = mapped_column(String(20))
     execution_state: Mapped[str | None] = mapped_column(String(40))
+    # Кто разобрал окно: `ai` или `fallback` (сторож правил). Второй не трогает
+    # уже разобранное окно: захват идёт только из `closed`.
+    analyzed_by: Mapped[str | None] = mapped_column(String(20))
     # Происхождение разбора без текста: режим, версии, задержка, стоимость.
     analysis: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -187,8 +203,19 @@ class Signal(Base):
             "report_count >= 0 AND author_count >= 0 AND author_count <= report_count",
             name="counters",
         ),
+        CheckConstraint("version >= 1", name="version"),
+        CheckConstraint(
+            "(status IN ('converted', 'routed_external', 'dismissed')) = (decided_at IS NOT NULL)",
+            name="decided",
+        ),
+        CheckConstraint(
+            "decision_reason IS NULL OR decision_reason IN "
+            "('not_a_problem', 'duplicate', 'resolved', 'out_of_scope', 'spam')",
+            name="decision_reason",
+        ),
         Index("ix_signals_house_status_seen", "house_id", "status", "last_seen_at"),
         Index("ix_signals_house_dedupe", "house_id", "dedupe_key", "status"),
+        Index("ix_signals_incident", "incident_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -229,6 +256,23 @@ class Signal(Base):
             use_alter=True,
             name="fk_signals_route_outcome_id_route_outcomes",
         )
+    )
+    # Версия для решений оператора: каждое изменение сигнала её увеличивает,
+    # решение с устаревшей версией получает 409 `stale_version`.
+    version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    # Решение оператора: кто, когда, почему. Решённый сигнал не решается снова.
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT")
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decision_reason: Mapped[str | None] = mapped_column(String(30))
+    decision_note: Mapped[str | None] = mapped_column(String(500))
+    # Заявка, которую создал или к которой присоединил сигнал оператор.
+    report_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("reports.id", ondelete="SET NULL")
+    )
+    incident_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("incidents.id", ondelete="SET NULL")
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -306,6 +350,10 @@ class SignalEvent(Base):
     details: Mapped[str] = mapped_column(Text, default="", server_default="")
     # Версии таксономии, правил, схемы, промпта и модели того разбора.
     versions: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # Автор решения оператора. У событий ядра и продукта автора нет.
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

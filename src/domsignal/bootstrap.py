@@ -35,6 +35,7 @@ from domsignal.services.passive_capture import PassiveCaptureService
 from domsignal.services.reports import DemoRule, ReportService
 from domsignal.services.routing import RoutingService, load_directory_or_none
 from domsignal.services.sessions import SessionService
+from domsignal.services.signal_inbox import SignalInboxService
 from domsignal.services.signals import PassiveConfig, SignalEngine
 from domsignal.services.tickets import TicketService
 from domsignal.settings import LlmProvider, MaxTransportMode, Settings
@@ -70,6 +71,7 @@ class Container:
     signals: SignalEngine
     passive: PassiveCaptureService
     passive_analysis: PassiveWindowAnalysis
+    signal_inbox: SignalInboxService
     ai_budget: PostgresBudgetGuard | None = None
     ai_provider: OpenAICompatibleProvider | None = field(default=None, repr=False)
 
@@ -227,6 +229,7 @@ def build_container(settings: Settings) -> Container:
             chat_provider.client, bot_username=settings.max_bot_username
         ),
         enabled=settings.max_transport == MaxTransportMode.WEBHOOK,
+        public_base_url=settings.public_base_url,
     )
     ai = build_ai(settings, session_factory)
     explicit_reports = ExplicitReportService(
@@ -253,6 +256,7 @@ def build_container(settings: Settings) -> Container:
         engine=signals,
         analyzer=ai.analyzer,
         budget=ai.budget,
+        rules_analyzer=ai.rules_analyzer,
     )
     worker_handlers = WorkerHandlers(
         session_factory=session_factory,
@@ -290,6 +294,9 @@ def build_container(settings: Settings) -> Container:
         signals=signals,
         passive=passive,
         passive_analysis=passive_analysis,
+        signal_inbox=SignalInboxService(
+            routing=routing, action_cards=action_cards, reports=report_service
+        ),
         ai_budget=ai.budget,
         ai_provider=ai.provider,
     )

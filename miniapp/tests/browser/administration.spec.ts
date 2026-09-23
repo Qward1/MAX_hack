@@ -77,7 +77,7 @@ test("B09 full administrative lifecycle, separate surfaces, privacy and revoke",
     await acceptNew(admin, firstLink, adminLogin);
     await expect(admin.getByRole("heading", { name: "Обзор", exact: true })).toBeVisible();
     const companyNav = admin.getByRole("navigation", { name: "Разделы кабинета" });
-    await expect(companyNav.getByRole("link")).toHaveCount(6);
+    await expect(companyNav.getByRole("link")).toHaveCount(7);
     await companyNav.getByRole("link", { name: "Сотрудники", exact: true }).click();
     await admin.getByRole("button", { name: "Пригласить сотрудника", exact: true }).click();
     const operatorLink = await admin.getByLabel("Одноразовая ссылка").inputValue();
@@ -85,7 +85,7 @@ test("B09 full administrative lifecycle, separate surfaces, privacy and revoke",
     const operatorLogin = `b09.operator.${suffix}`;
     await acceptNew(operator, operatorLink, operatorLogin);
     await expect(operator.getByRole("heading", { name: "Заявки", exact: true })).toBeVisible();
-    await expect(operator.getByRole("navigation", { name: "Разделы кабинета" }).getByRole("link")).toHaveText(["Заявки", "Мои дома"]);
+    await expect(operator.getByRole("navigation", { name: "Разделы кабинета" }).getByRole("link")).toHaveText(["Заявки", "Сигналы", "Мои дома"]);
 
     await companyNav.getByRole("link", { name: "Дома", exact: true }).click();
     await admin.getByRole("button", { name: "Запросить управление домом" }).click();

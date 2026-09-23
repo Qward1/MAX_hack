@@ -72,6 +72,8 @@ class WorkerHandlers:
         if self.passive_analysis:
             # Разбор окна живёт в AI-пуле: его отказ не задерживает приём.
             handlers["ai.window.analyze"] = self.passive_analysis.analyze_window
+            # Сторож правил — в операционном пуле, как `report.fallback`.
+            handlers["chat.window.fallback"] = self.passive_analysis.analyze_with_rules
         return handlers
 
     async def verify_connection(self, payload: dict[str, Any]) -> None:

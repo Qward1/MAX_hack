@@ -58,9 +58,12 @@ logger = logging.getLogger(__name__)
 
 TICK_JOB = "chat.window.tick"
 ANALYZE_JOB = "ai.window.analyze"
+FALLBACK_JOB = "chat.window.fallback"
 PURGE_JOB = "chat.buffer.purge"
 
 TICK_PRIORITY = 40
+#: Сторож разбора окна — как `report.fallback` явного пути.
+FALLBACK_PRIORITY = 50
 PURGE_PRIORITY = 90
 #: Окно с опасностью разбирается раньше явного `/report` (30) и обычных окон.
 DANGER_WINDOW_PRIORITY = 20
@@ -68,9 +71,6 @@ WINDOW_PRIORITY = 60
 
 #: Как часто повторяется очистка буфера.
 PURGE_INTERVAL = timedelta(hours=1)
-
-#: Памятка того же вида опасности в тот же чат не повторяется чаще.
-MEMO_COOLDOWN = timedelta(minutes=30)
 
 #: Запас к моменту тишины: ядро сравнивает строго («больше»).
 _TICK_MARGIN = timedelta(seconds=1)
@@ -325,10 +325,18 @@ class PassiveCaptureService:
         window.closed_at = datetime.now(UTC)
         window.tick_job_id = None
         await session.flush()
-        await ReliabilityRepository(session).add_job(
+        jobs = ReliabilityRepository(session)
+        await jobs.add_job(
             kind=ANALYZE_JOB,
             payload={"window_id": str(window.id)},
             priority=DANGER_WINDOW_PRIORITY if window.has_danger else WINDOW_PRIORITY,
+        )
+        # Сторож: остановленный AI-пул задерживает сигналы окна не дольше этого.
+        await jobs.add_job(
+            kind=FALLBACK_JOB,
+            payload={"window_id": str(window.id)},
+            priority=FALLBACK_PRIORITY,
+            delay_seconds=self.config.fallback_seconds,
         )
         logger.info(
             "passive_window_closed",
@@ -431,7 +439,7 @@ class PassiveCaptureService:
             )
             return
         if await repo.recent_chat_memo(
-            binding.id, kinds, since=datetime.now(UTC) - MEMO_COOLDOWN
+            binding.id, kinds, since=datetime.now(UTC) - self.config.memo_pause
         ):
             self.engine.event(
                 session,
@@ -570,6 +578,7 @@ class PassiveCaptureService:
 
 __all__ = [
     "ANALYZE_JOB",
+    "FALLBACK_JOB",
     "PURGE_JOB",
     "TICK_JOB",
     "PassiveCaptureService",

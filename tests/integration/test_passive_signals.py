@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -607,7 +608,9 @@ async def test_no_log_line_contains_text_or_the_external_user_id(pv, caplog) -> 
         extra = {key: value for key, value in vars(record).items() if key not in standard}
         rendered = record.getMessage() + " " + " ".join(f"{k}={v}" for k, v in extra.items())
         assert "газом" not in rendered and "Лифт" not in rendered and "квартиры" not in rendered
-        assert str(NEIGHBOURS[3]) not in rendered
+        # Идентификатор ищется целым токеном: случайный hex отпечатка входа
+        # может содержать те же цифры, и это не утечка.
+        assert not re.search(rf"{NEIGHBOURS[3]}", rendered), rendered
 
 
 async def test_open_signals_of_the_house_reach_the_window_as_open_items(pv) -> None:  # noqa: F811

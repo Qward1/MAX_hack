@@ -315,10 +315,15 @@ def resolve_route(
     effective = directory.effective(house.region_code, house.municipality_code)
     subtype = query.subtype if query.subtype in known_subtypes else UNSPECIFIED_SUBTYPE
     scope = query.location_scope
-    matched = [rule for rule in effective.rules if rule.matches(subtype, scope)]
+    matched = [
+        rule for rule in effective.rules if rule.matches(subtype, scope, query.danger_kinds)
+    ]
 
     # Экстренный маршрут не уступает внутренней заявке: запах газа остаётся
-    # вызовом службы, даже когда он на территории общего имущества дома.
+    # вызовом службы, даже когда он на территории общего имущества дома. Какие
+    # виды опасности ведут в экстренную службу ещё до подтипа, решают данные
+    # справочника (`match.danger_kinds`), а не код: другие правила видов
+    # опасности не знают, поэтому «затопило» маршрут не меняет.
     emergency = [rule for rule in matched if rule.route_type == "emergency_service"]
     if emergency:
         return _from_rules(emergency, effective, house, today)
@@ -339,6 +344,42 @@ def resolve_route(
         return _unknown_route(effective, today)
 
     return _unknown_route(effective, today)
+
+
+def route_of_type(
+    route_type: RouteType,
+    query: RoutingQuery,
+    directory: ResponsibilityDirectory,
+    *,
+    known_subtypes: Collection[str],
+    today: date,
+) -> ResponsibilityRoute:
+    """Маршрут типа, который выбрал человек, когда роутер не смог решить сам.
+
+    Тип задаёт оператор; организацию и канал подставляет справочник — первое
+    по приоритету правило этого типа для подтипа или вида опасности. Нет
+    такого правила — организация и канал остаются пустыми: продукт ничего не
+    дописывает за справочник и не принимает свободный текст организации.
+    """
+    house = query.house
+    effective = directory.effective(house.region_code, house.municipality_code)
+    subtype = query.subtype if query.subtype in known_subtypes else UNSPECIFIED_SUBTYPE
+    if route_type == "uk_internal":
+        return _uk_route(subtype, effective, house, today)
+    if route_type == "unknown":
+        return _unknown_route(effective, today)
+    candidates = [
+        rule
+        for rule in effective.rules
+        if rule.route_type == route_type
+        and (
+            subtype in rule.subtypes
+            or any(kind in rule.danger_kinds for kind in query.danger_kinds)
+        )
+    ]
+    if candidates:
+        return _rule_route(candidates[0], effective, house, today)
+    return _route(route_type=route_type, directory=effective, match="none", today=today)
 
 
 def _territory_route(

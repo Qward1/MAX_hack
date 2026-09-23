@@ -84,13 +84,16 @@ _PURGE_CONSUMED = text(
 )
 
 #: Счётчики сигнала — из его строк реплик. Счётчик не уменьшается: строка
-#: предварительного сигнала без окна тоже учтена при создании.
+#: предварительного сигнала без окна тоже учтена при создании. Каждое изменение
+#: сигнала ядром увеличивает его версию: решение оператора по устаревшему
+#: снимку получает 409 и перечитывает карточку.
 _RECOUNT = text(
     """
     UPDATE signals AS s
     SET report_count = GREATEST(s.report_count, c.lines),
         author_count = GREATEST(s.author_count, c.authors),
         last_seen_at = GREATEST(s.last_seen_at, COALESCE(c.last_at, s.last_seen_at)),
+        version = s.version + 1,
         updated_at = now()
     FROM (
         SELECT count(DISTINCT line_mid) AS lines,

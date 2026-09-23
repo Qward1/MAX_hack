@@ -95,6 +95,14 @@ class Settings(BaseSettings):
     passive_dedupe_days: int = Field(default=7, ge=1, le=30)
     # Сырые реплики живут не дольше 72 часов независимо от состояния разбора.
     passive_buffer_hours: int = Field(default=72, ge=1, le=72)
+    # Повтор сообщения об опасности того же вида в доме за это время
+    # присоединяется к открытому критическому сигналу (решение владельца: 30).
+    passive_danger_group_minutes: int = Field(default=30, ge=1, le=1440)
+    # Памятка того же вида опасности в тот же чат не чаще, чем раз за это время.
+    passive_chat_memo_pause_minutes: int = Field(default=30, ge=1, le=1440)
+    # Сторож разбора окна: если AI-пул не разобрал окно за это время, окно
+    # разбирают правила в операционном пуле.
+    passive_analysis_fallback_seconds: int = Field(default=90, ge=5, le=3600)
     build_commit: str = "dev"
     public_base_url: str = "http://localhost:8000"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]

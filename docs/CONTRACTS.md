@@ -475,6 +475,128 @@ nullable, назначения `signal_alert | chat_reading_notice | chat_safety
 предмет доставки — ровно один из четырёх. Downgrade отказывает, пока есть
 данные пассивного чтения или включённое чтение, — как в P3b.
 
+## Очередь сигналов оператора — срез P5
+
+**IMPLEMENTED IN BRANCH** (`agent/b/p5-inbox`). Сигнал никогда не становится
+заявкой сам: заявку, присоединение, внешний маршрут, выбор маршрута или
+закрытие выбирает оператор, и каждое решение записано с автором, временем и
+причиной. Контракт аддитивен: пути и схемы только добавлены.
+
+### Доступ
+
+Модель доступа прежняя. Чтение — право `ticket.read` (как очередь заявок),
+решения — `ticket.work` (как создание и приём заявки); нового права нет. Сигнал
+относится к периоду управления через привязку чата, поэтому новая УК дома не
+видит сигналов из чата прежней. Порядок проверок как у заявок B-14: чужой дом и
+чужой период управления — маскирующий `404`, дом доступен, но нет права —
+`403`. Audit Pool (`disposition = audit_pool`) не отдаётся ни списком, ни по
+идентификатору (`404`).
+
+### Endpoints
+
+| Method/path | Request → response |
+|---|---|
+| `GET /api/v1/signals` | `house_id?`, `status` (повторяемый), `strength` (повторяемый), `limit` ≤ 100, `offset` → `SignalList`. Только Inbox; порядок `critical → strong → medium → weak`, внутри — `last_seen_at` убыв. Без `house_id` — все дома сотрудника с серверным `page.total`. `counts` — по силе при тех же доме и статусе без фильтра силы; `attention` — открытые критические сигналы области (число, самый свежий, его время). |
+| `GET /api/v1/signals/{id}` | → `SignalView` |
+| `POST /api/v1/signals/{id}/create-ticket` | `{expected_version, category?, description?}` → `SignalMutation`. `ReportService.create_in_context` в контексте сотрудника (`classification_mode = manual`), дальше — обычный жизненный цикл Ticket. Описание по умолчанию — `ticket_draft.description`. Место с цитатой переносится в `incidents.location_*`. Статус `converted`, `report_id`/`incident_id`. Приём заявок выключен — `409 signal_action_unavailable`. |
+| `POST /api/v1/signals/{id}/join` | `{expected_version, incident_id}` → новый `Report` под открытой проблемой того же дома и периода управления; второй Ticket не создаётся. Чужая проблема — `422` с `field_errors[incident_id]`, закрытая — `409 incident_closed`. |
+| `POST /api/v1/signals/{id}/route-external` | `{expected_version}` → `routed_external` и снимок маршрута. Только для внешних маршрутов (`municipality`, `resource_supplier`, `regional_operator`, `other_authority`, `emergency_service`), иначе `409 signal_action_unavailable`. Продукт никуда ничего не отправляет. |
+| `POST /api/v1/signals/{id}/choose-route` | `{expected_version, route_type}` → `in_review`. Только когда роутер вернул `unknown` или `requires_operator_choice`; допустимы `alternatives` роутера, а при `unknown` — все типы, кроме `unknown` (`SignalView.route_choices`). Недопустимый тип — `422` с `field_errors[route_type]`; маршрут определён справочником — `409`. Свободного текста организации нет: лишнее поле — `422`. |
+| `POST /api/v1/signals/{id}/dismiss` | `{expected_version, reason, note?}`, `reason ∈ not_a_problem | duplicate | resolved | out_of_scope | spam`, `note` ≤ 500 → `dismissed`. Без причины — `422`. |
+| `POST /api/v1/chat-bindings/{id}/passive-capture` | `{enabled}` → `PassiveCaptureView`. Тот же `PassiveCaptureService.set_capture`, что у CLI P4: право `chat.connect`, включение ставит сообщение о чтении чата один раз на версию привязки, при выключенном `PASSIVE_CAPTURE_ENABLED` — `409 passive_capture_disabled`. |
+
+Все пять решений требуют `Idempotency-Key`. Порядок: доступ (`404`/`403`) →
+квитанция (тот же ключ и тело — прежний результат с `replayed = true`, другое
+тело — `409 idempotency_conflict`) → `expected_version` (`409 stale_version`) →
+статус (решённый сигнал — `409 signal_decided`) → проверка действия. Переход
+статусов проверяет сервер: из `new | in_review` в `converted | routed_external |
+dismissed`; `choose-route` оставляет сигнал открытым (`in_review`).
+`SignalMutation = {signal, replayed, effect_version}`.
+
+`signals.version` растёт при каждом решении и при каждом изменении сигнала
+движком P4 (новые реплики ветки, примирение, пересчёт маршрута): решение по
+устаревшему снимку получает `409` и перечитывает карточку.
+
+### `SignalView`
+
+Поля `SignalSummary` (id, дом и адрес, `subtype` и `subtype_label` — подпись
+таксономии, а до разбора окна — «Признак опасности», `object_label`,
+`category`, сила и `strength_reason` — причина силы шаблоном продукта, статус,
+счётчики реплик и уникальных авторов, `first_seen_at`/`last_seen_at`,
+`first_quote`, `place`, текущий `route_type` и `route_source = router |
+operator`, `danger_kinds`, `version`) плюс:
+
+- `territory` — территория и её цитата; `place` — подъезд, этаж, «с какого
+  времени» **только со значением и цитатой из собственной реплики сигнала**:
+  цитата из реплики контекста (прошлого разговора чата) не показывается и в
+  заявку не переносится;
+- `quotes` — до трёх дословных цитат (псевдоним «Житель A», время, текст);
+- `danger` — виды, подписи, источники `rules | semantic`, доказательства;
+  при `evidence_unverified` вместо цитат разбора — сами реплики жителей из
+  `signal_quotes`; флаги `preliminary`, `displaced`, `downgraded`;
+- `action_card` — ActionCard `audience = operator`, собранная сейчас по
+  текущему справочнику; при выборе оператора — по выбранному типу
+  (`RoutingService.route_of_type`: организацию и канал подставляет справочник,
+  если знает правило этого типа, иначе они пусты);
+- `route_choices`, `route_chosen_by`, `route_chosen_at`;
+- `join_candidates` — правило P3c (дом и период управления, открытый статус,
+  та же категория, не старше 14 суток, до трёх); первой стоит проблема, в
+  которую уже превращён такой же сигнал (тот же ключ склейки);
+- `ticket_draft` — категория и описание по умолчанию: подпись подтипа,
+  счётчики, место с цитатой и дословные цитаты. Текста модели в нём нет;
+- `linked` — связанная проблема, её Report и Ticket (`T-N`);
+- `decision` — кто, когда, причина и комментарий, снимок маршрута решения
+  (тип, организация, канал, основание, источник, дата проверки, версия
+  справочника);
+- `allowed_actions` — `create-ticket | join | route-external | choose-route |
+  dismiss` в порядке карточки маршрута; выключенное действие — с причиной;
+  у решённого сигнала список пуст;
+- `events` — безопасное подмножество `signal_events`: вид, подпись и время, у
+  решений — автор. Деталей и версий модели нет.
+
+### Хранение
+
+Миграция `20260923_0009` аддитивна: `signals.version` (≥ 1, по умолчанию 1),
+`decided_by`, `decided_at`, `decision_reason`, `decision_note` (≤ 500),
+`report_id`, `incident_id`; CHECK «решённый статус ⇔ есть `decided_at`» и
+допустимые причины. `signal_events.actor_id` — автор решения.
+`conversation_windows.analyzed_by = ai | fallback`. `route_outcomes.basis`
+(JSONB) и `directory_version` — снимок маршрута решения; исход решения
+записывается с `author_id` оператора и `source = passive`, сигнал указывает на
+последний исход. Downgrade отказывает, пока есть решения, выбор маршрута или
+снимки.
+
+### Доделки P4
+
+- **Сторож разбора окна.** При закрытии окна в операционный пул ставится
+  `chat.window.fallback` (приоритет 50) с задержкой
+  `PASSIVE_ANALYSIS_FALLBACK_SECONDS` (90). Он делает тот же атомарный захват,
+  что `ai.window.analyze`, и разбирает окно только правилами, без модели и
+  бюджета. Кто захватил первым — тот и пишет; второй тихо выходит. Застал окно
+  в разборе — переносит себя на 60 с, пока чужой захват не станет брошенным.
+- **Настройки вместо констант:** `PASSIVE_DANGER_GROUP_MINUTES` и
+  `PASSIVE_CHAT_MEMO_PAUSE_MINUTES` (по умолчанию 30).
+- **Маршрут опасности до разбора.** `match.danger_kinds` в
+  `regions/responsibility.schema.json`: правило совпадает по подтипу **или**
+  по пересечению видов опасности, `location_scopes` остаётся фильтром, хотя
+  бы один из `subtypes`/`danger_kinds` непуст. `danger_kinds` допустимы только
+  у правил `emergency_service` (схема, разбор справочника и
+  `scripts/validate_region_pack.py`). `federal.gas_smell.emergency` получил
+  `danger_kinds: [gas]`: предварительный сигнал о газе сразу идёт в 112, а
+  «затопило» маршрут не меняет. Правила `smoke_fire` нет: в 488-ФЗ нет статьи,
+  прямо относящей пожарную охрану к службам вызова по 112 (ст. 3 ч. 2
+  определяет их общим образом, перечень определяет Правительство — ст. 6 ч. 1
+  п. 2).
+- **Ссылка в оповещении оператора** — строка текста
+  «Сигнал в кабинете: `PUBLIC_BASE_URL`/admin/?section=signals&signal=<id>»,
+  без кнопки. Доступ проверяет сам кабинет.
+- **Выключатель в кабинете** — endpoint выше; `ChatSummary` +=
+  `passive_capture_enabled`, `CapabilityFlags` += `passive_capture`.
+
+`Surface` += `signals` (у администратора УК и оператора, рядом с «Заявки»).
+`TestSessionRequest.actor` += `p5-operator`, `p5-admin` — синтетические
+участники браузерного стенда; в production тестовая сессия выключена.
+
 ## A-10 employee web-auth contract — 19.09.2026 branch slice
 
 Prefix `/api/v1/auth/employee`:

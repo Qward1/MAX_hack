@@ -31,6 +31,10 @@ services:
       # стенд показа закрывает окно после 20 секунд тишины, а не 120.
       PASSIVE_CAPTURE_ENABLED: ${PASSIVE_CAPTURE_ENABLED:-false}
       PASSIVE_WINDOW_SILENCE_SECONDS: ${PASSIVE_WINDOW_SILENCE_SECONDS:-20}
+      # Склейка опасности, пауза памятки и сторож разбора окна — настройки стенда.
+      PASSIVE_DANGER_GROUP_MINUTES: ${PASSIVE_DANGER_GROUP_MINUTES:-30}
+      PASSIVE_CHAT_MEMO_PAUSE_MINUTES: ${PASSIVE_CHAT_MEMO_PAUSE_MINUTES:-30}
+      PASSIVE_ANALYSIS_FALLBACK_SECONDS: ${PASSIVE_ANALYSIS_FALLBACK_SECONDS:-90}
       PUBLIC_BASE_URL: http://localhost:${API_PORT:-8000}
       CORS_ORIGINS: http://localhost:5173,http://localhost:${API_PORT:-8000}
     depends_on:

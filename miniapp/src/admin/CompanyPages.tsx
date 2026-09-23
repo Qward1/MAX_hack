@@ -83,7 +83,8 @@ export function HouseList({ houses }: { houses: House[] }) {
     <p>{h.open_ticket_count} открытых заявок · {h.operator_count} операторов · {h.responsible_count} ответственных</p>
     {h.warning && <p className="admin-feedback">{h.warning}</p>}
     <h3>Подключение MAX</h3>{!h.bindings.length && <p className="muted">Чат пока не подключён</p>}
-    {h.bindings.map(b => <p key={b.id}>{b.title ?? "MAX-чат"} · <Status value={b.status} />{b.suspension_reason && ` · ${b.suspension_reason}`}</p>)}
+    {h.bindings.map(b => <p key={b.id}>{b.title ?? "MAX-чат"} · <Status value={b.status} />{b.suspension_reason && ` · ${b.suspension_reason}`}
+      {b.status === "active" && b.passive_capture_enabled != null && ` · Чтение чата: ${b.passive_capture_enabled ? "включено" : "выключено"}`}</p>)}
   </section>)}</div> : <p className="state-panel">Доступных домов пока нет.</p>;
 }
 export function CompanyHouses({ base }: { base: string }) {
@@ -113,16 +114,24 @@ export function CompanyHouses({ base }: { base: string }) {
 }
 export function ChatConnections({ base }: { base: string }) {
   const houses = useRead<House[]>(`${base}/houses`);
+  const capabilities = useRead<Schema["CapabilitiesResponse"]>("/api/v1/capabilities");
   const action = useAction(houses.refresh);
   const [token, setToken] = useState("");
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const available = capabilities.data?.features.passive_capture === true;
   return <><Title description="Подключение существующих чатов к подтверждённым домам">MAX-чаты</Title>
     <Feedback loading={houses.loading} error={houses.error ?? action.error} />
     {token && <section className="one-time-link"><h2>Продолжите в MAX</h2><p>Передайте администратору чата эту команду для личного сообщения боту ДомСигнал:</p>
       <input aria-label="Команда подключения MAX" readOnly value={`/start ${token}`} onFocus={e => e.target.select()} />
       <p>Затем администратор добавляет существующего бота в группу. После проверки обновите страницу и подтвердите подключение.</p></section>}
     {!houses.error && houses.data?.map(h => <section className="admin-detail" key={h.management_id}><h2>{h.address}</h2>
-      {h.bindings.map(b => <p key={b.id}>{b.title ?? "MAX-чат"} · <Status value={b.status} /> · {b.scope_type === "entrance" ? `Подъезд ${b.scope_value}` : "Весь дом"}
-        {b.suspension_reason && ` · ${b.suspension_reason}`}</p>)}
+      {h.bindings.map(b => <div key={b.id} className="connection-row">
+        <p>{b.title ?? "MAX-чат"} · <Status value={b.status} /> · {b.scope_type === "entrance" ? `Подъезд ${b.scope_value}` : "Весь дом"}
+          {b.suspension_reason && ` · ${b.suspension_reason}`}</p>
+        {b.status === "active" && <PassiveSwitch binding={b} available={available} busy={action.busy}
+          confirming={confirm === b.id} ask={() => setConfirm(b.id)} cancel={() => setConfirm(null)}
+          change={async enabled => { await action.run(`/api/v1/chat-bindings/${b.id}/passive-capture`, { enabled }); setConfirm(null); }} />}
+      </div>)}
       <button className="ticket-button" disabled={action.busy} onClick={async () => {
         const result = await action.run<Schema["ConnectionView"]>(`/api/v1/houses/${h.house_id}/chat-connections`, { scope_type: "house" });
         if (result) setToken(result.correlation_token ?? "");
@@ -137,4 +146,28 @@ export function ChatConnections({ base }: { base: string }) {
       </div>)}
     </section>)}
   </>;
+}
+
+function PassiveSwitch({ binding, available, busy, confirming, ask, cancel, change }: {
+  binding: Schema["ChatSummary"]; available: boolean; busy: boolean; confirming: boolean;
+  ask: () => void; cancel: () => void; change: (enabled: boolean) => Promise<void>;
+}) {
+  const enabled = binding.passive_capture_enabled === true;
+  const hint = `passive-hint-${binding.id}`;
+  return <div className="passive-switch">
+    <p>Чтение чата: <strong>{enabled ? "включено" : "выключено"}</strong></p>
+    {!confirming ? <>
+      <button className="ticket-button secondary" disabled={busy || (!enabled && !available)}
+        aria-describedby={!enabled && !available ? hint : undefined} onClick={ask}>
+        {enabled ? "Выключить чтение чата" : "Включить чтение чата"}</button>
+      {!enabled && !available && <p id={hint} className="muted">Чтение чатов выключено на сервере ДомСигнала.</p>}
+    </> : <div className="admin-feedback" role="group" aria-label="Подтверждение">
+      <p>{enabled
+        ? "Бот перестанет сохранять сообщения этого чата. Уже собранные сигналы останутся."
+        : "Бот начнёт читать сообщения чата, чтобы замечать проблемы дома. В чат один раз придёт сообщение о чтении."}</p>
+      <button className="ticket-button" disabled={busy} onClick={() => void change(!enabled)}>
+        {enabled ? "Подтвердить: выключить" : "Подтвердить: включить"}</button>
+      <button className="ticket-button secondary" disabled={busy} onClick={cancel}>Отмена</button>
+    </div>}
+  </div>;
 }

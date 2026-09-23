@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from domsignal.contracts.common import FieldError
+
 
 class ServiceError(Exception):
     status = 400
@@ -43,6 +45,18 @@ class IdempotencyConflict(ServiceError):
     status = 409
     code = "idempotency_conflict"
     title = "Idempotency key conflict"
+
+
+class FieldValidationError(ServiceError):
+    """422 бизнес-проверки поля: значение формально верное, но недопустимое здесь."""
+
+    status = 422
+    code = "validation_error"
+    title = "Request validation failed"
+
+    def __init__(self, detail: str, *, field: str, code: str = "invalid_choice") -> None:
+        super().__init__(detail)
+        self.field_errors = [FieldError(field=field, code=code, message=detail)]
 
 
 class InvalidInitData(ServiceError):

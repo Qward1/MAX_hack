@@ -1053,6 +1053,11 @@
             "title": "Miniapp",
             "type": "boolean"
           },
+          "passive_capture": {
+            "default": false,
+            "title": "Passive Capture",
+            "type": "boolean"
+          },
           "photo_analysis": {
             "default": false,
             "title": "Photo Analysis",
@@ -1100,6 +1105,17 @@
           "max_chat_id": {
             "title": "Max Chat Id",
             "type": "string"
+          },
+          "passive_capture_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passive Capture Enabled"
           },
           "scope_type": {
             "title": "Scope Type",
@@ -1271,6 +1287,7 @@
               "enum": [
                 "overview",
                 "tickets",
+                "signals",
                 "assigned_houses",
                 "houses",
                 "staff",
@@ -1689,6 +1706,72 @@
           "last_error_code"
         ],
         "title": "ConnectionView",
+        "type": "object"
+      },
+      "DangerEvidenceView": {
+        "additionalProperties": false,
+        "description": "Основание опасности: срабатывание правил или цитата разбора.\n\nПри `evidence_unverified` цитаты разбора не показываются: вместо них идут\nсами реплики жителей из сохранённых цитат сигнала.",
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "kind": {
+            "enum": [
+              "gas",
+              "smoke_fire",
+              "electric",
+              "person_trapped",
+              "flooding",
+              "structural",
+              "other_hazard"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "source": {
+            "enum": [
+              "rules",
+              "semantic"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "source",
+          "text"
+        ],
+        "title": "DangerEvidenceView",
         "type": "object"
       },
       "DeadlineCreate": {
@@ -3630,6 +3713,51 @@
         "title": "PageMeta",
         "type": "object"
       },
+      "PassiveCaptureChange": {
+        "additionalProperties": false,
+        "description": "Включить или выключить чтение подключённого чата.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "PassiveCaptureChange",
+        "type": "object"
+      },
+      "PassiveCaptureView": {
+        "additionalProperties": false,
+        "properties": {
+          "binding_id": {
+            "format": "uuid",
+            "title": "Binding Id",
+            "type": "string"
+          },
+          "binding_version": {
+            "title": "Binding Version",
+            "type": "integer"
+          },
+          "notice_queued": {
+            "title": "Notice Queued",
+            "type": "boolean"
+          },
+          "passive_capture_enabled": {
+            "title": "Passive Capture Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "binding_id",
+          "binding_version",
+          "passive_capture_enabled",
+          "notice_queued"
+        ],
+        "title": "PassiveCaptureView",
+        "type": "object"
+      },
       "PlatformBindingView": {
         "additionalProperties": false,
         "properties": {
@@ -3656,6 +3784,17 @@
           "max_chat_id": {
             "title": "Max Chat Id",
             "type": "string"
+          },
+          "passive_capture_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passive Capture Enabled"
           },
           "scope_type": {
             "title": "Scope Type",
@@ -5097,6 +5236,1260 @@
         "title": "SessionResponse",
         "type": "object"
       },
+      "SignalActionDescriptor": {
+        "additionalProperties": false,
+        "description": "Команда оператора. `enabled=false` всегда сопровождается причиной.",
+        "properties": {
+          "code": {
+            "enum": [
+              "create-ticket",
+              "join",
+              "route-external",
+              "choose-route",
+              "dismiss"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "code",
+          "enabled"
+        ],
+        "title": "SignalActionDescriptor",
+        "type": "object"
+      },
+      "SignalAttention": {
+        "additionalProperties": false,
+        "description": "Открытые критические сигналы в выбранной области: для баннера.",
+        "properties": {
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "latest_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest At"
+          },
+          "latest_signal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Signal Id"
+          }
+        },
+        "required": [
+          "count"
+        ],
+        "title": "SignalAttention",
+        "type": "object"
+      },
+      "SignalChooseRoute": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "route_type": {
+            "enum": [
+              "uk_internal",
+              "municipality",
+              "resource_supplier",
+              "emergency_service",
+              "regional_operator",
+              "other_authority",
+              "unknown"
+            ],
+            "title": "Route Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_version",
+          "route_type"
+        ],
+        "title": "SignalChooseRoute",
+        "type": "object"
+      },
+      "SignalCreateTicket": {
+        "additionalProperties": false,
+        "description": "Заявка из сигнала. Без полей — категория и описание по умолчанию.",
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportCategory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 5,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_version"
+        ],
+        "title": "SignalCreateTicket",
+        "type": "object"
+      },
+      "SignalDanger": {
+        "additionalProperties": false,
+        "properties": {
+          "displaced": {
+            "default": false,
+            "title": "Displaced",
+            "type": "boolean"
+          },
+          "downgraded": {
+            "default": false,
+            "title": "Downgraded",
+            "type": "boolean"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/DangerEvidenceView"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "evidence_unverified": {
+            "default": false,
+            "title": "Evidence Unverified",
+            "type": "boolean"
+          },
+          "kinds": {
+            "items": {
+              "enum": [
+                "gas",
+                "smoke_fire",
+                "electric",
+                "person_trapped",
+                "flooding",
+                "structural",
+                "other_hazard"
+              ],
+              "type": "string"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "labels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Labels",
+            "type": "array"
+          },
+          "preliminary": {
+            "default": false,
+            "title": "Preliminary",
+            "type": "boolean"
+          },
+          "sources": {
+            "items": {
+              "enum": [
+                "rules",
+                "semantic"
+              ],
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kinds",
+          "labels",
+          "sources"
+        ],
+        "title": "SignalDanger",
+        "type": "object"
+      },
+      "SignalDecisionView": {
+        "additionalProperties": false,
+        "properties": {
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_a_problem",
+                  "duplicate",
+                  "resolved",
+                  "out_of_scope",
+                  "spam"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reason_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Label"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignalRouteSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "new",
+              "in_review",
+              "converted",
+              "routed_external",
+              "dismissed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "SignalDecisionView",
+        "type": "object"
+      },
+      "SignalDismiss": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "enum": [
+              "not_a_problem",
+              "duplicate",
+              "resolved",
+              "out_of_scope",
+              "spam"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_version",
+          "reason"
+        ],
+        "title": "SignalDismiss",
+        "type": "object"
+      },
+      "SignalEventView": {
+        "additionalProperties": false,
+        "description": "Безопасное подмножество событий: вид, подпись и время. Без деталей модели.",
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "at"
+        ],
+        "title": "SignalEventView",
+        "type": "object"
+      },
+      "SignalEvidenceValue": {
+        "additionalProperties": false,
+        "description": "Значение места или времени — только вместе с дословной цитатой.",
+        "properties": {
+          "quote": {
+            "title": "Quote",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "quote"
+        ],
+        "title": "SignalEvidenceValue",
+        "type": "object"
+      },
+      "SignalJoin": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "incident_id": {
+            "format": "uuid",
+            "title": "Incident Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_version",
+          "incident_id"
+        ],
+        "title": "SignalJoin",
+        "type": "object"
+      },
+      "SignalLinked": {
+        "additionalProperties": false,
+        "description": "Заявка или проблема, связанная с сигналом решением оператора.",
+        "properties": {
+          "incident_id": {
+            "format": "uuid",
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "report_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Id"
+          },
+          "ticket_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Id"
+          },
+          "ticket_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Number"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "incident_id",
+          "title"
+        ],
+        "title": "SignalLinked",
+        "type": "object"
+      },
+      "SignalList": {
+        "additionalProperties": false,
+        "properties": {
+          "attention": {
+            "$ref": "#/components/schemas/SignalAttention"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/SignalStrengthCounts"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SignalSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMeta"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "counts",
+          "attention"
+        ],
+        "title": "SignalList",
+        "type": "object"
+      },
+      "SignalMutation": {
+        "additionalProperties": false,
+        "properties": {
+          "effect_version": {
+            "minimum": 1.0,
+            "title": "Effect Version",
+            "type": "integer"
+          },
+          "replayed": {
+            "default": false,
+            "title": "Replayed",
+            "type": "boolean"
+          },
+          "signal": {
+            "$ref": "#/components/schemas/SignalView"
+          }
+        },
+        "required": [
+          "signal",
+          "effect_version"
+        ],
+        "title": "SignalMutation",
+        "type": "object"
+      },
+      "SignalPlace": {
+        "additionalProperties": false,
+        "properties": {
+          "entrance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignalEvidenceValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "floor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignalEvidenceValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "since": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignalEvidenceValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "SignalPlace",
+        "type": "object"
+      },
+      "SignalQuoteView": {
+        "additionalProperties": false,
+        "description": "Дословная цитата жителя с псевдонимом автора и временем.",
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "sent_at": {
+            "format": "date-time",
+            "title": "Sent At",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "author",
+          "sent_at",
+          "text"
+        ],
+        "title": "SignalQuoteView",
+        "type": "object"
+      },
+      "SignalRouteExternal": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_version"
+        ],
+        "title": "SignalRouteExternal",
+        "type": "object"
+      },
+      "SignalRouteSnapshot": {
+        "additionalProperties": false,
+        "description": "Маршрут, как он был показан в момент решения оператора.",
+        "properties": {
+          "basis_source_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis Source Title"
+          },
+          "basis_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis Text"
+          },
+          "basis_verification_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "verified",
+                  "needs_verification",
+                  "demo"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis Verification Status"
+          },
+          "basis_verified_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis Verified At"
+          },
+          "channel_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Label"
+          },
+          "directory_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Directory Version"
+          },
+          "organization_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization Name"
+          },
+          "route_type": {
+            "enum": [
+              "uk_internal",
+              "municipality",
+              "resource_supplier",
+              "emergency_service",
+              "regional_operator",
+              "other_authority",
+              "unknown"
+            ],
+            "title": "Route Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "route_type"
+        ],
+        "title": "SignalRouteSnapshot",
+        "type": "object"
+      },
+      "SignalStrengthCounts": {
+        "additionalProperties": false,
+        "properties": {
+          "critical": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Critical",
+            "type": "integer"
+          },
+          "medium": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Medium",
+            "type": "integer"
+          },
+          "strong": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Strong",
+            "type": "integer"
+          },
+          "weak": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Weak",
+            "type": "integer"
+          }
+        },
+        "title": "SignalStrengthCounts",
+        "type": "object"
+      },
+      "SignalSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "author_count": {
+            "minimum": 0.0,
+            "title": "Author Count",
+            "type": "integer"
+          },
+          "category": {
+            "$ref": "#/components/schemas/ReportCategory"
+          },
+          "danger_kinds": {
+            "items": {
+              "enum": [
+                "gas",
+                "smoke_fire",
+                "electric",
+                "person_trapped",
+                "flooding",
+                "structural",
+                "other_hazard"
+              ],
+              "type": "string"
+            },
+            "title": "Danger Kinds",
+            "type": "array"
+          },
+          "first_quote": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignalQuoteView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "first_seen_at": {
+            "format": "date-time",
+            "title": "First Seen At",
+            "type": "string"
+          },
+          "house_address": {
+            "title": "House Address",
+            "type": "string"
+          },
+          "house_id": {
+            "format": "uuid",
+            "title": "House Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_demo": {
+            "default": false,
+            "title": "Is Demo",
+            "type": "boolean"
+          },
+          "last_seen_at": {
+            "format": "date-time",
+            "title": "Last Seen At",
+            "type": "string"
+          },
+          "object_label": {
+            "title": "Object Label",
+            "type": "string"
+          },
+          "place": {
+            "$ref": "#/components/schemas/SignalPlace"
+          },
+          "report_count": {
+            "minimum": 0.0,
+            "title": "Report Count",
+            "type": "integer"
+          },
+          "requires_operator_choice": {
+            "default": false,
+            "title": "Requires Operator Choice",
+            "type": "boolean"
+          },
+          "route_source": {
+            "enum": [
+              "router",
+              "operator"
+            ],
+            "title": "Route Source",
+            "type": "string"
+          },
+          "route_type": {
+            "enum": [
+              "uk_internal",
+              "municipality",
+              "resource_supplier",
+              "emergency_service",
+              "regional_operator",
+              "other_authority",
+              "unknown"
+            ],
+            "title": "Route Type",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "in_review",
+              "converted",
+              "routed_external",
+              "dismissed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "strength": {
+            "enum": [
+              "critical",
+              "strong",
+              "medium",
+              "weak"
+            ],
+            "title": "Strength",
+            "type": "string"
+          },
+          "strength_reason": {
+            "title": "Strength Reason",
+            "type": "string"
+          },
+          "subtype": {
+            "title": "Subtype",
+            "type": "string"
+          },
+          "subtype_label": {
+            "title": "Subtype Label",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "house_id",
+          "house_address",
+          "subtype",
+          "subtype_label",
+          "object_label",
+          "category",
+          "strength",
+          "strength_reason",
+          "status",
+          "report_count",
+          "author_count",
+          "first_seen_at",
+          "last_seen_at",
+          "place",
+          "route_type",
+          "route_source",
+          "version"
+        ],
+        "title": "SignalSummary",
+        "type": "object"
+      },
+      "SignalTerritory": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          },
+          "scope": {
+            "enum": [
+              "apartment",
+              "house_common",
+              "house_territory",
+              "municipal_territory",
+              "external_network",
+              "other_building",
+              "unknown"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "label"
+        ],
+        "title": "SignalTerritory",
+        "type": "object"
+      },
+      "SignalTicketDraft": {
+        "additionalProperties": false,
+        "description": "Что уйдёт в заявку по умолчанию: категория и описание из цитат.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/ReportCategory"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "description"
+        ],
+        "title": "SignalTicketDraft",
+        "type": "object"
+      },
+      "SignalView": {
+        "additionalProperties": false,
+        "properties": {
+          "action_card": {
+            "$ref": "#/components/schemas/ActionCard"
+          },
+          "allowed_actions": {
+            "items": {
+              "$ref": "#/components/schemas/SignalActionDescriptor"
+            },
+            "title": "Allowed Actions",
+            "type": "array"
+          },
+          "author_count": {
+            "minimum": 0.0,
+            "title": "Author Count",
+            "type": "integer"
+          },
+          "category": {
+            "$ref": "#/components/schemas/ReportCategory"
+          },
+          "danger": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignalDanger"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "danger_kinds": {
+            "items": {
+              "enum": [
+                "gas",
+                "smoke_fire",
+                "electric",
+                "person_trapped",
+                "flooding",
+                "structural",
+                "other_hazard"
+              ],
+              "type": "string"
+            },
+            "title": "Danger Kinds",
+            "type": "array"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignalDecisionView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/SignalEventView"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "first_quote": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignalQuoteView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "first_seen_at": {
+            "format": "date-time",
+            "title": "First Seen At",
+            "type": "string"
+          },
+          "house_address": {
+            "title": "House Address",
+            "type": "string"
+          },
+          "house_id": {
+            "format": "uuid",
+            "title": "House Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_demo": {
+            "default": false,
+            "title": "Is Demo",
+            "type": "boolean"
+          },
+          "join_candidates": {
+            "items": {
+              "$ref": "#/components/schemas/DuplicateCandidate"
+            },
+            "title": "Join Candidates",
+            "type": "array"
+          },
+          "last_seen_at": {
+            "format": "date-time",
+            "title": "Last Seen At",
+            "type": "string"
+          },
+          "linked": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignalLinked"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "object_label": {
+            "title": "Object Label",
+            "type": "string"
+          },
+          "place": {
+            "$ref": "#/components/schemas/SignalPlace"
+          },
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/SignalQuoteView"
+            },
+            "title": "Quotes",
+            "type": "array"
+          },
+          "report_count": {
+            "minimum": 0.0,
+            "title": "Report Count",
+            "type": "integer"
+          },
+          "requires_operator_choice": {
+            "default": false,
+            "title": "Requires Operator Choice",
+            "type": "boolean"
+          },
+          "route_choices": {
+            "items": {
+              "enum": [
+                "uk_internal",
+                "municipality",
+                "resource_supplier",
+                "emergency_service",
+                "regional_operator",
+                "other_authority",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            "title": "Route Choices",
+            "type": "array"
+          },
+          "route_chosen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Chosen At"
+          },
+          "route_chosen_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Chosen By"
+          },
+          "route_source": {
+            "enum": [
+              "router",
+              "operator"
+            ],
+            "title": "Route Source",
+            "type": "string"
+          },
+          "route_type": {
+            "enum": [
+              "uk_internal",
+              "municipality",
+              "resource_supplier",
+              "emergency_service",
+              "regional_operator",
+              "other_authority",
+              "unknown"
+            ],
+            "title": "Route Type",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "in_review",
+              "converted",
+              "routed_external",
+              "dismissed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "strength": {
+            "enum": [
+              "critical",
+              "strong",
+              "medium",
+              "weak"
+            ],
+            "title": "Strength",
+            "type": "string"
+          },
+          "strength_reason": {
+            "title": "Strength Reason",
+            "type": "string"
+          },
+          "subtype": {
+            "title": "Subtype",
+            "type": "string"
+          },
+          "subtype_label": {
+            "title": "Subtype Label",
+            "type": "string"
+          },
+          "territory": {
+            "$ref": "#/components/schemas/SignalTerritory"
+          },
+          "ticket_draft": {
+            "$ref": "#/components/schemas/SignalTicketDraft"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "house_id",
+          "house_address",
+          "subtype",
+          "subtype_label",
+          "object_label",
+          "category",
+          "strength",
+          "strength_reason",
+          "status",
+          "report_count",
+          "author_count",
+          "first_seen_at",
+          "last_seen_at",
+          "place",
+          "route_type",
+          "route_source",
+          "version",
+          "territory",
+          "action_card",
+          "ticket_draft"
+        ],
+        "title": "SignalView",
+        "type": "object"
+      },
       "StaffDetail": {
         "additionalProperties": false,
         "properties": {
@@ -5156,7 +6549,9 @@
               "a16-resident",
               "a16-neighbor",
               "a16-outsider",
-              "a16-beta-admin"
+              "a16-beta-admin",
+              "p5-operator",
+              "p5-admin"
             ],
             "title": "Actor",
             "type": "string"
@@ -9528,6 +10923,225 @@
         "summary": "Capabilities",
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/api/v1/chat-bindings/{binding_id}/passive-capture": {
+      "post": {
+        "description": "Выключатель чтения чата в кабинете — то же право `chat.connect`, что у CLI.\n\nВключение ставит сообщение о чтении чата один раз на версию привязки;\nвыключение сразу прекращает приём, собранные сигналы остаются.",
+        "operationId": "passive_capture_api_v1_chat_bindings__binding_id__passive_capture_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "binding_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Binding Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PassiveCaptureChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PassiveCaptureView"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Passive Capture",
+        "tags": [
+          "chat-connections"
         ]
       }
     },
@@ -19170,6 +20784,1655 @@
         "summary": "Route Outcome",
         "tags": [
           "incidents"
+        ]
+      }
+    },
+    "/api/v1/signals": {
+      "get": {
+        "description": "Только Signal Inbox: критические сверху, внутри силы — свежие первыми.\n\nБез `house_id` — все дома, доступные сотруднику. `status` и `strength`\nможно повторять; пусто — без фильтра.",
+        "operationId": "signals_api_v1_signals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "house_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "House Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "new",
+                      "in_review",
+                      "converted",
+                      "routed_external",
+                      "dismissed"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "strength",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "critical",
+                      "strong",
+                      "medium",
+                      "weak"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Strength"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalList"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Signals",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/api/v1/signals/{signal_id}": {
+      "get": {
+        "operationId": "signal_detail_api_v1_signals__signal_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Signal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalView"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Signal Detail",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/api/v1/signals/{signal_id}/choose-route": {
+      "post": {
+        "description": "Выбор маршрута, когда роутер вернул `unknown` или требует выбора оператора.",
+        "operationId": "choose_route_api_v1_signals__signal_id__choose_route_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Signal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 8,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalChooseRoute"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalMutation"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Choose Route",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/api/v1/signals/{signal_id}/create-ticket": {
+      "post": {
+        "description": "Заявка из сигнала в контексте сотрудника. Автоматически не создаётся никогда.",
+        "operationId": "create_ticket_api_v1_signals__signal_id__create_ticket_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Signal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 8,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalCreateTicket"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalMutation"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Ticket",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/api/v1/signals/{signal_id}/dismiss": {
+      "post": {
+        "description": "Закрыть сигнал с обязательной причиной: она нужна оценке качества.",
+        "operationId": "dismiss_api_v1_signals__signal_id__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Signal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 8,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalDismiss"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalMutation"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Dismiss",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/api/v1/signals/{signal_id}/join": {
+      "post": {
+        "description": "Новый Report под открытой проблемой того же дома; второй Ticket не создаётся.",
+        "operationId": "join_api_v1_signals__signal_id__join_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Signal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 8,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalJoin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalMutation"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Join",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/api/v1/signals/{signal_id}/route-external": {
+      "post": {
+        "description": "Отметка внешнего маршрута со снимком. Продукт никуда ничего не отправляет.",
+        "operationId": "route_external_api_v1_signals__signal_id__route_external_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Signal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 8,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalRouteExternal"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalMutation"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Route External",
+        "tags": [
+          "signals"
         ]
       }
     },

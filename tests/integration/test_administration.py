@@ -265,6 +265,7 @@ async def test_new_employee_mfa_boundary_and_replay(env):
     assert boot["companies"][0]["surfaces"] == [
         "overview",
         "tickets",
+        "signals",
         "houses",
         "staff",
         "chat_connections",

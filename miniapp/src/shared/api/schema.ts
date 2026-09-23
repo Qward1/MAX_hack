@@ -331,6 +331,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/chat-bindings/{binding_id}/passive-capture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Passive Capture
+         * @description Выключатель чтения чата в кабинете — то же право `chat.connect`, что у CLI.
+         *
+         *     Включение ставит сообщение о чтении чата один раз на версию привязки;
+         *     выключение сразу прекращает приём, собранные сигналы остаются.
+         */
+        post: operations["passive_capture_api_v1_chat_bindings__binding_id__passive_capture_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/chat-connections/{request_id}": {
         parameters: {
             query?: never;
@@ -1070,6 +1093,146 @@ export interface paths {
         get: operations["route_outcome_api_v1_route_outcomes__outcome_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/signals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Signals
+         * @description Только Signal Inbox: критические сверху, внутри силы — свежие первыми.
+         *
+         *     Без `house_id` — все дома, доступные сотруднику. `status` и `strength`
+         *     можно повторять; пусто — без фильтра.
+         */
+        get: operations["signals_api_v1_signals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/signals/{signal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Signal Detail */
+        get: operations["signal_detail_api_v1_signals__signal_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/signals/{signal_id}/choose-route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Choose Route
+         * @description Выбор маршрута, когда роутер вернул `unknown` или требует выбора оператора.
+         */
+        post: operations["choose_route_api_v1_signals__signal_id__choose_route_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/signals/{signal_id}/create-ticket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Ticket
+         * @description Заявка из сигнала в контексте сотрудника. Автоматически не создаётся никогда.
+         */
+        post: operations["create_ticket_api_v1_signals__signal_id__create_ticket_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/signals/{signal_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss
+         * @description Закрыть сигнал с обязательной причиной: она нужна оценке качества.
+         */
+        post: operations["dismiss_api_v1_signals__signal_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/signals/{signal_id}/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join
+         * @description Новый Report под открытой проблемой того же дома; второй Ticket не создаётся.
+         */
+        post: operations["join_api_v1_signals__signal_id__join_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/signals/{signal_id}/route-external": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Route External
+         * @description Отметка внешнего маршрута со снимком. Продукт никуда ничего не отправляет.
+         */
+        post: operations["route_external_api_v1_signals__signal_id__route_external_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1816,6 +1979,11 @@ export interface components {
              */
             miniapp: boolean;
             /**
+             * Passive Capture
+             * @default false
+             */
+            passive_capture: boolean;
+            /**
              * Photo Analysis
              * @default false
              */
@@ -1852,6 +2020,8 @@ export interface components {
             id: string;
             /** Max Chat Id */
             max_chat_id: string;
+            /** Passive Capture Enabled */
+            passive_capture_enabled?: boolean | null;
             /** Scope Type */
             scope_type: string;
             /** Scope Value */
@@ -1905,7 +2075,7 @@ export interface components {
             /** Name */
             name: string;
             /** Surfaces */
-            surfaces: ("overview" | "tickets" | "assigned_houses" | "houses" | "staff" | "chat_connections" | "organization")[];
+            surfaces: ("overview" | "tickets" | "signals" | "assigned_houses" | "houses" | "staff" | "chat_connections" | "organization")[];
         };
         /** CompanyHouseView */
         CompanyHouseView: {
@@ -2054,6 +2224,33 @@ export interface components {
             /** Scope Value */
             scope_value: string | null;
             status: components["schemas"]["ConnectionStatus"];
+        };
+        /**
+         * DangerEvidenceView
+         * @description Основание опасности: срабатывание правил или цитата разбора.
+         *
+         *     При `evidence_unverified` цитаты разбора не показываются: вместо них идут
+         *     сами реплики жителей из сохранённых цитат сигнала.
+         */
+        DangerEvidenceView: {
+            /** Author */
+            author?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "gas" | "smoke_fire" | "electric" | "person_trapped" | "flooding" | "structural" | "other_hazard";
+            /** Label */
+            label: string;
+            /** Sent At */
+            sent_at?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "rules" | "semantic";
+            /** Text */
+            text: string;
         };
         /** DeadlineCreate */
         DeadlineCreate: {
@@ -2792,6 +2989,28 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * PassiveCaptureChange
+         * @description Включить или выключить чтение подключённого чата.
+         */
+        PassiveCaptureChange: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** PassiveCaptureView */
+        PassiveCaptureView: {
+            /**
+             * Binding Id
+             * Format: uuid
+             */
+            binding_id: string;
+            /** Binding Version */
+            binding_version: number;
+            /** Notice Queued */
+            notice_queued: boolean;
+            /** Passive Capture Enabled */
+            passive_capture_enabled: boolean;
+        };
         /** PlatformBindingView */
         PlatformBindingView: {
             /**
@@ -2816,6 +3035,8 @@ export interface components {
             management_id: string;
             /** Max Chat Id */
             max_chat_id: string;
+            /** Passive Capture Enabled */
+            passive_capture_enabled?: boolean | null;
             /** Scope Type */
             scope_type: string;
             /** Scope Value */
@@ -3324,6 +3545,454 @@ export interface components {
              */
             token_type: "bearer";
         };
+        /**
+         * SignalActionDescriptor
+         * @description Команда оператора. `enabled=false` всегда сопровождается причиной.
+         */
+        SignalActionDescriptor: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "create-ticket" | "join" | "route-external" | "choose-route" | "dismiss";
+            /** Enabled */
+            enabled: boolean;
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * SignalAttention
+         * @description Открытые критические сигналы в выбранной области: для баннера.
+         */
+        SignalAttention: {
+            /** Count */
+            count: number;
+            /** Latest At */
+            latest_at?: string | null;
+            /** Latest Signal Id */
+            latest_signal_id?: string | null;
+        };
+        /** SignalChooseRoute */
+        SignalChooseRoute: {
+            /** Expected Version */
+            expected_version: number;
+            /**
+             * Route Type
+             * @enum {string}
+             */
+            route_type: "uk_internal" | "municipality" | "resource_supplier" | "emergency_service" | "regional_operator" | "other_authority" | "unknown";
+        };
+        /**
+         * SignalCreateTicket
+         * @description Заявка из сигнала. Без полей — категория и описание по умолчанию.
+         */
+        SignalCreateTicket: {
+            category?: components["schemas"]["ReportCategory"] | null;
+            /** Description */
+            description?: string | null;
+            /** Expected Version */
+            expected_version: number;
+        };
+        /** SignalDanger */
+        SignalDanger: {
+            /**
+             * Displaced
+             * @default false
+             */
+            displaced: boolean;
+            /**
+             * Downgraded
+             * @default false
+             */
+            downgraded: boolean;
+            /** Evidence */
+            evidence?: components["schemas"]["DangerEvidenceView"][];
+            /**
+             * Evidence Unverified
+             * @default false
+             */
+            evidence_unverified: boolean;
+            /** Kinds */
+            kinds: ("gas" | "smoke_fire" | "electric" | "person_trapped" | "flooding" | "structural" | "other_hazard")[];
+            /** Labels */
+            labels: string[];
+            /**
+             * Preliminary
+             * @default false
+             */
+            preliminary: boolean;
+            /** Sources */
+            sources: ("rules" | "semantic")[];
+        };
+        /** SignalDecisionView */
+        SignalDecisionView: {
+            /** Decided At */
+            decided_at?: string | null;
+            /** Decided By */
+            decided_by?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Reason */
+            reason?: ("not_a_problem" | "duplicate" | "resolved" | "out_of_scope" | "spam") | null;
+            /** Reason Label */
+            reason_label?: string | null;
+            route?: components["schemas"]["SignalRouteSnapshot"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "in_review" | "converted" | "routed_external" | "dismissed";
+        };
+        /** SignalDismiss */
+        SignalDismiss: {
+            /** Expected Version */
+            expected_version: number;
+            /** Note */
+            note?: string | null;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "not_a_problem" | "duplicate" | "resolved" | "out_of_scope" | "spam";
+        };
+        /**
+         * SignalEventView
+         * @description Безопасное подмножество событий: вид, подпись и время. Без деталей модели.
+         */
+        SignalEventView: {
+            /** Actor */
+            actor?: string | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+        };
+        /**
+         * SignalEvidenceValue
+         * @description Значение места или времени — только вместе с дословной цитатой.
+         */
+        SignalEvidenceValue: {
+            /** Quote */
+            quote: string;
+            /** Value */
+            value: string;
+        };
+        /** SignalJoin */
+        SignalJoin: {
+            /** Expected Version */
+            expected_version: number;
+            /**
+             * Incident Id
+             * Format: uuid
+             */
+            incident_id: string;
+        };
+        /**
+         * SignalLinked
+         * @description Заявка или проблема, связанная с сигналом решением оператора.
+         */
+        SignalLinked: {
+            /**
+             * Incident Id
+             * Format: uuid
+             */
+            incident_id: string;
+            /** Report Id */
+            report_id?: string | null;
+            /** Ticket Id */
+            ticket_id?: string | null;
+            /** Ticket Number */
+            ticket_number?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** SignalList */
+        SignalList: {
+            attention: components["schemas"]["SignalAttention"];
+            counts: components["schemas"]["SignalStrengthCounts"];
+            /** Items */
+            items: components["schemas"]["SignalSummary"][];
+            page: components["schemas"]["PageMeta"];
+        };
+        /** SignalMutation */
+        SignalMutation: {
+            /** Effect Version */
+            effect_version: number;
+            /**
+             * Replayed
+             * @default false
+             */
+            replayed: boolean;
+            signal: components["schemas"]["SignalView"];
+        };
+        /** SignalPlace */
+        SignalPlace: {
+            entrance?: components["schemas"]["SignalEvidenceValue"] | null;
+            floor?: components["schemas"]["SignalEvidenceValue"] | null;
+            since?: components["schemas"]["SignalEvidenceValue"] | null;
+        };
+        /**
+         * SignalQuoteView
+         * @description Дословная цитата жителя с псевдонимом автора и временем.
+         */
+        SignalQuoteView: {
+            /** Author */
+            author: string;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            /** Text */
+            text: string;
+        };
+        /** SignalRouteExternal */
+        SignalRouteExternal: {
+            /** Expected Version */
+            expected_version: number;
+        };
+        /**
+         * SignalRouteSnapshot
+         * @description Маршрут, как он был показан в момент решения оператора.
+         */
+        SignalRouteSnapshot: {
+            /** Basis Source Title */
+            basis_source_title?: string | null;
+            /** Basis Text */
+            basis_text?: string | null;
+            /** Basis Verification Status */
+            basis_verification_status?: ("verified" | "needs_verification" | "demo") | null;
+            /** Basis Verified At */
+            basis_verified_at?: string | null;
+            /** Channel Label */
+            channel_label?: string | null;
+            /** Directory Version */
+            directory_version?: string | null;
+            /** Organization Name */
+            organization_name?: string | null;
+            /**
+             * Route Type
+             * @enum {string}
+             */
+            route_type: "uk_internal" | "municipality" | "resource_supplier" | "emergency_service" | "regional_operator" | "other_authority" | "unknown";
+        };
+        /** SignalStrengthCounts */
+        SignalStrengthCounts: {
+            /**
+             * Critical
+             * @default 0
+             */
+            critical: number;
+            /**
+             * Medium
+             * @default 0
+             */
+            medium: number;
+            /**
+             * Strong
+             * @default 0
+             */
+            strong: number;
+            /**
+             * Weak
+             * @default 0
+             */
+            weak: number;
+        };
+        /** SignalSummary */
+        SignalSummary: {
+            /** Author Count */
+            author_count: number;
+            category: components["schemas"]["ReportCategory"];
+            /** Danger Kinds */
+            danger_kinds?: ("gas" | "smoke_fire" | "electric" | "person_trapped" | "flooding" | "structural" | "other_hazard")[];
+            first_quote?: components["schemas"]["SignalQuoteView"] | null;
+            /**
+             * First Seen At
+             * Format: date-time
+             */
+            first_seen_at: string;
+            /** House Address */
+            house_address: string;
+            /**
+             * House Id
+             * Format: uuid
+             */
+            house_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Is Demo
+             * @default false
+             */
+            is_demo: boolean;
+            /**
+             * Last Seen At
+             * Format: date-time
+             */
+            last_seen_at: string;
+            /** Object Label */
+            object_label: string;
+            place: components["schemas"]["SignalPlace"];
+            /** Report Count */
+            report_count: number;
+            /**
+             * Requires Operator Choice
+             * @default false
+             */
+            requires_operator_choice: boolean;
+            /**
+             * Route Source
+             * @enum {string}
+             */
+            route_source: "router" | "operator";
+            /**
+             * Route Type
+             * @enum {string}
+             */
+            route_type: "uk_internal" | "municipality" | "resource_supplier" | "emergency_service" | "regional_operator" | "other_authority" | "unknown";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "in_review" | "converted" | "routed_external" | "dismissed";
+            /**
+             * Strength
+             * @enum {string}
+             */
+            strength: "critical" | "strong" | "medium" | "weak";
+            /** Strength Reason */
+            strength_reason: string;
+            /** Subtype */
+            subtype: string;
+            /** Subtype Label */
+            subtype_label: string;
+            /** Version */
+            version: number;
+        };
+        /** SignalTerritory */
+        SignalTerritory: {
+            /** Label */
+            label: string;
+            /** Quote */
+            quote?: string | null;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "apartment" | "house_common" | "house_territory" | "municipal_territory" | "external_network" | "other_building" | "unknown";
+        };
+        /**
+         * SignalTicketDraft
+         * @description Что уйдёт в заявку по умолчанию: категория и описание из цитат.
+         */
+        SignalTicketDraft: {
+            category: components["schemas"]["ReportCategory"];
+            /** Description */
+            description: string;
+        };
+        /** SignalView */
+        SignalView: {
+            action_card: components["schemas"]["ActionCard"];
+            /** Allowed Actions */
+            allowed_actions?: components["schemas"]["SignalActionDescriptor"][];
+            /** Author Count */
+            author_count: number;
+            category: components["schemas"]["ReportCategory"];
+            danger?: components["schemas"]["SignalDanger"] | null;
+            /** Danger Kinds */
+            danger_kinds?: ("gas" | "smoke_fire" | "electric" | "person_trapped" | "flooding" | "structural" | "other_hazard")[];
+            decision?: components["schemas"]["SignalDecisionView"] | null;
+            /** Events */
+            events?: components["schemas"]["SignalEventView"][];
+            first_quote?: components["schemas"]["SignalQuoteView"] | null;
+            /**
+             * First Seen At
+             * Format: date-time
+             */
+            first_seen_at: string;
+            /** House Address */
+            house_address: string;
+            /**
+             * House Id
+             * Format: uuid
+             */
+            house_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Is Demo
+             * @default false
+             */
+            is_demo: boolean;
+            /** Join Candidates */
+            join_candidates?: components["schemas"]["DuplicateCandidate"][];
+            /**
+             * Last Seen At
+             * Format: date-time
+             */
+            last_seen_at: string;
+            linked?: components["schemas"]["SignalLinked"] | null;
+            /** Object Label */
+            object_label: string;
+            place: components["schemas"]["SignalPlace"];
+            /** Quotes */
+            quotes?: components["schemas"]["SignalQuoteView"][];
+            /** Report Count */
+            report_count: number;
+            /**
+             * Requires Operator Choice
+             * @default false
+             */
+            requires_operator_choice: boolean;
+            /** Route Choices */
+            route_choices?: ("uk_internal" | "municipality" | "resource_supplier" | "emergency_service" | "regional_operator" | "other_authority" | "unknown")[];
+            /** Route Chosen At */
+            route_chosen_at?: string | null;
+            /** Route Chosen By */
+            route_chosen_by?: string | null;
+            /**
+             * Route Source
+             * @enum {string}
+             */
+            route_source: "router" | "operator";
+            /**
+             * Route Type
+             * @enum {string}
+             */
+            route_type: "uk_internal" | "municipality" | "resource_supplier" | "emergency_service" | "regional_operator" | "other_authority" | "unknown";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "in_review" | "converted" | "routed_external" | "dismissed";
+            /**
+             * Strength
+             * @enum {string}
+             */
+            strength: "critical" | "strong" | "medium" | "weak";
+            /** Strength Reason */
+            strength_reason: string;
+            /** Subtype */
+            subtype: string;
+            /** Subtype Label */
+            subtype_label: string;
+            territory: components["schemas"]["SignalTerritory"];
+            ticket_draft: components["schemas"]["SignalTicketDraft"];
+            /** Version */
+            version: number;
+        };
         /** StaffDetail */
         StaffDetail: {
             /** Assignments */
@@ -3350,7 +4019,7 @@ export interface components {
              * @default demo
              * @enum {string}
              */
-            actor: "demo" | "demo-neighbour" | "demo-third" | "outsider" | "a16-admin" | "a16-responsible" | "a16-operator" | "a16-revoked" | "a16-resident" | "a16-neighbor" | "a16-outsider" | "a16-beta-admin";
+            actor: "demo" | "demo-neighbour" | "demo-third" | "outsider" | "a16-admin" | "a16-responsible" | "a16-operator" | "a16-revoked" | "a16-resident" | "a16-neighbor" | "a16-outsider" | "a16-beta-admin" | "p5-operator" | "p5-admin";
         };
         /**
          * TicketAction
@@ -5866,6 +6535,133 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CapabilitiesResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    passive_capture_api_v1_chat_bindings__binding_id__passive_capture_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                binding_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PassiveCaptureChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PassiveCaptureView"];
                 };
             };
             /** @description Unauthorized */
@@ -11478,6 +12274,901 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RouteOutcomeView"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    signals_api_v1_signals_get: {
+        parameters: {
+            query?: {
+                house_id?: string | null;
+                status?: ("new" | "in_review" | "converted" | "routed_external" | "dismissed")[] | null;
+                strength?: ("critical" | "strong" | "medium" | "weak")[] | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalList"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    signal_detail_api_v1_signals__signal_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                signal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalView"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    choose_route_api_v1_signals__signal_id__choose_route_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                signal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignalChooseRoute"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalMutation"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_ticket_api_v1_signals__signal_id__create_ticket_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                signal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignalCreateTicket"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalMutation"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    dismiss_api_v1_signals__signal_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                signal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignalDismiss"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalMutation"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    join_api_v1_signals__signal_id__join_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                signal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignalJoin"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalMutation"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    route_external_api_v1_signals__signal_id__route_external_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                signal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignalRouteExternal"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalMutation"];
                 };
             };
             /** @description Unauthorized */

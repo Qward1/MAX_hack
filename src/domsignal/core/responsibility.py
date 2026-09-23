@@ -43,6 +43,15 @@ _RULE_ROUTE_TYPES = (
     "regional_operator",
     "other_authority",
 )
+_DANGER_KINDS = (
+    "gas",
+    "smoke_fire",
+    "electric",
+    "person_trapped",
+    "flooding",
+    "structural",
+    "other_hazard",
+)
 
 
 class DirectoryError(ValueError):
@@ -269,10 +278,21 @@ class Rule:
     verification: Verification
     layer_id: str = FEDERAL_LAYER_ID
     layer_depth: int = 0
+    #: Виды опасности, по которым правило совпадает и без подтипа. Допустимы
+    #: только у правил экстренной службы: опасность ортогональна маршруту.
+    danger_kinds: tuple[str, ...] = ()
 
-    def matches(self, subtype: str, location_scope: str) -> bool:
-        """Пустой список значений в `match` означает «любое значение»."""
-        if subtype not in self.subtypes:
+    def matches(
+        self, subtype: str, location_scope: str, danger_kinds: Sequence[str] = ()
+    ) -> bool:
+        """Совпадение по подтипу или по пересечению видов опасности.
+
+        `location_scopes` остаётся дополнительным фильтром; пустой список
+        значений в `match` означает «любое значение».
+        """
+        by_subtype = subtype in self.subtypes
+        by_danger = any(kind in self.danger_kinds for kind in danger_kinds)
+        if not (by_subtype or by_danger):
             return False
         return not self.location_scopes or location_scope in self.location_scopes
 
@@ -285,19 +305,25 @@ class Rule:
             raise DirectoryError(f"{where}: priority must be an integer")
         match = _mapping(entry.get("match"), f"{where}.match")
         subtypes = _codes(match, "subtypes", f"{where}.match")
-        if not subtypes:
-            raise DirectoryError(f"{where}.match: subtypes must not be empty")
+        danger_kinds = _codes(match, "danger_kinds", f"{where}.match")
+        if not subtypes and not danger_kinds:
+            raise DirectoryError(f"{where}.match: subtypes or danger_kinds must not be empty")
+        route_type = _literal(
+            _text(entry, "route_type", where), _RULE_ROUTE_TYPES, where, "route_type"
+        )
+        if danger_kinds and route_type != "emergency_service":
+            raise DirectoryError(
+                f"{where}.match: danger_kinds are allowed only for emergency_service rules"
+            )
+        for kind in danger_kinds:
+            _literal(kind, _DANGER_KINDS, f"{where}.match", "danger_kinds")
         return cls(
             id=identifier,
             priority=priority,
             subtypes=subtypes,
             location_scopes=_codes(match, "location_scopes", f"{where}.match"),
-            route_type=cast(
-                RouteType,
-                _literal(
-                    _text(entry, "route_type", where), _RULE_ROUTE_TYPES, where, "route_type"
-                ),
-            ),
+            danger_kinds=danger_kinds,
+            route_type=cast(RouteType, route_type),
             organization_id=_optional_text(entry, "organization_id", where),
             channel_ids=_codes(entry, "channel_ids", where),
             can_prepare_appeal=_flag(entry, "can_prepare_appeal", where),
