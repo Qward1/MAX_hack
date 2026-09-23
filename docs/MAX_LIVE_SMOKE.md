@@ -1,5 +1,18 @@
 # MAX live smoke — RESIDENT / GROUP / TICKET PRODUCT LOOP LIVE VERIFIED (MAX WEB)
 
+## P7b — выкладка черновика обращения — 23 сентября 2026
+
+Живой прогон не повторялся. `BUILD_COMMIT` = `9d4988dc0c02cd0d228e0dc54eb623d852a126d4`
+(«merge: appeal draft holds only what goes into the service form (P7b)»),
+образ `sha256:1b6446a78471d1c184db16162295ac2e721f9b879ff775077891784aeb67be2e`,
+откат — `domsignal-backend:pre-286976a`; миграций нет; резервная копия
+`/var/backups/domsignal/domsignal-20260923T201524467510Z.dump` (220 647 байт,
+mode 600, `pg_restore --list` — 369 строк). После выкладки (≈20:16 UTC):
+`/ready` 200 снаружи, `/version` = `9d4988d`, capabilities без изменений,
+webhook без секрета 401, подписка — одна, прежние URL и типы; перезапусков и
+ошибок нет. Модель — по-прежнему `openai/gpt-5-mini` (решение по
+`sber/gigachat-2` — за владельцем).
+
 ## P7b — выкладка P6 и проводки — 23 сентября 2026
 
 Живой прогон не повторялся; выкладка кода после слияния P6 и проводки
