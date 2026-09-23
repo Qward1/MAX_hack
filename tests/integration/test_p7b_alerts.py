@@ -203,7 +203,8 @@ async def test_the_window_adding_a_kind_to_a_preliminary_signal_alerts_again(
 ) -> None:
     """Примирение: правила нашли газ, разбор окна — ещё и запертого человека."""
     await pv.bind()
-    line = "Пахнет газом, а в лифте застряла женщина"
+    # Правила находят здесь только газ; запертого человека — только разбор.
+    line = "Пахнет газом, и там кто-то стучит изнутри"
     use_model(
         pv,
         {
@@ -225,7 +226,7 @@ async def test_the_window_adding_a_kind_to_a_preliminary_signal_alerts_again(
                         },
                         {
                             "kind": "person_trapped",
-                            "evidence": [{"msg": "m1", "quote": "в лифте застряла женщина"}],
+                            "evidence": [{"msg": "m1", "quote": "кто-то стучит изнутри"}],
                             "contextual": False,
                         },
                     ],
