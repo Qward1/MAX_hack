@@ -1,5 +1,18 @@
 # MAX live smoke — RESIDENT / GROUP / TICKET PRODUCT LOOP LIVE VERIFIED (MAX WEB)
 
+## P7b — выкладка роутера, выключателя модели окон и выгрузки D2 — 24 сентября 2026
+
+Живой прогон не повторялся. `BUILD_COMMIT` = `72f32221b7cfdf48eb8525fab9ed26137cffc416`
+(«merge: router on the P6 reference, passive model switch, D2 export (P7b)»),
+образ `sha256:9bb5be42ca25d6f2d051ad3a079880c9667d8fb2e823d3fd50b9b949f46e3273`,
+откат — `domsignal-backend:pre-9d4988d`; миграций нет; резервная копия
+`/var/backups/domsignal/domsignal-20260923T211846070419Z.dump` (220 649 байт,
+mode 600, `pg_restore --list` — 369 строк). После выкладки (≈21:19 UTC):
+`/ready` 200 снаружи, `/version` = `72f3222`, webhook без секрета 401,
+подписка — одна, прежние URL и типы; в `ai-worker` `PASSIVE_LLM_ENABLED` =
+true (значение по умолчанию), модель `openai/gpt-5-mini`, таймаут 60 с;
+перезапусков и ошибок нет.
+
 ## P7b — выкладка черновика обращения — 23 сентября 2026
 
 Живой прогон не повторялся. `BUILD_COMMIT` = `9d4988dc0c02cd0d228e0dc54eb623d852a126d4`

@@ -258,6 +258,9 @@ DEV-A должен подогнать промпт/формат под `json_obj
   потолок, а не ожидание (p95 профиля ≈ 8 с).
 - Проверки на ветке: backend 750 passed / 1 skipped, frontend 129, contracts
   PASS, integration 347 (142 + 76 + 129), браузерные 36 passed / 2 skipped.
+- Слияние `72f3222`, отправлено в origin (`bd4230b..72f3222`, проверка
+  секретов — 0), **DEPLOYED** (`BUILD_COMMIT=72f3222`, копия БД
+  `domsignal-20260923T211846070419Z.dump`, откат `pre-9d4988d`).
 
 ### Уборка
 
