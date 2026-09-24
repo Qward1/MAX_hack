@@ -24,7 +24,7 @@ from domsignal.db.repositories.routing import RoutingRepository
 from domsignal.db.session import create_engine, create_session_factory
 from domsignal.settings import Settings
 from domsignal.tools import house_routing_profile, live_fixture, route_preview
-from domsignal.tools.seed_demo import DEMO_HOUSE_ID, OTHER_HOUSE_ID, seed
+from domsignal.tools.seed_demo import DEMO_HOUSE_ID, MOSCOW_HOUSE_ID, OTHER_HOUSE_ID, seed
 from tests.integration.migration_columns import without_added_columns
 from tests.integration.test_migrations import migrate
 
@@ -42,7 +42,14 @@ async def test_seed_creates_routing_profiles_idempotently(
     try:
         async with factory() as session:
             assert (
-                await session.scalar(select(func.count()).select_from(HouseRoutingProfile)) == 2
+                await session.scalar(select(func.count()).select_from(HouseRoutingProfile)) == 3
+            )
+            moscow = await session.get(HouseRoutingProfile, MOSCOW_HOUSE_ID)
+            assert moscow is not None
+            assert (moscow.region_code, moscow.municipality_code, moscow.territory_policy) == (
+                "RU-MOW",
+                "moscow",
+                "mixed",
             )
             demo = await session.get(HouseRoutingProfile, DEMO_HOUSE_ID)
             other = await session.get(HouseRoutingProfile, OTHER_HOUSE_ID)
@@ -77,7 +84,7 @@ async def test_seed_enables_ticket_intake_for_both_demo_houses(
             )
             assert enabled == [True, True]
             # Повторный seed не размножает периоды управления.
-            assert await session.scalar(select(func.count()).select_from(HouseManagement)) == 2
+            assert await session.scalar(select(func.count()).select_from(HouseManagement)) == 3
     finally:
         await engine.dispose()
 

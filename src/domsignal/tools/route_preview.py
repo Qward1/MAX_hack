@@ -101,7 +101,7 @@ def print_comparison(routing: RoutingService) -> None:
 async def run(args: argparse.Namespace) -> None:
     container = build_container(get_settings())
     try:
-        if args.compare_regions:
+        if getattr(args, "compare_regions", False):
             print_comparison(container.routing)
             return
         if args.house_id is None or args.subtype is None:
