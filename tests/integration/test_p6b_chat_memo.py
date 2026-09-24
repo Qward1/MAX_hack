@@ -63,3 +63,64 @@ async def test_a_hypothetical_alerts_the_operator_without_a_memo(pv) -> None:  #
     assert pv.messaging.sent, "оповещение оператора — как было"
     kinds = await events(pv)
     assert "chat_memo_not_eligible" in kinds and "chat_memo_queued" not in kinds
+
+
+# ------------------------- живой шаг 6: новый вид при открытой опасности
+
+
+async def test_a_trapped_person_is_not_glued_to_an_open_smoke_signal_by_key(pv) -> None:  # noqa: F811
+    """Живой шаг 6 P6b (повтор): модель вернула новый сигнал `person_trapped`,
+    а продукт склеил его с открытым дымовым по ключу дедупликации — у обоих
+    подтип `other.unspecified` без подъезда. Вид K не ложится в сигнал без K.
+    """
+    from tests.integration.test_p7b_alerts import alert_intents, verdict
+    from tests.integration.test_passive_signals import facet, model_signal, settle, use_model
+
+    await pv.bind()
+    await pv.say("и дымом тоже тянет", actor=NEIGHBOURS[0], at=ago(600))
+    await settle(pv)
+    await pv.deliver()
+    smoke = await pv.scalar(select(Signal))
+    assert smoke.emergency["kinds"] == ["smoke_fire"]
+    use_model(
+        pv,
+        {
+            "messages": [
+                verdict("m2", "status_question", "new:1"),
+                verdict("m3", "new_problem", "new:1"),
+                verdict("m4", "more_info", "new:1"),
+            ],
+            "signals": [
+                model_signal(
+                    subtype="other.unspecified",
+                    obj="человек за дверью",
+                    facets={
+                        "current": facet("yes", "женщина стучит", "m3"),
+                        "local": facet("unclear"),
+                        "observed": facet("yes", "женщина стучит", "m3"),
+                    },
+                    danger=[
+                        {
+                            "kind": "person_trapped",
+                            "evidence": [{"msg": "m3", "quote": "женщина стучит"}],
+                            "contextual": True,
+                        }
+                    ],
+                )
+            ],
+        },
+    )
+    await pv.say("Там кто-нибудь внутри?", actor=NEIGHBOURS[0], at=ago(120))
+    await pv.say("Да, женщина стучит", actor=NEIGHBOURS[0], at=ago(110))
+    await pv.say("Двери вообще не открываются", actor=NEIGHBOURS[0], at=ago(100))
+    await settle(pv)
+    await pv.deliver()
+    stored = await pv.scalar(select(Signal).where(Signal.id == smoke.id))
+    assert stored.emergency["kinds"] == ["smoke_fire"], "дымовой сигнал не поглотил новый вид"
+    trapped = await pv.scalar(select(Signal).where(Signal.id != smoke.id))
+    assert trapped is not None and trapped.strength == "critical"
+    assert trapped.emergency["kinds"] == ["person_trapped"]
+    intents = await alert_intents(pv)
+    assert intents[-1]["signal_id"] == str(trapped.id)
+    assert intents[-1]["new_kinds"] == [], "первое оповещение нового сигнала"
+    assert not pv.memos(), "смысловая опасность в чат не пишет; «и дымом» без места — тоже"

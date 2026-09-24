@@ -50,6 +50,7 @@ from domsignal.services.errors import RescheduleJob
 from domsignal.services.signals import (
     LineIndex,
     SignalEngine,
+    danger_fits,
     open_item_danger_kinds,
     versions_of,
 )
@@ -530,7 +531,7 @@ class PassiveWindowAnalysis:
             seen_after=now - timedelta(days=engine.config.dedupe_days),
             filtered=draft.strength == "filtered",
         )
-        if signal is not None:
+        if signal is not None and danger_fits(signal.emergency, draft.emergency):
             await engine.group(
                 session,
                 signal,
@@ -542,6 +543,16 @@ class PassiveWindowAnalysis:
                 reason="dedupe_key",
             )
             return signal
+        if signal is not None:
+            # Тот же ключ, но новый вид опасности: отдельный сигнал (P6b, шаг 6).
+            engine.event(
+                session,
+                house_id=claimed.house_id,
+                signal_id=signal.id,
+                window_id=claimed.id,
+                kind="danger_not_joined",
+                details=",".join(draft.emergency.kinds),
+            )
         # 4. Новая проблема.
         created = await engine.create(
             session,

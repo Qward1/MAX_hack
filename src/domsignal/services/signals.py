@@ -33,6 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from domsignal.ai import (
     DangerHit,
+    EmergencyDecision,
     Evidence,
     Facet,
     LocationEvidence,
@@ -150,6 +151,20 @@ def open_item_danger_kinds(emergency: dict[str, Any] | None) -> tuple[DangerKind
     if not emergency or emergency.get("is_emergency") is False:
         return ()
     return _danger_kinds(emergency.get("kinds") or [])
+
+
+def danger_fits(emergency: dict[str, Any] | None, decision: EmergencyDecision) -> bool:
+    """Инвариант P6 на склейке продукта: опасность вида K — только к сигналу с K.
+
+    Живой шаг 6 P6b: новый сигнал «человек не может выйти» с подтипом
+    `other.unspecified` совпал по ключу дедупликации с открытым дымовым сигналом
+    того же подтипа и растворился в нём. Ядро этот инвариант держит для
+    открытых элементов (`may_join_open_item`), продукт — здесь.
+    """
+    if not decision.is_emergency:
+        return True
+    known = set(open_item_danger_kinds(emergency))
+    return all(kind in known for kind in decision.kinds)
 
 
 def _danger_kinds(values: Sequence[str]) -> tuple[DangerKind, ...]:
