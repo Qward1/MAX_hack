@@ -51,9 +51,10 @@ OWN = "лифт опять не работает"
         ("since", "со вчера", "со вчера"),
     ],
 )
-async def test_place_quoted_from_context_line_is_dropped(
+async def test_place_quoted_from_context_line_is_not_used(
     field: str, value: str, quote: str
 ) -> None:
+    # P6b: место модели не используется вовсе, правила читают только реплики окна.
     response = model_response(
         [model_signal(**{field: {"value": value, "quote": quote, "msg": "m1"}})],
         roles={"m2": "new_problem"},
@@ -61,7 +62,6 @@ async def test_place_quoted_from_context_line_is_dropped(
     )
     analysis = await analyse(response, with_context(CONTEXT, OWN))
     assert getattr(analysis.signals[0], field) is None
-    assert any(field in details and "контекст" in details for details in dropped_details(analysis))
 
 
 async def test_location_scope_quoted_from_context_line_is_dropped() -> None:
@@ -74,7 +74,7 @@ async def test_location_scope_quoted_from_context_line_is_dropped() -> None:
         roles={"m2": "new_problem"},
         refs={"m2": ["new:1"]},
     )
-    analysis = await analyse(response, with_context(CONTEXT, OWN))
+    analysis = await analyse(response, with_context(CONTEXT, "опять не работает"))
     assert analysis.signals[0].location_scope.value == "unknown"
     assert any("location_scope" in details for details in dropped_details(analysis))
 
@@ -235,7 +235,7 @@ def test_floor_range_keeps_both_numbers() -> None:
     assert normalize_place_number("между 3 и 4") == "между 3 и 4"
 
 
-async def test_model_entrance_word_becomes_digit_and_quote_stays_verbatim() -> None:
+async def test_entrance_word_becomes_digit_and_the_model_floor_is_not_used() -> None:
     text = "в третьем подъезде лифт стоит"
     response = model_response(
         [
@@ -251,8 +251,9 @@ async def test_model_entrance_word_becomes_digit_and_quote_stays_verbatim() -> N
     signal = analysis.signals[0]
     assert signal.entrance is not None
     assert signal.entrance.value == "3"
-    assert signal.entrance.quote == "в третьем подъезде"
-    assert signal.floor is not None and signal.floor.value == "5"
+    assert signal.entrance.quote in text and "третьем" in signal.entrance.quote
+    # Этаж «пятом» с цитатой «лифт» модель выдумала; правила этажа не видят.
+    assert signal.floor is None
 
 
 async def test_rules_entrance_word_becomes_digit() -> None:
@@ -491,12 +492,12 @@ async def test_missing_model_place_is_taken_from_rules_on_signal_lines() -> None
     assert "place_from_rules" in signal.flags
 
 
-async def test_dropped_model_place_is_replaced_by_rules() -> None:
+async def test_invented_model_place_is_replaced_by_rules() -> None:
     response = model_response(
         [
             model_signal(
                 subtype="elevator.button",
-                entrance={"value": "2", "quote": "во 2-м подъезде", "msg": "m1"},
+                entrance={"value": "7", "quote": "во 2-м подъезде", "msg": "m1"},
             )
         ],
         roles={"m1": "new_problem"},
@@ -504,11 +505,12 @@ async def test_dropped_model_place_is_replaced_by_rules() -> None:
     )
     analysis = await analyse(response, window(PLACE_TEXT))
     signal = analysis.signals[0]
-    assert signal.entrance is not None and signal.entrance.quote in PLACE_TEXT
-    assert analysis.dropped_fields >= 1
+    assert signal.entrance is not None and signal.entrance.value == "2"
+    assert signal.entrance.quote in PLACE_TEXT
 
 
-async def test_valid_model_place_is_kept_without_the_flag() -> None:
+async def test_even_a_valid_model_place_comes_from_rules() -> None:
+    """P6b: подъезд, этаж и «с какого времени» — только из правил."""
     response = model_response(
         [
             model_signal(
@@ -522,7 +524,40 @@ async def test_valid_model_place_is_kept_without_the_flag() -> None:
     )
     signal = (await analyse(response, window(PLACE_TEXT))).signals[0]
     assert signal.entrance is not None and signal.entrance.value == "2"
-    assert "place_from_rules" not in signal.flags
+    assert signal.floor is not None and signal.floor.value == "1"
+    assert "place_from_rules" in signal.flags
+
+
+async def test_scope_comes_from_rules_when_they_quote_it() -> None:
+    text = "у остановки фонарь не горит"
+    response = model_response(
+        [
+            model_signal(
+                subtype="street_lighting.failure",
+                location_scope={"value": "house_territory", "quote": "фонарь", "msg": "m1"},
+            )
+        ],
+        roles={"m1": "new_problem"},
+        refs={"m1": ["new:1"]},
+    )
+    scope = (await analyse(response, window(text))).signals[0].location_scope
+    assert scope.value == "municipal_territory" and scope.quote and scope.quote in text
+
+
+async def test_model_scope_is_used_when_rules_do_not_know_it() -> None:
+    text = "фонарь опять не горит"
+    response = model_response(
+        [
+            model_signal(
+                subtype="street_lighting.failure",
+                location_scope={"value": "house_territory", "quote": "фонарь", "msg": "m1"},
+            )
+        ],
+        roles={"m1": "new_problem"},
+        refs={"m1": ["new:1"]},
+    )
+    scope = (await analyse(response, window(text))).signals[0].location_scope
+    assert scope.value == "house_territory" and scope.quote == "фонарь"
 
 
 async def test_rules_place_never_comes_from_context_or_foreign_lines() -> None:

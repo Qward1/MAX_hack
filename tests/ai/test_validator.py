@@ -37,11 +37,25 @@ async def test_quote_from_another_line_drops_the_field() -> None:
         refs={"m1": ["new:1"], "m2": ["new:1"]},
     )
     analysis = await analyse(response)
-    # Цитата модели из чужой реплики отброшена; подъезд восстанавливают правила
-    # из реплики самого сигнала (P6), с дословной цитатой именно из неё.
+    # P6b: подъезд модели не используется, его дают правила из реплики самого
+    # сигнала — с дословной цитатой именно из неё.
     entrance = analysis.signals[0].entrance
     assert entrance is not None and entrance.line_id == "line-1"
     assert "place_from_rules" in analysis.signals[0].flags
+
+
+async def test_scope_quote_from_another_line_drops_the_field() -> None:
+    response = model_response(
+        [
+            model_signal(
+                location_scope={"value": "house_common", "quote": "не работает", "msg": "m2"},
+            )
+        ],
+        roles={"m1": "new_problem", "m2": "me_too"},
+        refs={"m1": ["new:1"], "m2": ["new:1"]},
+    )
+    analysis = await analyse(response, window("опять не работает с утра", "у нас тоже"))
+    assert analysis.signals[0].location_scope.value == "unknown"
     assert analysis.dropped_fields >= 1
     assert "field_dropped" in {event.kind for event in analysis.audit_events}
 
@@ -100,7 +114,7 @@ async def test_location_scope_without_a_quote_becomes_unknown() -> None:
         roles={"m1": "new_problem"},
         refs={"m1": ["new:1"]},
     )
-    analysis = await analyse(response)
+    analysis = await analyse(response, window("опять не работает с утра"))
     assert analysis.signals[0].location_scope.value == "unknown"
 
 

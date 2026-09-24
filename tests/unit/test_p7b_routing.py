@@ -115,6 +115,22 @@ def test_apartment_radiators_need_a_connected_company(directory: Any) -> None:
     assert route_type(directory, "heating.cold_radiators", "apartment", uk=False) == "unknown"
 
 
+@pytest.mark.parametrize("scope", ["apartment", "house_common"])
+def test_cold_radiators_are_the_company_first_with_a_supplier_alternative(
+    directory: Any, scope: str
+) -> None:
+    """P6b: «УК первой линией с альтернативой» — организация не называется."""
+    route = resolve_route(
+        RoutingQuery(subtype="heating.cold_radiators", location_scope=scope, house=house()),
+        directory,
+        known_subtypes=SUBTYPES,
+        today=TODAY,
+    )
+    assert route.route_type == "uk_internal" and not route.requires_operator_choice
+    assert [item.route_type for item in route.alternatives] == ["resource_supplier"]
+    assert route.organization_id is None
+
+
 @pytest.mark.parametrize(
     ("rule_id", "danger", "item", "quote"),
     [

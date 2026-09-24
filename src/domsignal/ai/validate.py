@@ -86,7 +86,8 @@ CONTEXT_LINE = "реплика контекста, доказательства 
 
 #: Поля, значение которых — номер подъезда или этажа.
 _NUMBERED_FIELDS = frozenset({"entrance", "floor"})
-#: Поля места и времени сигнала: при отсутствии у модели — из правил.
+#: Поля места и времени сигнала — только из правил (P6b, частное ограничение
+#: §6.3: выдуманных цитат модели 10,1 % > 2 %, OWNER-DECISION-2026-09-24).
 _PLACE_FIELDS = ("entrance", "floor", "since")
 
 
@@ -391,14 +392,10 @@ def validate_output(
             observed=_facet(context, raw.facets.observed, collector, ref, "observed"),
         )
         strength, reason = decide_strength(emergency, facets)
-        place: dict[str, Evidence | None] = {}
-        from_rules = False
-        for name in _PLACE_FIELDS:
-            value = _evidence(context, getattr(raw, name), collector, ref, name)
-            if value is None:
-                value = _rules_place(rules, line_ids, name)
-                from_rules = from_rules or value is not None
-            place[name] = value
+        # Подъезд, этаж и «с какого времени» — только из правил по репликам
+        # сигнала; значения модели не используются (P6b).
+        place = {name: _rules_place(rules, line_ids, name) for name in _PLACE_FIELDS}
+        from_rules = any(value is not None for value in place.values())
         signals.append(
             SignalDraft(
                 ref=ref,
@@ -408,7 +405,8 @@ def validate_output(
                 entrance=place["entrance"],
                 floor=place["floor"],
                 since=place["since"],
-                location_scope=_scope(context, raw, collector, ref),
+                location_scope=_rules_scope(rules, line_ids)
+                or _scope(context, raw, collector, ref),
                 facets=facets,
                 emergency=emergency,
                 strength=strength,
@@ -441,10 +439,11 @@ def _rules_place(
 ) -> Evidence | None:
     """Подъезд, этаж или «с какого времени» из правил — по репликам сигнала.
 
-    Модель при минимальных рассуждениях часто не заполняет необязательные поля
-    места (P6, dev D3). Правила дают значение с дословной цитатой по
-    построению; берётся первая по времени реплика самого сигнала, реплики
-    контекста и чужих сигналов не участвуют.
+    Единственный источник этих полей в режиме модели (P6b): у модели при
+    минимальных рассуждениях 10,1 % цитат выдуманы (P6, holdout). Правила дают
+    значение с дословной цитатой по построению, номера — цифрами; берётся
+    первая по времени реплика самого сигнала, реплики контекста и чужих
+    сигналов не участвуют.
     """
     wanted = set(line_ids)
     for facts in rules.facts:
@@ -452,6 +451,22 @@ def _rules_place(
             value: Evidence | None = getattr(facts.place, name)
             if value is not None:
                 return value
+    return None
+
+
+def _rules_scope(rules: RulesOutcome, line_ids: Sequence[str]) -> LocationEvidence | None:
+    """Территория правил с цитатой по репликам сигнала, если она определена.
+
+    У правил `location_scope` точнее, чем у модели при минимальных
+    рассуждениях (P6, holdout: 0,857 против 0,605): словарь «у остановки»,
+    «во дворе» даёт значение с дословной цитатой. Иначе — значение модели.
+    """
+    wanted = set(line_ids)
+    for facts in rules.facts:
+        if facts.line_id in wanted and not facts.line.is_context:
+            scope = facts.place.scope
+            if scope.value != "unknown" and scope.quote:
+                return scope
     return None
 
 

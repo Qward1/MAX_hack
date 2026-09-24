@@ -37,6 +37,9 @@ services:
       # Модель в разборе окон чата (P6-DECISION); false — правила, /report с моделью.
       PASSIVE_LLM_ENABLED: ${PASSIVE_LLM_ENABLED:-true}
       PASSIVE_WINDOW_SILENCE_SECONDS: ${PASSIVE_WINDOW_SILENCE_SECONDS:-120}
+      # Окно не длиннее 6 реплик — частное ограничение §6.3 (p95 7,5 с > 6 с),
+      # OWNER-DECISION-2026-09-24.
+      PASSIVE_WINDOW_MAX_LINES: ${PASSIVE_WINDOW_MAX_LINES:-6}
       PASSIVE_DANGER_GROUP_MINUTES: ${PASSIVE_DANGER_GROUP_MINUTES:-30}
       PASSIVE_CHAT_MEMO_PAUSE_MINUTES: ${PASSIVE_CHAT_MEMO_PAUSE_MINUTES:-30}
       PASSIVE_ANALYSIS_FALLBACK_SECONDS: ${PASSIVE_ANALYSIS_FALLBACK_SECONDS:-90}
@@ -86,8 +89,9 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-rules}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-}
-      # Живые окна P7a — 10,8–28,7 с при профиле 12 с; владелец утвердил 60 с.
-      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
+      # Пусто — таймаут из профиля модели (gpt-5-mini: 30 с, p99 dev 20,6 с, P6);
+      # непустое значение перекрывает профиль (OWNER-DECISION-2026-09-24).
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-}
       LLM_DAILY_CALL_BUDGET: ${LLM_DAILY_CALL_BUDGET:-300}
       LLM_CHAT_DAILY_SHARE: ${LLM_CHAT_DAILY_SHARE:-0.2}
       # Аренда задачи AI-пула ≥ таймаут модели + 20 с, иначе воркер не стартует.

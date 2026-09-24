@@ -119,6 +119,7 @@ export function ChatConnections({ base }: { base: string }) {
   const [token, setToken] = useState("");
   const [confirm, setConfirm] = useState<string | null>(null);
   const available = capabilities.data?.features.passive_capture === true;
+  const aiAnalysis = capabilities.data?.features.passive_ai_analysis === true;
   return <><Title description="Подключение существующих чатов к подтверждённым домам">MAX-чаты</Title>
     <Feedback loading={houses.loading} error={houses.error ?? action.error} />
     {token && <section className="one-time-link"><h2>Продолжите в MAX</h2><p>Передайте администратору чата эту команду для личного сообщения боту ДомСигнал:</p>
@@ -128,7 +129,7 @@ export function ChatConnections({ base }: { base: string }) {
       {h.bindings.map(b => <div key={b.id} className="connection-row">
         <p>{b.title ?? "MAX-чат"} · <Status value={b.status} /> · {b.scope_type === "entrance" ? `Подъезд ${b.scope_value}` : "Весь дом"}
           {b.suspension_reason && ` · ${b.suspension_reason}`}</p>
-        {b.status === "active" && <PassiveSwitch binding={b} available={available} busy={action.busy}
+        {b.status === "active" && <PassiveSwitch binding={b} available={available} aiAnalysis={aiAnalysis} busy={action.busy}
           confirming={confirm === b.id} ask={() => setConfirm(b.id)} cancel={() => setConfirm(null)}
           change={async enabled => { await action.run(`/api/v1/chat-bindings/${b.id}/passive-capture`, { enabled }); setConfirm(null); }} />}
       </div>)}
@@ -148,14 +149,15 @@ export function ChatConnections({ base }: { base: string }) {
   </>;
 }
 
-function PassiveSwitch({ binding, available, busy, confirming, ask, cancel, change }: {
-  binding: Schema["ChatSummary"]; available: boolean; busy: boolean; confirming: boolean;
+function PassiveSwitch({ binding, available, aiAnalysis, busy, confirming, ask, cancel, change }: {
+  binding: Schema["ChatSummary"]; available: boolean; aiAnalysis: boolean; busy: boolean; confirming: boolean;
   ask: () => void; cancel: () => void; change: (enabled: boolean) => Promise<void>;
 }) {
   const enabled = binding.passive_capture_enabled === true;
   const hint = `passive-hint-${binding.id}`;
   return <div className="passive-switch">
     <p>Чтение чата: <strong>{enabled ? "включено" : "выключено"}</strong></p>
+    {enabled && <p className="muted">Разбор переписки: {aiAnalysis ? "правила и модель (ИИ)" : "только правила, модель в чатах выключена"}</p>}
     {!confirming ? <>
       <button className="ticket-button secondary" disabled={busy || (!enabled && !available)}
         aria-describedby={!enabled && !available ? hint : undefined} onClick={ask}>

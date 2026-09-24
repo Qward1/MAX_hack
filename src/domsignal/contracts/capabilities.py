@@ -22,6 +22,10 @@ class CapabilityFlags(ContractModel):
     # Глобальный выключатель пассивного чтения чатов (`PASSIVE_CAPTURE_ENABLED`).
     # Выключен — чтение отдельного чата включить нельзя.
     passive_capture: bool = False
+    # Модель разбирает окна пассивного чтения: провайдер подключён и
+    # `PASSIVE_LLM_ENABLED` не выключен. false — окна разбирают только правила;
+    # явный путь (`/report`, форма) от флага не зависит (`ai_analysis`).
+    passive_ai_analysis: bool = False
     reminders: bool = False
     media: bool = False
 

@@ -34,7 +34,7 @@ import sys
 import time
 from collections import Counter
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from typing import Any
 
@@ -133,6 +133,14 @@ class ModelConfig:
     temperature: float | None = None
     max_tokens: int = 1600
     timeout_seconds: float = 60.0
+    #: P6b (A2): рассуждения для окон, где правила нашли опасность без отрицания.
+    danger_effort: str | None = None
+
+    def for_window(self, rules_danger: bool) -> ModelConfig:
+        """Конфигурация вызова окна: другие рассуждения только при опасности правил."""
+        if rules_danger and self.danger_effort is not None:
+            return replace(self, effort=self.danger_effort)
+        return self
 
     def extra_body(self) -> dict[str, Any]:
         body: dict[str, Any] = {}
@@ -195,6 +203,15 @@ CONFIGS: dict[str, ModelConfig] = {
         prompt="window.v2",
         effort="minimal",
         provider_order=("openai/flex", "openai"),
+    ),
+    # P6b A2: итоговый профиль, но `low` для окон с опасностью правил.
+    "gpt5mini_v2_minimal_flexfirst_dangerlow": ModelConfig(
+        name="gpt5mini_v2_minimal_flexfirst_dangerlow",
+        model="openai/gpt-5-mini",
+        prompt="window.v2",
+        effort="minimal",
+        provider_order=("openai/flex", "openai"),
+        danger_effort="low",
     ),
     # E: резервная модель на тех же окнах.
     "gemini_v1": ModelConfig(
@@ -346,6 +363,16 @@ def _signal_record(analysis: WindowAnalysis) -> list[dict[str, Any]]:
     ]
 
 
+def rules_danger(window: WindowInput) -> bool:
+    """Правила нашли в репликах окна опасность без отрицания."""
+    return any(
+        not hit.negated
+        for line in window.lines
+        if not line.is_context
+        for hit in screen_message_for_danger(line.text, line_id=line.line_id)
+    )
+
+
 def intake_record(window: WindowInput) -> list[dict[str, Any]]:
     """Путь приёма продукта по каждой реплике окна: до окна и до модели.
 
@@ -417,12 +444,14 @@ async def run_unit(
         window = base.model_copy(update={"open_items": tuple(open_items)})
         tap = UsageTap()
         recorder: CallRecorder | None = None
+        danger = rules_danger(window)
+        call = config.for_window(danger)
         if config.model is None:
             analyzer = WindowAnalyzer()
         else:
             assert api_key is not None and budget is not None
-            recorder = CallRecorder(build_provider(config, api_key, tap), budget, run)
-            analyzer = WindowAnalyzer(recorder, timeout_s=config.timeout_seconds + 2)
+            recorder = CallRecorder(build_provider(call, api_key, tap), budget, run)
+            analyzer = WindowAnalyzer(recorder, timeout_s=call.timeout_seconds + 2)
         started = time.perf_counter()
         try:
             analysis = await analyzer.analyze(window)
@@ -463,6 +492,8 @@ async def run_unit(
                 "signals": _signal_record(analysis),
                 "semantic_danger": [danger.kind for danger in analysis.semantic_danger],
                 "intake": intake_record(window),
+                "rules_danger": danger,
+                "effort": call.effort,
             }
         )
         open_items = _update_open_items(open_items, analysis, unit.id, counter)
@@ -833,6 +864,11 @@ def main() -> None:
     parser.add_argument("--run", help="run name; raw records go to p6-runs/<run>.jsonl")
     parser.add_argument("--units", help="comma-separated unit ids (subset)")
     parser.add_argument("--exclude-units", help="comma-separated unit ids to skip")
+    parser.add_argument(
+        "--rules-danger-only",
+        action="store_true",
+        help="only units with at least one window where rules found danger (A2)",
+    )
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--summarize", help="summarize an existing raw records file")
     parser.add_argument("--routes", action="store_true", help="router on the routing reference")
@@ -859,6 +895,12 @@ def main() -> None:
     if args.exclude_units:
         skipped = set(args.exclude_units.split(","))
         units = [unit for unit in units if unit.id not in skipped]
+    if args.rules_danger_only:
+        units = [
+            unit
+            for unit in units
+            if any(rules_danger(window) for window in unit_windows(unit, args.dataset))
+        ]
     api_key = budget = None
     if config.model is not None:
         api_key = _load_key()

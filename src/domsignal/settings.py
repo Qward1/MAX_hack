@@ -77,7 +77,8 @@ class Settings(BaseSettings):
     llm_model: str | None = None
     llm_schema_mode: LlmSchemaMode = LlmSchemaMode.JSON_SCHEMA_STRICT
     # Путь AI-пула не ждёт человек синхронно (целевая архитектура v3 §10).
-    llm_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
+    # Не задан — таймаут из профиля модели (`models.v1.yaml`); задан — перекрывает его.
+    llm_timeout_seconds: float | None = Field(default=None, gt=0, le=60)
     llm_max_tokens: int = Field(default=1600, ge=256, le=8192)
     llm_max_concurrency: int = Field(default=4, ge=1, le=64)
     llm_daily_call_budget: int = Field(default=1000, ge=0)
@@ -157,6 +158,7 @@ class Settings(BaseSettings):
         "max_webhook_secret",
         "llm_api_key",
         "llm_model",
+        "llm_timeout_seconds",
         "ai_pool_llm_provider",
         mode="before",
     )

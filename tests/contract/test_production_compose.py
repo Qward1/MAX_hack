@@ -16,6 +16,7 @@ import yaml
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from domsignal.bootstrap import build_ai
 from domsignal.main import create_app
 from domsignal.settings import LlmProvider, Settings
 from domsignal.worker.pools import lease_seconds_for
@@ -107,7 +108,8 @@ def test_without_model_variables_everything_stays_on_rules(
     worker = settings_of("ai-worker", SYNTHETIC_VPS, monkeypatch)
     assert worker.llm_provider is LlmProvider.RULES
     assert worker.llm_api_key is None and worker.llm_model is None
-    assert worker.llm_timeout_seconds == 60
+    # P6b: пусто — таймаут из профиля модели, а не явные 60 с.
+    assert worker.llm_timeout_seconds is None
     assert worker.llm_daily_call_budget == 300
     assert worker.llm_chat_daily_share == 0.2
     assert worker.ai_worker_lease_seconds == 80
@@ -123,6 +125,27 @@ def test_without_model_variables_everything_stays_on_rules(
     api = settings_of("api", SYNTHETIC_VPS, monkeypatch)
     assert api.ai_pool_llm_provider is LlmProvider.RULES
     assert not api.passive_capture_enabled
+    # Окно не длиннее 6 реплик и модель в окнах чата — одинаково во всех
+    # процессах, которые режут и разбирают окна (OWNER-DECISION-2026-09-24).
+    for service in ("api", "worker", "ai-worker"):
+        passive = settings_of(service, SYNTHETIC_VPS, monkeypatch)
+        assert passive.passive_window_max_lines == 6
+        assert passive.passive_llm_enabled
+
+
+def test_the_model_timeout_comes_from_the_profile_unless_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    worker = settings_of("ai-worker", {**SYNTHETIC_VPS, **MODEL}, monkeypatch)
+    ai = build_ai(worker, None)  # type: ignore[arg-type]  # фабрика сессий не нужна
+    assert ai.timeout_seconds == 30.0, "профиль gpt-5-mini (P6)"
+    assert lease_seconds_for(
+        "ai", ai_lease_seconds=worker.ai_worker_lease_seconds, model_timeout_seconds=30.0
+    ) == 80
+    explicit = settings_of(
+        "ai-worker", {**SYNTHETIC_VPS, **MODEL, "LLM_TIMEOUT_SECONDS": "45"}, monkeypatch
+    )
+    assert build_ai(explicit, None).timeout_seconds == 45.0  # type: ignore[arg-type]
 
 
 def test_model_configuration_reaches_the_ai_worker_and_the_lease_covers_it(
@@ -166,10 +189,19 @@ def test_the_api_advertises_the_model_without_holding_the_key(
     with TestClient(create_app(api)) as client:
         features = client.get("/api/v1/capabilities").json()["features"]
     assert features["ai_analysis"] is True
+    assert features["passive_ai_analysis"] is True
+    switched_off = settings_of(
+        "api", {**SYNTHETIC_VPS, **MODEL, "PASSIVE_LLM_ENABLED": "false"}, monkeypatch
+    )
+    with TestClient(create_app(switched_off)) as client:
+        features = client.get("/api/v1/capabilities").json()["features"]
+    assert features["ai_analysis"] is True, "/report сохраняет модель"
+    assert features["passive_ai_analysis"] is False, "окна чата — только правила"
     rules_only = settings_of("api", SYNTHETIC_VPS, monkeypatch)
     with TestClient(create_app(rules_only)) as client:
         features = client.get("/api/v1/capabilities").json()["features"]
     assert features["ai_analysis"] is False
+    assert features["passive_ai_analysis"] is False
 
 
 def test_the_model_provider_without_a_key_stops_the_ai_worker(

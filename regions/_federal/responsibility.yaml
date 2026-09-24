@@ -350,9 +350,14 @@ uk_default:
     - entrance_door.broken
     - cleaning.stairwell
     - structure.damage
+  # Альтернатива «ресурсоснабжающая организация» показывается оператору рядом
+  # с УК: отключение может идти от внешних сетей. Холодные батареи — тоже
+  # (ориентир владельца P6b: «УК первой линией с альтернативой»); тип маршрута
+  # остаётся uk_internal, организация не называется.
   resource_supplier_alternatives:
     - water.hot_outage
     - water.supply_outage
+    - heating.cold_radiators
   # Батареи в квартире — часть внутридомовой системы отопления: заявка в УК и
   # при территории «квартира». Типовое распределение, как и весь uk_default.
   apartment_subtypes:

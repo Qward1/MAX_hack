@@ -34,6 +34,7 @@ export const capabilities: Capabilities = {
     routes: true,
     appeals: true,
     passive_capture: false,
+    passive_ai_analysis: false,
     reminders: false,
     media: false,
   },
