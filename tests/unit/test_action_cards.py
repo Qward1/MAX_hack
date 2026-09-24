@@ -139,13 +139,16 @@ def test_route_without_verified_channel_falls_back_to_manual_decision(packaged: 
     assert types(card(route, audience="operator")) == ["operator_review"]
 
 
-def test_moscow_house_sees_a_card_without_channels(packaged: Any) -> None:
+def test_moscow_house_gets_the_moscow_portal_instead_of_the_pos(packaged: Any) -> None:
+    # D2 (REGION-MOW-2026-09-26): ПОС в Москве недоступен — его место занимает
+    # проверенный канал пакета RU-MOW, тем же кодом карточки.
     house = HouseRoutingContext(region_code="RU-MOW", has_active_connected_uk=True)
     route = resolve(packaged, "street_lighting.failure", "municipal_territory", house)
     built = card(route, house=house)
-    assert route.channels == []
-    assert types(built) == ["report_to_uk_anyway"]
-    assert built.actions[0].enabled is True
+    assert [channel.id for channel in route.channels] == ["ru_mow_nash_gorod"]
+    opened = next(a for a in built.actions if a.type == "open_official_channel")
+    assert opened.enabled is True and opened.url == "https://gorod.mos.ru/"
+    assert "report_to_uk_anyway" in types(built)
 
 
 def test_danger_puts_the_verified_safety_memo_and_112_first(packaged: Any) -> None:
