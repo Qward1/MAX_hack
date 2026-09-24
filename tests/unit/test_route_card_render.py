@@ -98,6 +98,34 @@ def test_message_is_short_with_one_source_link_at_the_end(packaged: Any) -> None
     assert any(fact.text in message.text for fact in card.facts)
 
 
+def test_appeal_message_walks_through_the_mini_app_buttons(packaged: Any) -> None:
+    """P6b, владелец: инструкция «что нажать» по кнопкам карточки и черновика."""
+    card, _ = _card(packaged, "street_lighting.failure", "municipal_territory")
+    text = render_route_card(_intent(card), ref=REF).text
+    steps = text[text.index("Что делать:") : text.index("ДомСигнал не отправляет")]
+    for label in (
+        "«Открыть карточку»",
+        "«Подготовить текст обращения»",
+        "«Сохранить правку»",
+        "«Скопировать текст»",
+        "«Открыть официальный сервис»",
+        "«Я отправил(а) обращение»",
+    ):
+        assert label in steps, label
+    assert steps.index("«Подготовить текст обращения»") < steps.index("«Скопировать текст»")
+    assert text.endswith("Информация взята с: pos.gosuslugi.ru/landing")
+
+
+def test_routes_without_an_appeal_get_no_appeal_steps(packaged: Any) -> None:
+    for subtype, scope, danger in (
+        ("gas.smell", "house_common", ("gas",)),
+        ("elevator.stopped", "house_common", ()),
+    ):
+        card, _ = _card(packaged, subtype, scope, danger=danger)
+        text = render_route_card(_intent(card, danger=danger), ref=REF).text
+        assert "Что делать:" not in text, subtype
+
+
 def test_at_most_two_facts_reach_the_message(packaged: Any) -> None:
     card, _ = _card(packaged, "street_lighting.failure", "municipal_territory")
     intent = _intent(card)
@@ -177,11 +205,21 @@ def test_route_card_never_claims_the_message_is_an_appeal(packaged: Any) -> None
     for subtype, scope in cases:
         card, _ = _card(packaged, subtype, scope)
         text = render_route_card(_intent(card), ref=REF).text.lower()
-        # Единственное допустимое употребление — прямое отрицание.
+        # Допустимо только отрицание или инструкция жителю, что делает он сам
+        # (P6b: «проверьте текст», «отправьте», кнопка «Я отправил(а)»).
         for sentence in text.split("."):
             if "обращение" in sentence or "обращения" in sentence:
-                allowed = ("не является", "подготовить", "отправляете")
+                allowed = (
+                    "не является",
+                    "подготовить",
+                    "отправляете",
+                    "отправьте",
+                    "проверьте текст",
+                    "я отправил(а)",
+                )
                 assert any(word in sentence for word in allowed), sentence
+        for phrase in FORBIDDEN_PHRASES:
+            assert phrase not in text, phrase
 
 
 def test_model_prose_is_never_part_of_the_intent(packaged: Any) -> None:
