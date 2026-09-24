@@ -65,6 +65,7 @@ class OpenAICompatibleProvider:
         taxonomy: Taxonomy | None = None,
         few_shot: bool = True,
         extra_body: Mapping[str, Any] | None = None,
+        open_danger_extra_body: Mapping[str, Any] | None = None,
         client: httpx.AsyncClient | None = None,
         prompt_version: str = PROMPT_VERSION,
     ) -> None:
@@ -81,6 +82,7 @@ class OpenAICompatibleProvider:
         self.few_shot = few_shot
         self.prompt_version = prompt_spec(prompt_version).version
         self.extra_body = dict(extra_body or {})
+        self.open_danger_extra_body = dict(open_danger_extra_body or {})
         self._api_key = api_key
         self._taxonomy = taxonomy
         self._owns_client = client is None
@@ -133,6 +135,12 @@ class OpenAICompatibleProvider:
         if self.temperature is not None:
             payload["temperature"] = self.temperature
         payload.update(self.extra_body)
+        if self.open_danger_extra_body and any(item.danger_kinds for item in request.open_items):
+            # P6b, живой шаг 6: при открытом сигнале об опасности модель с
+            # минимальными рассуждениями принимала новую угрозу людям за
+            # продолжение открытой ветки. Такие окна редки — только пока в доме
+            # открыт критический сигнал.
+            payload.update(self.open_danger_extra_body)
         return payload
 
     async def analyze_window(self, request: ProviderRequest) -> ProviderResult:

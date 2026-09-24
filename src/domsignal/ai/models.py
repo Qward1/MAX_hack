@@ -37,6 +37,8 @@ class ModelProfile:
     timeout_seconds: float
     temperature: float | None
     extra_body: dict[str, Any]
+    #: Добавка к телу запроса для окон при открытом сигнале об опасности (P6b).
+    open_danger_extra_body: dict[str, Any]
     upstream: str
     stores_data_in_russia: bool
     policy_basis: str
@@ -90,6 +92,7 @@ def build_catalog(document: Any) -> ModelCatalog:
                 timeout_seconds=float(entry.get("timeout_seconds", 10)),
                 temperature=entry.get("temperature"),
                 extra_body=dict(entry.get("extra_body") or {}),
+                open_danger_extra_body=dict(entry.get("open_danger_extra_body") or {}),
                 upstream=str(entry.get("upstream", "")),
                 stores_data_in_russia=bool(entry.get("stores_data_in_russia", False)),
                 policy_basis=str(entry.get("policy_basis", "")),

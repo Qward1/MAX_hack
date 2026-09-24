@@ -23,7 +23,27 @@ const FILED_NOTE =
 const CONFLICT_NOTE = "Черновик изменился. Ваш текст сохранён на экране.";
 const UNVERIFIED_CHANNEL = "Канал ещё не проверен в справочнике.";
 const SELF_FILING_NOTE = "ДомСигнал не отправляет обращения за вас — вы отправляете его сами.";
-const TEXT_HINT = "В текст входит только то, что нужно вставить в форму сервиса.";
+const TEXT_HINT = "Текст можно поправить перед отправкой — сохраните правку.";
+/** Буфер обмена webview может не ответить вовсе: ждём не дольше. */
+const CLIPBOARD_TIMEOUT_MS = 1500;
+
+async function writeClipboard(value: string): Promise<boolean> {
+  if (!navigator.clipboard?.writeText) return false;
+  let timer: number | undefined;
+  try {
+    await Promise.race([
+      navigator.clipboard.writeText(value),
+      new Promise((_resolve, reject) => {
+        timer = window.setTimeout(() => reject(new Error("clipboard timeout")), CLIPBOARD_TIMEOUT_MS);
+      }),
+    ]);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
 
 export function AppealDraftScreen({
   draft,
@@ -81,15 +101,21 @@ export function AppealDraftScreen({
 
   async function copyText() {
     setCopy(null);
-    try {
-      await navigator.clipboard.writeText(text);
+    if (await writeClipboard(text)) {
       setCopy(COPY_DONE);
-    } catch {
-      // Отказ буфера обмена — обычное состояние, а не ошибка: выделяем текст.
-      area.current?.focus();
-      area.current?.select();
-      setCopy(COPY_FALLBACK);
+      return;
     }
+    // Отказ или молчание буфера обмена — обычное состояние, а не ошибка:
+    // выделяем текст и пробуем старый способ копирования.
+    area.current?.focus();
+    area.current?.select();
+    let copied = false;
+    try {
+      copied = document.execCommand("copy");
+    } catch {
+      copied = false;
+    }
+    setCopy(copied ? COPY_DONE : COPY_FALLBACK);
   }
 
   return (
@@ -224,7 +250,7 @@ export function AppealDraftScreen({
                 <div key={code}>
                   <Button
                     stretched
-                    disabled={busy || !action.enabled}
+                    disabled={!action.enabled}
                     aria-describedby={reasonId}
                     onClick={() => void copyText()}
                   >

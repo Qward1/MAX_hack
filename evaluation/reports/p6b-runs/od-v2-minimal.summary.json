@@ -1,0 +1,76 @@
+{
+  "dataset": "open_danger_dev",
+  "config": "gpt5mini_v2_minimal_flexfirst",
+  "calls": {
+    "windows": 20,
+    "calls": 20,
+    "states": {
+      "ok": 20
+    },
+    "valid_json": {
+      "k": 20,
+      "n": 20,
+      "value": 1.0,
+      "ci95": [
+        0.8389,
+        1.0
+      ]
+    },
+    "timeouts": 0,
+    "provider_errors": 0,
+    "p50_ms": 4531,
+    "p95_ms": 5322,
+    "p99_ms": 5382,
+    "max_ms": 5382,
+    "rub_total": 0.9726,
+    "rub_per_window": 0.0486,
+    "tokens_in_mean": 6158,
+    "tokens_out_mean": 304,
+    "reasoning_tokens_mean": 0,
+    "quotes": {
+      "k": 11,
+      "n": 88,
+      "value": 0.125,
+      "ci95": [
+        0.0713,
+        0.2101
+      ]
+    },
+    "dropped_fields": 25,
+    "audit": {
+      "field_dropped": 25,
+      "no_new_facts_violation": 6
+    },
+    "upstreams": {
+      "openrouter": 20
+    }
+  },
+  "open_danger": {
+    "new_kind_separate_signal": {
+      "k": 5,
+      "n": 10,
+      "value": 0.5,
+      "ci95": [
+        0.2366,
+        0.7634
+      ]
+    },
+    "continuation_without_foreign_kind": {
+      "k": 10,
+      "n": 10,
+      "value": 1.0,
+      "ci95": [
+        0.7225,
+        1.0
+      ]
+    },
+    "new_kind_missed": [
+      "od-02",
+      "od-03",
+      "od-05",
+      "od-08",
+      "od-10"
+    ],
+    "continuation_foreign_kind": []
+  }
+}

@@ -109,6 +109,26 @@ describe("appeal draft", () => {
     expect(errors).not.toHaveBeenCalled();
   });
 
+  it("a clipboard that never answers falls back instead of hanging", async () => {
+    clipboard(() => new Promise<void>(() => {}));
+    show();
+    fireEvent.click(screen.getByRole("button", { name: "Скопировать текст" }));
+    await screen.findByText("Выделите и скопируйте текст вручную.", undefined, {
+      timeout: 4000,
+    });
+  });
+
+  it("copying stays available while the screen refreshes", () => {
+    render(
+      <MaxUI>
+        <AppealDraftScreen draft={draft} client={apiWith()} onLoaded={vi.fn()} busy />
+      </MaxUI>,
+    );
+    expect(
+      (screen.getByRole("button", { name: "Скопировать текст" }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+  });
+
   it("copies the current text when the clipboard is available", async () => {
     const write = vi.fn().mockResolvedValue(undefined);
     clipboard(write);

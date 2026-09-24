@@ -109,3 +109,5 @@ def test_shipped_default_profile_follows_the_p6_measurement() -> None:
     assert default.extra_body["provider"]["order"][0] == "openai/flex"
     assert default.extra_body["provider"]["allow_fallbacks"] is True
     assert 20.0 < default.timeout_seconds <= 60.0
+    # P6b: окна при открытом сигнале об опасности — reasoning low.
+    assert default.open_danger_extra_body == {"reasoning": {"effort": "low"}}
