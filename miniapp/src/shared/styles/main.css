@@ -386,6 +386,33 @@ textarea {
 .house-select {
   margin-bottom: 20px;
 }
+/* D1: вход без тупика — как попасть в дом и открытые дома. */
+.no-house,
+.open-houses {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.open-house-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.open-house-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--ds-line);
+}
+.open-house-list li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .diagnostics {
   padding-block: 20px;
   font-size: 13px;

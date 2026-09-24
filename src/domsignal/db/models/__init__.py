@@ -1,4 +1,5 @@
 from domsignal.db.models.access import (
+    ChatMemberCheck,
     House,
     HouseAssignment,
     HouseManagement,
@@ -49,6 +50,7 @@ from domsignal.db.models.tickets import (
 )
 
 __all__ = [
+    "ChatMemberCheck",
     "CompanyOnboardingRequest", "EmployeeInvitation", "HouseManagementRequest",
     "AuthChallenge", "AuthRateLimit", "EmployeeCredential", "RecoveryCode",
     "GLOBAL_BUDGET_SCOPE",

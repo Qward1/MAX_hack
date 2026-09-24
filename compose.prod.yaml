@@ -78,7 +78,10 @@ services:
     logging: *production-logging
 
   worker:
-    environment: *production-environment
+    environment:
+      <<: *production-environment
+      # `/version` личного бота отвечает из операционного пула (D1).
+      BUILD_COMMIT: ${BUILD_COMMIT:?set BUILD_COMMIT}
     logging: *production-logging
 
   ai-worker:

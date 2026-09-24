@@ -16,7 +16,9 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validato
 
 from domsignal.core.incidents import ReportCategory
 
-Channel = Literal["group_passive", "group_report", "form"]
+#: `dm_report` — сообщение о проблеме в личке бота (D1, аддитивно): то же окно
+#: из одной реплики, что и `/report` в группе.
+Channel = Literal["group_passive", "group_report", "form", "dm_report"]
 OpenItemKind = Literal["signal", "incident"]
 LineRole = Literal[
     "new_problem",

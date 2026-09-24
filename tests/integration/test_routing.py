@@ -25,6 +25,7 @@ from domsignal.db.session import create_engine, create_session_factory
 from domsignal.settings import Settings
 from domsignal.tools import house_routing_profile, live_fixture, route_preview
 from domsignal.tools.seed_demo import DEMO_HOUSE_ID, OTHER_HOUSE_ID, seed
+from tests.integration.migration_columns import without_added_columns
 from tests.integration.test_migrations import migrate
 
 
@@ -393,7 +394,9 @@ async def test_routing_profile_migration_is_additive_and_guards_downgrade(
         await migrate(url, "check")
         async with engine.connect() as connection:
             assert (
-                await connection.execute(text("SELECT row_to_json(t) FROM houses t"))
+                await connection.execute(
+                    text(f"SELECT {without_added_columns('houses')} FROM houses t")
+                )
             ).all() == before
             assert (
                 await connection.scalar(text("SELECT count(*) FROM house_routing_profiles")) == 0

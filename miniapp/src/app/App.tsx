@@ -10,6 +10,7 @@ import {
   type IncidentList,
   type Me,
   type NotificationLaunch,
+  type OpenHouse,
   type RouteOutcomeView,
   problemStatus,
   retryable,
@@ -31,6 +32,7 @@ import { type FlowTarget, ReportFlow } from "../features/incidents/ReportFlow";
 import { AppealDraftScreen } from "../features/appeals/AppealDraftScreen";
 import { RouteCard } from "../features/routing/RouteCard";
 import { ResidentWorkProgress } from "../features/tickets/ResidentWorkProgress";
+import { NoHouse } from "../features/houses/NoHouse";
 import {
   categoryLabel,
   formatDate,
@@ -48,7 +50,17 @@ type Loaded = {
   card?: RouteOutcomeView;
   draft?: AppealDraftView;
   unavailable?: boolean;
+  /** Дома с открытым доступом — для жителя, у которого домов ещё нет. */
+  openHouses?: OpenHouse[];
+  openHousesFailed?: boolean;
 };
+
+/**
+ * Ссылки запуска, которые разрешает резолвер: `w_` — работа по заявке, `r_` —
+ * карточка маршрута. Ссылка `c_…` из кнопки в чате уже учтена при входе
+ * (сервер проверил участие в этом чате), остальные параметры ничего не значат.
+ */
+const LAUNCH_REF = /^[wr]_[A-Za-z0-9_-]{32}$/;
 type Target = FlowTarget & { house?: string; offset?: number };
 function routeUrl(target: Target = {}) {
   // Never propagate MAX launch/auth parameters into DOM links or copied navigation URLs.
@@ -108,7 +120,8 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       const me = await client.me(signal);
       const testRef = capabilities.environment !== "production" && capabilities.features.test_auth
         ? new URLSearchParams(window.location.search).get("test_start_param") : null;
-      const launchRef = launchPending ? (maxBridge.startParam ?? testRef) : null;
+      const startRef = launchPending ? (maxBridge.startParam ?? testRef) : null;
+      const launchRef = startRef && LAUNCH_REF.test(startRef) ? startRef : null;
       if (launchRef && capabilities.features.miniapp) {
         const target = await client.notificationLaunch(launchRef, signal);
         const home = me.houses.find((house) => house.id === target.house_id);
@@ -179,7 +192,16 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
           trace_id: "",
           retryable: false,
         });
-      if (!house) return { capabilities, me };
+      if (!house) {
+        if (me.houses.length) return { capabilities, me };
+        // Домов нет — показать, как в дом попасть, и открытые дома, если они есть.
+        try {
+          return { capabilities, me, openHouses: await client.openHouses(signal) };
+        } catch (reason) {
+          if (signal.aborted) throw reason;
+          return { capabilities, me, openHouses: [], openHousesFailed: true };
+        }
+      }
       const incidents = await client.incidents(house.id, signal, offset);
       return { capabilities, me, house, incidents };
     },
@@ -227,7 +249,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
 
   const backLink = (
     <Button variant="secondary" onClick={() => navigate(routeUrl())}>
-      К домам
+      К выбору дома
     </Button>
   );
   const headerTitle = cardId
@@ -290,12 +312,19 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
             ))}
           </Panel>
         ) : (
-          <StatePanel
-            title="Пока нет доступных домов"
-            detail="Откройте ДомСигнал из своего дома в MAX. Ссылка сама по себе не предоставляет доступ."
-            action="Обновить"
-            onAction={resource.refresh}
+          <NoHouse
+            client={client}
+            houses={data.openHouses ?? []}
+            loadError={Boolean(data.openHousesFailed)}
+            busy={resource.loading}
+            onRefresh={resource.refresh}
+            onJoined={(id) => navigate(routeUrl({ house: id }))}
           />
+        )}
+        {resource.loading && (
+          <p role="status" className="refresh-notice">
+            Обновляем данные…
+          </p>
         )}
       </main>
     );
@@ -711,12 +740,14 @@ function ErrorPanel({
     403: "Нет доступа к этому дому",
     404: "Проблема не найдена",
     409: "Данные изменились",
+    429: "Слишком много запросов",
   };
   const details: Record<number, string> = {
     401: "Сессия недействительна или истекла. Закройте мини-приложение и откройте его заново в MAX.",
-    403: "Выберите доступный вам дом.",
+    403: "Доступ закрыт или ещё не подтверждён. Откройте ДомСигнал кнопкой из вашего домового чата или выберите другой дом.",
     404: "Вернитесь к доске и обновите список проблем.",
     409: "Обновите данные перед следующим действием.",
+    429: "Подождите минуту и попробуйте снова.",
   };
   return (
     <>

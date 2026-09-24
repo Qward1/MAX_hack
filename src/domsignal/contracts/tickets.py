@@ -125,7 +125,7 @@ class TicketView(ContractModel):
     requires_reassignment: bool
     routing_reason: str
     responsibility: Literal["not_verified"] = "not_verified"
-    source: Literal["api", "max_replay", "max_group"]
+    source: Literal["api", "max_replay", "max_group", "max_dm"]
     created_by: UUID
     created_at: datetime
     updated_at: datetime

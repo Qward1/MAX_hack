@@ -1,4 +1,4 @@
-"""Столбцы, добавленные срезами P3b и P4 к уже существующим таблицам.
+"""Столбцы, добавленные срезами P3b, P4 и D1 к уже существующим таблицам.
 
 Проверки миграций сравнивают строки до и после обновления до head. Новые
 столбцы перечислены здесь явно, чтобы сравнение оставалось осмысленным: оно
@@ -16,17 +16,39 @@ P3B_COLUMNS: dict[str, tuple[str, ...]] = {
         "observed_since",
     ),
     "reports": ("analysis",),
-    "notification_deliveries": ("route_outcome_id", "signal_id", "chat_binding_id"),
+    "notification_deliveries": (
+        "route_outcome_id",
+        "signal_id",
+        "chat_binding_id",
+        # D1: ответ личного бота.
+        "reply_event_id",
+    ),
     # P4: пассивное чтение чата.
     "chat_bindings": ("passive_capture_enabled",),
     "route_outcomes": ("signal_id",),
+    # D1: открытый доступ к дому, диалог с ботом, членство по чату, личка.
+    "houses": ("open_resident_access", "open_access_changed_at", "open_access_changed_by"),
+    "users": ("max_dialog_at", "max_dialog_stopped_at", "group_ack_at"),
+    "resident_memberships": (
+        "chat_binding_id",
+        "binding_version",
+        "checked_at",
+        "ended_at",
+        "end_reason",
+    ),
+    "explicit_intakes": ("channel", "house_id", "user_id", "hold_until", "pending_analysis"),
 }
 
 
 #: Значение, которое миграция ставит существующим строкам. Столбцы, которых
 #: здесь нет, обязаны остаться пустыми. Чтение чата у прежних привязок
 #: выключено — это и есть значение по умолчанию.
-ADDED_DEFAULTS: dict[str, object] = {"passive_capture_enabled": False}
+ADDED_DEFAULTS: dict[str, object] = {
+    "passive_capture_enabled": False,
+    # D1: открытого доступа у прежних домов нет; прежний приём — `/report` группы.
+    "open_resident_access": False,
+    "channel": "group_report",
+}
 
 
 def added_default(column: str) -> object:

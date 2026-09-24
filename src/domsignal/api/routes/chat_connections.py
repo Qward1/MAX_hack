@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from domsignal.api.dependencies import ContainerDep, CurrentUserDep, DbDep
 from domsignal.contracts.chat_connections import (
     BindingView,
+    ChatNoticeView,
     ConnectionApprove,
     ConnectionCreate,
     ConnectionView,
@@ -104,6 +105,24 @@ async def cancel(
             target="cancelled",
         )
         return await container.chat_connections.view(session, request)
+
+
+@router.post("/chat-bindings/{binding_id}/notice", response_model=ChatNoticeView)
+async def resend_notice(
+    binding_id: UUID,
+    user: CurrentUserDep,
+    session: DbDep,
+    container: ContainerDep,
+) -> ChatNoticeView:
+    """«Отправить сообщение с кнопкой ещё раз» — право `chat.connect`.
+
+    Не чаще раза в 10 минут на привязку; `queued=false` — уже поставлено.
+    """
+    async with session.begin():
+        queued = await container.passive.resend_notice(
+            session, binding_id=binding_id, actor_id=user.id
+        )
+    return ChatNoticeView(binding_id=binding_id, queued=queued)
 
 
 @router.post("/chat-bindings/{binding_id}/passive-capture", response_model=PassiveCaptureView)

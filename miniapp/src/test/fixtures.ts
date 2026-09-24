@@ -226,6 +226,8 @@ export function apiWith(items: IncidentDetail[] = [incident]): DomSignalApi {
         houses: [house],
         capabilities: capabilities.features,
       }),
+    openHouses: vi.fn().mockResolvedValue([]),
+    joinOpenHouse: vi.fn(),
     incidents: vi
       .fn()
       .mockResolvedValue({

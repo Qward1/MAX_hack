@@ -227,6 +227,47 @@ class CompanyHouseView(ContractModel):
     bindings: list[ChatSummary]
     connection_requests: list[ConnectionView]
     warning: str | None = None
+    #: Открытый доступ к дому (OPEN-HOUSE-ACCESS-2026-09-25, аддитивно).
+    open_resident_access: bool = False
+    open_access_changed_at: datetime | None = None
+
+
+class OpenAccessChange(ContractModel):
+    """Включить или выключить открытый доступ к дому.
+
+    Включение требует явного подтверждения: «Любой пользователь MAX сможет
+    выбрать этот дом, сообщать о проблемах и видеть доску дома».
+    """
+
+    enabled: bool
+    confirm: bool = False
+
+    @model_validator(mode="after")
+    def confirmed(self) -> Self:
+        if self.enabled and not self.confirm:
+            raise ValueError("Включение открытого доступа требует подтверждения")
+        return self
+
+
+class OpenAccessView(ContractModel):
+    house_id: UUID
+    open_resident_access: bool
+    open_access_changed_at: datetime | None
+    #: Сколько действующих членств по открытому доступу завершено сейчас.
+    ended_memberships: int = 0
+
+
+class PlatformOpenHouseView(ContractModel):
+    house_id: UUID
+    address: str
+    name: str
+    company_id: UUID
+    company_name: str
+    open_access_changed_at: datetime | None
+
+
+class OpenAccessClose(ContractModel):
+    reason: str = Field(min_length=3, max_length=500)
 
 
 class CompanyView(ContractModel):

@@ -32,7 +32,9 @@ from domsignal.services.membership import MembershipService
 from domsignal.services.notifications import TicketNotificationHandler
 from domsignal.services.passive_analysis import PassiveWindowAnalysis
 from domsignal.services.passive_capture import PassiveCaptureService
+from domsignal.services.personal_bot import PersonalBotService
 from domsignal.services.reports import DemoRule, ReportService
+from domsignal.services.resident_access import ResidentAccessService
 from domsignal.services.routing import RoutingService, load_directory_or_none
 from domsignal.services.sessions import SessionService
 from domsignal.services.signal_inbox import SignalInboxService
@@ -74,6 +76,8 @@ class Container:
     passive: PassiveCaptureService
     passive_analysis: PassiveWindowAnalysis
     signal_inbox: SignalInboxService
+    resident_access: ResidentAccessService
+    personal_bot: PersonalBotService
     ai_budget: PostgresBudgetGuard | None = None
     ai_provider: OpenAICompatibleProvider | None = field(default=None, repr=False)
     #: Таймаут одного вызова модели; `None` — модель не подключена.
@@ -245,15 +249,26 @@ def build_container(settings: Settings) -> Container:
         required_permissions=settings.max_required_permissions,
     )
     ticket_service = TicketService()
+    messaging = HttpMaxMessagingProvider(
+        chat_provider.client, bot_username=settings.max_bot_username
+    )
+    webhook_mode = settings.max_transport == MaxTransportMode.WEBHOOK
     notifications = TicketNotificationHandler(
         session_factory=session_factory,
         tickets=ticket_service,
-        provider=HttpMaxMessagingProvider(
-            chat_provider.client, bot_username=settings.max_bot_username
-        ),
-        enabled=settings.max_transport == MaxTransportMode.WEBHOOK,
+        provider=messaging,
+        enabled=webhook_mode,
         public_base_url=settings.public_base_url,
         display_timezone=settings.display_timezone,
+    )
+    # Житель = участник домового чата (RESIDENT-BY-CHAT-2026-09-25): события
+    # MAX и точечная проверка участия; открытый доступ к дому.
+    resident_access = ResidentAccessService(
+        session_factory=session_factory,
+        connections=chat_connections,
+        check_all_max_chats=settings.resident_check_all_max_chats,
+        check_interval_seconds=settings.resident_check_interval_seconds,
+        membership_ttl_seconds=settings.resident_membership_ttl_seconds,
     )
     ai = build_ai(settings, session_factory)
     explicit_reports = ExplicitReportService(
@@ -265,6 +280,22 @@ def build_container(settings: Settings) -> Container:
         analyzer=ai.analyzer,
         rules_analyzer=ai.rules_analyzer,
         budget=ai.budget,
+        resident_access=resident_access,
+        hold_seconds=settings.bot_hold_seconds,
+    )
+    personal_bot = PersonalBotService(
+        session_factory=session_factory,
+        resident_access=resident_access,
+        explicit_reports=explicit_reports,
+        reports=report_service,
+        notifications=notifications,
+        rules_analyzer=ai.rules_analyzer,
+        routing=routing,
+        answer_enabled=webhook_mode,
+        build_commit=settings.build_commit,
+        bot_username=settings.max_bot_username,
+        daily_limit=settings.bot_daily_report_limit,
+        hold_seconds=settings.bot_hold_seconds,
     )
     appeal_drafts = AppealDraftService(routing=routing)
     # Пассивное чтение чата: приём и окна в операционном контуре, разбор окна —
@@ -296,6 +327,8 @@ def build_container(settings: Settings) -> Container:
         explicit_reports=explicit_reports,
         passive=passive,
         passive_analysis=passive_analysis,
+        personal_bot=personal_bot,
+        resident_access=resident_access,
     )
     return Container(
         settings=settings,
@@ -312,7 +345,9 @@ def build_container(settings: Settings) -> Container:
         transport=transport,
         worker_handlers=worker_handlers,
         chat_connections=chat_connections,
-        max_webhook=MaxWebhookService(chat_connections, passive),
+        max_webhook=MaxWebhookService(
+            chat_connections, passive, resident_access=resident_access, bot=personal_bot
+        ),
         notifications=notifications,
         routing=routing,
         action_cards=action_cards,
@@ -326,6 +361,8 @@ def build_container(settings: Settings) -> Container:
         signal_inbox=SignalInboxService(
             routing=routing, action_cards=action_cards, reports=report_service
         ),
+        resident_access=resident_access,
+        personal_bot=personal_bot,
         ai_budget=ai.budget,
         ai_provider=ai.provider,
         ai_timeout_seconds=ai.timeout_seconds,

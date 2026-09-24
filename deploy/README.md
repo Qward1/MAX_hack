@@ -221,12 +221,16 @@ docker compose --project-name domsignal-prod \
 The exact subscription set is:
 
 ```text
-bot_started, bot_stopped, bot_added, bot_removed, message_created, message_callback
+bot_started, bot_stopped, bot_added, bot_removed, message_created, message_callback,
+user_added, user_removed
 ```
 
-All six names are present in the current official MAX `Update` object. To rotate
-the secret or correct update types for the same expected URL, use the documented
-POST update operation:
+All eight names are present in the current official MAX `Update` object.
+`user_added`/`user_removed` (D1, RESIDENT-BY-CHAT-2026-09-25) grant and end chat
+membership; the URL does not change. A deployment that still has the six-type
+subscription is moved with `replace` below (record `list` before and after,
+never the secret). To rotate the secret or correct update types for the same
+expected URL, use the documented POST update operation:
 
 ```bash
 docker compose --project-name domsignal-prod \

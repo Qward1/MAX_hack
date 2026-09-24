@@ -33,9 +33,12 @@ from domsignal.contracts.onboarding import (
     HouseRequestView,
     InvitationView,
     MembershipView,
+    OpenAccessChange,
+    OpenAccessView,
     PlatformBindingView,
     PlatformHealth,
     PlatformHouseView,
+    PlatformOpenHouseView,
     Role,
     StaffDetail,
 )
@@ -69,6 +72,7 @@ from domsignal.services.errors import (
     ServiceError,
 )
 from domsignal.services.management import ManagementService
+from domsignal.services.resident_access import ResidentAccessService
 from domsignal.settings import Settings
 
 OPEN = {"submitted", "under_review", "needs_info"}
@@ -774,9 +778,104 @@ class AdministrationService:
                     "Новые заявки будут поступать в общую очередь дома."
                     if responsible > 1
                     else None,
+                    open_resident_access=house.open_resident_access,
+                    open_access_changed_at=house.open_access_changed_at,
                 )
             )
         return result
+
+    async def set_open_access(
+        self,
+        db: AsyncSession,
+        actor: UUID,
+        company: UUID,
+        house_id: UUID,
+        payload: OpenAccessChange,
+    ) -> OpenAccessView:
+        """Открытый доступ к дому переключает администратор УК этого дома.
+
+        Чужая УК и чужой дом — 404; сотрудник без роли администратора — 403.
+        Выключение сразу завершает членства по открытому доступу; заявки и
+        история остаются у УК.
+        """
+        await require_company(db, actor, company)
+        await authority_lock(db)
+        house = await db.scalar(
+            select(House)
+            .join(HouseManagement, HouseManagement.house_id == House.id)
+            .where(
+                House.id == house_id,
+                HouseManagement.tenant_id == company,
+                *current_management(),
+            )
+            .with_for_update(of=House)
+            .execution_options(populate_existing=True)
+        )
+        if house is None:
+            raise ResourceNotFound("Дом не найден")
+        changed = house.open_resident_access != payload.enabled
+        ended = await ResidentAccessService.set_open_access(
+            db, house=house, enabled=payload.enabled, actor_id=actor
+        )
+        if changed:
+            audit(
+                db,
+                "house.open_access_enabled" if payload.enabled else "house.open_access_disabled",
+                actor,
+                house.id,
+            )
+        return OpenAccessView(
+            house_id=house.id,
+            open_resident_access=house.open_resident_access,
+            open_access_changed_at=house.open_access_changed_at,
+            ended_memberships=ended,
+        )
+
+    async def platform_open_houses(self, db: AsyncSession) -> list[PlatformOpenHouseView]:
+        """Все дома с открытым доступом — для суперадмина."""
+        rows = (
+            await db.execute(
+                select(House, ManagementCompany)
+                .join(HouseManagement, HouseManagement.house_id == House.id)
+                .join(ManagementCompany, ManagementCompany.id == HouseManagement.tenant_id)
+                .where(House.open_resident_access.is_(True), *current_management())
+                .order_by(House.address)
+                .limit(500)
+            )
+        ).all()
+        return [
+            PlatformOpenHouseView(
+                house_id=house.id,
+                address=house.address,
+                name=house.name,
+                company_id=company.id,
+                company_name=company.name,
+                open_access_changed_at=house.open_access_changed_at,
+            )
+            for house, company in rows
+        ]
+
+    async def platform_close_open_access(
+        self, db: AsyncSession, actor: UUID, house_id: UUID, reason: str
+    ) -> OpenAccessView:
+        """Суперадмин закрывает открытый доступ к дому; причина — в аудит."""
+        await require_platform(db, actor)
+        await authority_lock(db)
+        house = await db.get(House, house_id, with_for_update=True, populate_existing=True)
+        if house is None:
+            raise ResourceNotFound("Дом не найден")
+        changed = house.open_resident_access
+        ended = await ResidentAccessService.set_open_access(
+            db, house=house, enabled=False, actor_id=actor
+        )
+        if changed:
+            audit(db, "house.open_access_closed_by_platform", actor, house.id, reason)
+        return OpenAccessView(
+            house_id=house.id,
+            open_resident_access=house.open_resident_access,
+            open_access_changed_at=house.open_access_changed_at,
+            ended_memberships=ended,
+        )
 
     async def company(self, db: AsyncSession, obj: UUID) -> CompanyView:
         row = await db.get(ManagementCompany, obj)

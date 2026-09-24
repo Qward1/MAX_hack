@@ -64,6 +64,16 @@ class PassiveCaptureView(ContractModel):
     notice_queued: bool
 
 
+class ChatNoticeView(ContractModel):
+    """«Отправить сообщение с кнопкой ещё раз»: поставлено ли сообщение сейчас.
+
+    `false` — такое сообщение уже поставлено за последние 10 минут.
+    """
+
+    binding_id: UUID
+    queued: bool
+
+
 class GroupMessage(ContractModel):
     event_id: str
     chat_id: str

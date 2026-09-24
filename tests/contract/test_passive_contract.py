@@ -166,7 +166,8 @@ def test_the_reading_notice_says_who_what_how_rarely_and_who_turns_it_off() -> N
     assert "управляющей компанией «Первая»" in text  # кто подключил
     assert "читает сообщения этого чата" in text  # что делает
     assert "замечать проблемы дома" in text  # зачем
-    assert "почти никогда не пишет" in text  # как редко
+    assert "пишет сюда редко" in text  # как редко
+    assert "кнопка «Открыть ДомСигнал»" in text  # D1: вход из чата
     assert "не является официальным обращением" in text
     assert "Отключить чтение может управляющая компания «Первая»" in text
     # Никаких ссылок, телефонов и сроков.

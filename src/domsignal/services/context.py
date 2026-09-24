@@ -9,7 +9,7 @@ from enum import StrEnum
 from typing import Literal
 from uuid import UUID
 
-OperationSource = Literal["api", "max_replay", "max_group", "worker"]
+OperationSource = Literal["api", "max_replay", "max_group", "max_dm", "worker"]
 
 
 class ScopeState(StrEnum):
