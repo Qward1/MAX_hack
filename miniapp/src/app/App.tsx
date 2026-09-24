@@ -423,7 +423,9 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
           key={draft.id}
           draft={draft}
           client={client}
-          busy={resource.loading || Boolean(resource.error) || resource.stale}
+          // P6b: «данные могли измениться» не запирает редактор и копирование —
+          // черновик пишут дольше минуты, а устаревшую правку отсекает версия (409).
+          busy={resource.loading}
           onLoaded={() => resource.refresh()}
         />
         <footer className="page-footer">

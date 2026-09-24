@@ -311,6 +311,21 @@ describe("route card and appeal draft navigation", () => {
     await screen.findByText(actionCard.title);
   });
 
+  it("stale data does not lock the draft editor or copying (P6b live run)", async () => {
+    window.history.replaceState(null, "", `/?draft=${draft.id}`);
+    render(<App client={apiWith()} />);
+    const area = await screen.findByRole("textbox", { name: "Обращение" });
+    // Возврат из официального сервиса или минута на экране — «данные могли измениться».
+    fireEvent(document, new Event("visibilitychange"));
+    expect(await screen.findByText("Данные могли измениться.")).toBeTruthy();
+    expect((area as HTMLTextAreaElement).disabled).toBe(false);
+    expect(
+      (screen.getByRole("button", { name: "Скопировать текст" }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+    fireEvent.change(area, { target: { value: "Здравствуйте! Мой текст" } });
+    expect((area as HTMLTextAreaElement).value).toBe("Здравствуйте! Мой текст");
+  });
+
   it("says the route was refreshed when the directory changed", async () => {
     window.history.replaceState(null, "", `/?card=${outcome.id}`);
     const client = apiWith();

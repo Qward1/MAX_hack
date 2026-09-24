@@ -55,11 +55,16 @@ async def test_draft_is_composed_from_verified_data_and_the_residents_words(ex) 
     assert PROBLEM_HEADING in text
     assert STREET_LIGHT in text
     assert "Казань, Синтетическая улица, 1" in text
-    # P7b: в тексте только то, что житель вставит в форму сервиса. Канал, его
-    # факты с источниками и напоминания показывает экран, а не обращение.
+    # P6b: письмо — вступление, суть, место, просьба и подпись. Канал, его
+    # факты с источниками и напоминания показывает экран, а не обращение (P7b).
     assert text.split("\n\n") == [
+        "Здравствуйте!",
+        "Обращаюсь как житель дома по адресу: Казань, Синтетическая улица, 1. "
+        "Прошу рассмотреть обращение и принять меры, чтобы устранить проблему.",
         f"{PROBLEM_HEADING}\n{STREET_LIGHT}",
         "Адрес: Казань, Синтетическая улица, 1",
+        "Прошу сообщить о принятых мерах.",
+        "С уважением,\nжитель дома",
     ]
     for screen_only in (CHANNEL_FACTS_HEADING, SELF_FILING_NOTE, AI_NOTE, "Источник", "gosuslugi"):
         assert screen_only not in text, screen_only
