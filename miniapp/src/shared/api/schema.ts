@@ -2778,6 +2778,8 @@ export interface components {
             company_id: string;
             /** Name */
             name: string;
+            /** Role */
+            role?: ("operator" | "company_admin") | null;
             /** Surfaces */
             surfaces: ("overview" | "tickets" | "signals" | "assigned_houses" | "houses" | "staff" | "chat_connections" | "organization")[];
         };
@@ -2841,6 +2843,11 @@ export interface components {
             address: string;
             /** Bindings */
             bindings: components["schemas"]["ChatSummary"][];
+            /**
+             * Can Connect Chats
+             * @default false
+             */
+            can_connect_chats: boolean;
             /** Connection Requests */
             connection_requests: components["schemas"]["ConnectionView"][];
             /**

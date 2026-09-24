@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [react()],
-  build: { rollupOptions: { input: { resident: "index.html", admin: "admin/index.html", platform: "platform-admin/index.html", company: "company/index.html" } } },
+  build: { rollupOptions: { input: { resident: "index.html", admin: "admin/index.html", platform: "platform-admin/index.html", company: "company/index.html", login: "login/index.html", site: "site/index.html" } } },
   server: {
     port: 5173,
     proxy: {

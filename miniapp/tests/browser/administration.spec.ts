@@ -53,7 +53,9 @@ test("B09 full administrative lifecycle, separate surfaces, privacy and revoke",
     await applicant.getByLabel("Контактное лицо").fill("B09 Test applicant");
     await applicant.getByLabel("Электронная почта").fill("b09@example.test");
     await applicant.getByRole("button", { name: "Подать заявку" }).click();
-    await expect(applicant.getByRole("heading", { name: "Данные получены" })).toBeVisible();
+    await expect(applicant.getByRole("heading", { name: "Заявка принята" })).toBeVisible();
+    // D2: ссылку статуса получает заявитель, ссылку-приглашение не передают вручную.
+    const statusPath = new URL(await applicant.getByLabel("Ссылка на страницу статуса").inputValue()).pathname;
     expect((await publicContext.request.get("/api/v1/admin/bootstrap")).status()).toBe(401);
 
     const platform = await platformContext.newPage();
@@ -65,12 +67,16 @@ test("B09 full administrative lifecycle, separate surfaces, privacy and revoke",
     await platform.getByRole("button", { name: "Продолжить" }).click();
     await enrollment(platform);
     await expect(platform.getByRole("navigation", { name: "Разделы платформы" })).toBeVisible();
+    await platform.getByRole("navigation", { name: "Разделы платформы" }).getByRole("link", { name: "Заявки УК", exact: true }).click();
     await expect(platform.locator(".ticket-queue")).toHaveCount(0);
     await platform.getByRole("button", { name: `ООО ${companyName}`, exact: true }).click();
     await platform.getByLabel("Основание решения / сообщение для заявителя").fill("B09 deterministic review");
     await platform.getByRole("button", { name: "Одобрить УК", exact: true }).click();
-    const firstLink = await platform.getByLabel("Одноразовая ссылка").inputValue();
-    expect(firstLink).toContain("/admin/invite/");
+    await expect(platform.getByRole("button", { name: "Одобрить УК", exact: true })).toHaveCount(0);
+    await applicant.goto(statusPath);
+    await applicant.getByRole("button", { name: "Создать аккаунт администратора" }).click();
+    await expect(applicant).toHaveURL(/\/admin\/invite\//);
+    const firstLink = applicant.url();
 
     const admin = await adminContext.newPage();
     const adminLogin = `b09.admin.${suffix}`;
@@ -85,7 +91,7 @@ test("B09 full administrative lifecycle, separate surfaces, privacy and revoke",
     const operatorLogin = `b09.operator.${suffix}`;
     await acceptNew(operator, operatorLink, operatorLogin);
     await expect(operator.getByRole("heading", { name: "Заявки", exact: true })).toBeVisible();
-    await expect(operator.getByRole("navigation", { name: "Разделы кабинета" }).getByRole("link")).toHaveText(["Заявки", "Сигналы", "Мои дома"]);
+    await expect(operator.getByRole("navigation", { name: "Разделы кабинета" }).getByRole("link")).toHaveText(["Заявки", "Сигналы", "Мои дома", "Обзор"]);
 
     await companyNav.getByRole("link", { name: "Дома", exact: true }).click();
     await admin.getByRole("button", { name: "Запросить управление домом" }).click();

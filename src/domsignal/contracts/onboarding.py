@@ -113,6 +113,8 @@ class CompanyContext(ContractModel):
     company_id: UUID
     name: str
     surfaces: list[Surface]
+    #: Роль в этой УК (D2, аддитивно): интерфейс прячет действия администратора.
+    role: Role | None = None
 
 
 class AdminBootstrap(ContractModel):
@@ -321,6 +323,8 @@ class CompanyHouseView(ContractModel):
     #: Открытый доступ к дому (OPEN-HOUSE-ACCESS-2026-09-25, аддитивно).
     open_resident_access: bool = False
     open_access_changed_at: datetime | None = None
+    #: Может ли текущий сотрудник подключать чаты этого дома (`chat.connect`, D2).
+    can_connect_chats: bool = False
 
 
 class OpenAccessChange(ContractModel):

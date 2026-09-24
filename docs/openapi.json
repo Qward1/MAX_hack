@@ -1976,6 +1976,21 @@
             "title": "Name",
             "type": "string"
           },
+          "role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "operator",
+                  "company_admin"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
           "surfaces": {
             "items": {
               "enum": [
@@ -2133,6 +2148,11 @@
             },
             "title": "Bindings",
             "type": "array"
+          },
+          "can_connect_chats": {
+            "default": false,
+            "title": "Can Connect Chats",
+            "type": "boolean"
           },
           "connection_requests": {
             "items": {

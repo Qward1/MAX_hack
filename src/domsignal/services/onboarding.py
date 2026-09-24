@@ -457,6 +457,20 @@ class AdministrationService:
                 .order_by(ManagementCompany.name)
             )
         ).all()
+        # Ответственный за дом подключает чаты своих домов (право `chat.connect`
+        # действующей политики A-15), поэтому видит раздел MAX-чатов (D2).
+        responsible = set(
+            await db.scalars(
+                select(HouseManagement.tenant_id)
+                .join(HouseAssignment, HouseAssignment.management_id == HouseManagement.id)
+                .where(
+                    HouseAssignment.user_id == actor,
+                    HouseAssignment.status == "active",
+                    HouseAssignment.role == "responsible",
+                    *current_management(),
+                )
+            )
+        )
         return AdminBootstrap(
             user_id=actor,
             display_name=user.display_name,
@@ -464,6 +478,7 @@ class AdministrationService:
                 CompanyContext(
                     company_id=c.id,
                     name=c.name,
+                    role=cast(Role, m.role),
                     surfaces=(
                         [
                             "overview",
@@ -476,6 +491,7 @@ class AdministrationService:
                         ]
                         if m.role == "company_admin"
                         else ["tickets", "signals", "assigned_houses", "overview"]
+                        + (["chat_connections"] if c.id in responsible else [])
                     ),
                 )
                 for c, m in rows
@@ -819,6 +835,14 @@ class AdministrationService:
                 HouseAssignment, HouseAssignment.management_id == HouseManagement.id
             ).where(HouseAssignment.user_id == actor, HouseAssignment.status == "active")
         rows = (await db.execute(query.order_by(House.address))).all()
+        own_roles = {
+            a.management_id: a.role
+            for a in await db.scalars(
+                select(HouseAssignment).where(
+                    HouseAssignment.user_id == actor, HouseAssignment.status == "active"
+                )
+            )
+        }
         result = []
         for house, management in rows:
             assignments = list(
@@ -890,6 +914,7 @@ class AdministrationService:
                         ConnectionView.model_validate(r, from_attributes=True) for r in requests
                     ]
                     if member.role == "company_admin"
+                    or own_roles.get(management.id) == "responsible"
                     else [],
                     warning="Для дома назначено несколько ответственных. "
                     "Новые заявки будут поступать в общую очередь дома."
@@ -897,6 +922,8 @@ class AdministrationService:
                     else None,
                     open_resident_access=house.open_resident_access,
                     open_access_changed_at=house.open_access_changed_at,
+                    can_connect_chats=member.role == "company_admin"
+                    or own_roles.get(management.id) == "responsible",
                 )
             )
         return result

@@ -3,7 +3,8 @@ import { AdminApp } from "./AdminApp";
 import { SignalsApp } from "./SignalsApp";
 import { adminClient, Feedback, Title, useRoute, type Schema } from "./administration";
 import { useResource } from "../shared/api/useResource";
-import { ChatConnections, CompanyHouses, MyHouses, Organization, Overview, Staff } from "./CompanyPages";
+import { ChatConnections, CompanyHouses, MyHouses, Organization, Staff } from "./CompanyPages";
+import { CompanyOverview } from "./Dashboards";
 
 type Context = Schema["CompanyContext"];
 const names: Record<string, string> = { overview: "Обзор", tickets: "Заявки", signals: "Сигналы", houses: "Дома",
@@ -86,7 +87,7 @@ function openTicket(navigate: (url: string) => void, href: (surface: string) => 
 function CompanyWorkspace({ company, surface, href, navigate, visit }: Workspace) {
   const base = `/api/v1/companies/${company.company_id}`;
   switch (surface) {
-    case "overview": return <Overview base={base} />;
+    case "overview": return <CompanyOverview base={base} />;
     case "tickets": return <AdminApp key={visit} embedded companyId={company.company_id} />;
     case "signals": return <SignalsApp key={visit} companyId={company.company_id} openTicket={openTicket(navigate, href)} />;
     case "houses": return <CompanyHouses base={base} />;
@@ -101,6 +102,9 @@ function OperatorWorkspace({ company, surface, href, navigate, visit }: Workspac
   if (surface === "tickets") return <AdminApp key={visit} embedded companyId={company.company_id} />;
   if (surface === "signals") return <SignalsApp key={visit} companyId={company.company_id} openTicket={openTicket(navigate, href)} />;
   if (surface === "assigned_houses") return <MyHouses base={base} />;
+  if (surface === "overview") return <CompanyOverview base={base} />;
+  if (surface === "chat_connections" && company.surfaces.includes("chat_connections"))
+    return <ChatConnections base={base} canRequest={false} />;
   return <DeniedRoute base={base} surface={surface} />;
 }
 function DeniedRoute({ base, surface }: { base: string; surface: string }) {
