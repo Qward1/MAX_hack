@@ -45,6 +45,18 @@ ROUTE_CARD_INTENT_KIND = "route.action_card.v1"
 
 _SOURCE_PREFIX = "Источник: "
 SOURCES_PREFIX = "Информация взята с: "
+STEPS_HEADING = "Что делать:"
+#: Подписи кнопок — как на экранах mini app (`features/incidents/presentation.ts`,
+#: `features/appeals/AppealDraftScreen.tsx`): инструкция ведёт по ним (P6b, владелец).
+_APPEAL_STEPS = (
+    f"Нажмите «{OPEN_CARD_LABEL}» под этим сообщением.",
+    "В карточке нажмите «{prepare}».",
+    "Проверьте текст обращения: верно ли указаны место и суть проблемы. "
+    "При необходимости поправьте его и нажмите «Сохранить правку».",
+    "Нажмите «Скопировать текст», затем «Открыть официальный сервис».",
+    "В официальном сервисе войдите, вставьте текст в форму и отправьте обращение.",
+    "Вернитесь в карточку и нажмите «Я отправил(а) обращение», чтобы отметить подачу.",
+)
 #: Цитата «…» факта, уже показанная в основании, — повтор.
 _QUOTE = re.compile(r"«([^«»]{20,})»")
 
@@ -74,6 +86,8 @@ class RouteCardIntent(ContractModel):
     # Честная формулировка следующего шага, когда ответственный не определён.
     next_step: str | None = None
     dangerous: bool = False
+    # Пошаговая инструкция по кнопкам mini app (P6b); пусто — без инструкции.
+    steps: list[str] = Field(default_factory=list)
 
 
 def build_route_card_intent(
@@ -87,6 +101,19 @@ def build_route_card_intent(
 ) -> RouteCardIntent:
     """Снять с карточки ровно то, что попадёт в личное сообщение."""
     basis = card.route.basis
+    prepare = next(
+        (
+            action
+            for action in card.actions
+            if action.type == "prepare_appeal" and action.enabled
+        ),
+        None,
+    )
+    steps = (
+        [step.format(prepare=prepare.label) for step in _APPEAL_STEPS]
+        if prepare is not None
+        else []
+    )
     return RouteCardIntent(
         route_outcome_id=route_outcome_id,
         house_id=house_id,
@@ -104,6 +131,7 @@ def build_route_card_intent(
         demo_notice=card.demo_notice,
         next_step=next_step,
         dangerous=bool(danger_kinds) or card.safety is not None,
+        steps=steps,
     )
 
 
@@ -152,6 +180,9 @@ def render_route_card(intent: RouteCardIntent, *, ref: str) -> PersonalMessage:
     for fact in intent.facts[:MAX_FACTS]:
         if not _repeats(fact.text, "\n".join(blocks)):
             blocks.append(fact.text)
+    if intent.steps:
+        numbered = [f"{number}. {step}" for number, step in enumerate(intent.steps, start=1)]
+        blocks.append("\n".join([STEPS_HEADING, *numbered]))
     if intent.disclaimer:
         blocks.append(intent.disclaimer)
     if intent.demo_notice:
