@@ -109,5 +109,8 @@ def test_shipped_default_profile_follows_the_p6_measurement() -> None:
     assert default.extra_body["provider"]["order"][0] == "openai/flex"
     assert default.extra_body["provider"]["allow_fallbacks"] is True
     assert 20.0 < default.timeout_seconds <= 60.0
-    # P6b: окна при открытом сигнале об опасности — reasoning low.
-    assert default.open_danger_extra_body == {"reasoning": {"effort": "low"}}
+    # P6b: окна при открытом сигнале об опасности — reasoning low. P6c: на dev D3
+    # рассуждения low упирались в 1600 токенов (4/20 окон — обрезанный JSON),
+    # лимит ответа таких окон — 2800; остальные окна — прежние 1600.
+    assert default.open_danger_extra_body == {"reasoning": {"effort": "low"}, "max_tokens": 2800}
+    assert default.max_tokens == 1600

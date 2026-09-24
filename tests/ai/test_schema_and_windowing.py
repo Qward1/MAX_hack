@@ -68,6 +68,8 @@ ALLOWED_SUBTYPE_KEYS = {
     "description",
     "patterns",
     "exclude",
+    # P6c: вид опасности, однозначно задающий подтип, — классификация, не маршрут.
+    "danger_kind",
 }
 
 

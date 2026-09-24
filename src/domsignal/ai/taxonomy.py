@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Literal, cast
 
+from domsignal.ai.contracts import DANGER_KINDS, DangerKind
 from domsignal.ai.matching import StemMatch, StemSet, Token
 from domsignal.ai.resources import load_yaml_resource
 from domsignal.core.incidents import ReportCategory
@@ -38,6 +39,8 @@ class Subtype:
     description: str
     patterns: tuple[tuple[StemSet, ...], ...]
     exclude: StemSet
+    #: Вид опасности, который сам по себе называет этот подтип (P6c).
+    danger_kind: DangerKind | None = None
 
 
 @dataclass(frozen=True)
@@ -87,6 +90,20 @@ class Taxonomy:
 
     def product_category(self, code: str) -> ReportCategory:
         return self.get(code).product_category
+
+    def subtype_for_danger(self, kinds: Sequence[str]) -> str | None:
+        """Подтип, который однозначно следует из видов опасности сигнала.
+
+        Однозначно — когда среди видов сигнала ровно один подтип объявил свой
+        `danger_kind`; иначе `None`, и подтип не выводится.
+        """
+        wanted = set(kinds)
+        codes = {
+            subtype.code
+            for subtype in self.subtypes
+            if subtype.danger_kind is not None and subtype.danger_kind in wanted
+        }
+        return codes.pop() if len(codes) == 1 else None
 
     def match(
         self,
@@ -161,6 +178,9 @@ def _build_subtype(raw: Any, fuzzy: Sequence[str]) -> Subtype:
             )
         )
     exclude = StemSet(_as_list(entry.get("exclude") or [], "exclude", code), fuzzy)
+    danger_kind = entry.get("danger_kind")
+    if danger_kind is not None and danger_kind not in DANGER_KINDS:
+        raise TaxonomyError(f"{code}: unknown danger_kind {danger_kind!r}")
     return Subtype(
         code=code,
         product_category=ReportCategory(category),
@@ -169,6 +189,7 @@ def _build_subtype(raw: Any, fuzzy: Sequence[str]) -> Subtype:
         description=description,
         patterns=tuple(patterns),
         exclude=exclude,
+        danger_kind=cast(DangerKind | None, danger_kind),
     )
 
 

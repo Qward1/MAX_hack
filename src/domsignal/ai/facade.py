@@ -24,7 +24,12 @@ from domsignal.ai.contracts import (
     WindowAnalysis,
     WindowInput,
 )
-from domsignal.ai.engine import DEFAULT_AUDIT_RATE, apply_audit_sample, input_sha256
+from domsignal.ai.engine import (
+    DEFAULT_AUDIT_RATE,
+    apply_audit_sample,
+    input_sha256,
+    subtype_from_danger,
+)
 from domsignal.ai.fallback import RulesOutcome, analyze_with_rules
 from domsignal.ai.model_output import SCHEMA_ID, WindowModelOutput
 from domsignal.ai.providers.base import (
@@ -116,7 +121,8 @@ class WindowAnalyzer:
                 window, rules, digest, started, state, provider_called=called, result=result
             )
 
-        signals = apply_audit_sample(validated.signals, digest, self.audit_rate)
+        typed, events = subtype_from_danger(validated.signals, taxonomy)
+        signals = apply_audit_sample(typed, digest, self.audit_rate)
         analysis = WindowAnalysis(
             mode="model",
             execution=self._execution("ok", started, provider_called=True, result=result),
@@ -125,7 +131,7 @@ class WindowAnalyzer:
             signals=signals,
             danger_hits=rules.danger_hits,
             semantic_danger=validated.semantic_danger,
-            audit_events=validated.audit_events,
+            audit_events=(*validated.audit_events, *events),
             dropped_fields=validated.dropped_fields,
         )
         _log(analysis)
@@ -183,9 +189,8 @@ class WindowAnalyzer:
     ) -> WindowAnalysis:
         taxonomy = self._taxonomy or load_taxonomy()
         lexicon = self._lexicon or load_lexicon()
-        signals: tuple[SignalDraft, ...] = apply_audit_sample(
-            rules.signals, digest, self.audit_rate
-        )
+        typed, events = subtype_from_danger(rules.signals, taxonomy)
+        signals: tuple[SignalDraft, ...] = apply_audit_sample(typed, digest, self.audit_rate)
         mode: AnalysisMode = "rules" if rules.has_signals else "manual"
         analysis = WindowAnalysis(
             mode=mode,
@@ -196,7 +201,7 @@ class WindowAnalyzer:
             lines=rules.lines,
             signals=signals,
             danger_hits=rules.danger_hits,
-            audit_events=rules.audit_events,
+            audit_events=(*rules.audit_events, *events),
         )
         _log(analysis)
         return analysis

@@ -244,7 +244,16 @@ class PassiveWindowAnalysis:
                     limit=self.engine.config.policy.context_lines,
                 )
             items: list[tuple[datetime, OpenItem]] = []
+            # P6c (живой шаг 4 P6b): предварительный сигнал из реплики самого
+            # окна — не открытый элемент, окно примиряет его по привязке
+            # реплики (`_apply`, шаг 1). Подтип предварительного сигнала —
+            # заглушка `other.unspecified`: модель её повторяла, и газ после
+            # разбора становился «Другое». Заглушка модели не передаётся.
+            own = set((await repo.ingest_links(claimed.id)).values())
             for signal in await repo.open_signals(claimed.house_id, limit=MAX_OPEN_ITEMS):
+                preliminary = "preliminary" in signal.flags
+                if preliminary and signal.id in own:
+                    continue
                 items.append(
                     (
                         signal.last_seen_at,
@@ -252,7 +261,7 @@ class PassiveWindowAnalysis:
                             ref=f"signal:{signal.id}",
                             kind="signal",
                             category=_category(signal.product_category),
-                            subtype=signal.subtype,
+                            subtype=None if preliminary else signal.subtype,
                             entrance=(signal.entrance or {}).get("value"),
                             title=signal.object_label[:200],
                             # P6: опасность вида K не ляжет в элемент без K.

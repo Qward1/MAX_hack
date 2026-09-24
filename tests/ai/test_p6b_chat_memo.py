@@ -211,9 +211,10 @@ D5_DEV = pathlib.Path("datasets/synthetic/d5_dev.v1.jsonl")
 def test_d5_dev_shape() -> None:
     rows = load_allowed_jsonl(D5_DEV)
     groups = [row["group"] for row in rows]
+    # P6c: +10 ловушек «прошлое время» и +10 пар настоящего времени к ним.
     assert (groups.count("danger"), groups.count("trap"), groups.count("contextual")) == (
-        30,
         40,
+        50,
         10,
     )
     assert {row["family"] for row in rows if row["group"] == "trap"} >= {
@@ -221,6 +222,7 @@ def test_d5_dev_shape() -> None:
         "resolved",
         "light",
         "figurative",
+        "past",
     }
 
 
@@ -248,4 +250,4 @@ async def test_d5_dev_floors() -> None:
             )
             danger_found += any(signal.emergency.is_emergency for signal in analysis.signals)
     assert trap_memos == []
-    assert danger_found >= 24
+    assert danger_found >= 34

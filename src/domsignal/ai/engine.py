@@ -12,6 +12,7 @@ import json
 from collections.abc import Sequence
 
 from domsignal.ai.contracts import (
+    AuditEvent,
     Disposition,
     EmergencyDecision,
     ExplicitReportDecision,
@@ -23,6 +24,7 @@ from domsignal.ai.contracts import (
     WindowAnalysis,
     WindowInput,
 )
+from domsignal.ai.taxonomy import UNSPECIFIED, Taxonomy
 from domsignal.core.incidents import ReportCategory
 
 #: Доля окон без сигналов в Inbox, попадающих в выборочный аудит, в процентах.
@@ -67,6 +69,50 @@ def may_join_open_item(emergency: EmergencyDecision, item: OpenItem) -> bool:
     if not emergency.is_emergency:
         return True
     return all(kind in item.danger_kinds for kind in emergency.kinds)
+
+
+def subtype_from_danger(
+    signals: Sequence[SignalDraft], taxonomy: Taxonomy
+) -> tuple[tuple[SignalDraft, ...], tuple[AuditEvent, ...]]:
+    """Подтип по виду опасности, если модель или правила его не определили.
+
+    Живой шаг 4 P6b: газовый сигнал после разбора стал «Другое». Опасность
+    при подтипе `other.unspecified` даёт подтип таксономии, когда вид
+    опасности задаёт его однозначно (`Taxonomy.subtype_for_danger`); иначе
+    сигнал не меняется. Проверка в коде, а не в промпте.
+    """
+    fallback_label = taxonomy.get(UNSPECIFIED).label
+    fixed: list[SignalDraft] = []
+    events: list[AuditEvent] = []
+    for signal in signals:
+        code = (
+            taxonomy.subtype_for_danger(signal.emergency.kinds)
+            if signal.subtype == UNSPECIFIED and signal.emergency.is_emergency
+            else None
+        )
+        if code is None:
+            fixed.append(signal)
+            continue
+        subtype = taxonomy.get(code)
+        label = signal.object_label
+        fixed.append(
+            signal.model_copy(
+                update={
+                    "subtype": code,
+                    "product_category": subtype.product_category,
+                    "object_label": subtype.label if label in ("", fallback_label) else label,
+                    "flags": (*signal.flags, "subtype_from_danger"),
+                }
+            )
+        )
+        events.append(
+            AuditEvent(
+                kind="subtype_from_danger",
+                signal_ref=signal.ref,
+                details=f"{UNSPECIFIED} → {code} по опасности {'/'.join(signal.emergency.kinds)}",
+            )
+        )
+    return tuple(fixed), tuple(events)
 
 
 def rename_refs(

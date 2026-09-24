@@ -74,6 +74,7 @@ AuditEventKind = Literal[
     "no_new_facts_violation",
     "model_missing_line",
     "field_dropped",
+    "subtype_from_danger",
 ]
 
 ROLES: tuple[LineRole, ...] = (

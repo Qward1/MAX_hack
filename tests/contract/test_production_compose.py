@@ -140,7 +140,9 @@ def test_the_model_timeout_comes_from_the_profile_unless_set(
     ai = build_ai(worker, None)  # type: ignore[arg-type]  # фабрика сессий не нужна
     assert ai.timeout_seconds == 30.0, "профиль gpt-5-mini (P6)"
     assert ai.provider is not None
-    assert ai.provider.open_danger_extra_body == {"reasoning": {"effort": "low"}}
+    open_danger = {"reasoning": {"effort": "low"}, "max_tokens": 2800}
+    assert ai.provider.open_danger_extra_body == open_danger
+    assert ai.provider.max_tokens == 1600
     assert ai.provider.prompt_version == "window.v3"
     assert lease_seconds_for(
         "ai", ai_lease_seconds=worker.ai_worker_lease_seconds, model_timeout_seconds=30.0
