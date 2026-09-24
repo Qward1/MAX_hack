@@ -444,3 +444,29 @@ async def test_messages_are_stored_without_markup(env):  # noqa: F811
         rows = (await db.scalars(select(CompanyApplicationMessage))).all()
         assert [(r.author, r.text) for r in rows] == [("platform", "Уточните адреса")]
         assert not await db.scalar(select(AppSession).where(AppSession.user_id.is_(None)))
+
+
+async def test_responsible_sees_chat_connections_only_for_own_houses(env):  # noqa: F811
+    company = seed_id("alpha")
+    responsible = await env["client"](seed_id("responsible"))
+    boot = (await responsible.get("/api/v1/admin/bootstrap")).json()["companies"][0]
+    assert boot["role"] == "operator"
+    assert boot["surfaces"] == [
+        "tickets",
+        "signals",
+        "assigned_houses",
+        "overview",
+        "chat_connections",
+    ]
+    houses = (await responsible.get(f"/api/v1/companies/{company}/houses")).json()
+    assert [(h["house_id"], h["can_connect_chats"]) for h in houses] == [(str(seed_id("a1")), True)]
+    operator = (await env["operator"].get("/api/v1/admin/bootstrap")).json()["companies"][0]
+    assert "chat_connections" not in operator["surfaces"]
+    admin = (await env["admin"].get(f"/api/v1/companies/{company}/houses")).json()
+    assert {h["can_connect_chats"] for h in admin} == {True} and len(admin) == 2
+    # Ответственный подключает чат своего дома (право chat.connect действующей политики).
+    response = await responsible.post(f"/api/v1/houses/{seed_id('a1')}/chat-connections", json={})
+    assert response.status_code == 201, response.text
+    assert response.json()["quota"]["limit"] is None
+    denied = await env["operator"].post(f"/api/v1/houses/{seed_id('a1')}/chat-connections", json={})
+    assert denied.status_code in {403, 404}

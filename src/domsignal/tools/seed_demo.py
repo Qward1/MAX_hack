@@ -27,6 +27,8 @@ THIRD_USER_ID = UUID("00000000-0000-0000-0000-000000000004")
 DEMO_HOUSE_ID = UUID("00000000-0000-0000-0000-000000000101")
 DEMO_TENANT_ID = UUID("00000000-0000-0000-0000-000000000301")
 OTHER_HOUSE_ID = UUID("00000000-0000-0000-0000-000000000102")
+#: Второй регион (D2, REGION-MOW-2026-09-26): тот же код, другой пакет данных.
+MOSCOW_HOUSE_ID = UUID("00000000-0000-0000-0000-000000000103")
 
 
 async def seed(settings: Settings | None = None) -> None:
@@ -86,6 +88,12 @@ async def seed(settings: Settings | None = None) -> None:
                             "address": "Казань, Другая улица, 2 (демо)",
                             "is_demo": True,
                         },
+                        {
+                            "id": MOSCOW_HOUSE_ID,
+                            "name": "Демо-дом в Москве",
+                            "address": "Москва, Садовая улица, 3 (демо)",
+                            "is_demo": True,
+                        },
                     ]
                 )
                 .on_conflict_do_nothing(index_elements=[House.id])
@@ -102,7 +110,7 @@ async def seed(settings: Settings | None = None) -> None:
             # Решение владельца по итогам P3a: на демонстрации показываем полный
             # путь «сообщение → разбор → Ticket → статус», поэтому демо-дома
             # принимают заявки. Идемпотентно: повторный seed только включает флаг.
-            for house_id in (DEMO_HOUSE_ID, OTHER_HOUSE_ID):
+            for house_id in (DEMO_HOUSE_ID, OTHER_HOUSE_ID, MOSCOW_HOUSE_ID):
                 await session.execute(
                     insert(HouseManagement)
                     .values(
@@ -136,6 +144,14 @@ async def seed(settings: Settings | None = None) -> None:
                             "region_code": "RU-TA",
                             "municipality_code": "kazan",
                             "territory_policy": "uk",
+                        },
+                        # Москва: смешанная территория — двор решает диспетчер,
+                        # городская территория ведёт в «Наш город», а не в ПОС.
+                        {
+                            "house_id": MOSCOW_HOUSE_ID,
+                            "region_code": "RU-MOW",
+                            "municipality_code": "moscow",
+                            "territory_policy": "mixed",
                         },
                     ]
                 )
