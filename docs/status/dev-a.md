@@ -23,7 +23,7 @@ State: MERGED + DEPLOYED (`main` = `dev/b-experience` = `dev/a-core`); живы�
 
 | Проверка | Результат |
 |---|---|
-| `check.py --scope backend` | PASS — ruff, mypy (151 файл), 823 passed, 1 skipped |
+| `check.py --scope backend` | PASS — ruff, mypy (151 файл), 825 passed, 1 skipped |
 | `check.py --scope frontend` | PASS — typecheck, 135 vitest, build |
 | `check.py --scope contracts` | PASS — OpenAPI/TS без дрейфа (`passive_ai_analysis`), `regions/` валиден |
 | `check.py --scope integration` | PASS — 351 (своя БД `domsignal-p6b-db`, `127.0.0.1:55502`) |
