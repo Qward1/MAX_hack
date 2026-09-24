@@ -1,0 +1,266 @@
+{
+  "dataset": "d5_dev",
+  "config": "gpt5mini_v2_minimal_flexfirst",
+  "calls": {
+    "windows": 80,
+    "calls": 80,
+    "states": {
+      "ok": 80
+    },
+    "valid_json": {
+      "k": 80,
+      "n": 80,
+      "value": 1.0,
+      "ci95": [
+        0.9542,
+        1.0
+      ]
+    },
+    "timeouts": 0,
+    "provider_errors": 0,
+    "p50_ms": 4430,
+    "p95_ms": 7602,
+    "p99_ms": 11827,
+    "max_ms": 13925,
+    "rub_total": 2.9608,
+    "rub_per_window": 0.037,
+    "tokens_in_mean": 6066,
+    "tokens_out_mean": 192,
+    "reasoning_tokens_mean": 0,
+    "quotes": {
+      "k": 0,
+      "n": 241,
+      "value": 0.0,
+      "ci95": [
+        0.0,
+        0.0157
+      ]
+    },
+    "dropped_fields": 0,
+    "audit": {},
+    "upstreams": {
+      "openrouter": 80
+    }
+  },
+  "d5": {
+    "danger_found": {
+      "k": 30,
+      "n": 30,
+      "value": 1.0,
+      "ci95": [
+        0.8865,
+        1.0
+      ]
+    },
+    "contextual_found": {
+      "k": 10,
+      "n": 10,
+      "value": 1.0,
+      "ci95": [
+        0.7225,
+        1.0
+      ]
+    },
+    "trap_false_alarms": {
+      "k": 7,
+      "n": 40,
+      "value": 0.175,
+      "ci95": [
+        0.0875,
+        0.3195
+      ]
+    },
+    "rules_danger_found": {
+      "k": 24,
+      "n": 30,
+      "value": 0.8,
+      "ci95": [
+        0.6269,
+        0.9049
+      ]
+    },
+    "rules_contextual_found": {
+      "k": 1,
+      "n": 10,
+      "value": 0.1,
+      "ci95": [
+        0.0179,
+        0.4042
+      ]
+    },
+    "rules_trap_false_alarms": {
+      "k": 5,
+      "n": 40,
+      "value": 0.125,
+      "ci95": [
+        0.0546,
+        0.2611
+      ]
+    },
+    "misses": [],
+    "false_alarms": [
+      "d5dev-40",
+      "d5dev-41",
+      "d5dev-52",
+      "d5dev-65",
+      "d5dev-66",
+      "d5dev-67",
+      "d5dev-68"
+    ],
+    "intake": {
+      "danger_alert": {
+        "k": 24,
+        "n": 30,
+        "value": 0.8,
+        "ci95": [
+          0.6269,
+          0.9049
+        ]
+      },
+      "danger_memo": {
+        "k": 17,
+        "n": 30,
+        "value": 0.5667,
+        "ci95": [
+          0.392,
+          0.7262
+        ]
+      },
+      "contextual_memo": {
+        "k": 0,
+        "n": 10,
+        "value": 0.0,
+        "ci95": [
+          0.0,
+          0.2775
+        ]
+      },
+      "trap_alert": {
+        "k": 10,
+        "n": 40,
+        "value": 0.25,
+        "ci95": [
+          0.1419,
+          0.4019
+        ]
+      },
+      "trap_memo": {
+        "k": 0,
+        "n": 40,
+        "value": 0.0,
+        "ci95": [
+          0.0,
+          0.0876
+        ]
+      },
+      "trap_memo_units": []
+    },
+    "families": {
+      "context": {
+        "windows": 10,
+        "alarm": 10,
+        "rules_alarm": 1,
+        "intake_alert": 1,
+        "memo": 0
+      },
+      "displaced": {
+        "windows": 4,
+        "alarm": 0,
+        "rules_alarm": 0,
+        "intake_alert": 4,
+        "memo": 0
+      },
+      "drill": {
+        "windows": 8,
+        "alarm": 0,
+        "rules_alarm": 0,
+        "intake_alert": 0,
+        "memo": 0
+      },
+      "electric": {
+        "windows": 5,
+        "alarm": 5,
+        "rules_alarm": 5,
+        "intake_alert": 5,
+        "memo": 3
+      },
+      "figurative": {
+        "windows": 8,
+        "alarm": 0,
+        "rules_alarm": 0,
+        "intake_alert": 0,
+        "memo": 0
+      },
+      "fire": {
+        "windows": 6,
+        "alarm": 6,
+        "rules_alarm": 5,
+        "intake_alert": 5,
+        "memo": 5
+      },
+      "flooding": {
+        "windows": 4,
+        "alarm": 4,
+        "rules_alarm": 3,
+        "intake_alert": 3,
+        "memo": 1
+      },
+      "gas": {
+        "windows": 6,
+        "alarm": 6,
+        "rules_alarm": 5,
+        "intake_alert": 5,
+        "memo": 5
+      },
+      "hypothetical": {
+        "windows": 4,
+        "alarm": 4,
+        "rules_alarm": 4,
+        "intake_alert": 4,
+        "memo": 0
+      },
+      "light": {
+        "windows": 6,
+        "alarm": 1,
+        "rules_alarm": 1,
+        "intake_alert": 1,
+        "memo": 0
+      },
+      "negation": {
+        "windows": 2,
+        "alarm": 0,
+        "rules_alarm": 0,
+        "intake_alert": 0,
+        "memo": 0
+      },
+      "other_hazard": {
+        "windows": 2,
+        "alarm": 2,
+        "rules_alarm": 0,
+        "intake_alert": 0,
+        "memo": 0
+      },
+      "resolved": {
+        "windows": 8,
+        "alarm": 2,
+        "rules_alarm": 0,
+        "intake_alert": 1,
+        "memo": 0
+      },
+      "structural": {
+        "windows": 2,
+        "alarm": 2,
+        "rules_alarm": 2,
+        "intake_alert": 2,
+        "memo": 1
+      },
+      "trapped": {
+        "windows": 5,
+        "alarm": 5,
+        "rules_alarm": 4,
+        "intake_alert": 4,
+        "memo": 2
+      }
+    }
+  }
+}
