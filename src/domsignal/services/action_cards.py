@@ -66,6 +66,11 @@ _EXPLANATION_CHOICE = (
 )
 _EXPLANATION_UNKNOWN = "Правила для этой проблемы в справочнике нет, а догадку продукт не выдаёт."
 _EXPLANATION_EMERGENCY = "Такие сообщения адресуются экстренным службам, а не обычной заявке."
+#: Общие пояснения, которые основание маршрута пересказывает своими словами:
+#: в личном сообщении при основании они не повторяются (P6b, владелец).
+EXPLANATIONS_COVERED_BY_BASIS = frozenset(
+    {_EXPLANATION_UK, _EXPLANATION_ROUTED, _EXPLANATION_EMERGENCY}
+)
 
 
 def _action(

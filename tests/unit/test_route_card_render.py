@@ -81,19 +81,21 @@ def test_external_route_message_names_the_route_and_its_basis(packaged: Any) -> 
     assert card.route.route_type == "municipality"
     message = render_route_card(_intent(card), ref=REF)
     assert card.title in message.text
-    assert card.explanation in message.text
-    # Основание маршрута и источник факта видны жителю.
+    # Основание видно жителю; общее пояснение, которое оно пересказывает, — нет.
     assert card.route.basis is not None
     assert card.route.basis.text in message.text
+    assert card.explanation not in message.text
 
 
-def test_facts_are_shown_with_their_source(packaged: Any) -> None:
+def test_message_is_short_with_one_source_link_at_the_end(packaged: Any) -> None:
+    """P6b, владелец: без «Источник: …», «Проверено без входа …» и повторов."""
     card, _ = _card(packaged, "street_lighting.failure", "municipal_territory")
     message = render_route_card(_intent(card), ref=REF)
-    assert card.facts
-    first = card.facts[0]
-    assert first.text in message.text
-    assert first.source_title in message.text
+    assert "Источник:" not in message.text
+    assert "Проверено" not in message.text
+    assert message.text.endswith("Информация взята с: pos.gosuslugi.ru/landing")
+    assert message.text.count("рассмотрит профильный орган власти") == 1
+    assert any(fact.text in message.text for fact in card.facts)
 
 
 def test_at_most_two_facts_reach_the_message(packaged: Any) -> None:

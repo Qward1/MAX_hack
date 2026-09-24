@@ -1,5 +1,39 @@
 # DEV-B — current handoff
 
+## P6b — продуктовая часть (агент DEV-A, обе зоны по решению владельца) — 24.09.2026
+
+Код **MERGED** в `dev/b-experience` → `main`/`dev/a-core` (fast-forward) и
+**DEPLOYED** на `domsignal-prod`; живые шаги — [чекпоинт P6b](../MAX_LIVE_SMOKE.md#p6b-checkpoint--24-сентября-2026-памятка-только-по-высокоточным-срабатываниям-llm-слой-включён-шаг-6).
+Решение владельца — [OWNER-DECISION-2026-09-24](../decisions.md#owner-decision-2026-09-24).
+
+| Пункт | Что сделано |
+|---|---|
+| B1 `PASSIVE_LLM_ENABLED` | был с P7b (`72f3222`); добавлен `CapabilityFlags.passive_ai_analysis` (аддитивно, OpenAPI/TS обновлены), кабинет «MAX-чаты» показывает «Разбор переписки: правила и модель (ИИ)» / «только правила» |
+| B2 `OpenItem.danger_kinds` | был с P7b (`286976a`, тест `test_a_new_kind_at_an_open_gas_signal_becomes_its_own_signal`); живой шаг 6 выявил обход инварианта на склейке по ключу — `danger_fits` + событие `danger_not_joined` |
+| B3 памятка | `passive_capture` пишет памятку только по `chat_memo_hits`; иначе событие `chat_memo_not_eligible`; оповещение оператора — как было |
+| B4 роутер | 75/76 с P7b; основания п. 21 «а/б/г» ПП № 2071 сверены по PDF официальной публикации (с. 8–9); `heating.cold_radiators` — УК + альтернатива РСО |
+| B5 Compose | `LLM_TIMEOUT_SECONDS` пуст по умолчанию (таймаут профиля 30 с; пустая строка = не задан), `PASSIVE_WINDOW_MAX_LINES` 6 для api/worker/ai-worker; runbook и `deploy/.env.example` обновлены |
+| Черновик (живой шаг 7) | «данные могли измениться» больше не запирает поле и «Скопировать текст»; копирование не зависает (таймаут 1,5 с + `execCommand`); текст — письмо со вступлением и завершением, без повторного адреса |
+| Карточка маршрута (шаг 7б) | личное сообщение короче: без «Источник: …» у фактов, без «Проверено без входа», без повторов; в конце «Информация взята с: pos.gosuslugi.ru/landing» |
+
+### Выкладки (подробно — в чекпоинте)
+
+`9fe99f2` → `703a32a` → `fda0fa8` → итоговая (docs и карточка), каждая: тег
+отката `pre-<sha>`, резервная копия с проверкой `pg_restore --list` (369),
+бандл, fast-forward, `BUILD_COMMIT`, `up -d --build`; миграций нет. Окружение:
+убран `LLM_TIMEOUT_SECONDS=60`, добавлены `PASSIVE_WINDOW_MAX_LINES=6`,
+`PASSIVE_LLM_ENABLED=true`; копия env `env-production-pre-p6b-20260924` (600).
+Подписка MAX не менялась.
+
+### Проверки — см. [DEV-A, P6b](dev-a.md) (одно итоговое дерево)
+
+### Вопросы владельцу
+
+1. Экстренное правило для `person_trapped` (маршрут сейчас «Не определён»).
+2. Текст оповещения оператору в личном чате жителя B не проверен глазами.
+
+---
+
 ## P7b — находки P7a, приватность журналов, основания ПОС — 23.09.2026
 
 Код P7b **MERGED** (`58b31f6`, «merge: product fixes, privacy and POS sources
