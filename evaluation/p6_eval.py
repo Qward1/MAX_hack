@@ -74,11 +74,13 @@ DATASETS = {
     "d5": pathlib.Path("datasets/synthetic/d5_danger.v1.jsonl"),
     # P6b: набор настройки опасности другого стиля; D5 остаётся контролем.
     "d5_dev": pathlib.Path("datasets/synthetic/d5_dev.v1.jsonl"),
+    # P6b (живой шаг 6): открытая опасность в доме + новый вид или продолжение.
+    "open_danger_dev": pathlib.Path("datasets/synthetic/open_danger_dev.v1.jsonl"),
     # D2 появляется только после сессии с добровольцами (evaluation/d2_convert.py).
     "d2": pathlib.Path("datasets/synthetic/d2_dialogs.v1.jsonl"),
 }
 #: Окно D5-типа: одно окно на строку набора, без нарезки.
-SINGLE_WINDOW = frozenset({"d5", "d5_dev"})
+SINGLE_WINDOW = frozenset({"d5", "d5_dev", "open_danger_dev"})
 
 
 @dataclass(frozen=True)
@@ -98,10 +100,12 @@ SLICES = {
         700,
         300.0,
     ),
+    # 400 вызовов по заданию; 600 — после живого шага 6 (решение владельца
+    # «чинить сейчас», промпт window.v3 на наборах настройки).
     "p6b": Slice(
         pathlib.Path("evaluation/reports/p6b-runs"),
         pathlib.Path("evaluation/reports/2026-09-24-p6b-ledger.json"),
-        400,
+        600,
         150.0,
     ),
 }
@@ -135,11 +139,15 @@ class ModelConfig:
     timeout_seconds: float = 60.0
     #: P6b (A2): рассуждения для окон, где правила нашли опасность без отрицания.
     danger_effort: str | None = None
+    #: P6b (живой шаг 6): рассуждения для окон при открытом сигнале об опасности.
+    open_danger_effort: str | None = None
 
-    def for_window(self, rules_danger: bool) -> ModelConfig:
-        """Конфигурация вызова окна: другие рассуждения только при опасности правил."""
+    def for_window(self, rules_danger: bool, open_danger: bool = False) -> ModelConfig:
+        """Конфигурация вызова окна: другие рассуждения только в особых окнах."""
         if rules_danger and self.danger_effort is not None:
             return replace(self, effort=self.danger_effort)
+        if open_danger and self.open_danger_effort is not None:
+            return replace(self, effort=self.open_danger_effort)
         return self
 
     def extra_body(self) -> dict[str, Any]:
@@ -213,6 +221,22 @@ CONFIGS: dict[str, ModelConfig] = {
         provider_order=("openai/flex", "openai"),
         danger_effort="low",
     ),
+    # P6b после живого шага 6: промпт window.v3, профиль прежний.
+    "gpt5mini_v3_minimal_flexfirst": ModelConfig(
+        name="gpt5mini_v3_minimal_flexfirst",
+        model="openai/gpt-5-mini",
+        prompt="window.v3",
+        effort="minimal",
+        provider_order=("openai/flex", "openai"),
+    ),
+    "gpt5mini_v3_minimal_flexfirst_openlow": ModelConfig(
+        name="gpt5mini_v3_minimal_flexfirst_openlow",
+        model="openai/gpt-5-mini",
+        prompt="window.v3",
+        effort="minimal",
+        provider_order=("openai/flex", "openai"),
+        open_danger_effort="low",
+    ),
     # E: резервная модель на тех же окнах.
     "gemini_v1": ModelConfig(
         name="gemini_v1", model="google/gemini-3.1-flash-lite", effort=None, temperature=0.0
@@ -237,6 +261,8 @@ class EvalUnit:
     id: str
     lines: list[WindowLine]
     labels: dict[str, Any]
+    context: tuple[WindowLine, ...] = ()
+    open_items: tuple[OpenItem, ...] = ()
 
 
 def load_units(dataset: str) -> list[EvalUnit]:
@@ -253,13 +279,34 @@ def load_units(dataset: str) -> list[EvalUnit]:
             )
             for item in row["lines"]
         ]
-        units.append(EvalUnit(id=row["id"], lines=lines, labels=row))
+        context = tuple(
+            WindowLine(
+                line_id=f"{row['id']}-c{item['n']}",
+                author_ref=f"{row['id']}-{item['author']}",
+                text=item["text"],
+                sent_at=BASE_TIME + timedelta(seconds=item["offset_s"]),
+                is_context=True,
+            )
+            for item in row.get("context", [])
+        )
+        open_items = tuple(OpenItem.model_validate(item) for item in row.get("open_items", []))
+        units.append(
+            EvalUnit(
+                id=row["id"], lines=lines, labels=row, context=context, open_items=open_items
+            )
+        )
     return units
 
 
 def unit_windows(unit: EvalUnit, dataset: str) -> list[WindowInput]:
     if dataset in SINGLE_WINDOW:
-        return [WindowInput(channel="group_passive", lines=tuple(unit.lines))]
+        return [
+            WindowInput(
+                channel="group_passive",
+                lines=(*unit.context, *unit.lines),
+                open_items=unit.open_items,
+            )
+        ]
     return build_windows(unit.lines, channel="group_passive")
 
 
@@ -437,7 +484,7 @@ async def run_unit(
     run: str,
 ) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
-    open_items: list[OpenItem] = []
+    open_items: list[OpenItem] = list(unit.open_items)
     counter = [0]
     windows = unit_windows(unit, dataset)
     for index, base in enumerate(windows):
@@ -445,7 +492,9 @@ async def run_unit(
         tap = UsageTap()
         recorder: CallRecorder | None = None
         danger = rules_danger(window)
-        call = config.for_window(danger)
+        call = config.for_window(
+            danger, open_danger=any(item.danger_kinds for item in window.open_items)
+        )
         if config.model is None:
             analyzer = WindowAnalyzer()
         else:
@@ -753,6 +802,39 @@ def summarize_d5(records: Sequence[dict[str, Any]], dataset: str = "d5") -> dict
     return result
 
 
+def summarize_open_danger(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """Новый вид при открытой опасности — отдельный сигнал; продолжение — без чужого вида."""
+    units = {unit.id: unit for unit in load_units("open_danger_dev")}
+    new_ok: list[str] = []
+    new_fail: list[str] = []
+    cont_ok: list[str] = []
+    cont_fail: list[str] = []
+    for record in records:
+        unit = units[record["unit"]]
+        own = {kind for item in unit.open_items for kind in item.danger_kinds}
+        refs = {item.ref for item in unit.open_items}
+        expected = set(unit.labels["expected_new_kinds"])
+        fresh = {
+            kind
+            for signal in record["signals"]
+            if signal["ref"] not in refs and signal["disposition"] == "inbox"
+            for kind in signal["emergency"]["kinds"]
+        }
+        foreign = {
+            kind for signal in record["signals"] for kind in signal["emergency"]["kinds"]
+        } - own
+        if unit.labels["group"] == "new_kind":
+            (new_ok if fresh & expected else new_fail).append(record["unit"])
+        else:
+            (cont_fail if foreign else cont_ok).append(record["unit"])
+    return {
+        "new_kind_separate_signal": ratio(len(new_ok), len(new_ok) + len(new_fail)),
+        "continuation_without_foreign_kind": ratio(len(cont_ok), len(cont_ok) + len(cont_fail)),
+        "new_kind_missed": new_fail,
+        "continuation_foreign_kind": cont_fail,
+    }
+
+
 def summarize_d3_intake(records: Sequence[dict[str, Any]], dataset: str) -> dict[str, Any]:
     """Путь приёма на репликах D3: размеченная опасность против остальных."""
     units = {unit.id: unit for unit in load_units(dataset)}
@@ -832,7 +914,9 @@ def summarize(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
         "config": records[0]["config"] if records else "",
         "calls": summarize_calls(records),
     }
-    if dataset in SINGLE_WINDOW:
+    if dataset == "open_danger_dev":
+        result["open_danger"] = summarize_open_danger(records)
+    elif dataset in SINGLE_WINDOW:
         result["d5"] = summarize_d5(records, dataset)
     elif dataset:
         result["d3"] = summarize_d3(records, dataset)

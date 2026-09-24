@@ -128,7 +128,7 @@ async def test_facade_records_model_prompt_and_accounting() -> None:
     assert analysis.execution.tokens_in == 2480
     assert analysis.execution.cost_rub == pytest.approx(0.04131306)
     assert analysis.versions.model == MODEL
-    assert analysis.versions.prompt == "window.v2"
+    assert analysis.versions.prompt == "window.v3"
 
 
 async def test_answer_wrapped_in_a_markdown_fence_is_accepted() -> None:
@@ -327,6 +327,34 @@ def test_model_specific_extras_reach_the_payload() -> None:
     payload = provider.build_payload(request)
     assert "temperature" not in payload
     assert payload["reasoning"] == {"effort": "low"}
+
+
+def test_open_danger_windows_get_more_reasoning() -> None:
+    """P6b, живой шаг 6: при открытом сигнале об опасности — reasoning low."""
+    from domsignal.ai.contracts import OpenItem
+
+    provider = provider_for(
+        replying(completion("{}")),
+        extra_body={"reasoning": {"effort": "minimal"}, "provider": {"order": ["openai/flex"]}},
+        open_danger_extra_body={"reasoning": {"effort": "low"}},
+    )
+    gas = OpenItem(
+        ref="signal-1",
+        kind="signal",
+        category="other",
+        subtype="other.unspecified",
+        entrance="2",
+        title="запах газа",
+        danger_kinds=("gas",),
+    )
+    quiet = gas.model_copy(update={"ref": "signal-2", "danger_kinds": ()})
+    danger, _ = build_request(window("да, женщина стучит", open_items=(gas,)))
+    calm, _ = build_request(window("лифт стоит", open_items=(quiet,)))
+    alone, _ = build_request(single("Лифт не работает"))
+    assert provider.build_payload(danger)["reasoning"] == {"effort": "low"}
+    assert provider.build_payload(danger)["provider"] == {"order": ["openai/flex"]}
+    assert provider.build_payload(calm)["reasoning"] == {"effort": "minimal"}
+    assert provider.build_payload(alone)["reasoning"] == {"effort": "minimal"}
 
 
 def test_provider_refuses_to_start_without_a_key_or_model() -> None:

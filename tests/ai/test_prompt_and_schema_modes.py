@@ -234,7 +234,7 @@ def test_messages_are_system_few_shot_pairs_and_the_window() -> None:
 
 
 def test_prompt_version_is_the_one_reported_to_the_product() -> None:
-    assert PROMPT_VERSION == "window.v2"
+    assert PROMPT_VERSION == "window.v3"
 
 
 # ------------------------------------------------------------- few-shot
@@ -246,7 +246,8 @@ def test_examples_are_a_small_set_of_valid_answers() -> None:
     for example in examples:
         parsed = WindowModelOutput.model_validate(json.loads(example.assistant))
         payload = json.loads(example.user)
-        known = {line["id"] for line in payload["lines"]}
+        # Для реплик контекста роли не возвращаются (промпт, раздел 1).
+        known = {line["id"] for line in payload["lines"] if not line.get("is_context")}
         assert {line.id for line in parsed.messages} == known
         for signal in parsed.signals:
             assert load_taxonomy().is_known(signal.subtype)
@@ -288,6 +289,22 @@ def test_examples_do_not_overlap_with_the_selection_datasets() -> None:
 
 
 # ------------------------------------------------------ версии промпта
+
+
+def test_prompt_v3_adds_the_open_danger_example_to_v2() -> None:
+    """P6b, живой шаг 6: открытая опасность не поглощает угрозу людям."""
+    v2 = {example.id for example in load_examples("window.v2")}
+    v3 = load_examples("window.v3")
+    assert v2 < {example.id for example in v3}
+    added = [example for example in v3 if example.id not in v2]
+    assert [example.id for example in added] == ["fs07-open-danger-new-kind"]
+    user = json.loads(added[0].user)
+    assert user["open_items"][0]["danger_kinds"] == ["gas"]
+    answer = WindowModelOutput.model_validate(json.loads(added[0].assistant))
+    assert answer.signals[0].ref == "new:1"
+    assert [danger.kind for danger in answer.signals[0].danger] == ["person_trapped"]
+    system = build_messages(build_request(single("x"))[0], version="window.v3")[0]["content"]
+    assert "Открытый сигнал об опасности не объясняет новую угрозу людям" in system
 
 
 def test_prompt_v2_is_compact_and_uses_a_subset_of_v1_examples() -> None:

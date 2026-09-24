@@ -36,7 +36,9 @@ from domsignal.ai.taxonomy import Taxonomy, load_taxonomy
 
 #: Версия промпта по умолчанию, попадающая в `WindowAnalysis.versions.prompt`.
 #: P6 (23.09): window.v2 — измерено на dev D3, решение и числа в docs/decisions.md.
-PROMPT_VERSION = "window.v2"
+#: P6b (24.09): window.v3 — после живого шага 6 (открытая опасность поглощала
+#: угрозу людям); измерено только на наборах настройки, docs/decisions.md.
+PROMPT_VERSION = "window.v3"
 
 PROMPT_RESOURCE = "prompts/window.v1.md"
 EXAMPLES_RESOURCE = "prompts/window.v1.examples.jsonl"
@@ -62,6 +64,13 @@ PROMPT_SPECS: dict[str, PromptSpec] = {
         "window.v2",
         "prompts/window.v2.md",
         "prompts/window.v2.examples.jsonl",
+        compact=True,
+    ),
+    # P6b (живой шаг 6): открытая опасность не поглощает угрозу людям.
+    "window.v3": PromptSpec(
+        "window.v3",
+        "prompts/window.v3.md",
+        "prompts/window.v3.examples.jsonl",
         compact=True,
     ),
 }
