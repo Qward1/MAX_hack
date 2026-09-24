@@ -1,0 +1,33 @@
+{
+  "calls": 196,
+  "max_calls": 200,
+  "max_rub": 30.0,
+  "rub": 14.573883,
+  "runs": {
+    "d3dev-v2": {
+      "calls": 88,
+      "rub": 5.094388
+    },
+    "d3dev-v3": {
+      "calls": 88,
+      "rub": 7.266951
+    },
+    "d3dev-v3-2800-fix4": {
+      "calls": 11,
+      "rub": 1.481628
+    },
+    "diag-gas-v2min-own": {
+      "calls": 3,
+      "rub": 0.204007
+    },
+    "diag-gas-v3-fixed": {
+      "calls": 3,
+      "rub": 0.217607
+    },
+    "diag-gas-v3openlow-own": {
+      "calls": 3,
+      "rub": 0.309302
+    }
+  },
+  "unknown_cost_calls": 0
+}

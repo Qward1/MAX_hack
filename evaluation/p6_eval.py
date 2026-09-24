@@ -108,6 +108,13 @@ SLICES = {
         600,
         150.0,
     ),
+    # P6c: закрытие AI-ступени — регрессия window.v3 против window.v2 на dev.
+    "p6c": Slice(
+        pathlib.Path("evaluation/reports/p6c-runs"),
+        pathlib.Path("evaluation/reports/2026-09-24-p6c-ledger.json"),
+        200,
+        30.0,
+    ),
 }
 RUNS_DIR = SLICES["p6"].runs
 LEDGER = SLICES["p6"].ledger
@@ -141,13 +148,19 @@ class ModelConfig:
     danger_effort: str | None = None
     #: P6b (живой шаг 6): рассуждения для окон при открытом сигнале об опасности.
     open_danger_effort: str | None = None
+    #: P6c: лимит ответа тех же окон (рассуждения low упирались в 1600).
+    open_danger_max_tokens: int | None = None
 
     def for_window(self, rules_danger: bool, open_danger: bool = False) -> ModelConfig:
         """Конфигурация вызова окна: другие рассуждения только в особых окнах."""
         if rules_danger and self.danger_effort is not None:
             return replace(self, effort=self.danger_effort)
         if open_danger and self.open_danger_effort is not None:
-            return replace(self, effort=self.open_danger_effort)
+            return replace(
+                self,
+                effort=self.open_danger_effort,
+                max_tokens=self.open_danger_max_tokens or self.max_tokens,
+            )
         return self
 
     def extra_body(self) -> dict[str, Any]:
@@ -236,6 +249,17 @@ CONFIGS: dict[str, ModelConfig] = {
         effort="minimal",
         provider_order=("openai/flex", "openai"),
         open_danger_effort="low",
+    ),
+    # P6c: профиль production после §3 — тот же, лимит ответа окон при
+    # открытой опасности 2800 (решение владельца).
+    "gpt5mini_v3_openlow_2800": ModelConfig(
+        name="gpt5mini_v3_openlow_2800",
+        model="openai/gpt-5-mini",
+        prompt="window.v3",
+        effort="minimal",
+        provider_order=("openai/flex", "openai"),
+        open_danger_effort="low",
+        open_danger_max_tokens=2800,
     ),
     # E: резервная модель на тех же окнах.
     "gemini_v1": ModelConfig(

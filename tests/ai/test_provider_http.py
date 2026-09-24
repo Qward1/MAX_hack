@@ -357,6 +357,28 @@ def test_open_danger_windows_get_more_reasoning() -> None:
     assert provider.build_payload(alone)["reasoning"] == {"effort": "minimal"}
 
 
+def test_open_danger_windows_get_a_larger_answer_limit_from_the_profile() -> None:
+    """P6c: лимит ответа окна с открытой опасностью — из профиля, остальные прежние."""
+    from domsignal.ai.contracts import OpenItem
+    from domsignal.ai.models import load_models
+
+    profile = load_models().default
+    assert profile is not None
+    provider = provider_for(
+        replying(completion("{}")),
+        max_tokens=profile.max_tokens,
+        extra_body=profile.extra_body,
+        open_danger_extra_body=profile.open_danger_extra_body,
+    )
+    gas = OpenItem(
+        ref="signal-1", kind="signal", category="other", title="запах газа", danger_kinds=("gas",)
+    )
+    danger, _ = build_request(window("да, женщина стучит", open_items=(gas,)))
+    alone, _ = build_request(single("Лифт не работает"))
+    assert provider.build_payload(danger)["max_tokens"] == 2800
+    assert provider.build_payload(alone)["max_tokens"] == 1600
+
+
 def test_provider_refuses_to_start_without_a_key_or_model() -> None:
     with pytest.raises(ValueError, match="api key"):
         OpenAICompatibleProvider(api_key="", model=MODEL)

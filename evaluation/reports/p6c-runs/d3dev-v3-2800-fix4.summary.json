@@ -1,0 +1,201 @@
+{
+  "dataset": "d3_dev",
+  "config": "gpt5mini_v3_openlow_2800",
+  "calls": {
+    "windows": 11,
+    "calls": 11,
+    "states": {
+      "ok": 11
+    },
+    "valid_json": {
+      "k": 11,
+      "n": 11,
+      "value": 1.0,
+      "ci95": [
+        0.7412,
+        1.0
+      ]
+    },
+    "timeouts": 0,
+    "provider_errors": 0,
+    "p50_ms": 7748,
+    "p95_ms": 12215,
+    "p99_ms": 12215,
+    "max_ms": 12215,
+    "rub_total": 1.4816,
+    "rub_per_window": 0.1347,
+    "tokens_in_mean": 6968,
+    "tokens_out_mean": 960,
+    "reasoning_tokens_mean": 553,
+    "quotes": {
+      "k": 0,
+      "n": 59,
+      "value": 0.0,
+      "ci95": [
+        0.0,
+        0.0611
+      ]
+    },
+    "dropped_fields": 0,
+    "audit": {},
+    "upstreams": {
+      "openrouter": 11
+    }
+  },
+  "d3": {
+    "incidents": 4,
+    "incident_capture": {
+      "k": 4,
+      "n": 4,
+      "value": 1.0,
+      "ci95": [
+        0.5101,
+        1.0
+      ]
+    },
+    "non_problem_signals": {
+      "k": 0,
+      "n": 11,
+      "value": 0.0,
+      "ci95": [
+        0.0,
+        0.2588
+      ]
+    },
+    "subtype_accuracy": {
+      "k": 4,
+      "n": 4,
+      "value": 1.0,
+      "ci95": [
+        0.5101,
+        1.0
+      ]
+    },
+    "category_accuracy": {
+      "k": 4,
+      "n": 4,
+      "value": 1.0,
+      "ci95": [
+        0.5101,
+        1.0
+      ]
+    },
+    "scope_accuracy": {
+      "k": 1,
+      "n": 4,
+      "value": 0.25,
+      "ci95": [
+        0.0456,
+        0.6994
+      ]
+    },
+    "entrance_accuracy": {
+      "k": 0,
+      "n": 4,
+      "value": 0.0,
+      "ci95": [
+        0.0,
+        0.4899
+      ]
+    },
+    "route_end_to_end": {
+      "k": 3,
+      "n": 4,
+      "value": 0.75,
+      "ci95": [
+        0.3006,
+        0.9544
+      ]
+    },
+    "d3_danger_found": {
+      "k": 4,
+      "n": 4,
+      "value": 1.0,
+      "ci95": [
+        0.5101,
+        1.0
+      ]
+    },
+    "role_accuracy": {
+      "k": 22,
+      "n": 54,
+      "value": 0.4074,
+      "ci95": [
+        0.2868,
+        0.5403
+      ]
+    },
+    "missed_incidents": [],
+    "route_details": [
+      {
+        "incident": "d035.I1",
+        "subtype": [
+          "gas.smell",
+          "gas.smell"
+        ],
+        "scope": [
+          "house_common",
+          "unknown"
+        ],
+        "route": [
+          "emergency_service",
+          "emergency_service"
+        ]
+      },
+      {
+        "incident": "d036.I1",
+        "subtype": [
+          "gas.smell",
+          "gas.smell"
+        ],
+        "scope": [
+          "house_common",
+          "unknown"
+        ],
+        "route": [
+          "emergency_service",
+          "emergency_service"
+        ]
+      },
+      {
+        "incident": "d045.I1",
+        "subtype": [
+          "electrical.panel",
+          "electrical.panel"
+        ],
+        "scope": [
+          "house_common",
+          "apartment"
+        ],
+        "route": [
+          "uk_internal",
+          "unknown"
+        ]
+      },
+      {
+        "incident": "d048.I1",
+        "subtype": [
+          "water.leak",
+          "water.leak"
+        ],
+        "scope": [
+          "house_common",
+          "house_common"
+        ],
+        "route": [
+          "uk_internal",
+          "uk_internal"
+        ]
+      }
+    ],
+    "intake": {
+      "danger_lines": 27,
+      "other_lines": 888,
+      "danger_lines_alert": 5,
+      "danger_lines_memo": 4,
+      "other_lines_alert": 0,
+      "other_lines_memo": 0,
+      "other_memo_lines": []
+    }
+  }
+}
