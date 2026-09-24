@@ -8,6 +8,7 @@ outbox и доставку, повтор события не даёт второ
 from __future__ import annotations
 
 import logging
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -364,14 +365,20 @@ async def test_logs_carry_neither_text_nor_max_ids(
     await dialog.say(ELEVATOR)
     await dialog.say("Всем доброе утро, хорошего дня")
     await dialog.settle()
+    standard = set(vars(logging.LogRecord("", 0, "", 0, "", (), None))) | {"message", "asctime"}
+    # MAX id ищется отдельным токеном и только в сообщении и строковых полях:
+    # «721» в миллисекундах времени или в длительности — не утечка.
+    leak = re.compile(rf"(?<![0-9A-Za-z]){RESIDENT}(?![0-9A-Za-z])")
     for record in caplog.records:
         if not record.name.startswith("domsignal.services"):
             continue
-        rendered = (
-            record.getMessage() + " " + " ".join(str(value) for value in record.__dict__.values())
-        )
-        assert "лифт" not in rendered.lower() and "доброе утро" not in rendered.lower()
-        assert str(RESIDENT) not in rendered
+        extras = {key: value for key, value in vars(record).items() if key not in standard}
+        assert not {"text", "actor", "max_user_id", "external_user_id", "destination"} & set(
+            extras
+        ), (record.name, sorted(extras))
+        for rendered in [record.getMessage(), *(v for v in extras.values() if isinstance(v, str))]:
+            assert "лифт" not in rendered.lower() and "доброе утро" not in rendered.lower()
+            assert not leak.search(rendered), (record.name, rendered)
 
 
 # ------------------------------------------------------------ группа
