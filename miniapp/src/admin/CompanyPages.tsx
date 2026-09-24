@@ -149,7 +149,7 @@ export function ChatConnections({ base }: { base: string }) {
   </>;
 }
 
-function PassiveSwitch({ binding, available, aiAnalysis, busy, confirming, ask, cancel, change }: {
+export function PassiveSwitch({ binding, available, aiAnalysis, busy, confirming, ask, cancel, change }: {
   binding: Schema["ChatSummary"]; available: boolean; aiAnalysis: boolean; busy: boolean; confirming: boolean;
   ask: () => void; cancel: () => void; change: (enabled: boolean) => Promise<void>;
 }) {
