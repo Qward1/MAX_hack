@@ -1,8 +1,8 @@
 {
-  "calls": 281,
-  "max_calls": 400,
+  "calls": 472,
+  "max_calls": 600,
   "max_rub": 150.0,
-  "rub": 14.113003,
+  "rub": 26.061023,
   "runs": {
     "a2-d5dev-dangerlow": {
       "calls": 35,
@@ -12,6 +12,50 @@
       "calls": 80,
       "rub": 2.960792
     },
+    "diag-step6-authors_ABA": {
+      "calls": 3,
+      "rub": 0.222092
+    },
+    "diag-step6-items_no_context": {
+      "calls": 3,
+      "rub": 0.141487
+    },
+    "diag-step6-items_without_kinds": {
+      "calls": 3,
+      "rub": 0.140518
+    },
+    "diag-step6-live": {
+      "calls": 3,
+      "rub": 0.166746
+    },
+    "diag-step6-live_low": {
+      "calls": 3,
+      "rub": 0.40823
+    },
+    "diag-step6-live_v3_low": {
+      "calls": 3,
+      "rub": 0.374783
+    },
+    "diag-step6-no_context_no_items": {
+      "calls": 3,
+      "rub": 0.153144
+    },
+    "diag-step6-no_open_items": {
+      "calls": 3,
+      "rub": 0.153286
+    },
+    "od-v2-minimal": {
+      "calls": 20,
+      "rub": 0.972555
+    },
+    "od-v3-minimal": {
+      "calls": 20,
+      "rub": 1.12093
+    },
+    "od-v3-openlow": {
+      "calls": 20,
+      "rub": 2.5528
+    },
     "p6b-d5-final": {
       "calls": 70,
       "rub": 2.439575
@@ -19,6 +63,14 @@
     "p6b-holdout-final": {
       "calls": 96,
       "rub": 5.491577
+    },
+    "v3-d3dev-danger": {
+      "calls": 27,
+      "rub": 2.88768
+    },
+    "v3-d5dev": {
+      "calls": 80,
+      "rub": 2.653769
     }
   },
   "unknown_cost_calls": 0
