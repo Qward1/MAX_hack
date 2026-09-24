@@ -128,6 +128,8 @@ class MaxEvent:
     #: `chat` — групповой чат, `dialog` — личка бота (D1).
     chat_type: str | None = None
     bot_callback: BotCallback | None = None
+    #: Сообщение отправил бот (в том числе сам ДомСигнал): на него не отвечают.
+    from_bot: bool = False
 
     @property
     def in_dialog(self) -> bool:
@@ -178,6 +180,7 @@ def parse_update(payload: dict[str, Any]) -> MaxEvent:
                 mid=message.body.mid if message.body else None,
                 reply_to_mid=_reply_to_mid(message.link),
                 chat_type=message.recipient.chat_type,
+                from_bot=bool(message.sender and message.sender.is_bot),
             )
         elif header.update_type == "message_callback":
             value = _CallbackUpdate.model_validate(payload)

@@ -474,3 +474,21 @@ async def test_bot_stopped_closes_the_dialog(bot: Any) -> None:
     assert not user.dialog_open
     async with bot.container.session_factory() as session, session.begin():
         await session.execute(update(User).where(User.id == user.id).values(group_ack_at=None))
+
+
+async def test_the_bot_never_answers_its_own_dialog_messages(bot: Any) -> None:
+    await bot.webhook(
+        {
+            "update_type": "message_created",
+            "timestamp": ms(datetime.now(UTC)),
+            "message": {
+                "sender": {"user_id": 999, "is_bot": True},
+                "recipient": {"chat_id": 9000 + GUEST, "chat_type": "dialog"},
+                "body": {"mid": "mid.bot-own-1", "text": bot_replies.HELP},
+            },
+        }
+    )
+    await bot.drain_all()
+    await bot.deliver()
+    assert bot.messaging.sent == []
+    assert await bot.scalar(select(User).where(User.max_user_id == "999")) is None

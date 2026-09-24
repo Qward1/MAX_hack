@@ -152,6 +152,7 @@ class MaxWebhookService:
             elif (
                 event.kind == "message_created"
                 and event.in_dialog
+                and not event.from_bot
                 and event.chat_id
                 and event.actor
                 and self.bot
