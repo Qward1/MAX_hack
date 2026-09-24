@@ -48,3 +48,85 @@
   .assignment-row { flex-direction: column; align-items: stretch; }.admin-facts { grid-template-columns: 1fr; gap: 4px; }.admin-facts dd { margin-bottom: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .admin-shell *, .company-apply * { scroll-behavior: auto; } }
+
+/* D2: публичные страницы заявки и статуса. */
+.public-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: min(100% - 32px, 1120px); margin: 0 auto; padding: 18px 0; }
+.application-status { width: min(100% - 32px, 760px); margin: 0 auto; padding: 24px 0 64px; display: grid; gap: 18px; }
+.application-status h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; letter-spacing: -.03em; }
+.status-steps { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 28px; }
+.status-steps li { position: relative; padding-left: 22px; color: #536379; }
+.status-steps li::before { content: ""; position: absolute; left: 0; top: .4em; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #9fb2c8; }
+.status-steps li.is-done { color: #18273b; font-weight: 600; }
+.status-steps li.is-done::before { background: #235dcc; border-color: #235dcc; }
+.status-figure { font-size: 32px; font-weight: 650; letter-spacing: -.02em; }
+.message-list { list-style: none; padding: 0; display: grid; gap: 12px; }
+.message-list li { padding: 14px 16px; border-radius: 12px; background: #f3f6fa; display: grid; gap: 4px; }
+.message-list li.message-applicant { background: #edf3ff; }
+.message-list time { font-size: 13px; color: #536379; }
+.message-list p { white-space: pre-wrap; }
+.plain-list { margin: 0; padding-left: 18px; }
+.quota-fieldset { border: 1px solid #d5dfe9; border-radius: 12px; padding: 16px; display: grid; gap: 12px; }
+.quota-fieldset legend { font-weight: 650; padding: 0 6px; }
+
+/* D2: квота чатов. Заполнение и дорожка — один тон (#235dcc на #cde2fb). */
+.quota-panel { display: grid; gap: 14px; }
+.quota-meter { display: grid; gap: 6px; min-width: 160px; }
+.quota-value { margin: 0; }
+.quota-value span { color: #536379; }
+.quota-track { height: 8px; border-radius: 4px; background: #cde2fb; overflow: hidden; }
+.quota-track span { display: block; height: 100%; border-radius: 4px; background: #235dcc; }
+.quota-full .quota-track span { background: #a65a13; }
+.quota-over .quota-track { background: #f5e7e8; }
+.quota-over .quota-track span { background: #9c3844; }
+.quota-note { margin: 0; font-size: 14px; color: #3b516b; }
+
+/* D2: дашборды. */
+.dashboard-controls { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.period-switch { display: flex; gap: 6px; flex-wrap: wrap; }
+.period-switch [aria-pressed="true"] { background: #182f50; color: #fff; border-color: #182f50; }
+.dashboard { display: grid; gap: 24px; transition: opacity .15s; }
+.dashboard.is-refreshing { opacity: .55; }
+.dashboard h2 { margin: 12px 0 0; }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin: 0; }
+.stat-tile { background: #fff; border: 1px solid #d5dfe9; border-radius: 12px; padding: 16px 18px; }
+.stat-tile dt { color: #536379; font-size: 14px; }
+.stat-tile dd { margin: 6px 0 0; font-size: 30px; font-weight: 650; line-height: 1.1; }
+.stat-tile p { margin: 6px 0 0; font-size: 13px; }
+.stat-link { font: inherit; color: #235dcc; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+.chart { margin: 0; background: #fff; border: 1px solid #d5dfe9; border-radius: 12px; padding: 16px 18px; display: grid; gap: 8px; min-width: 0; }
+.chart figcaption h3 { margin: 0; }
+.chart figcaption p { margin: 2px 0 0; font-size: 14px; }
+.chart-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.chart-legend { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: #3b516b; }
+.chart-legend li { display: flex; align-items: center; gap: 6px; }
+.chart-swatch { width: 12px; height: 12px; border-radius: 3px; }
+.chart-frame { position: relative; }
+.chart-frame svg { display: block; width: 100%; overflow: visible; }
+.chart-grid, .chart-axis { stroke: #e3e9f0; stroke-width: 1; }
+.chart-axis { stroke: #c4d0dd; }
+.chart-tick { font-size: 11px; fill: #536379; font-variant-numeric: tabular-nums; }
+.chart-hit { fill: transparent; cursor: default; outline: none; }
+.chart-hit.is-active, .chart-hit:focus-visible { fill: rgba(35, 93, 204, .07); }
+.chart-tooltip { position: absolute; top: 0; transform: translateX(-50%); pointer-events: none; background: #fff; border: 1px solid #d5dfe9;
+  border-radius: 8px; padding: 8px 10px; font-size: 13px; box-shadow: 0 4px 14px rgba(24, 39, 59, .12); display: grid; gap: 2px; min-width: 120px; z-index: 1; }
+.chart-tooltip span { display: flex; align-items: center; gap: 6px; color: #536379; }
+.chart-tooltip i { width: 12px; height: 2px; border-radius: 1px; display: inline-block; }
+.chart-tooltip b { color: #18273b; font-variant-numeric: tabular-nums; }
+.chart-empty { position: absolute; inset: 30% 0 auto; text-align: center; color: #536379; font-size: 14px; margin: 0; }
+.chart-table summary { cursor: pointer; font-size: 14px; color: #235dcc; }
+.chart-table table, .data-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.chart-table :where(th, td), .data-table :where(th, td) { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e3e9f0; vertical-align: top; }
+.chart-table td, .data-table td { font-variant-numeric: tabular-nums; }
+.data-table thead th { color: #536379; font-weight: 600; }
+.table-scroll { overflow-x: auto; background: #fff; border: 1px solid #d5dfe9; border-radius: 12px; }
+.funnel { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; max-width: 760px; }
+.funnel li { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr) 56px; gap: 12px; align-items: center; }
+.funnel-bar { height: 20px; background: #eaf0f7; border-radius: 4px; overflow: hidden; }
+.funnel-bar span { display: block; height: 100%; background: #235dcc; border-radius: 0 4px 4px 0; min-width: 2px; }
+.funnel strong { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 820px) {
+  .chart-grid-2 { grid-template-columns: 1fr; }
+  .funnel li { grid-template-columns: 1fr 48px; }
+  .funnel-bar { grid-column: 1 / -1; grid-row: 2; }
+  .public-header .admin-brand { font-size: 20px; }
+}

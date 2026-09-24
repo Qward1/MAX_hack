@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Feedback, History, OneTimeLink, Status, Title, dateInput, formValue, submitted, useAction, useRead, useRoute, type Schema } from "./administration";
+import { QuotaMeter } from "./charts";
+import { PlatformOverview } from "./Dashboards";
 
-const navigation: Record<string, string> = { applications: "Заявки УК", companies: "Организации",
+const navigation: Record<string, string> = { overview: "Обзор", applications: "Заявки УК", "quota-requests": "Запросы квоты", companies: "Организации",
   "house-management-requests": "Заявки на дома", houses: "Дома", "binding-disputes": "Спорные MAX-привязки", health: "Состояние системы", audit: "Аудит" };
 export function PlatformApp() {
   const bootstrap = useRead<Schema["PlatformBootstrap"]>("/api/v1/platform/bootstrap");
   const { url, navigate } = useRoute();
-  const page = url.pathname.replace(/^\/platform-admin\/?/, "") || "applications";
+  const page = url.pathname.replace(/^\/platform-admin\/?/, "") || "overview";
   return <div className="admin-shell platform-workspace"><aside className="admin-sidebar">
     <a className="admin-brand" href="/platform-admin/">ДомСигнал<span>Управление платформой</span></a>
     <nav aria-label="Разделы платформы">{!bootstrap.error && bootstrap.data?.surfaces.map(s => <a className="admin-nav-link" key={s}
@@ -14,11 +16,14 @@ export function PlatformApp() {
       onClick={e => { e.preventDefault(); navigate(`/platform-admin/${s}`); }}>{navigation[s] ?? s}</a>)}</nav>
     <p className="admin-sidebar-note">Рассмотрение заявок и состояние организаций</p>
   </aside><main className="app-shell admin-main"><Feedback loading={bootstrap.loading} error={bootstrap.error} />
-    {bootstrap.data && !bootstrap.error && <><div className="toolbar">{bootstrap.data.display_name}</div>
-      <PlatformPage key={page} page={page} /></>}
+    {bootstrap.data && !bootstrap.error && <><div className="toolbar ticket-line"><span>{bootstrap.data.display_name}</span>
+      <button className="ticket-button secondary" onClick={() => window.dispatchEvent(new Event("administration-refresh"))}>Обновить</button></div>
+      <PlatformPage key={page} page={page} open={next => navigate(`/platform-admin/${next}`)} /></>}
   </main></div>;
 }
-function PlatformPage({ page }: { page: string }) {
+function PlatformPage({ page, open }: { page: string; open: (page: string) => void }) {
+  if (page === "overview") return <PlatformOverview open={open} />;
+  if (page === "quota-requests") return <QuotaRequests />;
   if (page === "applications") return <ApplicationReview />;
   if (page === "house-management-requests") return <HouseReview />;
   if (page === "companies") return <PlatformCompanies />;
@@ -34,8 +39,11 @@ function ApplicationReview() {
   const [selected, select] = useState<string | null>(null);
   return <><Title description="Заявка не выдаёт аккаунт или доступ. При одобрении создаётся приглашение первого администратора.">Заявки УК</Title>
     <Feedback loading={r.loading} error={r.error} />
+    {r.data?.length === 0 && <p className="state-panel">Заявок пока нет. Их подают на странице «Подключить УК».</p>}
     <ul className="admin-records">{r.data?.map(a => <li key={a.id}><button className="record-link" onClick={() => select(a.id)}>{a.legal_name}</button>
-      <span>ИНН {a.inn}</span><Status value={a.status} /><time>{new Date(a.submitted_at).toLocaleString("ru-RU")}</time></li>)}</ul>
+      <span>ИНН {a.inn}</span>{a.requested_chat_count != null && <span>Чатов: {a.requested_chat_count}</span>}<Status value={a.status} />
+      {a.inn_conflict && <span className="admin-status status-needs_info">{a.inn_conflict === "company_exists" ? "УК с этим ИНН уже есть" : "Есть другая заявка с этим ИНН"}</span>}
+      <time>{new Date(a.submitted_at).toLocaleString("ru-RU")}</time></li>)}</ul>
     <Pages offset={offset} set={setOffset} count={r.data?.length ?? 0} />
     {selected && <ApplicationDetail key={selected} id={selected} refresh={r.refresh} />}</>;
 }
@@ -43,22 +51,44 @@ function ApplicationDetail({ id, refresh }: { id: string; refresh: () => void })
   const r = useRead<Schema["ApplicationView"]>(`/api/v1/platform/company-applications/${id}`);
   const action = useAction(() => { r.refresh(); refresh(); });
   const [link, setLink] = useState("");
-  return <section className="admin-detail"><Feedback loading={r.loading} error={r.error ?? action.error} />{r.data && <>
-    <h2>{r.data.legal_name}</h2><Status value={r.data.status} />
-    <dl className="admin-facts"><dt>ИНН</dt><dd>{r.data.inn}</dd><dt>Контакт</dt><dd>{r.data.contact_name} · {r.data.contact_email} · {r.data.contact_phone}</dd>
-      <dt>Комментарий</dt><dd>{r.data.comment ?? "Нет комментария"}</dd></dl>
-    {["submitted", "under_review", "needs_info"].includes(r.data.status) && <form className="ticket-form" onSubmit={async e => {
+  const [unlimited, setUnlimited] = useState(false);
+  const a = r.data;
+  return <section className="admin-detail"><Feedback loading={r.loading} error={r.error ?? (action.error || undefined)} />{a && <>
+    <h2>{a.legal_name}</h2><Status value={a.status} />
+    {a.inn_conflict && <p className="admin-feedback">{a.inn_conflict === "company_exists"
+      ? "Организация с этим ИНН уже подключена. Вторую УК с тем же ИНН одобрить нельзя."
+      : "С этим ИНН есть другая открытая заявка. Одобрить можно только одну."}</p>}
+    <dl className="admin-facts"><dt>ИНН</dt><dd>{a.inn}</dd>
+      <dt>Контактное лицо</dt><dd>{[a.contact_name, a.contact_position].filter(Boolean).join(", ")}</dd>
+      <dt>Связь</dt><dd>{[a.contact_email, a.contact_phone].filter(Boolean).join(", ") || "Не указана"}</dd>
+      <dt>Сколько чатов хотят подключить</dt><dd>{a.requested_chat_count ?? "Не указано (заявка до D2)"}</dd>
+      <dt>Адреса домов</dt><dd>{a.house_addresses?.length ? <ul className="plain-list">{a.house_addresses.map(h => <li key={h}>{h}</li>)}</ul> : "Не указаны"}</dd>
+      <dt>Комментарий</dt><dd>{a.comment ?? "Нет комментария"}</dd>
+      {a.status === "approved" && <><dt>Выданная квота чатов</dt><dd>{a.granted_chat_quota ?? "Без ограничения"}</dd></>}</dl>
+    {a.messages && a.messages.length > 0 && <><h3>Вопросы и ответы</h3><ol className="message-list">{a.messages.map((m, i) => <li key={i} className={`message-${m.author}`}>
+      <strong>{m.author === "platform" ? "Платформа" : "Заявитель"}</strong><time>{new Date(m.created_at).toLocaleString("ru-RU")}</time><p>{m.text}</p></li>)}</ol></>}
+    {["submitted", "under_review", "needs_info"].includes(a.status) && <form className="ticket-form" onSubmit={async e => {
       const data = submitted(e); const verb = (e.nativeEvent as SubmitEvent).submitter?.getAttribute("value");
       if (!verb) return;
-      const result = await action.run<Schema["CompanyApproved"] | Schema["ApplicationView"]>(`/api/v1/platform/company-applications/${id}/${verb}`, { reason: formValue(data, "reason") });
-      if (result && "invitation" in result) setLink(result.invitation.invitation_url ?? "");
+      const payload: Record<string, unknown> = { reason: formValue(data, "reason") };
+      if (verb === "approve") { if (unlimited) payload.unlimited = true; else payload.chat_quota = Number(formValue(data, "quota")); }
+      const result = await action.run<Schema["CompanyApproved"] | Schema["ApplicationView"]>(`/api/v1/platform/company-applications/${id}/${verb}`, payload);
+      if (result && "invitation" in result && result.invitation) setLink(result.invitation.invitation_url ?? "");
     }}><label>Основание решения / сообщение для заявителя<textarea name="reason" maxLength={2000} required /></label>
-      <p className="muted">Уточнения передаются заявителю вручную по указанному контакту. Автоматической отправки нет.</p>
+      <p className="muted">{a.status_link_issued
+        ? "Заявитель видит статус, вопросы и решение на своей странице статуса. После одобрения он сам создаст аккаунт администратора."
+        : "Заявка подана до страницы статуса: уточнения передаются заявителю вручную, приглашение появится после одобрения."}</p>
+      <fieldset className="quota-fieldset"><legend>Квота чатов при одобрении</legend>
+        <label>Сколько домовых чатов может подключить УК<input name="quota" type="number" min={0} max={10000} inputMode="numeric"
+          defaultValue={a.requested_chat_count ?? 1} disabled={unlimited} required={!unlimited} /></label>
+        <label className="checkbox-label"><input type="checkbox" checked={unlimited} onChange={e => setUnlimited(e.target.checked)} />Без ограничения</label>
+        <p className="muted">Если квота отличается от запрошенной, укажите причину в основании решения — заявитель её увидит.</p>
+      </fieldset>
       <div className="button-row"><button className="ticket-button secondary" name="action" value="start-review" disabled={action.busy}>Начать рассмотрение</button>
         <button className="ticket-button secondary" name="action" value="request-info" disabled={action.busy}>Запросить уточнения</button>
         <button className="ticket-button" name="action" value="approve" disabled={action.busy}>Одобрить УК</button>
         <button className="ticket-button secondary" name="action" value="reject" disabled={action.busy}>Отклонить заявку</button></div></form>}
-    {link && <OneTimeLink url={link} />}<History rows={r.data.history ?? []} />
+    {link && <OneTimeLink url={link} />}<History rows={a.history ?? []} />
   </>}</section>;
 }
 function HouseReview() {
@@ -122,6 +152,8 @@ function PlatformCompany({ id, refresh }: { id: string; refresh: () => void }) {
   const [key, setKey] = useState(() => crypto.randomUUID());
   return <section className="admin-detail"><Feedback loading={r.loading} error={r.error ?? action.error} />{r.data && <>
     <h2>{r.data.legal_name ?? r.data.name}</h2><p>ИНН {r.data.inn ?? "не указан"}</p><Status value={r.data.status} />
+    <CompanyQuota id={id} refresh={() => { r.refresh(); refresh(); }} />
+    <OpenRegistration id={id} active={r.data.status === "active"} />
     <form className="ticket-form" onSubmit={e => { const data = submitted(e);
       void action.run(`/api/v1/platform/companies/${id}/${r.data?.status === "active" ? "suspend" : "reactivate"}`, { reason: formValue(data, "reason") });
     }}><label>Основание<textarea name="reason" required maxLength={2000} /></label>
@@ -185,4 +217,86 @@ function Pages({ offset, set, count }: { offset: number; set: (value: number) =>
   if (!offset && count < 100) return null;
   return <div className="button-row"><button type="button" className="ticket-button secondary" disabled={!offset} onClick={() => set(Math.max(0, offset - 100))}>Предыдущие</button>
     <button type="button" className="ticket-button secondary" disabled={count < 100} onClick={() => set(offset + 100)}>Следующие</button></div>;
+}
+
+/** Квота чатов организации: текущее состояние, изменение с причиной, история. */
+function CompanyQuota({ id, refresh }: { id: string; refresh: () => void }) {
+  const r = useRead<Schema["CompanyQuotaView"]>(`/api/v1/platform/companies/${id}/chat-quota`);
+  const action = useAction(() => { r.refresh(); refresh(); });
+  const [unlimited, setUnlimited] = useState(false);
+  return <section className="quota-panel" aria-labelledby={`quota-${id}`}><h3 id={`quota-${id}`}>Квота чатов</h3>
+    <Feedback loading={r.loading} error={r.error ?? (action.error || undefined)} />
+    {r.data && <><QuotaMeter quota={r.data.quota} />
+      <form className="inline-form" onSubmit={async e => {
+        const data = submitted(e);
+        await action.run(`/api/v1/platform/companies/${id}/chat-quota`, {
+          limit: unlimited ? null : Number(formValue(data, "limit")), reason: formValue(data, "reason") });
+      }}><label>Новая квота<input name="limit" type="number" min={0} max={10000} inputMode="numeric" disabled={unlimited} required={!unlimited}
+          defaultValue={r.data.quota.limit ?? r.data.quota.used} /></label>
+        <label className="checkbox-label"><input type="checkbox" checked={unlimited} onChange={e => setUnlimited(e.target.checked)} />Без ограничения</label>
+        <label>Причина<input name="reason" required minLength={3} maxLength={2000} /></label>
+        <button className="ticket-button" disabled={action.busy}>Изменить квоту</button></form>
+      <p className="muted">Снижение не отключает подключённые чаты: УК будет отмечена как превысившая квоту, новые подключения заблокируются.</p>
+      <details><summary>История выдач</summary><ul className="admin-records">{r.data.grants.map((g, i) => <li key={i}>
+        <span>{g.limit_after === null || g.limit_after === undefined ? "Без ограничения" : `Квота ${g.limit_after}`}</span>
+        <span>{g.reason}</span><time>{new Date(g.created_at).toLocaleString("ru-RU")}</time></li>)}</ul></details></>}
+  </section>;
+}
+
+/** Открытая регистрация сотрудников УК по публичной ссылке. */
+function OpenRegistration({ id, active }: { id: string; active: boolean }) {
+  const r = useRead<Schema["OpenRegistrationView"]>(`/api/v1/platform/companies/${id}/open-registration`);
+  const action = useAction(r.refresh);
+  const [link, setLink] = useState("");
+  const enabled = r.data?.enabled === true;
+  return <section className="quota-panel" aria-labelledby={`join-${id}`}><h3 id={`join-${id}`}>Открытая регистрация сотрудников</h3>
+    <Feedback loading={r.loading} error={r.error ?? (action.error || undefined)} />
+    {r.data && <>
+      <p>Регистрация по ссылке: <strong>{enabled ? "открыта" : "закрыта"}</strong>
+        {r.data.changed_at && <> с {new Date(r.data.changed_at).toLocaleString("ru-RU")}</>}</p>
+      <p className="muted">По ссылке человек сам создаёт логин, пароль и второй фактор и становится оператором этой УК на всех её текущих домах.</p>
+      <form className="inline-form" onSubmit={async e => {
+        const data = submitted(e); const verb = (e.nativeEvent as SubmitEvent).submitter?.getAttribute("value");
+        const result = await action.run<Schema["OpenRegistrationView"]>(`/api/v1/platform/companies/${id}/open-registration`,
+          { enabled: verb !== "close", reason: formValue(data, "reason") });
+        setLink(result?.join_url ?? "");
+      }}><label>Причина<input name="reason" required minLength={3} maxLength={2000} /></label>
+        {active && <button className="ticket-button" value="open" disabled={action.busy}>{enabled ? "Выпустить новую ссылку" : "Открыть регистрацию"}</button>}
+        {enabled && <button className="ticket-button secondary" value="close" disabled={action.busy}>Закрыть регистрацию</button>}
+      </form>
+      {link && <OneTimeLink url={link} title="Ссылка регистрации сотрудников" label="Ссылка регистрации" />}
+      <h4>Зарегистрировались по ссылке</h4>
+      {(r.data.employees ?? []).length === 0 ? <p className="muted">Пока никого.</p> :
+        <ul className="admin-records">{(r.data.employees ?? []).map(e => <li key={e.user_id}><span>{e.display_name}</span><span>{e.login_name}</span>
+          <Status value={e.status} />{e.registered_at && <time>{new Date(e.registered_at).toLocaleString("ru-RU")}</time>}</li>)}</ul>}
+    </>}
+  </section>;
+}
+
+/** Запросы УК на расширение квоты: одобрить полностью, частично или отклонить. */
+function QuotaRequests() {
+  const [all, setAll] = useState(false);
+  const r = useRead<Schema["ChatQuotaRequestView"][]>(`/api/v1/platform/chat-quota-requests?pending=${all ? "false" : "true"}`);
+  return <><Title description="Решение меняет квоту УК сразу; причина видна администратору УК">Запросы на расширение квоты</Title>
+    <label className="checkbox-label"><input type="checkbox" checked={all} onChange={e => setAll(e.target.checked)} />Показать и рассмотренные</label>
+    <Feedback loading={r.loading} error={r.error} />
+    {r.data?.length === 0 && <p className="state-panel">{all ? "Запросов пока не было." : "Запросов, ждущих решения, нет."}</p>}
+    {r.data?.map(q => <QuotaRequest key={q.id} request={q} refresh={r.refresh} />)}</>;
+}
+function QuotaRequest({ request, refresh }: { request: Schema["ChatQuotaRequestView"]; refresh: () => void }) {
+  const action = useAction(refresh);
+  return <section className="admin-detail"><h2>{request.company_name ?? "УК"}: +{request.requested_delta}</h2><Status value={request.status} />
+    {request.quota && <QuotaMeter quota={request.quota} />}
+    <p>{request.reason}</p><time>{new Date(request.created_at).toLocaleString("ru-RU")}</time>
+    {request.decision_reason && <p className="muted">Решение: {request.decision_reason}{request.granted_delta ? ` (выдано +${request.granted_delta})` : ""}</p>}
+    <Feedback error={action.error || undefined} />
+    {request.status === "pending" && <form className="ticket-form" onSubmit={async e => {
+      const data = submitted(e); const verb = (e.nativeEvent as SubmitEvent).submitter?.getAttribute("value");
+      await action.run(`/api/v1/platform/chat-quota-requests/${request.id}/decide`, {
+        granted_delta: verb === "reject" ? 0 : Number(formValue(data, "granted")), reason: formValue(data, "reason") });
+    }}><label>Сколько выдать<input name="granted" type="number" min={1} max={request.requested_delta} defaultValue={request.requested_delta} inputMode="numeric" /></label>
+      <label>Причина решения<textarea name="reason" required minLength={3} maxLength={2000} /></label>
+      <div className="button-row"><button className="ticket-button" value="approve" disabled={action.busy}>Одобрить</button>
+        <button className="ticket-button secondary" value="reject" disabled={action.busy}>Отклонить</button></div></form>}
+  </section>;
 }

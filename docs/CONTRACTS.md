@@ -1767,3 +1767,102 @@ cancelled. Terminal decisions cannot replay or reopen; reasons and reviewer time
 are retained. House approval requires explicit existing/new resolution; overlapping
 active management is a 409 from A-15. Platform mutation responses use the same
 private-content-free projections as reads. Full source: generated OpenAPI/TS.
+
+## Самостоятельное подключение УК, квота чатов, дашборды — срез D2
+
+Решения: [CHAT-QUOTA-2026-09-26](decisions.md#chat-quota-2026-09-26),
+[COMPANY-SIGNUP-2026-09-26](decisions.md#company-signup-2026-09-26),
+[SITE-ENTRY-2026-09-26](decisions.md#site-entry-2026-09-26),
+[DASHBOARDS-2026-09-26](decisions.md#dashboards-2026-09-26),
+[REGION-MOW-2026-09-26](decisions.md#region-mow-2026-09-26). Миграция
+`20260926_0012` аддитивна. Изменения прежних DTO — только новые поля с
+значениями по умолчанию, кроме двух оговорённых ниже.
+
+### Изменения существующих контрактов
+
+- `CompanyApplicationCreate`: **обязательное** `requested_chat_count` (1…1000),
+  необязательные `house_addresses[]` (до 50 строк 5…500 символов, без разметки)
+  и `contact_position`. Единственный потребитель — форма заявки этого же
+  фронтенда (обновлена в том же комплекте).
+- `ApplicationReceived.status_url` — секретная ссылка страницы статуса,
+  показывается один раз. Повтор ИНН создаёт отдельную заявку с отдельной
+  ссылкой (прежде ответ был одинаковым без новой записи).
+- Одобрение заявки принимает `ApplicationDecision` (`reason`, `chat_quota`,
+  `unlimited`) и всегда отвечает `CompanyApproved`; `invitation` — `null`, если
+  у заявителя есть ссылка статуса (заявки до D2 получают приглашение, как
+  раньше).
+- `ApplicationView` += `contact_position`, `requested_chat_count`,
+  `house_addresses`, `status_link_issued`, `inn_conflict`
+  (`company_exists | open_application | null`), `messages[]`,
+  `granted_chat_quota`.
+- `ConnectionView.quota` (`ChatQuotaView`): «осталось N из Q» на момент ответа.
+- `CompanyView` += `chat_quota`, `pending_quota_requests`,
+  `open_registration_enabled`; `MembershipView.open_registration`;
+  `CompanyContext.role`; `CompanyHouseView.can_connect_chats`.
+- `AdminBootstrap`: у оператора раздел `overview` (обзор своих домов), у
+  ответственного за дом — ещё `chat_connections`. `PlatformBootstrap`:
+  `overview` (по умолчанию) и `quota-requests`.
+- `CapabilitiesResponse.bot_url` — `https://max.ru/<ник>` или `null`.
+
+### Квота чатов (`ChatQuotaView`)
+
+`limit` (`null` — без ограничения), `used` (активные привязки чатов домов
+УК), `remaining`, `over_limit` (квоту снизили ниже числа чатов), `exhausted`
+(новые подключения заблокированы).
+
+| Метод и путь | Кто | Что |
+|---|---|---|
+| `GET /api/v1/companies/{id}/chat-quota` | сотрудник УК | квота, история выдач, запросы УК |
+| `POST /api/v1/companies/{id}/chat-quota/requests` + `Idempotency-Key` | администратор УК | `{requested_delta 1…1000, reason}` → 201; второй на рассмотрении — 409 |
+| `POST …/chat-quota/requests/{rid}/cancel` | администратор УК | отозвать свой запрос |
+| `GET /api/v1/platform/chat-quota-requests?pending=true` | суперадмин | запросы с квотой УК |
+| `POST /api/v1/platform/chat-quota-requests/{rid}/decide` | суперадмин | `{granted_delta 0…requested, reason}`: 0 — отказ, меньше — частично |
+| `GET/POST /api/v1/platform/companies/{id}/chat-quota` | суперадмин | история; `{limit | null, reason}` — задать |
+
+Отказ подключения по квоте: `409 application/problem+json`, `code =
+CHAT_QUOTA_EXCEEDED`, `detail` — «Лимит подключённых чатов исчерпан: N из Q…».
+При создании запроса — запрос не создаётся; при подтверждении — запрос
+остаётся неактивированным с `last_error_code = CHAT_QUOTA_EXCEEDED`.
+Приостановленная УК — `tenant_suspended`.
+
+### Страница статуса заявки и первый администратор
+
+Секрет передаётся телом, не адресом API; ограничитель попыток — общий A-10.
+
+| Метод и путь | Тело | Ответ |
+|---|---|---|
+| `POST /api/v1/onboarding/application-status` | `{token}` | `ApplicationStatusView`: статус, вопросы и ответы, `can_reply`, `decision_reason` (одобрение/отказ), `granted_chat_quota`, `quota_unlimited`, `admin_account = unavailable | create | active`; неизвестный токен — 404 |
+| `POST …/application-status/reply` | `{token, text}` | только при `needs_info`, иначе 409; заявка → `under_review` |
+| `POST …/application-status/admin-invitation` | `{token}` | `{invitation_url}` — приглашение первого администратора A-10; 409, если заявка не одобрена или администратор уже создан |
+| `POST …/application-status/notify-link` | `{token}` | `{bot_url}` — `https://max.ru/<бот>?start=ca_<код>`, код одноразовый; `bot_started` с ним подписывает открывшего бота на сообщения о статусе (`ApplicationStatusView.max_notifications`) |
+
+### Сброс пароля/MFA и открытая регистрация
+
+| Метод и путь | Кто | Что |
+|---|---|---|
+| `POST /api/v1/companies/{id}/staff/{user}/credential-reset` | администратор УК | `{kind: password | password_mfa}` → `{reset_url, expires_at}`; сессии сотрудника отозваны сразу; себя, платформу и сотрудника другой УК — 409 |
+| `POST /api/v1/auth/employee/credential-reset/preview` | по ссылке (preauth + CSRF) | компания, логин, вид, срок |
+| `POST /api/v1/auth/employee/credential-reset/complete` | по ссылке (preauth + CSRF) | `{token, password}` → `EmployeeSession` на шаге `mfa_enroll` или `mfa_challenge` |
+| `GET/POST /api/v1/platform/companies/{id}/open-registration` | суперадмин | состояние, список зарегистрированных; `{enabled, reason}` → при включении `join_url` один раз |
+| `POST /api/v1/auth/employee/join/preview`, `…/join/register` | по ссылке (preauth + CSRF) | название УК; `{code, display_name, login_name, password}` → `mfa_enroll`; роль и назначения — после второго фактора |
+| `GET /api/v1/auth/employee/destinations` | сотрудник с паролем и MFA | `{platform, companies[]}` для единого входа `/login` |
+
+Секретные сегменты страниц `/company/apply/status/`, `/admin/reset/`, `/join/`
+журналы приложения и Caddy скрывают так же, как `/admin/invite/`.
+
+### Дашборды
+
+| Метод и путь | Кто | Ответ |
+|---|---|---|
+| `GET /api/v1/platform/dashboard?days=7|14|30` | суперадмин | `PlatformDashboard`: итоги, УК с квотами, воронка, активность по дням, модель (вызовы, ₽, доля бюджета, по УК), доставка |
+| `GET /api/v1/companies/{id}/dashboard?days=…` | сотрудник УК | `CompanyDashboard`: квота, дома (сигналы, заявки, медиана до принятия, проверка жителями, частые категории), активность; `scope = company | assigned` |
+| `GET /api/v1/companies/{id}/dashboard.csv?days=…` | сотрудник УК | те же агрегаты по домам, `text/csv`, UTF-8 с BOM, `;` |
+
+Иной период — 422. Текстов жителей, цитат, авторов и MAX id в ответах нет.
+
+### Статические страницы
+
+`/site` — страница продукта; корень `/` в обычном браузере без `initData` на
+production — она же (SITE-ENTRY); `/login` — единый вход;
+`/company/apply/status/<token>`, `/join/<код>`, `/admin/reset/<token>` —
+страницы соответствующих шагов.

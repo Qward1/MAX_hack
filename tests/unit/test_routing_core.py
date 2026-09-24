@@ -395,7 +395,8 @@ def test_packaged_directory_hides_moscow_channel_and_unverified_records(packaged
         today=TODAY,
     )
     assert moscow.route_type == "municipality"
-    assert moscow.channels == []
+    # ПОС в Москве скрыт полем `unavailable_regions`; канал — «Наш город» (D2).
+    assert [channel.id for channel in moscow.channels] == ["ru_mow_nash_gorod"]
     waste = route(packaged, "waste.removal_regional", "unknown", kazan())
     assert waste.route_type == "regional_operator"
     assert waste.channels == []

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import cast
+from typing import Literal, cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import func, or_, select
@@ -17,6 +17,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from domsignal.contracts.onboarding import (
     AdminBootstrap,
+    ApplicationMessageView,
     ApplicationView,
     AssignmentChange,
     AssignmentView,
@@ -44,6 +45,9 @@ from domsignal.contracts.onboarding import (
 )
 from domsignal.db.models import (
     ChatBinding,
+    ChatQuotaGrant,
+    ChatQuotaRequest,
+    CompanyApplicationMessage,
     CompanyOnboardingRequest,
     ConnectionRequest,
     EmployeeCredential,
@@ -63,6 +67,8 @@ from domsignal.db.models import (
     User,
 )
 from domsignal.db.repositories.reliability import ReliabilityRepository, authority_lock, stable_hash
+from domsignal.services.bot_replies import enqueue_reply
+from domsignal.services.chat_quota import ChatQuotaService, quota_state
 from domsignal.services.employee_auth import EmployeeAuthService
 from domsignal.services.errors import (
     AccessDenied,
@@ -120,6 +126,54 @@ def transition(
     row.decision_reason = reason
     kind = "company_application" if isinstance(row, CompanyOnboardingRequest) else "house_request"
     audit(db, f"{kind}.{target}", actor, row.id, reason)
+
+
+#: Сообщения бота о смене статуса заявки УК (D2, «Получать уведомления в MAX»).
+#: Ссылки статуса в них нет: она секретная и хранится только у заявителя.
+APPLICATION_NOTICES = {
+    "under_review": "Заявка «{name}»: платформа начала проверку.",
+    "needs_info": (
+        "Заявка «{name}»: платформе нужны уточнения. Ответьте на странице статуса "
+        "заявки — по ссылке, которую вы сохранили при подаче."
+    ),
+    "approved": (
+        "Заявка «{name}» одобрена. На странице статуса заявки создайте аккаунт "
+        "администратора — по ссылке, которую вы сохранили при подаче."
+    ),
+    "rejected": "Заявка «{name}» отклонена. Причина — на странице статуса заявки.",
+}
+
+
+async def notify_application(
+    db: AsyncSession, row: CompanyOnboardingRequest, target: str
+) -> None:
+    """Сообщение в личку тому, кто подписался на заявку через бота."""
+    text = APPLICATION_NOTICES.get(target)
+    if row.notify_user_id is None or text is None:
+        return
+    await enqueue_reply(
+        db,
+        user_id=row.notify_user_id,
+        event_id=f"application:{row.id}:{uuid4().hex}",
+        key=f"application-{target}",
+        text=text.format(name=row.short_name),
+    )
+
+
+async def application_messages(db: AsyncSession, obj: UUID) -> list[ApplicationMessageView]:
+    rows = await db.scalars(
+        select(CompanyApplicationMessage)
+        .where(CompanyApplicationMessage.application_id == obj)
+        .order_by(CompanyApplicationMessage.created_at, CompanyApplicationMessage.id)
+    )
+    return [
+        ApplicationMessageView(
+            author=cast(Literal["platform", "applicant"], r.author),
+            text=r.text,
+            created_at=r.created_at,
+        )
+        for r in rows
+    ]
 
 
 def current_management() -> tuple[ColumnElement[bool], ...]:
@@ -204,6 +258,10 @@ async def accept_invitation(db: AsyncSession, invitation_id: UUID, actor: UUID) 
             OrganizationMembership.tenant_id == row.company_id,
         )
     )
+    if row.source == "open_registration":
+        company = await db.get(ManagementCompany, row.company_id, populate_existing=True)
+        if company is None or not company.open_registration_enabled:
+            raise AuthenticationRequired("Регистрация по ссылке закрыта")
     if member is None:
         db.add(
             OrganizationMembership(
@@ -218,6 +276,25 @@ async def accept_invitation(db: AsyncSession, invitation_id: UUID, actor: UUID) 
     row.status, row.accepted_at = "accepted", datetime.now(UTC)
     audit(db, "invitation.accepted", actor, row.id)
     audit(db, "membership.created", actor, row.company_id)
+    if row.source == "open_registration":
+        # Открытая регистрация (D2): оператор на всех текущих домах УК.
+        managements = await db.scalars(
+            select(HouseManagement.id).where(
+                HouseManagement.tenant_id == row.company_id, *current_management()
+            )
+        )
+        for management_id in managements:
+            assignment = await db.scalar(
+                select(HouseAssignment).where(
+                    HouseAssignment.user_id == actor,
+                    HouseAssignment.management_id == management_id,
+                )
+            )
+            if assignment is None:
+                db.add(HouseAssignment(user_id=actor, management_id=management_id, role="operator"))
+            elif assignment.status != "active":
+                assignment.role, assignment.status = "operator", "active"
+        audit(db, "open_registration.joined", actor, row.company_id)
 
 
 class AdministrationService:
@@ -245,30 +322,57 @@ class AdministrationService:
             for r in rows
         ]
 
-    async def submit_company(self, db: AsyncSession, payload: CompanyApplicationCreate) -> None:
+    def status_url(self, token: str) -> str:
+        return f"{self.settings.public_base_url.rstrip('/')}/company/apply/status/{token}"
+
+    async def submit_company(self, db: AsyncSession, payload: CompanyApplicationCreate) -> str:
+        """Каждая отправка — своя заявка и своя ссылка статуса (D2).
+
+        Совпадение ИНН с другой заявкой или созданной УК публичный ответ не
+        меняет — нет оракула существования; конфликт видит только платформа.
+        """
         await authority_lock(db, exclusive=True)
-        existing = await db.scalar(
-            select(CompanyOnboardingRequest.id).where(
-                CompanyOnboardingRequest.inn == payload.inn,
-                CompanyOnboardingRequest.status.in_(OPEN),
-            )
+        token = secrets.token_urlsafe(32)
+        row = CompanyOnboardingRequest(
+            **payload.model_dump(),
+            submitted_at=datetime.now(UTC),
+            status_token_hash=self.auth.digest(token, "application-status"),
         )
-        company = await db.scalar(
-            select(ManagementCompany.id).where(ManagementCompany.inn == payload.inn)
-        )
-        if existing or company:
-            return  # Same public response; no existence/status oracle and no duplicate.
-        row = CompanyOnboardingRequest(**payload.model_dump(), submitted_at=datetime.now(UTC))
         db.add(row)
         await db.flush()
         audit(db, "company_application.submitted", None, row.id)
+        return self.status_url(token)
 
     async def application(self, db: AsyncSession, obj: UUID) -> ApplicationView:
         row = await db.get(CompanyOnboardingRequest, obj)
         if row is None:
             raise ResourceNotFound("Заявка не найдена")
-        view = ApplicationView.model_validate(row, from_attributes=True)
+        view = await self.application_view(db, row)
         view.history = await self.history(db, obj)
+        view.messages = await application_messages(db, obj)
+        return view
+
+    async def application_view(
+        self, db: AsyncSession, row: CompanyOnboardingRequest
+    ) -> ApplicationView:
+        view = ApplicationView.model_validate(row, from_attributes=True)
+        view.status_link_issued = row.status_token_hash is not None
+        if await db.scalar(select(ManagementCompany.id).where(ManagementCompany.inn == row.inn)):
+            view.inn_conflict = "company_exists" if row.company_id is None else None
+        if view.inn_conflict is None and row.status in OPEN:
+            other = await db.scalar(
+                select(CompanyOnboardingRequest.id).where(
+                    CompanyOnboardingRequest.inn == row.inn,
+                    CompanyOnboardingRequest.status.in_(OPEN),
+                    CompanyOnboardingRequest.id != row.id,
+                )
+            )
+            view.inn_conflict = "open_application" if other else None
+        view.granted_chat_quota = await db.scalar(
+            select(ChatQuotaGrant.limit_after).where(
+                ChatQuotaGrant.application_id == row.id, ChatQuotaGrant.kind == "initial"
+            )
+        )
         return view
 
     async def issue_invitation(
@@ -300,7 +404,15 @@ class AdministrationService:
         return view
 
     async def decide_company(
-        self, db: AsyncSession, obj: UUID, actor: UUID, target: str, reason: str
+        self,
+        db: AsyncSession,
+        obj: UUID,
+        actor: UUID,
+        target: str,
+        reason: str,
+        *,
+        chat_quota: int | None = None,
+        unlimited: bool = False,
     ) -> ApplicationView | CompanyApproved:
         await authority_lock(db, exclusive=True)
         await require_platform(db, actor)
@@ -308,6 +420,14 @@ class AdministrationService:
         if row is None:
             raise ResourceNotFound("Заявка не найдена")
         transition(db, row, target, actor, reason)
+        await notify_application(db, row, target)
+        if target == "needs_info":
+            # Вопрос платформы виден заявителю на странице статуса (D2).
+            db.add(
+                CompanyApplicationMessage(
+                    application_id=row.id, author="platform", actor_id=actor, text=reason
+                )
+            )
         invitation = None
         if target == "approved":
             if await db.scalar(
@@ -325,13 +445,31 @@ class AdministrationService:
             db.add(company)
             await db.flush()
             row.company_id = company.id
-            invitation = await self.issue_invitation(db, company.id, "company_admin", None)
+            # Квота чатов (CHAT-QUOTA-2026-09-26): явная или запрошенная; у
+            # заявок до D2 без числа чатов — без ограничения.
+            limit = None if unlimited else chat_quota
+            if limit is None and not unlimited:
+                limit = row.requested_chat_count
+            ChatQuotaService.add_grant(
+                db,
+                company_id=company.id,
+                kind="initial",
+                previous=None,
+                limit_after=limit,
+                reason=reason,
+                actor_id=actor,
+                application_id=row.id,
+            )
+            if row.status_token_hash is None:
+                # Заявка до D2: ссылки статуса у заявителя нет — приглашение
+                # первого администратора по-прежнему передаёт платформа.
+                invitation = await self.issue_invitation(db, company.id, "company_admin", None)
             audit(db, "company.created", actor, company.id)
         await db.flush()
         application = await self.application(db, obj)
         return (
             CompanyApproved(application=application, invitation=invitation)
-            if invitation
+            if target == "approved"
             else application
         )
 
@@ -353,6 +491,20 @@ class AdministrationService:
                 .order_by(ManagementCompany.name)
             )
         ).all()
+        # Ответственный за дом подключает чаты своих домов (право `chat.connect`
+        # действующей политики A-15), поэтому видит раздел MAX-чатов (D2).
+        responsible = set(
+            await db.scalars(
+                select(HouseManagement.tenant_id)
+                .join(HouseAssignment, HouseAssignment.management_id == HouseManagement.id)
+                .where(
+                    HouseAssignment.user_id == actor,
+                    HouseAssignment.status == "active",
+                    HouseAssignment.role == "responsible",
+                    *current_management(),
+                )
+            )
+        )
         return AdminBootstrap(
             user_id=actor,
             display_name=user.display_name,
@@ -360,6 +512,7 @@ class AdministrationService:
                 CompanyContext(
                     company_id=c.id,
                     name=c.name,
+                    role=cast(Role, m.role),
                     surfaces=(
                         [
                             "overview",
@@ -371,7 +524,8 @@ class AdministrationService:
                             "organization",
                         ]
                         if m.role == "company_admin"
-                        else ["tickets", "signals", "assigned_houses"]
+                        else ["tickets", "signals", "assigned_houses", "overview"]
+                        + (["chat_connections"] if c.id in responsible else [])
                     ),
                 )
                 for c, m in rows
@@ -452,9 +606,22 @@ class AdministrationService:
                 .order_by(User.display_name)
             )
         ).all()
+        joined = set(
+            await db.scalars(
+                select(EmployeeInvitation.claimed_by_user_id).where(
+                    EmployeeInvitation.company_id == company,
+                    EmployeeInvitation.source == "open_registration",
+                    EmployeeInvitation.status == "accepted",
+                )
+            )
+        )
         return [
             MembershipView(
-                user_id=u.id, display_name=u.display_name, role=cast(Role, m.role), status=m.status
+                user_id=u.id,
+                display_name=u.display_name,
+                role=cast(Role, m.role),
+                status=m.status,
+                open_registration=u.id in joined,
             )
             for u, m in rows
         ]
@@ -702,6 +869,14 @@ class AdministrationService:
                 HouseAssignment, HouseAssignment.management_id == HouseManagement.id
             ).where(HouseAssignment.user_id == actor, HouseAssignment.status == "active")
         rows = (await db.execute(query.order_by(House.address))).all()
+        own_roles = {
+            a.management_id: a.role
+            for a in await db.scalars(
+                select(HouseAssignment).where(
+                    HouseAssignment.user_id == actor, HouseAssignment.status == "active"
+                )
+            )
+        }
         result = []
         for house, management in rows:
             assignments = list(
@@ -773,6 +948,7 @@ class AdministrationService:
                         ConnectionView.model_validate(r, from_attributes=True) for r in requests
                     ]
                     if member.role == "company_admin"
+                    or own_roles.get(management.id) == "responsible"
                     else [],
                     warning="Для дома назначено несколько ответственных. "
                     "Новые заявки будут поступать в общую очередь дома."
@@ -780,6 +956,8 @@ class AdministrationService:
                     else None,
                     open_resident_access=house.open_resident_access,
                     open_access_changed_at=house.open_access_changed_at,
+                    can_connect_chats=member.role == "company_admin"
+                    or own_roles.get(management.id) == "responsible",
                 )
             )
         return result
@@ -910,6 +1088,15 @@ class AdministrationService:
                     HouseManagement.tenant_id == obj,
                     ChatBinding.status.in_(["suspended", "revoked"]),
                 )
+            )
+            or 0
+        )
+        view.chat_quota = (await quota_state(db, obj)).view()
+        view.pending_quota_requests = (
+            await db.scalar(
+                select(func.count())
+                .select_from(ChatQuotaRequest)
+                .where(ChatQuotaRequest.company_id == obj, ChatQuotaRequest.status == "pending")
             )
             or 0
         )

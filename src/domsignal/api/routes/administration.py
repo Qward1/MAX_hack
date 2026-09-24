@@ -13,6 +13,7 @@ from domsignal.api.routes.employee_auth import cookie, ip, preauth, result
 from domsignal.contracts.employee_auth import EmployeeSession
 from domsignal.contracts.onboarding import (
     AdminBootstrap,
+    ApplicationDecision,
     ApplicationReceived,
     ApplicationView,
     AssignmentChange,
@@ -98,8 +99,8 @@ async def public_application(
     service = AdministrationService(container.settings)
     await service.auth.rate(db, ip=ip(request), identifier=f"application:{payload.inn}")
     async with db.begin():
-        await service.submit_company(db, payload)
-    return ApplicationReceived()
+        status_url = await service.submit_company(db, payload)
+    return ApplicationReceived(status_url=status_url)
 
 
 @router.get("/admin/bootstrap", response_model=AdminBootstrap)
@@ -393,7 +394,9 @@ async def platform_bootstrap(user: Employee, db: DbDep) -> PlatformBootstrap:
         return PlatformBootstrap(
             display_name=actor.display_name,
             surfaces=[
+                "overview",
                 "applications",
+                "quota-requests",
                 "companies",
                 "house-management-requests",
                 "houses",
@@ -405,11 +408,14 @@ async def platform_bootstrap(user: Employee, db: DbDep) -> PlatformBootstrap:
 
 
 @router.get("/platform/company-applications", response_model=list[ApplicationView])
-async def applications(user: Employee, db: DbDep, offset: Offset = 0) -> list[ApplicationView]:
+async def applications(
+    user: Employee, db: DbDep, container: ContainerDep, offset: Offset = 0
+) -> list[ApplicationView]:
     async with db.begin():
         await require_platform(db, user.id)
+        service = AdministrationService(container.settings)
         return [
-            ApplicationView.model_validate(r, from_attributes=True)
+            await service.application_view(db, r)
             for r in await db.scalars(
                 select(CompanyOnboardingRequest)
                 .order_by(CompanyOnboardingRequest.submitted_at.desc())
@@ -444,14 +450,20 @@ TARGET = {
 async def decide_application(
     obj: UUID,
     action: ReviewAction,
-    payload: ReviewDecision,
+    payload: ApplicationDecision,
     user: Employee,
     db: DbDep,
     container: ContainerDep,
 ) -> ApplicationView | CompanyApproved:
     async with db.begin():
         return await AdministrationService(container.settings).decide_company(
-            db, obj, user.id, TARGET[action], payload.reason
+            db,
+            obj,
+            user.id,
+            TARGET[action],
+            payload.reason,
+            chat_quota=payload.chat_quota,
+            unlimited=payload.unlimited,
         )
 
 

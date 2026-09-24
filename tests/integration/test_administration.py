@@ -37,7 +37,9 @@ APP = {
     "inn": "7701234567",
     "contact_name": "Администратор",
     "contact_email": "test@example.test",
+    "requested_chat_count": 2,
 }
+STATUS = "/api/v1/onboarding/application-status"
 
 
 @pytest_asyncio.fixture
@@ -109,6 +111,8 @@ async def env(integration_settings):
         "admin": await client(seed_id("admin")),
         "operator": await client(seed_id("operator")),
         "foreign": await client(seed_id("beta-admin")),
+        # Ссылки статуса заявок (D2): id заявки → секрет из ответа на подачу.
+        "tokens": {},
     }
     yield data
     for c in clients:
@@ -123,19 +127,32 @@ async def post(client, path, payload=None, expected=200, key=None):
     return r.json()
 
 
-async def application(env):
-    await post(env["public"], "/api/v1/onboarding/company-applications", APP, 202)
+async def application(env, payload=None):
+    received = await post(
+        env["public"], "/api/v1/onboarding/company-applications", payload or APP, 202
+    )
     rows = (await env["platform"].get("/api/v1/platform/company-applications")).json()
+    env["tokens"][rows[0]["id"]] = received["status_url"].split("/")[-1]
     return rows[0]["id"]
+
+
+async def admin_link(env, obj, expected=200):
+    """«Создать аккаунт администратора» со страницы статуса заявки (D2)."""
+    return await post(
+        env["public"], STATUS + "/admin-invitation", {"token": env["tokens"][obj]}, expected
+    )
 
 
 async def approve(env):
     obj = await application(env)
-    return await post(
+    approved = await post(
         env["platform"],
         f"/api/v1/platform/company-applications/{obj}/approve",
         {"reason": "Проверено вручную"},
     )
+    assert approved["invitation"] is None  # ссылку больше не передают вручную
+    approved["invitation"] = await admin_link(env, obj)
+    return approved
 
 
 async def invite(env, role="operator", company=None):
@@ -183,17 +200,33 @@ async def test_public_application_no_access_duplicate_no_oracle_and_validation(e
             for t in (ManagementCompany, OrganizationMembership, EmployeeCredential, AppSession)
         }
     first = await post(c, "/api/v1/onboarding/company-applications", APP, 202)
-    assert await post(c, "/api/v1/onboarding/company-applications", APP, 202) == first
+    second = await post(c, "/api/v1/onboarding/company-applications", APP, 202)
+    # Повтор ИНН: такой же публичный ответ со своей ссылкой статуса — нет оракула
+    # «уже подано» и нет доступа к чужой заявке (D2).
+    assert first.keys() == second.keys() and first["message"] == second["message"]
+    assert first["status_url"] != second["status_url"]
     assert (await c.get("/api/v1/admin/bootstrap")).status_code == 401
     async with env["container"].session_factory() as db:
-        assert await db.scalar(select(func.count()).select_from(CompanyOnboardingRequest)) == 1
+        assert await db.scalar(select(func.count()).select_from(CompanyOnboardingRequest)) == 2
         for t in (ManagementCompany, OrganizationMembership, EmployeeCredential, AppSession):
             assert await db.scalar(select(func.count()).select_from(t)) == before[t.__tablename__]
+        raw = [r["status_url"].split("/")[-1] for r in (first, second)]
+        stored = json.dumps(
+            (await db.scalars(select(CompanyOnboardingRequest.status_token_hash))).all()
+        )
+        assert not any(token in stored for token in raw)
+    rows = (await env["platform"].get("/api/v1/platform/company-applications")).json()
+    assert {r["inn_conflict"] for r in rows} == {"open_application"}
+    assert all(r["status_link_issued"] and r["requested_chat_count"] == 2 for r in rows)
     for patch in (
         {"inn": "abc"},
         {"contact_email": None},
         {"comment": "<script>"},
         {"comment": "a" * 2001},
+        {"requested_chat_count": 0},
+        {"requested_chat_count": None},
+        {"house_addresses": ["<b>ул. Ленина, 1</b>"]},
+        {"house_addresses": ["ул. Ленина, 1"] * 51},
     ):
         await post(c, "/api/v1/onboarding/company-applications", {**APP, **patch}, 422)
 
@@ -221,16 +254,22 @@ async def test_company_review_atomic_concurrent_and_private(env):
             )
             == 1
         )
+        # Одобрение больше не выпускает ссылку для ручной передачи (D2).
+        assert not await db.scalar(select(EmployeeInvitation))
+    assert next(r.json() for r in results if r.status_code == 200)["invitation"] is None
+    link = await admin_link(env, obj)
+    # Та же ссылка статуса даёт то же приглашение, пока оно действует.
+    assert (await admin_link(env, obj)) == link
+    raw = link["invitation_url"].split("/")[-1]
+    async with env["container"].session_factory() as db:
         invitation = await db.scalar(select(EmployeeInvitation))
         assert invitation.organization_role == "company_admin"
+        assert invitation.source == "application_status"
         assert not await db.scalar(
             select(OrganizationMembership).where(
                 OrganizationMembership.tenant_id == invitation.company_id
             )
         )
-        raw = next(
-            r.json()["invitation"]["invitation_url"] for r in results if r.status_code == 200
-        ).split("/")[-1]
         assert invitation.token_hash == env["auth"].digest(raw, "invitation")
         assert raw not in json.dumps((await db.scalars(select(InboxReceipt.payload))).all())
     await post(env["platform"], path, {"reason": "Повтор"}, 409)
@@ -490,6 +529,11 @@ async def test_platform_privacy_every_read_endpoint(env, caplog):
         "binding-disputes",
         "health",
         "audit",
+        "dashboard?days=7",
+        "dashboard?days=30",
+        "chat-quota-requests",
+        f"companies/{company}/chat-quota",
+        f"companies/{company}/open-registration",
     ]
     for path in paths:
         response = await env["platform"].get("/api/v1/platform/" + path)
@@ -720,7 +764,7 @@ async def test_first_admin_reissue_revokes_old_link_and_never_replays_raw_token(
         {"reason": "Reviewed documents"},
     )
     company = approved["application"]["company_id"]
-    old = approved["invitation"]["invitation_url"].split("/")[-1]
+    old = (await admin_link(env, obj))["invitation_url"].split("/")[-1]
     path = f"/api/v1/platform/companies/{company}/invitations/first-admin"
     key = str(uuid4())
     new = await post(env["platform"], path, {"reason": "Lost unclaimed link"}, 201, key)
@@ -731,6 +775,8 @@ async def test_first_admin_reissue_revokes_old_link_and_never_replays_raw_token(
     await post(env["foreign"], AUTH + "/invitations/claim", {"token": token})
     await post(env["foreign"], AUTH + "/invitations/accept", {"token": token})
     await post(env["platform"], path, {"reason": "Must not add a second first admin"}, 409)
+    # Администратор создан: страница статуса больше не выпускает приглашений.
+    await admin_link(env, obj, 409)
 
 
 async def test_revoke_racing_ticket_accept_leaves_no_current_assignment(env):

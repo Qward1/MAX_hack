@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Feedback, History, OneTimeLink, Status, Title, dateInput, formValue, submitted, useAction, useRead, type Schema } from "./administration";
+import { Feedback, History, OneTimeLink, Status, Title, connectionErrors, dateInput, formValue, submitted, useAction, useRead, type Schema } from "./administration";
+import { QuotaMeter } from "./charts";
 
 type House = Schema["CompanyHouseView"];
 export function Organization({ base }: { base: string }) {
@@ -9,13 +10,6 @@ export function Organization({ base }: { base: string }) {
       <dt>ИНН</dt><dd>{r.data.inn ?? "Не указан"}</dd><dt>Статус</dt><dd><Status value={r.data.status} /></dd>
       <dt>Контакт</dt><dd>{[r.data.contact_name, r.data.contact_email, r.data.contact_phone].filter(Boolean).join(" · ") || "Не указан"}</dd>
     </dl>}</>;
-}
-export function Overview({ base }: { base: string }) {
-  const r = useRead<Schema["CompanyOverview"]>(`${base}/overview`);
-  const names: Record<string, string> = { open_tickets: "Открытых заявок", unassigned_tickets: "Без исполнителя",
-    verification_pending: "На проверке жителями", house_count: "Домов в управлении", active_employees: "Сотрудников", binding_problems: "Проблем с MAX" };
-  return <><Title description="Текущая работа вашей управляющей компании">Обзор</Title><Feedback loading={r.loading} error={r.error} />
-    {!r.error && r.data && <dl className="overview-grid">{Object.entries(r.data).map(([k, v]) => <div key={k}><dt>{names[k]}</dt><dd>{v}</dd></div>)}</dl>}</>;
 }
 export function Staff({ base }: { base: string }) {
   const people = useRead<Schema["MembershipView"][]>(`${base}/staff`);
@@ -38,6 +32,7 @@ export function Staff({ base }: { base: string }) {
       <ul className="admin-records">{people.data?.map(p => <li key={p.user_id}>
         <button className="record-link" onClick={() => setSelected(p.user_id)}>{p.display_name}</button>
         <span>{p.role === "company_admin" ? "Администратор УК" : "Оператор"}</span><Status value={p.status} />
+        {p.open_registration && <span className="admin-status">По открытой ссылке</span>}
       </li>)}</ul>
       {selected && <StaffAssignments key={selected} user={selected} base={base} houses={houses.data ?? []} refresh={people.refresh} />}
       <h2>Приглашения</h2><Feedback error={invitations.error} />
@@ -64,6 +59,7 @@ function StaffAssignments({ base, user, houses, refresh }: { base: string; user:
             <option value="none">Нет доступа</option><option value="operator">Оператор</option><option value="responsible">Ответственный</option>
           </select></label>)}
         <p className="muted">Администратор УК имеет доступ ко всем текущим домам своей организации. Назначение ответственного определяет работу с заявками дома.</p>
+        <CredentialReset base={base} user={user} />
         {!confirm ? <button className="ticket-button secondary" onClick={() => setConfirm(true)}>Отозвать доступ сотрудника</button> :
           <div className="admin-feedback"><p>Сотрудник потеряет доступ к этой УК. Его незакрытые заявки вернутся в очередь без исполнителя.</p>
             <button className="ticket-button" disabled={action.busy} onClick={() => void action.run(`${base}/staff/${user}/revoke`)}>Подтвердить отзыв</button>
@@ -71,6 +67,31 @@ function StaffAssignments({ base, user, houses, refresh }: { base: string; user:
       </>}
     </>}
   </section>;
+}
+/** «Сбросить пароль/MFA»: одноразовая ссылка, сессии сотрудника отзываются сразу. */
+function CredentialReset({ base, user }: { base: string; user: string }) {
+  const [kind, setKind] = useState<"password" | "password_mfa">("password_mfa");
+  const [confirming, setConfirming] = useState(false);
+  const [link, setLink] = useState("");
+  const action = useAction();
+  return <div className="passive-switch">
+    <h3>Пароль и аутентификатор</h3>
+    {link ? <OneTimeLink url={link} title="Передайте ссылку сброса сотруднику" label="Ссылка сброса" /> : <>
+      <p className="muted">Сотрудник получит одноразовую ссылку и задаст новый пароль. Все его сессии закроются сразу, прежний пароль перестанет действовать.</p>
+      <label>Что сбросить<select value={kind} onChange={e => setKind(e.target.value as typeof kind)}>
+        <option value="password_mfa">Пароль и аутентификатор</option><option value="password">Только пароль</option></select></label>
+      <Feedback error={action.error || undefined} />
+      {!confirming ? <button className="ticket-button secondary" onClick={() => setConfirming(true)}>Сбросить пароль/MFA</button> :
+        <div className="admin-feedback" role="group" aria-label="Подтверждение сброса">
+          <p>Сотрудник сразу выйдет из кабинета на всех устройствах. Войти он сможет только по новой ссылке.</p>
+          <button className="ticket-button" disabled={action.busy} onClick={async () => {
+            const result = await action.run<Schema["CredentialResetIssued"]>(`${base}/staff/${user}/credential-reset`, { kind });
+            if (result) { setLink(result.reset_url); setConfirming(false); }
+          }}>Подтвердить сброс</button>
+          <button className="ticket-button secondary" disabled={action.busy} onClick={() => setConfirming(false)}>Отмена</button>
+        </div>}
+    </>}
+  </div>;
 }
 export function MyHouses({ base }: { base: string }) {
   const r = useRead<House[]>(`${base}/houses`);
@@ -143,17 +164,28 @@ export function CompanyHouses({ base }: { base: string }) {
     </section>)}
   </>;
 }
-export function ChatConnections({ base }: { base: string }) {
+export function ChatConnections({ base, canRequest = true }: { base: string; canRequest?: boolean }) {
   const houses = useRead<House[]>(`${base}/houses`);
+  const quota = useRead<Schema["CompanyQuotaView"]>(`${base}/chat-quota`);
   const capabilities = useRead<Schema["CapabilitiesResponse"]>("/api/v1/capabilities");
-  const action = useAction(houses.refresh);
+  const action = useAction(() => { houses.refresh(); quota.refresh(); });
   const [token, setToken] = useState("");
+  const [remaining, setRemaining] = useState<Schema["ChatQuotaView"] | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [expand, setExpand] = useState(false);
   const available = capabilities.data?.features.passive_capture === true;
   const aiAnalysis = capabilities.data?.features.passive_ai_analysis === true;
+  const exceeded = action.code === "CHAT_QUOTA_EXCEEDED";
   return <><Title description="Подключение существующих чатов к подтверждённым домам">MAX-чаты</Title>
-    <Feedback loading={houses.loading} error={houses.error ?? action.error} />
-    {token && <section className="one-time-link"><h2>Продолжите в MAX</h2><p>Передайте администратору чата эту команду для личного сообщения боту ДомСигнал:</p>
+    <ChatQuotaPanel base={base} view={quota.data} error={quota.error} refresh={quota.refresh} open={expand || (exceeded && canRequest)}
+      setOpen={setExpand} canRequest={canRequest} />
+    {exceeded ? <div className="admin-feedback" role="alert"><p><strong>Лимит исчерпан.</strong> {action.error}</p>
+      {!canRequest ? <p>Расширение квоты запрашивает администратор УК.</p>
+        : !expand && <button className="ticket-button" onClick={() => setExpand(true)}>Запросить расширение</button>}</div>
+      : <Feedback loading={houses.loading} error={houses.error ?? (action.error || undefined)} />}
+    {token && <section className="one-time-link"><h2>Продолжите в MAX</h2>
+      {remaining?.limit != null && <p>После подключения останется свободных слотов: {Math.max((remaining.remaining ?? 0) - 1, 0)} из {remaining.limit}.</p>}
+      <p>Передайте администратору чата эту команду для личного сообщения боту ДомСигнал:</p>
       <input aria-label="Команда подключения MAX" readOnly value={`/start ${token}`} onFocus={e => e.target.select()} />
       <p>Затем администратор добавляет существующего бота в группу. После проверки обновите страницу и подтвердите подключение.</p></section>}
     {!houses.error && houses.data?.map(h => <section className="admin-detail" key={h.management_id}><h2>{h.address}</h2>
@@ -165,12 +197,12 @@ export function ChatConnections({ base }: { base: string }) {
           change={async enabled => { await action.run(`/api/v1/chat-bindings/${b.id}/passive-capture`, { enabled }); setConfirm(null); }} />}
         {b.status === "active" && <NoticeAgain binding={b.id} />}
       </div>)}
-      <button className="ticket-button" disabled={action.busy} onClick={async () => {
+      {h.can_connect_chats ? <button className="ticket-button" disabled={action.busy} onClick={async () => {
         const result = await action.run<Schema["ConnectionView"]>(`/api/v1/houses/${h.house_id}/chat-connections`, { scope_type: "house" });
-        if (result) setToken(result.correlation_token ?? "");
-      }}>Подключить существующий MAX-чат</button>
+        if (result) { setToken(result.correlation_token ?? ""); setRemaining(result.quota ?? null); }
+      }}>Подключить существующий MAX-чат</button> : <p className="muted">Чаты этого дома подключает администратор УК или ответственный за дом.</p>}
       {h.connection_requests.map(r => <div className="connection-row" key={r.id}><Status value={r.status} />
-        <p>{r.last_error_code}</p>
+        {r.last_error_code && <p>{connectionErrors[r.last_error_code] ?? r.last_error_code}</p>}
         {["max_verified", "awaiting_approval"].includes(r.status) && <button className="ticket-button" disabled={action.busy}
           onClick={() => void action.run(`/api/v1/chat-connections/${r.id}/approve`, { confirm: true })}>Подтвердить подключение</button>}
         {!["completed", "rejected", "cancelled", "expired"].includes(r.status) && <>
@@ -222,4 +254,43 @@ export function PassiveSwitch({ binding, available, aiAnalysis, busy, confirming
       <button className="ticket-button secondary" disabled={busy} onClick={cancel}>Отмена</button>
     </div>}
   </div>;
+}
+
+/** «Чаты: N из Q», запрос на расширение и история квоты (CHAT-QUOTA-2026-09-26). */
+export function ChatQuotaPanel({ base, view, error, refresh, open, setOpen, canRequest = true }: {
+  base: string; view?: Schema["CompanyQuotaView"]; error?: unknown; refresh: () => void; open: boolean; setOpen: (open: boolean) => void;
+  canRequest?: boolean;
+}) {
+  const [key, setKey] = useState(() => crypto.randomUUID());
+  const action = useAction(refresh);
+  if (error) return <Feedback error={error} />;
+  if (!view) return null;
+  const pending = view.requests.find(r => r.status === "pending");
+  const limited = view.quota.limit !== null && view.quota.limit !== undefined;
+  return <section className="admin-detail quota-panel" aria-label="Квота чатов">
+    <QuotaMeter quota={view.quota} label="Подключённые чаты" />
+    {pending ? <p>Запрос на расширение +{pending.requested_delta} на рассмотрении платформы.
+      {canRequest && <button className="ticket-button secondary" disabled={action.busy} onClick={() => void action.run(`${base}/chat-quota/requests/${pending.id}/cancel`)}>Отозвать запрос</button>}</p>
+      : limited && canRequest && (!open ? <button className="ticket-button secondary" onClick={() => setOpen(true)}>Запросить расширение</button> :
+      <form className="ticket-form" onSubmit={async e => {
+        const data = submitted(e);
+        const result = await action.run(`${base}/chat-quota/requests`, {
+          requested_delta: Number(formValue(data, "delta")), reason: formValue(data, "reason") }, key);
+        if (result) { setOpen(false); setKey(crypto.randomUUID()); }
+      }}><h3>Запрос на расширение квоты</h3>
+        <label>Сколько чатов добавить<input name="delta" type="number" min={1} max={1000} required defaultValue={1} inputMode="numeric" /></label>
+        <label>Обоснование<textarea name="reason" required minLength={3} maxLength={2000} placeholder="Например: подключаем чаты подъездов дома на ул. Баумана, 1" /></label>
+        <Feedback error={action.error || undefined} />
+        <div className="button-row"><button className="ticket-button" disabled={action.busy}>Отправить запрос</button>
+          <button type="button" className="ticket-button secondary" onClick={() => setOpen(false)}>Отмена</button></div>
+      </form>)}
+    {view.requests.some(r => r.status !== "pending") && <details><summary>История запросов и выдач</summary>
+      <ul className="admin-records">{view.requests.filter(r => r.status !== "pending").map(r => <li key={r.id}>
+        <span>+{r.requested_delta}: {r.reason}</span><Status value={r.status} />
+        {r.granted_delta != null && r.status !== "rejected" && <span>выдано +{r.granted_delta}</span>}
+        {r.decision_reason && <span className="muted">{r.decision_reason}</span>}</li>)}</ul>
+      <ul className="admin-records">{view.grants.map((g, i) => <li key={i}><span>{g.limit_after === null || g.limit_after === undefined ? "Без ограничения" : `Квота: ${g.limit_after}`}</span>
+        <span className="muted">{g.reason}</span><time>{new Date(g.created_at).toLocaleString("ru-RU")}</time></li>)}</ul>
+    </details>}
+  </section>;
 }

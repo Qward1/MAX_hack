@@ -305,6 +305,22 @@ export class ApiClient implements DomSignalApi {
       method: "POST", body: JSON.stringify(payload), headers: { "Idempotency-Key": key },
     });
 
+  /** Файл выгрузки (CSV) с той же аутентификацией, что у запросов API. */
+  async download(path: string): Promise<Blob> {
+    const headers = new Headers();
+    if (this.token) headers.set("Authorization", `Bearer ${this.token}`);
+    const response = await fetch(path, {
+      headers, cache: "no-store", credentials: this.surface === "employee" ? "same-origin" : "omit",
+    });
+    if (!response.ok)
+      throw new ApiProblem({
+        type: "about:blank", title: "Выгрузка недоступна", status: response.status,
+        detail: "Не удалось выгрузить файл. Обновите страницу и повторите.", code: "download_failed",
+        trace_id: response.headers.get("X-Request-ID") ?? "unknown", retryable: response.status >= 500,
+      });
+    return response.blob();
+  }
+
   async request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const headers = new Headers(init.headers);
     headers.set("Content-Type", "application/json");

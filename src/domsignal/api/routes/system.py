@@ -41,4 +41,9 @@ async def capabilities(container: ContainerDep) -> Any:
             passive_capture=container.settings.passive_capture_enabled,
             passive_ai_analysis=container.passive_ai_analysis_enabled,
         ),
+        bot_url=(
+            f"https://max.ru/{container.settings.max_bot_username}"
+            if container.settings.max_bot_username
+            else None
+        ),
     )

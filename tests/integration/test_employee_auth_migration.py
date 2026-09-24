@@ -27,6 +27,13 @@ LATER_COLUMNS = {
         "ended_at": None,
         "end_reason": None,
     },
+    # D2: открытая регистрация сотрудников у прежних УК выключена.
+    "management_companies": {
+        "open_registration_enabled": False,
+        "open_registration_code_hash": None,
+        "open_registration_changed_at": None,
+        "open_registration_changed_by": None,
+    },
 }
 
 

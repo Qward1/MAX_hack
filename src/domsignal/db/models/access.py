@@ -214,6 +214,16 @@ class ManagementCompany(Timestamps, Base):
     contact_name: Mapped[str | None] = mapped_column(String(200))
     contact_email: Mapped[str | None] = mapped_column(String(254))
     contact_phone: Mapped[str | None] = mapped_column(String(40))
+    # Открытая регистрация сотрудников по публичной ссылке `/join/<код>` (D2).
+    # Включает и закрывает суперадмин; в базе только хэш кода ссылки.
+    open_registration_enabled: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    open_registration_code_hash: Mapped[str | None] = mapped_column(String(64), unique=True)
+    open_registration_changed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    open_registration_changed_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
 
 
 class HouseManagement(Timestamps, Base):

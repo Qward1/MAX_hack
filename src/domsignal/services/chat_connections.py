@@ -26,14 +26,20 @@ from domsignal.db.models.chat_connections import ChatBinding, ConnectionRequest,
 from domsignal.db.repositories.access import AccessRepository
 from domsignal.db.repositories.chat_connections import ChatRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
+from domsignal.services.chat_quota import (
+    QUOTA_EXCEEDED,
+    activation_slot_error,
+    company_of_management,
+    quota_state,
+)
 from domsignal.services.context import OperationContext, ScopeState, ScopeValue
 from domsignal.services.errors import ResourceNotFound, ServiceError
 from domsignal.services.membership import MembershipService
 
 
 class ChatConnectionError(ServiceError):
-    def __init__(self, code: str, *, status: int = 409) -> None:
-        super().__init__("Chat connection could not be completed")
+    def __init__(self, code: str, *, status: int = 409, detail: str | None = None) -> None:
+        super().__init__(detail or "Chat connection could not be completed")
         self.code = code
         self.status = status
         self.retryable = status == 503
@@ -88,6 +94,14 @@ class ChatConnectionService:
         )
         self.memberships.require_permission(context, "chat.connect")
         management_id = cast(UUID, context.management_id.value)
+        # Квота (D2): при исчерпанных слотах новый запрос не создаётся —
+        # администратор не проходит шаги в MAX впустую. Окончательная проверка
+        # под блокировкой строки УК — при активации.
+        company_id = await company_of_management(session, management_id)
+        if company_id is not None:
+            state = await quota_state(session, company_id)
+            if state.exhausted:
+                raise ChatConnectionError(QUOTA_EXCEEDED, detail=state.exceeded_detail())
         repo = ChatRepository(session)
         await repo.lock(f"initiate:{actor_id}:{management_id}")
         for previous in await repo.open_for_initiator(actor_id, management_id):
@@ -335,6 +349,15 @@ class ChatConnectionService:
         await self.require_authority(session, request, actor_id)
         if await repo.active_binding(request.candidate_max_chat_id):
             raise ChatConnectionError("chat_already_bound")
+        # Квота УК (CHAT-QUOTA-2026-09-26): последняя проверка в транзакции
+        # активации под блокировкой строки УК. Отказ сохраняется в запросе
+        # (маршрут фиксирует транзакцию и при ошибке) — после расширения квоты
+        # то же подключение подтверждается повторно.
+        slot_error = await activation_slot_error(session, request.management_id)
+        if slot_error is not None:
+            code, detail = slot_error
+            request.last_error_code = code
+            raise ChatConnectionError(code, detail=detail)
         chat = await repo.chat(request.candidate_max_chat_id)
         assert chat is not None
         chat.binding_version += 1
@@ -517,6 +540,8 @@ class ChatConnectionService:
         token: str | None = None,
     ) -> ConnectionView:
         binding = await ChatRepository(session).completed_binding(request.id)
+        company_id = await company_of_management(session, request.management_id)
+        quota = (await quota_state(session, company_id)).view() if company_id else None
         return ConnectionView(
             id=request.id,
             house_id=request.house_id,
@@ -529,4 +554,5 @@ class ChatConnectionService:
             binding_id=binding.id if binding else None,
             binding_version=binding.binding_version if binding else None,
             correlation_token=token,
+            quota=quota,
         )

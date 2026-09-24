@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -36,7 +37,13 @@ from domsignal.bot.max_updates import MaxEvent
 from domsignal.bot.messaging import MessagingError
 from domsignal.contracts.routing import DangerKind
 from domsignal.core.routing import HouseRoutingContext
-from domsignal.db.models import ChatBinding, ExplicitIntake, House, User
+from domsignal.db.models import (
+    ChatBinding,
+    CompanyOnboardingRequest,
+    ExplicitIntake,
+    House,
+    User,
+)
 from domsignal.db.repositories.access import AccessRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.services.bot_replies import (
@@ -133,6 +140,7 @@ class PersonalBotService:
         bot_username: str | None = None,
         daily_limit: int = 10,
         hold_seconds: int = 1800,
+        application_digest: Callable[[str], str] | None = None,
     ) -> None:
         self.sessions = session_factory
         self.resident_access = resident_access
@@ -148,6 +156,8 @@ class PersonalBotService:
         self.daily_limit = daily_limit
         self.hold = timedelta(seconds=hold_seconds)
         self.memberships = MembershipService()
+        # Хэш кода `ca_…` ссылки «Получать уведомления в MAX» (D2).
+        self.application_digest = application_digest
 
     # ============================================================ вебхук
 
@@ -158,7 +168,39 @@ class PersonalBotService:
         _touch_dialog(user, event.occurred_at)
         if event.token and event.token.startswith("connect_"):
             return None  # Поток подключения чата A-07 не меняется.
+        if event.token and event.token.startswith("ca_") and self.application_digest:
+            await self._subscribe_application(session, event, user)
+            return None
         return await self._job(session, event.event_id, user.id, "start")
+
+    async def _subscribe_application(
+        self, session: AsyncSession, event: MaxEvent, user: User
+    ) -> None:
+        """Код `ca_…` со страницы статуса заявки УК: писать сюда о смене статуса.
+
+        Код одноразовый; сама ссылка статуса боту не передаётся и в сообщениях
+        не упоминается. Повтор события не даёт второго ответа (ключ — событие).
+        """
+        from domsignal.services.company_signup import NOTIFY_INVALID, NOTIFY_LINKED
+
+        assert event.token and self.application_digest
+        row = await session.scalar(
+            select(CompanyOnboardingRequest)
+            .where(
+                CompanyOnboardingRequest.notify_code_hash
+                == self.application_digest(event.token.removeprefix("ca_"))
+            )
+            .with_for_update()
+        )
+        if row is not None:
+            row.notify_user_id, row.notify_code_hash = user.id, None
+        await enqueue_reply(
+            session,
+            user_id=user.id,
+            event_id=event.event_id,
+            key="application",
+            text=NOTIFY_LINKED.format(name=row.short_name) if row else NOTIFY_INVALID,
+        )
 
     @staticmethod
     async def on_stopped(session: AsyncSession, event: MaxEvent) -> None:

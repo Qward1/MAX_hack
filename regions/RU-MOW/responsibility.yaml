@@ -1,0 +1,170 @@
+# Региональный слой справочника ответственности: город Москва (D2).
+#
+# Второй регион — данными, не кодом (REGION-MOW-2026-09-26). Федеральный канал
+# «Госуслуги. Решаем вместе» помечен `unavailable_regions: RU-MOW`, поэтому
+# в Москве роутер его не предлагает; тот же подтип получает московский канал —
+# портал «Наш город». Валидатор `scripts/validate_region_pack.py` не даёт этому
+# слою сослаться на канал, недоступный в RU-MOW.
+#
+# Источники прочитаны 24.09.2026 без входа: gorod.mos.ru/portal/about и
+# gorod.mos.ru/themes (с сервера в РФ — с зарубежного адреса портал не
+# открывается), mos.ru/news/item/97753073/. Темы портала процитированы
+# дословно. Сроков ответа справочник не утверждает: нормативного документа с
+# ними мы не открывали. Органов и телефонов без источника здесь нет.
+schema_version: 1
+layer_id: RU-MOW
+layer: region
+region: RU-MOW
+version: "1"
+updated_at: "2026-09-24"
+
+organizations: []
+
+channels:
+  - id: ru_mow_nash_gorod
+    organization_id: null
+    channel_type: official_web
+    label: Портал «Наш город»
+    url: https://gorod.mos.ru/
+    phone: null
+    entry_hint: gorod.mos.ru → «Сообщить о проблеме», вход через mos.ru
+    routes_to_competent_authority: true
+    facts:
+      - text: "«На портал житель может сообщить о проблемах в содержании городских объектов (некачественной уборке, наличии ям, неисправности освещения и пр.) и проконтролировать качество устранения проблем городскими службами»."
+        source_title: "Портал «Наш город», gorod.mos.ru/portal/about — «О портале». Проверено без входа 24.09.2026"
+        source_url: https://gorod.mos.ru/portal/about
+      - text: "Организацию-исполнителя выбирает портал: «после публикации на сайте умная система сама выбирает, в какую организацию передать сообщение, в зависимости от выбранного объекта и зафиксированной проблемы»."
+        source_title: "«Добро пожаловаться: как портал «Наш город» помогает москвичам», mos.ru — новости города. Проверено 24.09.2026"
+        source_url: https://www.mos.ru/news/item/97753073/
+      - text: "Для подачи нужна учётная запись mos.ru: «Нажмите на кнопку «Войти через mos.ru». На следующем этапе – вводите пароль и логин от портала mos.ru»."
+        source_title: "Портал «Наш город», gorod.mos.ru/portal/about — «Как стать пользователем?». Проверено без входа 24.09.2026"
+        source_url: https://gorod.mos.ru/portal/about
+    unavailable_regions: []
+    verification:
+      status: verified
+      verified_at: "2026-09-24"
+      verified_by: DEV-B (страницы gorod.mos.ru/portal/about и gorod.mos.ru/themes без входа; новость mos.ru)
+      source_title: "Портал «Наш город» — «О портале», gorod.mos.ru/portal/about. Проверено без входа 24.09.2026"
+      source_url: https://gorod.mos.ru/portal/about
+
+rules:
+  - id: ru_mow.street_lighting.nash_gorod
+    priority: 100
+    match:
+      subtypes:
+        - street_lighting.failure
+      location_scopes:
+        - municipal_territory
+    route_type: municipality
+    organization_id: null
+    channel_ids:
+      - ru_mow_nash_gorod
+    can_prepare_appeal: true
+    basis:
+      text: "На портале «Наш город» в разделе «Моя дорога» есть тема «Неисправность/некачественное содержание элементов освещения на проезжей части/тротуаре». Ответственную организацию выбирает портал, а не ДомСигнал."
+      source_title: "Портал «Наш город», gorod.mos.ru/themes — проблемные темы, раздел «Моя дорога». Проверено без входа 24.09.2026"
+      source_url: https://gorod.mos.ru/themes
+    verification:
+      status: verified
+      verified_at: "2026-09-24"
+      verified_by: DEV-B (страница тем портала без входа)
+      source_title: "Портал «Наш город», gorod.mos.ru/themes. Проверено без входа 24.09.2026"
+      source_url: https://gorod.mos.ru/themes
+
+  - id: ru_mow.road_damage.nash_gorod
+    priority: 100
+    match:
+      subtypes:
+        - road.damage
+      location_scopes:
+        - municipal_territory
+    route_type: municipality
+    organization_id: null
+    channel_ids:
+      - ru_mow_nash_gorod
+    can_prepare_appeal: true
+    basis:
+      text: "На портале «Наш город» в разделе «Моя дорога» есть тема «Повреждение дорожного покрытия на проезжей части/тротуаре (ямы, выбоины, провалы)». Ответственную организацию выбирает портал, а не ДомСигнал."
+      source_title: "Портал «Наш город», gorod.mos.ru/themes — проблемные темы, раздел «Моя дорога». Проверено без входа 24.09.2026"
+      source_url: https://gorod.mos.ru/themes
+    verification:
+      status: verified
+      verified_at: "2026-09-24"
+      verified_by: DEV-B (страница тем портала без входа)
+      source_title: "Портал «Наш город», gorod.mos.ru/themes. Проверено без входа 24.09.2026"
+      source_url: https://gorod.mos.ru/themes
+
+  - id: ru_mow.snow_street.nash_gorod
+    priority: 100
+    match:
+      subtypes:
+        - snow.street
+      location_scopes:
+        - municipal_territory
+    route_type: municipality
+    organization_id: null
+    channel_ids:
+      - ru_mow_nash_gorod
+    can_prepare_appeal: true
+    basis:
+      text: "На портале «Наш город» в разделе «Моя дорога» тема уборки называется «Неубранная проезжая часть/тротуар». Ответственную организацию выбирает портал, а не ДомСигнал."
+      source_title: "Портал «Наш город», gorod.mos.ru/themes — проблемные темы, раздел «Моя дорога», «Уборка». Проверено без входа 24.09.2026"
+      source_url: https://gorod.mos.ru/themes
+    verification:
+      status: verified
+      verified_at: "2026-09-24"
+      verified_by: DEV-B (страница тем портала без входа)
+      source_title: "Портал «Наш город», gorod.mos.ru/themes. Проверено без входа 24.09.2026"
+      source_url: https://gorod.mos.ru/themes
+
+  - id: ru_mow.landscaping.nash_gorod
+    priority: 100
+    match:
+      subtypes:
+        - landscaping.public
+      location_scopes:
+        - municipal_territory
+    route_type: municipality
+    organization_id: null
+    channel_ids:
+      - ru_mow_nash_gorod
+    can_prepare_appeal: true
+    basis:
+      text: "На портале «Наш город» в разделе «Моя дорога» есть темы «Ненадлежащий уход за зелеными насаждениями на проезжей части/тротуаре» и «Несвоевременное восстановление благоустройства территории после разрытий». Ответственную организацию выбирает портал, а не ДомСигнал."
+      source_title: "Портал «Наш город», gorod.mos.ru/themes — проблемные темы, раздел «Моя дорога». Проверено без входа 24.09.2026"
+      source_url: https://gorod.mos.ru/themes
+    verification:
+      status: verified
+      verified_at: "2026-09-24"
+      verified_by: DEV-B (страница тем портала без входа)
+      source_title: "Портал «Наш город», gorod.mos.ru/themes. Проверено без входа 24.09.2026"
+      source_url: https://gorod.mos.ru/themes
+
+  - id: ru_mow.waste_removal.nash_gorod
+    priority: 100
+    match:
+      subtypes:
+        - waste.removal_regional
+      location_scopes: []
+    route_type: regional_operator
+    organization_id: null
+    channel_ids:
+      - ru_mow_nash_gorod
+    can_prepare_appeal: true
+    basis:
+      text: "На портале «Наш город» в разделе «Мой двор» есть тема «Неубранная контейнерная площадка/переполнение контейнеров»; по mos.ru, «вывезти мусор» — среди проблем, которые «поможет решить портал «Наш город»». Организацию-исполнителя выбирает портал, ДомСигнал её не называет."
+      source_title: "Портал «Наш город», gorod.mos.ru/themes — проблемные темы, раздел «Мой двор», «Контейнерные/бункерные площадки». Проверено без входа 24.09.2026"
+      source_url: https://gorod.mos.ru/themes
+    verification:
+      status: verified
+      verified_at: "2026-09-24"
+      verified_by: DEV-B (страница тем портала без входа; новость mos.ru/news/item/97753073)
+      source_title: "Портал «Наш город», gorod.mos.ru/themes. Проверено без входа 24.09.2026"
+      source_url: https://gorod.mos.ru/themes
+
+municipalities:
+  - code: moscow
+    name: Москва
+    organizations: []
+    channels: []
+    rules: []

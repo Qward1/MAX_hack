@@ -129,6 +129,45 @@ def check_references(document: dict[str, Any], path: Path, known: dict[str, set[
     return failed
 
 
+def unavailable_channel_errors(
+    documents: Iterable[dict[str, Any]], document: dict[str, Any]
+) -> list[tuple[str, str]]:
+    """Правила слоя региона не предлагают канал, недоступный в этом регионе.
+
+    Недоступность — данные федерального слоя (`unavailable_regions`), не код:
+    «Госуслуги. Решаем вместе» не принимает сообщения из Москвы, поэтому пакет
+    RU-MOW не может на него сослаться. `documents` — все слои (откуда берутся
+    каналы), `document` — проверяемый слой. Возвращает пары (место, сообщение).
+    """
+    unavailable: dict[str, set[str]] = {}
+    for layer in documents:
+        for _, section in sections(layer):
+            for channel in section.get("channels") or []:
+                unavailable[str(channel.get("id"))] = set(channel.get("unavailable_regions") or [])
+    errors: list[tuple[str, str]] = []
+    region = document.get("region")
+    if region:
+        for where, section in sections(document):
+            for index, channel in enumerate(section.get("channels") or []):
+                if region in (channel.get("unavailable_regions") or []):
+                    errors.append(
+                        (
+                            f"{where}.channels.{index}",
+                            f"channel {channel.get('id')} of {region} is unavailable in {region}",
+                        )
+                    )
+            for index, rule in enumerate(section.get("rules") or []):
+                for channel_id in rule.get("channel_ids") or []:
+                    if region in unavailable.get(channel_id, set()):
+                        errors.append(
+                            (
+                                f"{where}.rules.{index}",
+                                f"channel {channel_id} is unavailable in {region}",
+                            )
+                        )
+    return errors
+
+
 def check_verification(document: dict[str, Any], path: Path) -> bool:
     """Проверенная запись обязана называть дату проверки и источник.
 
@@ -201,6 +240,9 @@ def responsibility_layers() -> bool:
     for path, document in zip(paths, documents, strict=True):
         failed |= check_references(document, path, known)
         failed |= check_verification(document, path)
+        for location, message in unavailable_channel_errors(documents, document):
+            report(path, location, message)
+            failed = True
     return failed
 
 

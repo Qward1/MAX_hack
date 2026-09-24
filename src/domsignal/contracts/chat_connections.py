@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 from domsignal.contracts.common import ContractModel
+from domsignal.contracts.quota import ChatQuotaView
 from domsignal.core.chat_connections import ConnectionStatus
 
 
@@ -34,6 +35,8 @@ class ConnectionView(ContractModel):
     binding_version: int | None = None
     # Returned only on first creation, never persisted in receipts or outbox.
     correlation_token: str | None = None
+    #: Квота чатов УК на момент ответа (D2): «осталось N из Q».
+    quota: ChatQuotaView | None = None
 
 
 class ConnectionApprove(ContractModel):

@@ -34,3 +34,5 @@ class CapabilitiesResponse(ContractModel):
     contract_version: Literal["c0.1"] = "c0.1"
     environment: Literal["local", "test", "production"]
     features: CapabilityFlags
+    #: Ссылка на бота ДомСигнала в MAX (`https://max.ru/<ник>`), если ник задан.
+    bot_url: str | None = None
