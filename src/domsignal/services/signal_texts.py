@@ -55,6 +55,7 @@ EVENT_LABELS: dict[str, str] = {
     "preliminary_critical": "Правила нашли признак опасности",
     "danger_grouped": "Повторное сообщение об опасности присоединено к сигналу",
     "danger_kind_added": "К сигналу добавился новый признак опасности",
+    "danger_not_joined": "Новый признак опасности вынесен в отдельный сигнал",
     "chat_memo_queued": "Памятка безопасности поставлена в очередь в чат",
     "chat_memo_suppressed": "Памятка не повторена: недавно уже была",
     "chat_memo_not_eligible": (
