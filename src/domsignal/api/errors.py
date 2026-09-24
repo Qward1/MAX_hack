@@ -27,7 +27,11 @@ class InvitationLogFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         if isinstance(record.args, tuple):
             record.args = tuple(
-                re.sub(r"/admin/invite/[^ ?]+", "/admin/invite/[redacted]", arg)
+                re.sub(
+                    r"(/admin/invite|/admin/reset|/company/apply/status|/join)/[^ ?]+",
+                    r"\1/[redacted]",
+                    arg,
+                )
                 if isinstance(arg, str)
                 else arg
                 for arg in record.args
@@ -65,9 +69,13 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
                     ),
                 )
         response.headers["X-Request-ID"] = request.state.request_id
-        if request.url.path.startswith(("/api/", "/admin", "/platform-admin", "/company")):
+        if request.url.path.startswith(
+            ("/api/", "/admin", "/platform-admin", "/company", "/login", "/join")
+        ):
             response.headers["Cache-Control"] = "no-store"
-        if request.url.path.startswith(("/admin", "/platform-admin", "/company")):
+        if request.url.path.startswith(
+            ("/admin", "/platform-admin", "/company", "/login", "/join", "/site")
+        ):
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
                 "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; "

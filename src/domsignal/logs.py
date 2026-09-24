@@ -167,7 +167,10 @@ def configure_logging() -> PrivateHandler:
 
 
 #: Пути, где сегмент — одноразовый секрет или ссылка-приглашение.
-_SECRET_PATHS = re.compile(r"^(/admin/invite|/api/v1/notification-launch)/[^/?]+")
+_SECRET_PATHS = re.compile(
+    r"^(/admin/invite|/admin/reset|/company/apply/status|/join|/api/v1/notification-launch)"
+    r"/[^/?]+"
+)
 
 
 def safe_path(path: str) -> str:

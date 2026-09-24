@@ -25,7 +25,9 @@ from domsignal.db.models.explicit import (
 from domsignal.db.models.incidents import Incident, Report
 from domsignal.db.models.notifications import MaxDestinationLimit, NotificationDelivery
 from domsignal.db.models.onboarding import (
+    CompanyApplicationMessage,
     CompanyOnboardingRequest,
+    EmployeeCredentialReset,
     EmployeeInvitation,
     HouseManagementRequest,
 )
@@ -38,6 +40,7 @@ from domsignal.db.models.passive import (
     SignalLine,
     SignalQuote,
 )
+from domsignal.db.models.quota import ChatQuotaGrant, ChatQuotaRequest
 from domsignal.db.models.reliability import IdempotencyRecord, InboxReceipt, Job, OutboxMessage
 from domsignal.db.models.routing import HouseRoutingProfile
 from domsignal.db.models.sessions import AppSession
@@ -52,6 +55,8 @@ from domsignal.db.models.tickets import (
 __all__ = [
     "ChatMemberCheck",
     "CompanyOnboardingRequest", "EmployeeInvitation", "HouseManagementRequest",
+    "CompanyApplicationMessage", "EmployeeCredentialReset",
+    "ChatQuotaGrant", "ChatQuotaRequest",
     "AuthChallenge", "AuthRateLimit", "EmployeeCredential", "RecoveryCode",
     "GLOBAL_BUDGET_SCOPE",
     "AiCallBudget",

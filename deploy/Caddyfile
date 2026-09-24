@@ -12,7 +12,7 @@
 				request>headers>X-Forwarded-For delete
 				request>headers>X-Real-Ip delete
 				request>headers>Forwarded delete
-				request>uri regexp "^/(admin/invite|api/v1/notification-launch)/[^/?]+" "/$1/[redacted]"
+				request>uri regexp "^/(admin/invite|admin/reset|company/apply/status|join|api/v1/notification-launch)/[^/?]+" "/$1/[redacted]"
 			}
 		}
 	}

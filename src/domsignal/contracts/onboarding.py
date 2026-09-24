@@ -9,6 +9,7 @@ from pydantic import AwareDatetime, Field, field_validator, model_validator
 
 from domsignal.contracts.chat_connections import ConnectionView
 from domsignal.contracts.common import ContractModel
+from domsignal.contracts.quota import ChatQuotaView
 
 Role = Literal["operator", "company_admin"]
 ReviewStatus = Literal[
@@ -40,14 +41,37 @@ class PlainInput(ContractModel):
         return value
 
 
+def plain_line(value: str) -> str:
+    value = value.strip()
+    if any(c in value for c in "<>") or any(ord(c) < 32 for c in value):
+        raise ValueError("Plain text required")
+    return value
+
+
 class CompanyApplicationCreate(PlainInput):
     legal_name: str = Field(min_length=2, max_length=300)
     short_name: str = Field(min_length=2, max_length=200)
     inn: str = Field(pattern=r"^(?:[0-9]{10}|[0-9]{12})$")
     contact_name: str = Field(min_length=2, max_length=200)
+    #: Должность контактного лица (D2), необязательно.
+    contact_position: str | None = Field(default=None, max_length=200)
     contact_email: str | None = Field(default=None, max_length=254)
     contact_phone: str | None = Field(default=None, max_length=40)
     comment: str | None = Field(default=None, max_length=2000)
+    #: Сколько домовых чатов УК хочет подключить (D2). Итоговую квоту задаёт платформа.
+    requested_chat_count: int = Field(ge=1, le=1000)
+    #: Необязательный список адресов домов — подсказка платформе, не доступ.
+    house_addresses: list[Annotated[str, Field(min_length=5, max_length=500)]] = Field(
+        default_factory=list, max_length=50
+    )
+
+    @field_validator("house_addresses", mode="before")
+    @classmethod
+    def plain_addresses(cls, value: object) -> object:
+        if isinstance(value, list):
+            cleaned = [plain_line(item) if isinstance(item, str) else item for item in value]
+            return [item for item in cleaned if item != ""]
+        return value
 
     @model_validator(mode="after")
     def contact(self) -> Self:
@@ -62,11 +86,27 @@ class CompanyApplicationCreate(PlainInput):
 
 class ApplicationReceived(ContractModel):
     received: Literal[True] = True
-    message: str = "Данные получены. Для уточнений с вами свяжутся вручную."
+    message: str = (
+        "Заявка принята. Сохраните ссылку на страницу статуса: по ней вы увидите решение, "
+        "ответите на вопросы и создадите аккаунт администратора."
+    )
+    #: Секретная ссылка на страницу статуса (D2). Показывается один раз.
+    status_url: str | None = None
 
 
 class ReviewDecision(PlainInput):
     reason: Plain
+
+
+class ApplicationDecision(ReviewDecision):
+    """Решение по заявке УК. При одобрении платформа задаёт квоту чатов (D2).
+
+    `chat_quota` не задан и `unlimited` ложно — квота равна запрошенному числу
+    чатов (у заявок до D2 без числа — без ограничения).
+    """
+
+    chat_quota: int | None = Field(default=None, ge=0, le=10000)
+    unlimited: bool = False
 
 
 class CompanyContext(ContractModel):
@@ -94,6 +134,12 @@ class AuditView(ContractModel):
     reason: str | None = None
 
 
+class ApplicationMessageView(ContractModel):
+    author: Literal["platform", "applicant"]
+    text: str
+    created_at: datetime
+
+
 class ApplicationView(ContractModel):
     id: UUID
     legal_name: str
@@ -109,6 +155,48 @@ class ApplicationView(ContractModel):
     decision_reason: str | None
     company_id: UUID | None
     history: list[AuditView] = Field(default_factory=list)
+    # D2, аддитивно.
+    contact_position: str | None = None
+    requested_chat_count: int | None = None
+    house_addresses: list[str] | None = None
+    #: У заявителя есть ссылка статуса: приглашение передавать вручную не нужно.
+    status_link_issued: bool = False
+    #: Совпадение ИНН: такая УК уже создана или есть другая открытая заявка.
+    inn_conflict: Literal["company_exists", "open_application"] | None = None
+    messages: list[ApplicationMessageView] = Field(default_factory=list)
+    #: Квота чатов, выданная при одобрении; `null` — без ограничения или не одобрено.
+    granted_chat_quota: int | None = None
+
+
+class ApplicationStatusToken(ContractModel):
+    token: str = Field(min_length=32, max_length=100, pattern=r"^[A-Za-z0-9_-]+$")
+
+
+class ApplicationReply(ApplicationStatusToken):
+    text: str = Field(min_length=1, max_length=2000, pattern=r"^[^<>]+$")
+
+
+class ApplicationStatusView(ContractModel):
+    """Страница статуса заявки по секретной ссылке: только своя заявка."""
+
+    status: ReviewStatus
+    short_name: str
+    submitted_at: datetime
+    requested_chat_count: int | None
+    house_addresses: list[str]
+    messages: list[ApplicationMessageView]
+    #: Ответить на вопросы платформы можно, пока заявка в статусе «Нужны уточнения».
+    can_reply: bool
+    #: Основание одобрения или отказа.
+    decision_reason: str | None
+    granted_chat_quota: int | None
+    quota_unlimited: bool
+    #: `create` — можно создать аккаунт администратора; `active` — он уже создан.
+    admin_account: Literal["unavailable", "create", "active"]
+
+
+class AdminInvitationLink(ContractModel):
+    invitation_url: str
 
 
 class InvitationCreate(ContractModel):
@@ -128,7 +216,8 @@ class InvitationView(ContractModel):
 
 class CompanyApproved(ContractModel):
     application: ApplicationView
-    invitation: InvitationView
+    #: `null` — у заявителя есть ссылка статуса, аккаунт он создаёт сам (D2).
+    invitation: InvitationView | None = None
 
 
 class InvitationToken(ContractModel):
@@ -152,6 +241,8 @@ class MembershipView(ContractModel):
     display_name: str
     role: Role
     status: str
+    #: Сотрудник зарегистрировался по открытой ссылке УК (D2).
+    open_registration: bool = False
 
 
 class AssignmentView(ContractModel):
@@ -282,6 +373,10 @@ class CompanyView(ContractModel):
     house_count: int = 0
     employee_count: int = 0
     binding_problems: int = 0
+    # D2, аддитивно.
+    chat_quota: ChatQuotaView | None = None
+    pending_quota_requests: int = 0
+    open_registration_enabled: bool = False
 
 
 class CompanyOverview(ContractModel):
@@ -310,3 +405,78 @@ class PlatformHealth(ContractModel):
     pending_jobs: int
     failed_jobs: int
     pending_deliveries: int
+
+
+class CredentialResetCreate(ContractModel):
+    """`password` — новый пароль, аутентификатор прежний; `password_mfa` — оба заново."""
+
+    kind: Literal["password", "password_mfa"]
+
+
+class CredentialResetIssued(ContractModel):
+    kind: Literal["password", "password_mfa"]
+    reset_url: str
+    expires_at: datetime
+
+
+class CredentialResetToken(ContractModel):
+    token: str = Field(min_length=32, max_length=100, pattern=r"^[A-Za-z0-9_-]+$")
+
+
+class CredentialResetPreview(ContractModel):
+    company_name: str
+    login_name: str
+    kind: Literal["password", "password_mfa"]
+    expires_at: datetime
+
+
+class CredentialResetComplete(CredentialResetToken):
+    password: str = Field(min_length=12, max_length=1024)
+
+
+class OpenRegistrationChange(PlainInput):
+    enabled: bool
+    reason: Plain
+
+
+class OpenRegistrationEmployee(ContractModel):
+    user_id: UUID
+    display_name: str
+    login_name: str | None
+    status: str
+    registered_at: datetime | None
+
+
+class OpenRegistrationView(ContractModel):
+    enabled: bool
+    changed_at: datetime | None
+    #: Публичная ссылка `/join/<код>` — только в ответе на включение.
+    join_url: str | None = None
+    employees: list[OpenRegistrationEmployee] = Field(default_factory=list)
+
+
+class JoinCode(ContractModel):
+    code: str = Field(min_length=20, max_length=100, pattern=r"^[A-Za-z0-9_-]+$")
+
+
+class JoinPreview(ContractModel):
+    company_name: str
+
+
+class JoinRegister(JoinCode):
+    display_name: str = Field(min_length=2, max_length=200, pattern=r"^[^<>]+$")
+    login_name: str = Field(min_length=3, max_length=100)
+    password: str = Field(min_length=12, max_length=1024)
+
+
+class CompanyDestination(ContractModel):
+    company_id: UUID
+    name: str
+    role: Role
+
+
+class EmployeeDestinations(ContractModel):
+    """Куда вести сотрудника после единого входа `/login`."""
+
+    platform: bool
+    companies: list[CompanyDestination]

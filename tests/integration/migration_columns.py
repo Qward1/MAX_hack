@@ -1,4 +1,4 @@
-"""Столбцы, добавленные срезами P3b, P4 и D1 к уже существующим таблицам.
+"""Столбцы, добавленные срезами P3b, P4, D1 и D2 к уже существующим таблицам.
 
 Проверки миграций сравнивают строки до и после обновления до head. Новые
 столбцы перечислены здесь явно, чтобы сравнение оставалось осмысленным: оно
@@ -37,6 +37,22 @@ P3B_COLUMNS: dict[str, tuple[str, ...]] = {
         "end_reason",
     ),
     "explicit_intakes": ("channel", "house_id", "user_id", "hold_until", "pending_analysis"),
+    # D2: открытая регистрация сотрудников, заявка УК со ссылкой статуса,
+    # источник приглашения.
+    "management_companies": (
+        "open_registration_enabled",
+        "open_registration_code_hash",
+        "open_registration_changed_at",
+        "open_registration_changed_by",
+    ),
+    "company_onboarding_requests": (
+        "requested_chat_count",
+        "house_addresses",
+        "contact_position",
+        "status_token_hash",
+        "admin_invite_generation",
+    ),
+    "employee_invitations": ("source",),
 }
 
 
@@ -48,6 +64,11 @@ ADDED_DEFAULTS: dict[str, object] = {
     # D1: открытого доступа у прежних домов нет; прежний приём — `/report` группы.
     "open_resident_access": False,
     "channel": "group_report",
+    # D2: регистрация по ссылке у прежних УК закрыта; прежние приглашения —
+    # обычные; ссылка «Создать аккаунт» ещё не выпускалась.
+    "open_registration_enabled": False,
+    "source": "invitation",
+    "admin_invite_generation": 0,
 }
 
 
