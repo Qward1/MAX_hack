@@ -3,15 +3,18 @@
     uv run python evaluation/p6_eval.py --dataset d3_dev --config gpt5mini_v1_low --run r01
     uv run python evaluation/p6_eval.py --dataset d5 --config rules --run r02
     uv run python evaluation/p6_eval.py --summarize evaluation/reports/p6-runs/r01.jsonl
+    uv run python evaluation/p6_eval.py --slice p6b --dataset d5_dev --config rules --run t01
 
 Жёсткие правила (docs/decisions.md#p6-prereg-2026-09-23):
 
 1. Во внешний API уходят только строки `datasets/synthetic/*` с `synthetic: true`
    (`evaluation.guard`); каталог `data/` не читается ни в каком виде.
 2. Все вызовы модели идут через общий лимит среза `SliceBudget`
-   (700 вызовов и 300 ₽ на весь срез, файл-счётчик в `evaluation/reports`).
+   (P6: 700 вызовов и 300 ₽, P6b: 400 вызовов и 150 ₽; файл-счётчик в
+   `evaluation/reports`).
 3. holdout прогоняется один раз итоговой конфигурацией; промпт настраивается
-   только на dev.
+   только на dev. В P6b настройка — только на `d5_dev` и dev D3, D5 и holdout
+   D3 — контроль.
 
 Окна режутся политикой ядра по умолчанию (`WindowPolicy()`), каждый диалог —
 отдельный поток. Открытые элементы симулируют продукт: сигналы Inbox,
@@ -40,7 +43,13 @@ if __package__ in (None, ""):
 
 import httpx  # noqa: E402
 
-from domsignal.ai import WindowAnalyzer, WindowInput, WindowLine  # noqa: E402
+from domsignal.ai import (  # noqa: E402
+    WindowAnalyzer,
+    WindowInput,
+    WindowLine,
+    chat_memo_hits,
+    screen_message_for_danger,
+)
 from domsignal.ai.contracts import OpenItem, WindowAnalysis  # noqa: E402
 from domsignal.ai.providers.base import ProviderRequest, ProviderResult  # noqa: E402
 from domsignal.ai.providers.openai_compatible import (  # noqa: E402
@@ -63,13 +72,41 @@ DATASETS = {
     "d3_dev": pathlib.Path("datasets/synthetic/d3_dialogs.v1.dev.jsonl"),
     "d3_holdout": pathlib.Path("datasets/synthetic/d3_dialogs.v1.holdout.jsonl"),
     "d5": pathlib.Path("datasets/synthetic/d5_danger.v1.jsonl"),
+    # P6b: набор настройки опасности другого стиля; D5 остаётся контролем.
+    "d5_dev": pathlib.Path("datasets/synthetic/d5_dev.v1.jsonl"),
     # D2 появляется только после сессии с добровольцами (evaluation/d2_convert.py).
     "d2": pathlib.Path("datasets/synthetic/d2_dialogs.v1.jsonl"),
 }
-RUNS_DIR = pathlib.Path("evaluation/reports/p6-runs")
-LEDGER = pathlib.Path("evaluation/reports/2026-09-23-p6-ledger.json")
-SLICE_MAX_CALLS = 700
-SLICE_MAX_RUB = 300.0
+#: Окно D5-типа: одно окно на строку набора, без нарезки.
+SINGLE_WINDOW = frozenset({"d5", "d5_dev"})
+
+
+@dataclass(frozen=True)
+class Slice:
+    """Каталог прогонов и лимит вызовов модели одного среза."""
+
+    runs: pathlib.Path
+    ledger: pathlib.Path
+    max_calls: int
+    max_rub: float
+
+
+SLICES = {
+    "p6": Slice(
+        pathlib.Path("evaluation/reports/p6-runs"),
+        pathlib.Path("evaluation/reports/2026-09-23-p6-ledger.json"),
+        700,
+        300.0,
+    ),
+    "p6b": Slice(
+        pathlib.Path("evaluation/reports/p6b-runs"),
+        pathlib.Path("evaluation/reports/2026-09-24-p6b-ledger.json"),
+        400,
+        150.0,
+    ),
+}
+RUNS_DIR = SLICES["p6"].runs
+LEDGER = SLICES["p6"].ledger
 MAX_OPEN_ITEMS = 10
 #: Профиль дома для маршрута от начала до конца (live-стенд, решение владельца).
 HOUSE = HouseRoutingContext(
@@ -204,7 +241,7 @@ def load_units(dataset: str) -> list[EvalUnit]:
 
 
 def unit_windows(unit: EvalUnit, dataset: str) -> list[WindowInput]:
-    if dataset == "d5":
+    if dataset in SINGLE_WINDOW:
         return [WindowInput(channel="group_passive", lines=tuple(unit.lines))]
     return build_windows(unit.lines, channel="group_passive")
 
@@ -309,6 +346,31 @@ def _signal_record(analysis: WindowAnalysis) -> list[dict[str, Any]]:
     ]
 
 
+def intake_record(window: WindowInput) -> list[dict[str, Any]]:
+    """Путь приёма продукта по каждой реплике окна: до окна и до модели.
+
+    Продукт проверяет каждую реплику правилами опасности в транзакции приёма
+    (`passive_capture`): любое срабатывание без отрицания — предварительный
+    критический сигнал и оповещение оператора; памятка в чат — только по
+    срабатываниям с правом на памятку (`chat_memo_hits`).
+    """
+    records: list[dict[str, Any]] = []
+    for line in window.lines:
+        if line.is_context:
+            continue
+        hits = screen_message_for_danger(line.text, line_id=line.line_id)
+        active = [hit for hit in hits if not hit.negated]
+        records.append(
+            {
+                "line": line.line_id,
+                "alert": bool(active),
+                "memo": bool(chat_memo_hits(hits)),
+                "kinds": sorted({hit.kind for hit in active}),
+            }
+        )
+    return records
+
+
 def _update_open_items(
     open_items: list[OpenItem], analysis: WindowAnalysis, unit_id: str, counter: list[int]
 ) -> list[OpenItem]:
@@ -400,6 +462,7 @@ async def run_unit(
                 "roles": {verdict.line_id: verdict.role for verdict in analysis.lines},
                 "signals": _signal_record(analysis),
                 "semantic_danger": [danger.kind for danger in analysis.semantic_danger],
+                "intake": intake_record(window),
             }
         )
         open_items = _update_open_items(open_items, analysis, unit.id, counter)
@@ -586,25 +649,105 @@ def summarize_d3(records: Sequence[dict[str, Any]], dataset: str) -> dict[str, A
     }
 
 
-def summarize_d5(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
-    units = {unit.id: unit for unit in load_units("d5")}
-    groups: dict[str, list[bool]] = {"danger": [], "trap": [], "contextual": []}
+def _intake_of(record: dict[str, Any]) -> list[dict[str, Any]]:
+    """Исход приёма по репликам; у прогонов P6 его нет."""
+    intake = record.get("intake")
+    return intake if isinstance(intake, list) else []
+
+
+def summarize_d5(records: Sequence[dict[str, Any]], dataset: str = "d5") -> dict[str, Any]:
+    units = {unit.id: unit for unit in load_units(dataset)}
+    names = ("danger", "trap", "contextual")
+    groups: dict[str, list[bool]] = {name: [] for name in names}
+    rules_groups: dict[str, list[bool]] = {name: [] for name in names}
+    alerts: dict[str, list[bool]] = {name: [] for name in names}
+    memos: dict[str, list[bool]] = {name: [] for name in names}
+    families: dict[str, dict[str, int]] = {}
     misses: list[str] = []
     false_alarms: list[str] = []
+    trap_memos: list[str] = []
+    has_intake = bool(records) and all("intake" in record for record in records)
     for record in records:
         labels = units[record["unit"]].labels
+        group = labels["group"]
         alarm = any(signal["emergency"]["is"] for signal in record["signals"])
-        groups[labels["group"]].append(alarm)
+        rules_alarm = any(
+            signal["emergency"]["is"] and "rules" in signal["emergency"]["sources"]
+            for signal in record["signals"]
+        )
+        groups[group].append(alarm)
+        rules_groups[group].append(rules_alarm)
         if labels["expected_danger"] and not alarm:
             misses.append(record["unit"])
         if not labels["expected_danger"] and alarm:
             false_alarms.append(record["unit"])
-    return {
+        intake = _intake_of(record)
+        alert = any(item["alert"] for item in intake)
+        memo = any(item["memo"] for item in intake)
+        alerts[group].append(alert)
+        memos[group].append(memo)
+        if group == "trap" and memo:
+            trap_memos.append(record["unit"])
+        family = str(labels.get("family") or group)
+        entry = families.setdefault(
+            family, {"windows": 0, "alarm": 0, "rules_alarm": 0, "intake_alert": 0, "memo": 0}
+        )
+        entry["windows"] += 1
+        entry["alarm"] += int(alarm)
+        entry["rules_alarm"] += int(rules_alarm)
+        entry["intake_alert"] += int(alert)
+        entry["memo"] += int(memo)
+    result: dict[str, Any] = {
         "danger_found": ratio(sum(groups["danger"]), len(groups["danger"])),
         "contextual_found": ratio(sum(groups["contextual"]), len(groups["contextual"])),
         "trap_false_alarms": ratio(sum(groups["trap"]), len(groups["trap"])),
+        "rules_danger_found": ratio(sum(rules_groups["danger"]), len(rules_groups["danger"])),
+        "rules_contextual_found": ratio(
+            sum(rules_groups["contextual"]), len(rules_groups["contextual"])
+        ),
+        "rules_trap_false_alarms": ratio(sum(rules_groups["trap"]), len(rules_groups["trap"])),
         "misses": misses,
         "false_alarms": false_alarms,
+    }
+    if has_intake:
+        result["intake"] = {
+            "danger_alert": ratio(sum(alerts["danger"]), len(alerts["danger"])),
+            "danger_memo": ratio(sum(memos["danger"]), len(memos["danger"])),
+            "contextual_memo": ratio(sum(memos["contextual"]), len(memos["contextual"])),
+            "trap_alert": ratio(sum(alerts["trap"]), len(alerts["trap"])),
+            "trap_memo": ratio(sum(memos["trap"]), len(memos["trap"])),
+            "trap_memo_units": trap_memos,
+        }
+        result["families"] = dict(sorted(families.items()))
+    return result
+
+
+def summarize_d3_intake(records: Sequence[dict[str, Any]], dataset: str) -> dict[str, Any]:
+    """Путь приёма на репликах D3: размеченная опасность против остальных."""
+    units = {unit.id: unit for unit in load_units(dataset)}
+    danger_of = {
+        f"{unit_id}-{line['n']}": line["danger"]
+        for unit_id, unit in units.items()
+        for line in unit.labels["lines"]
+    }
+    danger_lines = sum(1 for value in danger_of.values() if value)
+    counts: Counter[str] = Counter()
+    other_memo_lines: list[str] = []
+    for record in records:
+        for item in _intake_of(record):
+            danger = bool(danger_of.get(item["line"]))
+            counts["danger_alert" if danger else "other_alert"] += int(item["alert"])
+            counts["danger_memo" if danger else "other_memo"] += int(item["memo"])
+            if item["memo"] and not danger:
+                other_memo_lines.append(item["line"])
+    return {
+        "danger_lines": danger_lines,
+        "other_lines": len(danger_of) - danger_lines,
+        "danger_lines_alert": counts["danger_alert"],
+        "danger_lines_memo": counts["danger_memo"],
+        "other_lines_alert": counts["other_alert"],
+        "other_lines_memo": counts["other_memo"],
+        "other_memo_lines": other_memo_lines,
     }
 
 
@@ -658,10 +801,12 @@ def summarize(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
         "config": records[0]["config"] if records else "",
         "calls": summarize_calls(records),
     }
-    if dataset == "d5":
-        result["d5"] = summarize_d5(records)
+    if dataset in SINGLE_WINDOW:
+        result["d5"] = summarize_d5(records, dataset)
     elif dataset:
         result["d3"] = summarize_d3(records, dataset)
+        if all("intake" in record for record in records):
+            result["d3"]["intake"] = summarize_d3_intake(records, dataset)
     return result
 
 
@@ -691,7 +836,11 @@ def main() -> None:
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--summarize", help="summarize an existing raw records file")
     parser.add_argument("--routes", action="store_true", help="router on the routing reference")
+    parser.add_argument(
+        "--slice", choices=sorted(SLICES), default="p6b", help="runs directory and call budget"
+    )
     args = parser.parse_args()
+    current = SLICES[args.slice]
 
     if args.routes:
         print(json.dumps(route_reference_accuracy(), ensure_ascii=False, indent=2))
@@ -715,7 +864,7 @@ def main() -> None:
         api_key = _load_key()
         if not api_key:
             raise SystemExit("LLM_API_KEY не задан: вызов модели невозможен")
-        budget = SliceBudget(LEDGER, max_calls=SLICE_MAX_CALLS, max_rub=SLICE_MAX_RUB)
+        budget = SliceBudget(current.ledger, max_calls=current.max_calls, max_rub=current.max_rub)
     run = args.run or f"{args.dataset}-{config.name}"
     records = asyncio.run(
         run_dataset(
@@ -728,15 +877,15 @@ def main() -> None:
             concurrency=args.concurrency if config.model else 8,
         )
     )
-    RUNS_DIR.mkdir(parents=True, exist_ok=True)
-    out = RUNS_DIR / f"{run}.jsonl"
+    current.runs.mkdir(parents=True, exist_ok=True)
+    out = current.runs / f"{run}.jsonl"
     body = "".join(
         json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n"
         for record in sorted(records, key=lambda item: (item["unit"], item["window"]))
     )
     out.write_bytes(body.encode("utf-8"))
     summary = summarize(records)
-    (RUNS_DIR / f"{run}.summary.json").write_bytes(
+    (current.runs / f"{run}.summary.json").write_bytes(
         (json.dumps(summary, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     )
     brief = {key: value for key, value in summary.items() if key != "d3"}
@@ -748,7 +897,10 @@ def main() -> None:
         }
     print(json.dumps(brief, ensure_ascii=False, indent=2))
     if budget is not None:
-        print(f"срез: {budget.calls}/{SLICE_MAX_CALLS} вызовов, {budget.rub:.2f}/{SLICE_MAX_RUB} ₽")
+        print(
+            f"срез: {budget.calls}/{current.max_calls} вызовов, "
+            f"{budget.rub:.2f}/{current.max_rub} ₽"
+        )
 
 
 if __name__ == "__main__":

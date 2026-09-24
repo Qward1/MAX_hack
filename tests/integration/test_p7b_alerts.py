@@ -122,8 +122,11 @@ async def test_smoke_after_gas_is_its_own_alert_with_the_112_route(pv) -> None: 
     assert len(texts) == 2
     assert f"Цитата: «{SMOKE}» — Житель A, {moscow(smoke_at)}" in texts[1]
     assert "Признаки: дым или огонь" in texts[1]
-    # Пауза памятки — на вид: у дыма памятки ещё не было.
-    assert len(pv.memos()) == 2
+    # P6b: «и дымом тоже тянет» без места — не высокоточная формулировка:
+    # оператор оповещён, памятки в чат нет (у газа — одна, как и было).
+    assert len(pv.memos()) == 1
+    events = [event.kind for event in await pv.all(select(SignalEvent))]
+    assert "chat_memo_not_eligible" in events
 
 
 async def test_a_new_kind_at_an_open_gas_signal_becomes_its_own_signal(pv) -> None:  # noqa: F811

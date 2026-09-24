@@ -39,6 +39,7 @@ from domsignal.ai import (
     SignalDraft,
     WindowAnalysis,
     WindowPolicy,
+    chat_memo_hits,
     load_taxonomy,
 )
 from domsignal.contracts.routing import LOCATION_SCOPES, DangerKind, LocationScope
@@ -516,7 +517,7 @@ class SignalEngine:
                 "is_emergency": True,
                 "kinds": list(kinds),
                 "sources": ["rules"],
-                "memo_allowed": not displaced,
+                "memo_allowed": bool(chat_memo_hits(active)),
                 "downgraded": False,
                 "downgrade_reason": None,
                 "evidence_unverified": False,

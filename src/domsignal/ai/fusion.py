@@ -110,10 +110,15 @@ def fuse_emergency(
     if semantic_hit:
         sources.append("semantic")
     is_emergency = bool(sources)
+    # Памятка в чат — только по высокоточному срабатыванию правил (P6b):
+    # семантика модели права на голос бота в чате не даёт.
     memo_allowed = (
         is_emergency
         and not downgraded
-        and any(not hit.negated and not hit.displaced for hit in rule_hits)
+        and any(
+            hit.chat_memo_eligible and not hit.negated and not hit.displaced
+            for hit in rule_hits
+        )
     )
     return (
         EmergencyDecision(

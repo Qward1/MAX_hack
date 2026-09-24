@@ -63,7 +63,7 @@ from domsignal.ai.resilience import (
     ResilientProvider,
     budget_scope,
 )
-from domsignal.ai.rules.danger import screen_message_for_danger
+from domsignal.ai.rules.danger import chat_memo_hits, screen_message_for_danger
 from domsignal.ai.rules.lexicon import passes_recall_gate
 from domsignal.ai.schema_modes import SCHEMA_MODES, SchemaMode, response_format, strict_schema
 from domsignal.ai.taxonomy import Taxonomy, load_taxonomy
@@ -123,6 +123,7 @@ __all__ = [
     "build_json_schema",
     "build_messages",
     "build_windows",
+    "chat_memo_hits",
     "check_no_new_facts",
     "decide_explicit_report",
     "decide_strength",
