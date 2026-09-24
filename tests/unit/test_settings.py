@@ -125,7 +125,9 @@ def test_llm_defaults_keep_the_offline_rules_path() -> None:
     assert settings.llm_api_key is None
     assert settings.llm_model is None
     assert settings.llm_schema_mode is LlmSchemaMode.JSON_SCHEMA_STRICT
-    assert settings.llm_timeout_seconds == 10
+    # Не задан: таймаут берётся из профиля модели (P6b).
+    assert settings.llm_timeout_seconds is None
+    assert Settings(llm_timeout_seconds="", _env_file=None).llm_timeout_seconds is None
     assert settings.llm_max_tokens == 1600
     assert settings.llm_max_concurrency == 4
     assert settings.llm_daily_call_budget == 1000

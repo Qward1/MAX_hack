@@ -1,0 +1,321 @@
+{
+  "dataset": "d5_dev",
+  "config": "rules",
+  "calls": {
+    "windows": 80,
+    "calls": 0,
+    "states": {
+      "disabled": 80
+    },
+    "valid_json": {
+      "k": 0,
+      "n": 0,
+      "value": null,
+      "ci95": null
+    },
+    "timeouts": 0,
+    "provider_errors": 0,
+    "p50_ms": null,
+    "p95_ms": null,
+    "p99_ms": null,
+    "max_ms": null,
+    "rub_total": 0,
+    "rub_per_window": null,
+    "tokens_in_mean": null,
+    "tokens_out_mean": null,
+    "reasoning_tokens_mean": null,
+    "quotes": {
+      "k": 0,
+      "n": 0,
+      "value": null,
+      "ci95": null
+    },
+    "dropped_fields": 0,
+    "audit": {},
+    "upstreams": {}
+  },
+  "d5": {
+    "danger_found": {
+      "k": 23,
+      "n": 30,
+      "value": 0.7667,
+      "ci95": [
+        0.5907,
+        0.8821
+      ]
+    },
+    "contextual_found": {
+      "k": 1,
+      "n": 10,
+      "value": 0.1,
+      "ci95": [
+        0.0179,
+        0.4042
+      ]
+    },
+    "trap_false_alarms": {
+      "k": 26,
+      "n": 40,
+      "value": 0.65,
+      "ci95": [
+        0.4951,
+        0.7787
+      ]
+    },
+    "rules_danger_found": {
+      "k": 23,
+      "n": 30,
+      "value": 0.7667,
+      "ci95": [
+        0.5907,
+        0.8821
+      ]
+    },
+    "rules_contextual_found": {
+      "k": 1,
+      "n": 10,
+      "value": 0.1,
+      "ci95": [
+        0.0179,
+        0.4042
+      ]
+    },
+    "rules_trap_false_alarms": {
+      "k": 26,
+      "n": 40,
+      "value": 0.65,
+      "ci95": [
+        0.4951,
+        0.7787
+      ]
+    },
+    "misses": [
+      "d5dev-05",
+      "d5dev-09",
+      "d5dev-11",
+      "d5dev-22",
+      "d5dev-26",
+      "d5dev-29",
+      "d5dev-30",
+      "d5dev-71",
+      "d5dev-72",
+      "d5dev-73",
+      "d5dev-74",
+      "d5dev-75",
+      "d5dev-76",
+      "d5dev-77",
+      "d5dev-79",
+      "d5dev-80"
+    ],
+    "false_alarms": [
+      "d5dev-31",
+      "d5dev-33",
+      "d5dev-34",
+      "d5dev-35",
+      "d5dev-36",
+      "d5dev-37",
+      "d5dev-39",
+      "d5dev-40",
+      "d5dev-41",
+      "d5dev-43",
+      "d5dev-44",
+      "d5dev-46",
+      "d5dev-51",
+      "d5dev-52",
+      "d5dev-53",
+      "d5dev-54",
+      "d5dev-55",
+      "d5dev-56",
+      "d5dev-57",
+      "d5dev-58",
+      "d5dev-59",
+      "d5dev-60",
+      "d5dev-65",
+      "d5dev-66",
+      "d5dev-67",
+      "d5dev-68"
+    ],
+    "intake": {
+      "danger_alert": {
+        "k": 23,
+        "n": 30,
+        "value": 0.7667,
+        "ci95": [
+          0.5907,
+          0.8821
+        ]
+      },
+      "danger_memo": {
+        "k": 23,
+        "n": 30,
+        "value": 0.7667,
+        "ci95": [
+          0.5907,
+          0.8821
+        ]
+      },
+      "contextual_memo": {
+        "k": 1,
+        "n": 10,
+        "value": 0.1,
+        "ci95": [
+          0.0179,
+          0.4042
+        ]
+      },
+      "trap_alert": {
+        "k": 30,
+        "n": 40,
+        "value": 0.75,
+        "ci95": [
+          0.5981,
+          0.8581
+        ]
+      },
+      "trap_memo": {
+        "k": 26,
+        "n": 40,
+        "value": 0.65,
+        "ci95": [
+          0.4951,
+          0.7787
+        ]
+      },
+      "trap_memo_units": [
+        "d5dev-31",
+        "d5dev-33",
+        "d5dev-34",
+        "d5dev-35",
+        "d5dev-36",
+        "d5dev-37",
+        "d5dev-39",
+        "d5dev-40",
+        "d5dev-41",
+        "d5dev-43",
+        "d5dev-44",
+        "d5dev-46",
+        "d5dev-51",
+        "d5dev-52",
+        "d5dev-53",
+        "d5dev-54",
+        "d5dev-55",
+        "d5dev-56",
+        "d5dev-57",
+        "d5dev-58",
+        "d5dev-59",
+        "d5dev-60",
+        "d5dev-65",
+        "d5dev-66",
+        "d5dev-67",
+        "d5dev-68"
+      ]
+    },
+    "families": {
+      "context": {
+        "windows": 10,
+        "alarm": 1,
+        "rules_alarm": 1,
+        "intake_alert": 1,
+        "memo": 1
+      },
+      "displaced": {
+        "windows": 4,
+        "alarm": 0,
+        "rules_alarm": 0,
+        "intake_alert": 4,
+        "memo": 0
+      },
+      "drill": {
+        "windows": 8,
+        "alarm": 6,
+        "rules_alarm": 6,
+        "intake_alert": 6,
+        "memo": 6
+      },
+      "electric": {
+        "windows": 5,
+        "alarm": 5,
+        "rules_alarm": 5,
+        "intake_alert": 5,
+        "memo": 5
+      },
+      "figurative": {
+        "windows": 8,
+        "alarm": 8,
+        "rules_alarm": 8,
+        "intake_alert": 8,
+        "memo": 8
+      },
+      "fire": {
+        "windows": 6,
+        "alarm": 4,
+        "rules_alarm": 4,
+        "intake_alert": 4,
+        "memo": 4
+      },
+      "flooding": {
+        "windows": 4,
+        "alarm": 3,
+        "rules_alarm": 3,
+        "intake_alert": 3,
+        "memo": 3
+      },
+      "gas": {
+        "windows": 6,
+        "alarm": 5,
+        "rules_alarm": 5,
+        "intake_alert": 5,
+        "memo": 5
+      },
+      "hypothetical": {
+        "windows": 4,
+        "alarm": 4,
+        "rules_alarm": 4,
+        "intake_alert": 4,
+        "memo": 4
+      },
+      "light": {
+        "windows": 6,
+        "alarm": 2,
+        "rules_alarm": 2,
+        "intake_alert": 2,
+        "memo": 2
+      },
+      "negation": {
+        "windows": 2,
+        "alarm": 0,
+        "rules_alarm": 0,
+        "intake_alert": 0,
+        "memo": 0
+      },
+      "other_hazard": {
+        "windows": 2,
+        "alarm": 0,
+        "rules_alarm": 0,
+        "intake_alert": 0,
+        "memo": 0
+      },
+      "resolved": {
+        "windows": 8,
+        "alarm": 6,
+        "rules_alarm": 6,
+        "intake_alert": 6,
+        "memo": 6
+      },
+      "structural": {
+        "windows": 2,
+        "alarm": 2,
+        "rules_alarm": 2,
+        "intake_alert": 2,
+        "memo": 2
+      },
+      "trapped": {
+        "windows": 5,
+        "alarm": 4,
+        "rules_alarm": 4,
+        "intake_alert": 4,
+        "memo": 4
+      }
+    }
+  }
+}

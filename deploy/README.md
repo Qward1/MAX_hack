@@ -307,12 +307,14 @@ which Compose derives from the same `LLM_PROVIDER` value. Variables in
 | `LLM_PROVIDER` | ai-worker (+ capability in api) | `rules` | `openai_compatible` |
 | `LLM_API_KEY` | ai-worker only | empty | provider key, appended on the VPS only |
 | `LLM_MODEL` | ai-worker | empty | `openai/gpt-5-mini` |
-| `LLM_TIMEOUT_SECONDS` | ai-worker | `60` | `60` (owner decision 2026-09-23; live windows took 10.8–28.7 s, one call exceeded 25 s) |
+| `LLM_TIMEOUT_SECONDS` | ai-worker | empty — the model profile applies (`gpt-5-mini`: 30 s, P6 dev p99 20.6 s) | empty (OWNER-DECISION-2026-09-24); a number overrides the profile |
 | `LLM_DAILY_CALL_BUDGET` | ai-worker | `300` | `300` (≈0.37 ₽ per window) |
 | `LLM_CHAT_DAILY_SHARE` | ai-worker | `0.2` | `0.2` |
 | `AI_WORKER_LEASE_SECONDS` | ai-worker | `80` | `80`; must be ≥ model timeout + 20 s or the AI worker refuses to start |
 | `PASSIVE_CAPTURE_ENABLED` | api, worker, ai-worker | `false` | `true` |
 | `PASSIVE_WINDOW_SILENCE_SECONDS` | api, worker, ai-worker | `120` | `30` |
+| `PASSIVE_WINDOW_MAX_LINES` | api, worker, ai-worker | `6` | `6` (P6 §6.3: p95 7.5 s > 6 s; OWNER-DECISION-2026-09-24) |
+| `PASSIVE_LLM_ENABLED` | api, worker, ai-worker | `true` | `true` (OWNER-DECISION-2026-09-24) |
 
 Append the key without echoing it (stdin, not an argument), e.g. pipe the single
 `LLM_API_KEY=` line into `cat >> deploy/.env.production` over SSH; keep mode 600.
@@ -368,9 +370,17 @@ python -m domsignal.tools.live_staff grant --user-id <validated-max-user> \
 
 `PASSIVE_LLM_ENABLED` (default `true`) keeps the model in chat-window analysis.
 Set it to `false` in `deploy/.env.production` and recreate only `ai-worker`
-(`up -d --no-deps ai-worker`) to analyse chat windows with rules only; the
-explicit `/report` path keeps the model. This is the switch recommended by
-P6-DECISION; it is off only by an owner decision.
+(`up -d --no-deps ai-worker`, and `api` so that `/api/v1/capabilities`
+reports `passive_ai_analysis: false`) to analyse chat windows with rules only;
+the explicit `/report` path keeps the model. This is the switch recommended by
+P6-DECISION; the owner kept the model on (OWNER-DECISION-2026-09-24). The
+cabinet page «MAX-чаты» shows the actual mode next to a chat with reading on.
+
+Since P6b the bot writes the safety memo in the chat only for high-precision
+rule hits (`chat_memo_eligible`: «пахнет газом», «застряли в лифте», «дым из
+подвала»…); drills, thanks after the fix, the past, hypotheses and phrases
+without a place («и дымом тоже тянет») still alert the operator but give no
+memo (`chat_memo_not_eligible` in the signal journal).
 
 After a D2 role-play session (participants' consent, TEST_MAX), export the
 session lines from the buffer (≤ 72 h) inside the API container, read-only:

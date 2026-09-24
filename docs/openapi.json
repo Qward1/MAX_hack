@@ -1053,6 +1053,11 @@
             "title": "Miniapp",
             "type": "boolean"
           },
+          "passive_ai_analysis": {
+            "default": false,
+            "title": "Passive Ai Analysis",
+            "type": "boolean"
+          },
           "passive_capture": {
             "default": false,
             "title": "Passive Capture",

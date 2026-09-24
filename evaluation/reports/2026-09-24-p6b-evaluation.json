@@ -1,0 +1,2747 @@
+{
+  "slice": "P6b",
+  "date": "2026-09-24",
+  "label": "second run on already seen control (D5, holdout D3) — optimistic; P6 main table unchanged",
+  "decision": "OWNER-DECISION-2026-09-24",
+  "frozen_config_commit": "6ae29df22e91345058b0e5459b4936d5aef96cd9",
+  "model_profile": {
+    "model": "openai/gpt-5-mini",
+    "prompt": "window.v2",
+    "reasoning_effort": "minimal",
+    "provider_order": [
+      "openai/flex",
+      "openai"
+    ],
+    "eval_timeout_seconds": 60,
+    "window_policy": "WindowPolicy() as in P6 (10 lines)"
+  },
+  "tuning_set": {
+    "file": "datasets/synthetic/d5_dev.v1.jsonl",
+    "sha256": "2a8bd9c5e54dd000990c10d6a6322f5999c03bab7672d9d3e46e7b3e02eb3e14",
+    "danger": 30,
+    "trap": 40,
+    "contextual": 10
+  },
+  "control": {
+    "d5_model": {
+      "dataset": "d5",
+      "config": "gpt5mini_v2_minimal_flexfirst",
+      "calls": {
+        "windows": 70,
+        "calls": 70,
+        "states": {
+          "ok": 70
+        },
+        "valid_json": {
+          "k": 70,
+          "n": 70,
+          "value": 1.0,
+          "ci95": [
+            0.948,
+            1.0
+          ]
+        },
+        "timeouts": 0,
+        "provider_errors": 0,
+        "p50_ms": 3819,
+        "p95_ms": 7099,
+        "p99_ms": 7650,
+        "max_ms": 12414,
+        "rub_total": 2.4396,
+        "rub_per_window": 0.0349,
+        "tokens_in_mean": 6066,
+        "tokens_out_mean": 199,
+        "reasoning_tokens_mean": 0,
+        "quotes": {
+          "k": 3,
+          "n": 217,
+          "value": 0.0138,
+          "ci95": [
+            0.0047,
+            0.0399
+          ]
+        },
+        "dropped_fields": 0,
+        "audit": {},
+        "upstreams": {
+          "openrouter": 70
+        }
+      },
+      "d5": {
+        "danger_found": {
+          "k": 29,
+          "n": 30,
+          "value": 0.9667,
+          "ci95": [
+            0.8333,
+            0.9941
+          ]
+        },
+        "contextual_found": {
+          "k": 10,
+          "n": 10,
+          "value": 1.0,
+          "ci95": [
+            0.7225,
+            1.0
+          ]
+        },
+        "trap_false_alarms": {
+          "k": 11,
+          "n": 30,
+          "value": 0.3667,
+          "ci95": [
+            0.2187,
+            0.5449
+          ]
+        },
+        "rules_danger_found": {
+          "k": 24,
+          "n": 30,
+          "value": 0.8,
+          "ci95": [
+            0.6269,
+            0.9049
+          ]
+        },
+        "rules_contextual_found": {
+          "k": 1,
+          "n": 10,
+          "value": 0.1,
+          "ci95": [
+            0.0179,
+            0.4042
+          ]
+        },
+        "rules_trap_false_alarms": {
+          "k": 11,
+          "n": 30,
+          "value": 0.3667,
+          "ci95": [
+            0.2187,
+            0.5449
+          ]
+        },
+        "misses": [
+          "d5-03"
+        ],
+        "false_alarms": [
+          "d5-33",
+          "d5-40",
+          "d5-42",
+          "d5-43",
+          "d5-44",
+          "d5-47",
+          "d5-51",
+          "d5-54",
+          "d5-56",
+          "d5-58",
+          "d5-59"
+        ],
+        "intake": {
+          "danger_alert": {
+            "k": 24,
+            "n": 30,
+            "value": 0.8,
+            "ci95": [
+              0.6269,
+              0.9049
+            ]
+          },
+          "danger_memo": {
+            "k": 15,
+            "n": 30,
+            "value": 0.5,
+            "ci95": [
+              0.3315,
+              0.6685
+            ]
+          },
+          "contextual_memo": {
+            "k": 0,
+            "n": 10,
+            "value": 0.0,
+            "ci95": [
+              0.0,
+              0.2775
+            ]
+          },
+          "trap_alert": {
+            "k": 15,
+            "n": 30,
+            "value": 0.5,
+            "ci95": [
+              0.3315,
+              0.6685
+            ]
+          },
+          "trap_memo": {
+            "k": 2,
+            "n": 30,
+            "value": 0.0667,
+            "ci95": [
+              0.0185,
+              0.2132
+            ]
+          },
+          "trap_memo_units": [
+            "d5-42",
+            "d5-44"
+          ]
+        },
+        "families": {
+          "contextual": {
+            "windows": 10,
+            "alarm": 10,
+            "rules_alarm": 1,
+            "intake_alert": 1,
+            "memo": 0
+          },
+          "danger": {
+            "windows": 30,
+            "alarm": 29,
+            "rules_alarm": 24,
+            "intake_alert": 24,
+            "memo": 15
+          },
+          "trap": {
+            "windows": 30,
+            "alarm": 11,
+            "rules_alarm": 11,
+            "intake_alert": 15,
+            "memo": 2
+          }
+        }
+      }
+    },
+    "d5_rules": {
+      "dataset": "d5",
+      "config": "rules",
+      "calls": {
+        "windows": 70,
+        "calls": 0,
+        "states": {
+          "disabled": 70
+        },
+        "valid_json": {
+          "k": 0,
+          "n": 0,
+          "value": null,
+          "ci95": null
+        },
+        "timeouts": 0,
+        "provider_errors": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "p99_ms": null,
+        "max_ms": null,
+        "rub_total": 0,
+        "rub_per_window": null,
+        "tokens_in_mean": null,
+        "tokens_out_mean": null,
+        "reasoning_tokens_mean": null,
+        "quotes": {
+          "k": 0,
+          "n": 0,
+          "value": null,
+          "ci95": null
+        },
+        "dropped_fields": 0,
+        "audit": {},
+        "upstreams": {}
+      },
+      "d5": {
+        "danger_found": {
+          "k": 24,
+          "n": 30,
+          "value": 0.8,
+          "ci95": [
+            0.6269,
+            0.9049
+          ]
+        },
+        "contextual_found": {
+          "k": 1,
+          "n": 10,
+          "value": 0.1,
+          "ci95": [
+            0.0179,
+            0.4042
+          ]
+        },
+        "trap_false_alarms": {
+          "k": 11,
+          "n": 30,
+          "value": 0.3667,
+          "ci95": [
+            0.2187,
+            0.5449
+          ]
+        },
+        "rules_danger_found": {
+          "k": 24,
+          "n": 30,
+          "value": 0.8,
+          "ci95": [
+            0.6269,
+            0.9049
+          ]
+        },
+        "rules_contextual_found": {
+          "k": 1,
+          "n": 10,
+          "value": 0.1,
+          "ci95": [
+            0.0179,
+            0.4042
+          ]
+        },
+        "rules_trap_false_alarms": {
+          "k": 11,
+          "n": 30,
+          "value": 0.3667,
+          "ci95": [
+            0.2187,
+            0.5449
+          ]
+        },
+        "misses": [
+          "d5-03",
+          "d5-17",
+          "d5-21",
+          "d5-24",
+          "d5-27",
+          "d5-30",
+          "d5-61",
+          "d5-62",
+          "d5-63",
+          "d5-64",
+          "d5-65",
+          "d5-66",
+          "d5-67",
+          "d5-69",
+          "d5-70"
+        ],
+        "false_alarms": [
+          "d5-33",
+          "d5-40",
+          "d5-42",
+          "d5-43",
+          "d5-44",
+          "d5-47",
+          "d5-51",
+          "d5-54",
+          "d5-56",
+          "d5-58",
+          "d5-59"
+        ],
+        "intake": {
+          "danger_alert": {
+            "k": 24,
+            "n": 30,
+            "value": 0.8,
+            "ci95": [
+              0.6269,
+              0.9049
+            ]
+          },
+          "danger_memo": {
+            "k": 15,
+            "n": 30,
+            "value": 0.5,
+            "ci95": [
+              0.3315,
+              0.6685
+            ]
+          },
+          "contextual_memo": {
+            "k": 0,
+            "n": 10,
+            "value": 0.0,
+            "ci95": [
+              0.0,
+              0.2775
+            ]
+          },
+          "trap_alert": {
+            "k": 15,
+            "n": 30,
+            "value": 0.5,
+            "ci95": [
+              0.3315,
+              0.6685
+            ]
+          },
+          "trap_memo": {
+            "k": 2,
+            "n": 30,
+            "value": 0.0667,
+            "ci95": [
+              0.0185,
+              0.2132
+            ]
+          },
+          "trap_memo_units": [
+            "d5-42",
+            "d5-44"
+          ]
+        },
+        "families": {
+          "contextual": {
+            "windows": 10,
+            "alarm": 1,
+            "rules_alarm": 1,
+            "intake_alert": 1,
+            "memo": 0
+          },
+          "danger": {
+            "windows": 30,
+            "alarm": 24,
+            "rules_alarm": 24,
+            "intake_alert": 24,
+            "memo": 15
+          },
+          "trap": {
+            "windows": 30,
+            "alarm": 11,
+            "rules_alarm": 11,
+            "intake_alert": 15,
+            "memo": 2
+          }
+        }
+      }
+    },
+    "holdout_model": {
+      "dataset": "d3_holdout",
+      "config": "gpt5mini_v2_minimal_flexfirst",
+      "calls": {
+        "windows": 96,
+        "calls": 96,
+        "states": {
+          "ok": 96
+        },
+        "valid_json": {
+          "k": 96,
+          "n": 96,
+          "value": 1.0,
+          "ci95": [
+            0.9615,
+            1.0
+          ]
+        },
+        "timeouts": 0,
+        "provider_errors": 0,
+        "p50_ms": 4503,
+        "p95_ms": 8000,
+        "p99_ms": 12649,
+        "max_ms": 12966,
+        "rub_total": 5.4916,
+        "rub_per_window": 0.0572,
+        "tokens_in_mean": 6325,
+        "tokens_out_mean": 349,
+        "reasoning_tokens_mean": 0,
+        "quotes": {
+          "k": 51,
+          "n": 341,
+          "value": 0.1496,
+          "ci95": [
+            0.1156,
+            0.1913
+          ]
+        },
+        "dropped_fields": 58,
+        "audit": {
+          "field_dropped": 58,
+          "no_new_facts_violation": 21,
+          "evidence_unverified": 1
+        },
+        "upstreams": {
+          "openrouter": 96
+        }
+      },
+      "d3": {
+        "incidents": 39,
+        "incident_capture": {
+          "k": 38,
+          "n": 39,
+          "value": 0.9744,
+          "ci95": [
+            0.8682,
+            0.9955
+          ]
+        },
+        "non_problem_signals": {
+          "k": 6,
+          "n": 77,
+          "value": 0.0779,
+          "ci95": [
+            0.0362,
+            0.1598
+          ]
+        },
+        "subtype_accuracy": {
+          "k": 37,
+          "n": 38,
+          "value": 0.9737,
+          "ci95": [
+            0.8651,
+            0.9953
+          ]
+        },
+        "category_accuracy": {
+          "k": 38,
+          "n": 38,
+          "value": 1.0,
+          "ci95": [
+            0.9082,
+            1.0
+          ]
+        },
+        "scope_accuracy": {
+          "k": 32,
+          "n": 38,
+          "value": 0.8421,
+          "ci95": [
+            0.6958,
+            0.9256
+          ]
+        },
+        "entrance_accuracy": {
+          "k": 15,
+          "n": 27,
+          "value": 0.5556,
+          "ci95": [
+            0.3731,
+            0.7241
+          ]
+        },
+        "route_end_to_end": {
+          "k": 34,
+          "n": 38,
+          "value": 0.8947,
+          "ci95": [
+            0.7587,
+            0.9583
+          ]
+        },
+        "d3_danger_found": {
+          "k": 7,
+          "n": 7,
+          "value": 1.0,
+          "ci95": [
+            0.6457,
+            1.0
+          ]
+        },
+        "role_accuracy": {
+          "k": 354,
+          "n": 617,
+          "value": 0.5737,
+          "ci95": [
+            0.5344,
+            0.6122
+          ]
+        },
+        "missed_incidents": [
+          "d026.I1"
+        ],
+        "route_details": [
+          {
+            "incident": "d001.I1",
+            "subtype": [
+              "elevator.stopped",
+              "elevator.stopped"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d002.I1",
+            "subtype": [
+              "elevator.stopped",
+              "elevator.stopped"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d004.I1",
+            "subtype": [
+              "elevator.stopped",
+              "elevator.stopped"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d014.I1",
+            "subtype": [
+              "water.hot_outage",
+              "water.hot_outage"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d017.I1",
+            "subtype": [
+              "lighting.stairwell",
+              "lighting.stairwell"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d018.I1",
+            "subtype": [
+              "lighting.stairwell",
+              "lighting.stairwell"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d019.I1",
+            "subtype": [
+              "waste.chute",
+              "waste.chute"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "emergency_service"
+            ]
+          },
+          {
+            "incident": "d028.I1",
+            "subtype": [
+              "water.quality",
+              "water.quality"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d030.I1",
+            "subtype": [
+              "water.pressure",
+              "water.pressure"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d031.I1",
+            "subtype": [
+              "structure.damage",
+              "structure.damage"
+            ],
+            "scope": [
+              "house_common",
+              "unknown"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d033.I1",
+            "subtype": [
+              "water.supply_outage",
+              "water.supply_outage"
+            ],
+            "scope": [
+              "house_common",
+              "unknown"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d034.I1",
+            "subtype": [
+              "water.supply_outage",
+              "water.supply_outage"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d038.I1",
+            "subtype": [
+              "other.unspecified",
+              "other.unspecified"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "emergency_service",
+              "emergency_service"
+            ]
+          },
+          {
+            "incident": "d039.I1",
+            "subtype": [
+              "waste.chute",
+              "waste.chute"
+            ],
+            "scope": [
+              "house_common",
+              "unknown"
+            ],
+            "route": [
+              "emergency_service",
+              "emergency_service"
+            ]
+          },
+          {
+            "incident": "d040.I1",
+            "subtype": [
+              "elevator.stopped",
+              "elevator.stopped"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d041.I1",
+            "subtype": [
+              "elevator.stopped",
+              "elevator.stopped"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d042.I1",
+            "subtype": [
+              "elevator.doors",
+              "elevator.stopped"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d046.I1",
+            "subtype": [
+              "electrical.panel",
+              "electrical.panel"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d047.I1",
+            "subtype": [
+              "water.leak",
+              "water.leak"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "emergency_service"
+            ]
+          },
+          {
+            "incident": "d052.I1",
+            "subtype": [
+              "street_lighting.failure",
+              "street_lighting.failure"
+            ],
+            "scope": [
+              "municipal_territory",
+              "municipal_territory"
+            ],
+            "route": [
+              "municipality",
+              "municipality"
+            ]
+          },
+          {
+            "incident": "d053.I1",
+            "subtype": [
+              "street_lighting.failure",
+              "street_lighting.failure"
+            ],
+            "scope": [
+              "municipal_territory",
+              "municipal_territory"
+            ],
+            "route": [
+              "municipality",
+              "emergency_service"
+            ]
+          },
+          {
+            "incident": "d054.I1",
+            "subtype": [
+              "road.damage",
+              "road.damage"
+            ],
+            "scope": [
+              "municipal_territory",
+              "municipal_territory"
+            ],
+            "route": [
+              "municipality",
+              "municipality"
+            ]
+          },
+          {
+            "incident": "d055.I1",
+            "subtype": [
+              "road.damage",
+              "road.damage"
+            ],
+            "scope": [
+              "municipal_territory",
+              "municipal_territory"
+            ],
+            "route": [
+              "municipality",
+              "municipality"
+            ]
+          },
+          {
+            "incident": "d060.I1",
+            "subtype": [
+              "power.grid_outage",
+              "power.grid_outage"
+            ],
+            "scope": [
+              "external_network",
+              "external_network"
+            ],
+            "route": [
+              "resource_supplier",
+              "resource_supplier"
+            ]
+          },
+          {
+            "incident": "d062.I1",
+            "subtype": [
+              "water.supply_outage",
+              "water.supply_outage"
+            ],
+            "scope": [
+              "external_network",
+              "external_network"
+            ],
+            "route": [
+              "resource_supplier",
+              "resource_supplier"
+            ]
+          },
+          {
+            "incident": "d066.I1",
+            "subtype": [
+              "lighting.yard",
+              "lighting.yard"
+            ],
+            "scope": [
+              "house_territory",
+              "house_territory"
+            ],
+            "route": [
+              "operator_choice",
+              "operator_choice"
+            ]
+          },
+          {
+            "incident": "d067.I1",
+            "subtype": [
+              "lighting.yard",
+              "lighting.yard"
+            ],
+            "scope": [
+              "house_territory",
+              "house_territory"
+            ],
+            "route": [
+              "operator_choice",
+              "operator_choice"
+            ]
+          },
+          {
+            "incident": "d100.I1",
+            "subtype": [
+              "lighting.stairwell",
+              "lighting.stairwell"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d100.I2",
+            "subtype": [
+              "waste.chute",
+              "waste.chute"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "emergency_service"
+            ]
+          },
+          {
+            "incident": "d101.I1",
+            "subtype": [
+              "elevator.stopped",
+              "elevator.stopped"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d101.I2",
+            "subtype": [
+              "intercom.broken",
+              "intercom.broken"
+            ],
+            "scope": [
+              "house_common",
+              "unknown"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d105.I1",
+            "subtype": [
+              "water.leak",
+              "water.leak"
+            ],
+            "scope": [
+              "house_common",
+              "unknown"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d106.I1",
+            "subtype": [
+              "elevator.stopped",
+              "elevator.stopped"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d107.I1",
+            "subtype": [
+              "water.hot_outage",
+              "water.hot_outage"
+            ],
+            "scope": [
+              "house_common",
+              "unknown"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d109.I1",
+            "subtype": [
+              "elevator.stopped",
+              "elevator.stopped"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d111.I1",
+            "subtype": [
+              "water.pressure",
+              "water.pressure"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d116.I1",
+            "subtype": [
+              "water.hot_outage",
+              "water.hot_outage"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d118.I1",
+            "subtype": [
+              "elevator.button",
+              "elevator.button"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          }
+        ],
+        "intake": {
+          "danger_lines": 15,
+          "other_lines": 602,
+          "danger_lines_alert": 10,
+          "danger_lines_memo": 5,
+          "other_lines_alert": 5,
+          "other_lines_memo": 0,
+          "other_memo_lines": []
+        }
+      }
+    },
+    "holdout_rules": {
+      "dataset": "d3_holdout",
+      "config": "rules",
+      "calls": {
+        "windows": 96,
+        "calls": 0,
+        "states": {
+          "disabled": 96
+        },
+        "valid_json": {
+          "k": 0,
+          "n": 0,
+          "value": null,
+          "ci95": null
+        },
+        "timeouts": 0,
+        "provider_errors": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "p99_ms": null,
+        "max_ms": null,
+        "rub_total": 0,
+        "rub_per_window": null,
+        "tokens_in_mean": null,
+        "tokens_out_mean": null,
+        "reasoning_tokens_mean": null,
+        "quotes": {
+          "k": 0,
+          "n": 0,
+          "value": null,
+          "ci95": null
+        },
+        "dropped_fields": 0,
+        "audit": {},
+        "upstreams": {}
+      },
+      "d3": {
+        "incidents": 39,
+        "incident_capture": {
+          "k": 35,
+          "n": 39,
+          "value": 0.8974,
+          "ci95": [
+            0.7642,
+            0.9594
+          ]
+        },
+        "non_problem_signals": {
+          "k": 2,
+          "n": 49,
+          "value": 0.0408,
+          "ci95": [
+            0.0113,
+            0.1371
+          ]
+        },
+        "subtype_accuracy": {
+          "k": 28,
+          "n": 35,
+          "value": 0.8,
+          "ci95": [
+            0.6411,
+            0.8996
+          ]
+        },
+        "category_accuracy": {
+          "k": 28,
+          "n": 35,
+          "value": 0.8,
+          "ci95": [
+            0.6411,
+            0.8996
+          ]
+        },
+        "scope_accuracy": {
+          "k": 30,
+          "n": 35,
+          "value": 0.8571,
+          "ci95": [
+            0.7062,
+            0.9374
+          ]
+        },
+        "entrance_accuracy": {
+          "k": 15,
+          "n": 25,
+          "value": 0.6,
+          "ci95": [
+            0.4074,
+            0.766
+          ]
+        },
+        "route_end_to_end": {
+          "k": 31,
+          "n": 35,
+          "value": 0.8857,
+          "ci95": [
+            0.7405,
+            0.9546
+          ]
+        },
+        "d3_danger_found": {
+          "k": 6,
+          "n": 7,
+          "value": 0.8571,
+          "ci95": [
+            0.4869,
+            0.9743
+          ]
+        },
+        "role_accuracy": {
+          "k": 222,
+          "n": 617,
+          "value": 0.3598,
+          "ci95": [
+            0.3229,
+            0.3984
+          ]
+        },
+        "missed_incidents": [
+          "d026.I1",
+          "d028.I1",
+          "d030.I1",
+          "d111.I1"
+        ],
+        "route_details": [
+          {
+            "incident": "d001.I1",
+            "subtype": [
+              "elevator.stopped",
+              "elevator.stopped"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d002.I1",
+            "subtype": [
+              "elevator.stopped",
+              "lighting.stairwell"
+            ],
+            "scope": [
+              "house_common",
+              "unknown"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d004.I1",
+            "subtype": [
+              "elevator.stopped",
+              "other.unspecified"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d014.I1",
+            "subtype": [
+              "water.hot_outage",
+              "water.hot_outage"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d017.I1",
+            "subtype": [
+              "lighting.stairwell",
+              "lighting.stairwell"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d018.I1",
+            "subtype": [
+              "lighting.stairwell",
+              "lighting.stairwell"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d019.I1",
+            "subtype": [
+              "waste.chute",
+              "waste.chute"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d031.I1",
+            "subtype": [
+              "structure.damage",
+              "structure.damage"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "emergency_service"
+            ]
+          },
+          {
+            "incident": "d033.I1",
+            "subtype": [
+              "water.supply_outage",
+              "water.supply_outage"
+            ],
+            "scope": [
+              "house_common",
+              "other_building"
+            ],
+            "route": [
+              "uk_internal",
+              "unknown"
+            ]
+          },
+          {
+            "incident": "d034.I1",
+            "subtype": [
+              "water.supply_outage",
+              "water.supply_outage"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d038.I1",
+            "subtype": [
+              "other.unspecified",
+              "other.unspecified"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "emergency_service",
+              "emergency_service"
+            ]
+          },
+          {
+            "incident": "d039.I1",
+            "subtype": [
+              "waste.chute",
+              "waste.chute"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "emergency_service",
+              "emergency_service"
+            ]
+          },
+          {
+            "incident": "d040.I1",
+            "subtype": [
+              "elevator.stopped",
+              "elevator.stopped"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d041.I1",
+            "subtype": [
+              "elevator.stopped",
+              "elevator.stopped"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d042.I1",
+            "subtype": [
+              "elevator.doors",
+              "entrance_door.broken"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d046.I1",
+            "subtype": [
+              "electrical.panel",
+              "electrical.panel"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d047.I1",
+            "subtype": [
+              "water.leak",
+              "water.leak"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d052.I1",
+            "subtype": [
+              "street_lighting.failure",
+              "street_lighting.failure"
+            ],
+            "scope": [
+              "municipal_territory",
+              "municipal_territory"
+            ],
+            "route": [
+              "municipality",
+              "municipality"
+            ]
+          },
+          {
+            "incident": "d053.I1",
+            "subtype": [
+              "street_lighting.failure",
+              "street_lighting.failure"
+            ],
+            "scope": [
+              "municipal_territory",
+              "municipal_territory"
+            ],
+            "route": [
+              "municipality",
+              "municipality"
+            ]
+          },
+          {
+            "incident": "d054.I1",
+            "subtype": [
+              "road.damage",
+              "road.damage"
+            ],
+            "scope": [
+              "municipal_territory",
+              "municipal_territory"
+            ],
+            "route": [
+              "municipality",
+              "municipality"
+            ]
+          },
+          {
+            "incident": "d055.I1",
+            "subtype": [
+              "road.damage",
+              "road.damage"
+            ],
+            "scope": [
+              "municipal_territory",
+              "municipal_territory"
+            ],
+            "route": [
+              "municipality",
+              "municipality"
+            ]
+          },
+          {
+            "incident": "d060.I1",
+            "subtype": [
+              "power.grid_outage",
+              "power.grid_outage"
+            ],
+            "scope": [
+              "external_network",
+              "unknown"
+            ],
+            "route": [
+              "resource_supplier",
+              "unknown"
+            ]
+          },
+          {
+            "incident": "d062.I1",
+            "subtype": [
+              "water.supply_outage",
+              "water.supply_outage"
+            ],
+            "scope": [
+              "external_network",
+              "unknown"
+            ],
+            "route": [
+              "resource_supplier",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d066.I1",
+            "subtype": [
+              "lighting.yard",
+              "lighting.yard"
+            ],
+            "scope": [
+              "house_territory",
+              "house_territory"
+            ],
+            "route": [
+              "operator_choice",
+              "operator_choice"
+            ]
+          },
+          {
+            "incident": "d067.I1",
+            "subtype": [
+              "lighting.yard",
+              "lighting.yard"
+            ],
+            "scope": [
+              "house_territory",
+              "house_territory"
+            ],
+            "route": [
+              "operator_choice",
+              "operator_choice"
+            ]
+          },
+          {
+            "incident": "d100.I1",
+            "subtype": [
+              "lighting.stairwell",
+              "waste.chute"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d100.I2",
+            "subtype": [
+              "waste.chute",
+              "waste.chute"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d101.I1",
+            "subtype": [
+              "elevator.stopped",
+              "intercom.broken"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d101.I2",
+            "subtype": [
+              "intercom.broken",
+              "intercom.broken"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d105.I1",
+            "subtype": [
+              "water.leak",
+              "water.leak"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d106.I1",
+            "subtype": [
+              "elevator.stopped",
+              "elevator.stopped"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d107.I1",
+            "subtype": [
+              "water.hot_outage",
+              "water.hot_outage"
+            ],
+            "scope": [
+              "house_common",
+              "unknown"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d109.I1",
+            "subtype": [
+              "elevator.stopped",
+              "other.unspecified"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d116.I1",
+            "subtype": [
+              "water.hot_outage",
+              "water.hot_outage"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          },
+          {
+            "incident": "d118.I1",
+            "subtype": [
+              "elevator.button",
+              "other.unspecified"
+            ],
+            "scope": [
+              "house_common",
+              "house_common"
+            ],
+            "route": [
+              "uk_internal",
+              "uk_internal"
+            ]
+          }
+        ],
+        "intake": {
+          "danger_lines": 15,
+          "other_lines": 602,
+          "danger_lines_alert": 10,
+          "danger_lines_memo": 5,
+          "other_lines_alert": 5,
+          "other_lines_memo": 0,
+          "other_memo_lines": []
+        }
+      }
+    }
+  },
+  "p6_intake_baseline_748c00d": {
+    "d5": {
+      "danger": {
+        "windows": 30,
+        "alert": 22,
+        "memo": 22
+      },
+      "trap": {
+        "windows": 30,
+        "alert": 18,
+        "memo": 13
+      },
+      "contextual": {
+        "windows": 10,
+        "alert": 1,
+        "memo": 1
+      }
+    },
+    "holdout_lines": {
+      "danger_lines": 15,
+      "danger_lines_alert": 10,
+      "danger_lines_memo": 10,
+      "other_lines_alert": 8,
+      "other_lines_memo": 8
+    }
+  },
+  "tuning": {
+    "d5_dev_model": {
+      "dataset": "d5_dev",
+      "config": "gpt5mini_v2_minimal_flexfirst",
+      "calls": {
+        "windows": 80,
+        "calls": 80,
+        "states": {
+          "ok": 80
+        },
+        "valid_json": {
+          "k": 80,
+          "n": 80,
+          "value": 1.0,
+          "ci95": [
+            0.9542,
+            1.0
+          ]
+        },
+        "timeouts": 0,
+        "provider_errors": 0,
+        "p50_ms": 4430,
+        "p95_ms": 7602,
+        "p99_ms": 11827,
+        "max_ms": 13925,
+        "rub_total": 2.9608,
+        "rub_per_window": 0.037,
+        "tokens_in_mean": 6066,
+        "tokens_out_mean": 192,
+        "reasoning_tokens_mean": 0,
+        "quotes": {
+          "k": 0,
+          "n": 241,
+          "value": 0.0,
+          "ci95": [
+            0.0,
+            0.0157
+          ]
+        },
+        "dropped_fields": 0,
+        "audit": {},
+        "upstreams": {
+          "openrouter": 80
+        }
+      },
+      "d5": {
+        "danger_found": {
+          "k": 30,
+          "n": 30,
+          "value": 1.0,
+          "ci95": [
+            0.8865,
+            1.0
+          ]
+        },
+        "contextual_found": {
+          "k": 10,
+          "n": 10,
+          "value": 1.0,
+          "ci95": [
+            0.7225,
+            1.0
+          ]
+        },
+        "trap_false_alarms": {
+          "k": 7,
+          "n": 40,
+          "value": 0.175,
+          "ci95": [
+            0.0875,
+            0.3195
+          ]
+        },
+        "rules_danger_found": {
+          "k": 24,
+          "n": 30,
+          "value": 0.8,
+          "ci95": [
+            0.6269,
+            0.9049
+          ]
+        },
+        "rules_contextual_found": {
+          "k": 1,
+          "n": 10,
+          "value": 0.1,
+          "ci95": [
+            0.0179,
+            0.4042
+          ]
+        },
+        "rules_trap_false_alarms": {
+          "k": 5,
+          "n": 40,
+          "value": 0.125,
+          "ci95": [
+            0.0546,
+            0.2611
+          ]
+        },
+        "misses": [],
+        "false_alarms": [
+          "d5dev-40",
+          "d5dev-41",
+          "d5dev-52",
+          "d5dev-65",
+          "d5dev-66",
+          "d5dev-67",
+          "d5dev-68"
+        ],
+        "intake": {
+          "danger_alert": {
+            "k": 24,
+            "n": 30,
+            "value": 0.8,
+            "ci95": [
+              0.6269,
+              0.9049
+            ]
+          },
+          "danger_memo": {
+            "k": 17,
+            "n": 30,
+            "value": 0.5667,
+            "ci95": [
+              0.392,
+              0.7262
+            ]
+          },
+          "contextual_memo": {
+            "k": 0,
+            "n": 10,
+            "value": 0.0,
+            "ci95": [
+              0.0,
+              0.2775
+            ]
+          },
+          "trap_alert": {
+            "k": 10,
+            "n": 40,
+            "value": 0.25,
+            "ci95": [
+              0.1419,
+              0.4019
+            ]
+          },
+          "trap_memo": {
+            "k": 0,
+            "n": 40,
+            "value": 0.0,
+            "ci95": [
+              0.0,
+              0.0876
+            ]
+          },
+          "trap_memo_units": []
+        },
+        "families": {
+          "context": {
+            "windows": 10,
+            "alarm": 10,
+            "rules_alarm": 1,
+            "intake_alert": 1,
+            "memo": 0
+          },
+          "displaced": {
+            "windows": 4,
+            "alarm": 0,
+            "rules_alarm": 0,
+            "intake_alert": 4,
+            "memo": 0
+          },
+          "drill": {
+            "windows": 8,
+            "alarm": 0,
+            "rules_alarm": 0,
+            "intake_alert": 0,
+            "memo": 0
+          },
+          "electric": {
+            "windows": 5,
+            "alarm": 5,
+            "rules_alarm": 5,
+            "intake_alert": 5,
+            "memo": 3
+          },
+          "figurative": {
+            "windows": 8,
+            "alarm": 0,
+            "rules_alarm": 0,
+            "intake_alert": 0,
+            "memo": 0
+          },
+          "fire": {
+            "windows": 6,
+            "alarm": 6,
+            "rules_alarm": 5,
+            "intake_alert": 5,
+            "memo": 5
+          },
+          "flooding": {
+            "windows": 4,
+            "alarm": 4,
+            "rules_alarm": 3,
+            "intake_alert": 3,
+            "memo": 1
+          },
+          "gas": {
+            "windows": 6,
+            "alarm": 6,
+            "rules_alarm": 5,
+            "intake_alert": 5,
+            "memo": 5
+          },
+          "hypothetical": {
+            "windows": 4,
+            "alarm": 4,
+            "rules_alarm": 4,
+            "intake_alert": 4,
+            "memo": 0
+          },
+          "light": {
+            "windows": 6,
+            "alarm": 1,
+            "rules_alarm": 1,
+            "intake_alert": 1,
+            "memo": 0
+          },
+          "negation": {
+            "windows": 2,
+            "alarm": 0,
+            "rules_alarm": 0,
+            "intake_alert": 0,
+            "memo": 0
+          },
+          "other_hazard": {
+            "windows": 2,
+            "alarm": 2,
+            "rules_alarm": 0,
+            "intake_alert": 0,
+            "memo": 0
+          },
+          "resolved": {
+            "windows": 8,
+            "alarm": 2,
+            "rules_alarm": 0,
+            "intake_alert": 1,
+            "memo": 0
+          },
+          "structural": {
+            "windows": 2,
+            "alarm": 2,
+            "rules_alarm": 2,
+            "intake_alert": 2,
+            "memo": 1
+          },
+          "trapped": {
+            "windows": 5,
+            "alarm": 5,
+            "rules_alarm": 4,
+            "intake_alert": 4,
+            "memo": 2
+          }
+        }
+      }
+    },
+    "d5_dev_rules_p6": {
+      "danger_found": {
+        "k": 23,
+        "n": 30,
+        "value": 0.7667,
+        "ci95": [
+          0.5907,
+          0.8821
+        ]
+      },
+      "contextual_found": {
+        "k": 1,
+        "n": 10,
+        "value": 0.1,
+        "ci95": [
+          0.0179,
+          0.4042
+        ]
+      },
+      "trap_false_alarms": {
+        "k": 26,
+        "n": 40,
+        "value": 0.65,
+        "ci95": [
+          0.4951,
+          0.7787
+        ]
+      },
+      "rules_danger_found": {
+        "k": 23,
+        "n": 30,
+        "value": 0.7667,
+        "ci95": [
+          0.5907,
+          0.8821
+        ]
+      },
+      "rules_contextual_found": {
+        "k": 1,
+        "n": 10,
+        "value": 0.1,
+        "ci95": [
+          0.0179,
+          0.4042
+        ]
+      },
+      "rules_trap_false_alarms": {
+        "k": 26,
+        "n": 40,
+        "value": 0.65,
+        "ci95": [
+          0.4951,
+          0.7787
+        ]
+      },
+      "misses": [
+        "d5dev-05",
+        "d5dev-09",
+        "d5dev-11",
+        "d5dev-22",
+        "d5dev-26",
+        "d5dev-29",
+        "d5dev-30",
+        "d5dev-71",
+        "d5dev-72",
+        "d5dev-73",
+        "d5dev-74",
+        "d5dev-75",
+        "d5dev-76",
+        "d5dev-77",
+        "d5dev-79",
+        "d5dev-80"
+      ],
+      "false_alarms": [
+        "d5dev-31",
+        "d5dev-33",
+        "d5dev-34",
+        "d5dev-35",
+        "d5dev-36",
+        "d5dev-37",
+        "d5dev-39",
+        "d5dev-40",
+        "d5dev-41",
+        "d5dev-43",
+        "d5dev-44",
+        "d5dev-46",
+        "d5dev-51",
+        "d5dev-52",
+        "d5dev-53",
+        "d5dev-54",
+        "d5dev-55",
+        "d5dev-56",
+        "d5dev-57",
+        "d5dev-58",
+        "d5dev-59",
+        "d5dev-60",
+        "d5dev-65",
+        "d5dev-66",
+        "d5dev-67",
+        "d5dev-68"
+      ],
+      "intake": {
+        "danger_alert": {
+          "k": 23,
+          "n": 30,
+          "value": 0.7667,
+          "ci95": [
+            0.5907,
+            0.8821
+          ]
+        },
+        "danger_memo": {
+          "k": 23,
+          "n": 30,
+          "value": 0.7667,
+          "ci95": [
+            0.5907,
+            0.8821
+          ]
+        },
+        "contextual_memo": {
+          "k": 1,
+          "n": 10,
+          "value": 0.1,
+          "ci95": [
+            0.0179,
+            0.4042
+          ]
+        },
+        "trap_alert": {
+          "k": 30,
+          "n": 40,
+          "value": 0.75,
+          "ci95": [
+            0.5981,
+            0.8581
+          ]
+        },
+        "trap_memo": {
+          "k": 26,
+          "n": 40,
+          "value": 0.65,
+          "ci95": [
+            0.4951,
+            0.7787
+          ]
+        },
+        "trap_memo_units": [
+          "d5dev-31",
+          "d5dev-33",
+          "d5dev-34",
+          "d5dev-35",
+          "d5dev-36",
+          "d5dev-37",
+          "d5dev-39",
+          "d5dev-40",
+          "d5dev-41",
+          "d5dev-43",
+          "d5dev-44",
+          "d5dev-46",
+          "d5dev-51",
+          "d5dev-52",
+          "d5dev-53",
+          "d5dev-54",
+          "d5dev-55",
+          "d5dev-56",
+          "d5dev-57",
+          "d5dev-58",
+          "d5dev-59",
+          "d5dev-60",
+          "d5dev-65",
+          "d5dev-66",
+          "d5dev-67",
+          "d5dev-68"
+        ]
+      },
+      "families": {
+        "context": {
+          "windows": 10,
+          "alarm": 1,
+          "rules_alarm": 1,
+          "intake_alert": 1,
+          "memo": 1
+        },
+        "displaced": {
+          "windows": 4,
+          "alarm": 0,
+          "rules_alarm": 0,
+          "intake_alert": 4,
+          "memo": 0
+        },
+        "drill": {
+          "windows": 8,
+          "alarm": 6,
+          "rules_alarm": 6,
+          "intake_alert": 6,
+          "memo": 6
+        },
+        "electric": {
+          "windows": 5,
+          "alarm": 5,
+          "rules_alarm": 5,
+          "intake_alert": 5,
+          "memo": 5
+        },
+        "figurative": {
+          "windows": 8,
+          "alarm": 8,
+          "rules_alarm": 8,
+          "intake_alert": 8,
+          "memo": 8
+        },
+        "fire": {
+          "windows": 6,
+          "alarm": 4,
+          "rules_alarm": 4,
+          "intake_alert": 4,
+          "memo": 4
+        },
+        "flooding": {
+          "windows": 4,
+          "alarm": 3,
+          "rules_alarm": 3,
+          "intake_alert": 3,
+          "memo": 3
+        },
+        "gas": {
+          "windows": 6,
+          "alarm": 5,
+          "rules_alarm": 5,
+          "intake_alert": 5,
+          "memo": 5
+        },
+        "hypothetical": {
+          "windows": 4,
+          "alarm": 4,
+          "rules_alarm": 4,
+          "intake_alert": 4,
+          "memo": 4
+        },
+        "light": {
+          "windows": 6,
+          "alarm": 2,
+          "rules_alarm": 2,
+          "intake_alert": 2,
+          "memo": 2
+        },
+        "negation": {
+          "windows": 2,
+          "alarm": 0,
+          "rules_alarm": 0,
+          "intake_alert": 0,
+          "memo": 0
+        },
+        "other_hazard": {
+          "windows": 2,
+          "alarm": 0,
+          "rules_alarm": 0,
+          "intake_alert": 0,
+          "memo": 0
+        },
+        "resolved": {
+          "windows": 8,
+          "alarm": 6,
+          "rules_alarm": 6,
+          "intake_alert": 6,
+          "memo": 6
+        },
+        "structural": {
+          "windows": 2,
+          "alarm": 2,
+          "rules_alarm": 2,
+          "intake_alert": 2,
+          "memo": 2
+        },
+        "trapped": {
+          "windows": 5,
+          "alarm": 4,
+          "rules_alarm": 4,
+          "intake_alert": 4,
+          "memo": 4
+        }
+      }
+    },
+    "d5_dev_rules_p6b": {
+      "danger_found": {
+        "k": 24,
+        "n": 30,
+        "value": 0.8,
+        "ci95": [
+          0.6269,
+          0.9049
+        ]
+      },
+      "contextual_found": {
+        "k": 1,
+        "n": 10,
+        "value": 0.1,
+        "ci95": [
+          0.0179,
+          0.4042
+        ]
+      },
+      "trap_false_alarms": {
+        "k": 5,
+        "n": 40,
+        "value": 0.125,
+        "ci95": [
+          0.0546,
+          0.2611
+        ]
+      },
+      "rules_danger_found": {
+        "k": 24,
+        "n": 30,
+        "value": 0.8,
+        "ci95": [
+          0.6269,
+          0.9049
+        ]
+      },
+      "rules_contextual_found": {
+        "k": 1,
+        "n": 10,
+        "value": 0.1,
+        "ci95": [
+          0.0179,
+          0.4042
+        ]
+      },
+      "rules_trap_false_alarms": {
+        "k": 5,
+        "n": 40,
+        "value": 0.125,
+        "ci95": [
+          0.0546,
+          0.2611
+        ]
+      },
+      "misses": [
+        "d5dev-05",
+        "d5dev-11",
+        "d5dev-22",
+        "d5dev-26",
+        "d5dev-29",
+        "d5dev-30",
+        "d5dev-71",
+        "d5dev-72",
+        "d5dev-73",
+        "d5dev-74",
+        "d5dev-75",
+        "d5dev-76",
+        "d5dev-77",
+        "d5dev-79",
+        "d5dev-80"
+      ],
+      "false_alarms": [
+        "d5dev-52",
+        "d5dev-65",
+        "d5dev-66",
+        "d5dev-67",
+        "d5dev-68"
+      ],
+      "intake": {
+        "danger_alert": {
+          "k": 24,
+          "n": 30,
+          "value": 0.8,
+          "ci95": [
+            0.6269,
+            0.9049
+          ]
+        },
+        "danger_memo": {
+          "k": 17,
+          "n": 30,
+          "value": 0.5667,
+          "ci95": [
+            0.392,
+            0.7262
+          ]
+        },
+        "contextual_memo": {
+          "k": 0,
+          "n": 10,
+          "value": 0.0,
+          "ci95": [
+            0.0,
+            0.2775
+          ]
+        },
+        "trap_alert": {
+          "k": 10,
+          "n": 40,
+          "value": 0.25,
+          "ci95": [
+            0.1419,
+            0.4019
+          ]
+        },
+        "trap_memo": {
+          "k": 0,
+          "n": 40,
+          "value": 0.0,
+          "ci95": [
+            0.0,
+            0.0876
+          ]
+        },
+        "trap_memo_units": []
+      },
+      "families": {
+        "context": {
+          "windows": 10,
+          "alarm": 1,
+          "rules_alarm": 1,
+          "intake_alert": 1,
+          "memo": 0
+        },
+        "displaced": {
+          "windows": 4,
+          "alarm": 0,
+          "rules_alarm": 0,
+          "intake_alert": 4,
+          "memo": 0
+        },
+        "drill": {
+          "windows": 8,
+          "alarm": 0,
+          "rules_alarm": 0,
+          "intake_alert": 0,
+          "memo": 0
+        },
+        "electric": {
+          "windows": 5,
+          "alarm": 5,
+          "rules_alarm": 5,
+          "intake_alert": 5,
+          "memo": 3
+        },
+        "figurative": {
+          "windows": 8,
+          "alarm": 0,
+          "rules_alarm": 0,
+          "intake_alert": 0,
+          "memo": 0
+        },
+        "fire": {
+          "windows": 6,
+          "alarm": 5,
+          "rules_alarm": 5,
+          "intake_alert": 5,
+          "memo": 5
+        },
+        "flooding": {
+          "windows": 4,
+          "alarm": 3,
+          "rules_alarm": 3,
+          "intake_alert": 3,
+          "memo": 1
+        },
+        "gas": {
+          "windows": 6,
+          "alarm": 5,
+          "rules_alarm": 5,
+          "intake_alert": 5,
+          "memo": 5
+        },
+        "hypothetical": {
+          "windows": 4,
+          "alarm": 4,
+          "rules_alarm": 4,
+          "intake_alert": 4,
+          "memo": 0
+        },
+        "light": {
+          "windows": 6,
+          "alarm": 1,
+          "rules_alarm": 1,
+          "intake_alert": 1,
+          "memo": 0
+        },
+        "negation": {
+          "windows": 2,
+          "alarm": 0,
+          "rules_alarm": 0,
+          "intake_alert": 0,
+          "memo": 0
+        },
+        "other_hazard": {
+          "windows": 2,
+          "alarm": 0,
+          "rules_alarm": 0,
+          "intake_alert": 0,
+          "memo": 0
+        },
+        "resolved": {
+          "windows": 8,
+          "alarm": 0,
+          "rules_alarm": 0,
+          "intake_alert": 1,
+          "memo": 0
+        },
+        "structural": {
+          "windows": 2,
+          "alarm": 2,
+          "rules_alarm": 2,
+          "intake_alert": 2,
+          "memo": 1
+        },
+        "trapped": {
+          "windows": 5,
+          "alarm": 4,
+          "rules_alarm": 4,
+          "intake_alert": 4,
+          "memo": 2
+        }
+      }
+    },
+    "d3_dev_rules_p6": {
+      "danger_lines": 27,
+      "other_lines": 888,
+      "danger_lines_alert": 7,
+      "danger_lines_memo": 7,
+      "other_lines_alert": 6,
+      "other_lines_memo": 4,
+      "other_memo_lines": [
+        "d012-3",
+        "d065-1",
+        "d090-2",
+        "d120-6"
+      ]
+    },
+    "d3_dev_rules_p6b": {
+      "danger_lines": 27,
+      "other_lines": 888,
+      "danger_lines_alert": 7,
+      "danger_lines_memo": 6,
+      "other_lines_alert": 6,
+      "other_lines_memo": 0,
+      "other_memo_lines": []
+    }
+  },
+  "a2": {
+    "accepted": false,
+    "minimal": {
+      "windows": 80,
+      "calls": 80,
+      "states": {
+        "ok": 80
+      },
+      "valid_json": {
+        "k": 80,
+        "n": 80,
+        "value": 1.0,
+        "ci95": [
+          0.9542,
+          1.0
+        ]
+      },
+      "timeouts": 0,
+      "provider_errors": 0,
+      "p50_ms": 4430,
+      "p95_ms": 7602,
+      "p99_ms": 11827,
+      "max_ms": 13925,
+      "rub_total": 2.9608,
+      "rub_per_window": 0.037,
+      "tokens_in_mean": 6066,
+      "tokens_out_mean": 192,
+      "reasoning_tokens_mean": 0,
+      "quotes": {
+        "k": 0,
+        "n": 241,
+        "value": 0.0,
+        "ci95": [
+          0.0,
+          0.0157
+        ]
+      },
+      "dropped_fields": 0,
+      "audit": {},
+      "upstreams": {
+        "openrouter": 80
+      }
+    },
+    "danger_low": {
+      "windows": 35,
+      "calls": 35,
+      "states": {
+        "ok": 35
+      },
+      "valid_json": {
+        "k": 35,
+        "n": 35,
+        "value": 1.0,
+        "ci95": [
+          0.9011,
+          1.0
+        ]
+      },
+      "timeouts": 0,
+      "provider_errors": 0,
+      "p50_ms": 7785,
+      "p95_ms": 12644,
+      "p99_ms": 16805,
+      "max_ms": 16805,
+      "rub_total": 3.2211,
+      "rub_per_window": 0.092,
+      "tokens_in_mean": 6063,
+      "tokens_out_mean": 664,
+      "reasoning_tokens_mean": 384,
+      "quotes": {
+        "k": 7,
+        "n": 167,
+        "value": 0.0419,
+        "ci95": [
+          0.0205,
+          0.084
+        ]
+      },
+      "dropped_fields": 0,
+      "audit": {
+        "refutation_rejected": 2
+      },
+      "upstreams": {
+        "openrouter": 35
+      }
+    },
+    "reason": "0 refutations with a valid quote on traps; 2 refutation_rejected became new false alarms; 2.1x cost, p95 5.6 -> 12.6 s on the 35 rules-danger windows"
+  },
+  "router_reference": {
+    "accuracy": "75/76",
+    "deliberate_mismatch": "other.unspecified/house_common -> uk_internal (reference: unknown)"
+  },
+  "ledger": {
+    "calls": 281,
+    "rub": 14.113,
+    "max_calls": 400,
+    "max_rub": 150.0,
+    "runs": {
+      "a2-d5dev-dangerlow": {
+        "calls": 35,
+        "rub": 3.22106
+      },
+      "a2-d5dev-minimal": {
+        "calls": 80,
+        "rub": 2.960792
+      },
+      "p6b-d5-final": {
+        "calls": 70,
+        "rub": 2.439575
+      },
+      "p6b-holdout-final": {
+        "calls": 96,
+        "rub": 5.491577
+      }
+    }
+  }
+}

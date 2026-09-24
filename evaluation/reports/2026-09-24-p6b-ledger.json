@@ -1,0 +1,25 @@
+{
+  "calls": 281,
+  "max_calls": 400,
+  "max_rub": 150.0,
+  "rub": 14.113003,
+  "runs": {
+    "a2-d5dev-dangerlow": {
+      "calls": 35,
+      "rub": 3.22106
+    },
+    "a2-d5dev-minimal": {
+      "calls": 80,
+      "rub": 2.960792
+    },
+    "p6b-d5-final": {
+      "calls": 70,
+      "rub": 2.439575
+    },
+    "p6b-holdout-final": {
+      "calls": 96,
+      "rub": 5.491577
+    }
+  },
+  "unknown_cost_calls": 0
+}

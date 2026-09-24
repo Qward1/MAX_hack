@@ -1979,6 +1979,11 @@ export interface components {
              */
             miniapp: boolean;
             /**
+             * Passive Ai Analysis
+             * @default false
+             */
+            passive_ai_analysis: boolean;
+            /**
              * Passive Capture
              * @default false
              */

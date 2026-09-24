@@ -2,8 +2,9 @@
 
 Эталон `datasets/routing/route_reference.v1.jsonl` (DEV-A, P6) — «подтип ×
 территория × опасность → тип маршрута». Роутер давал 68/76; здесь закреплены
-75/76 с одним осознанным расхождением и каждая исправленная строка. Экстренные правила — только с дословной
-цитатой официальной публикации (Правила, утв. ПП РФ № 2071, п. 21).
+75/76 с одним осознанным расхождением и каждая исправленная строка.
+Экстренные правила — только с дословной цитатой официальной публикации
+(Правила, утв. ПП РФ № 2071, п. 21).
 """
 
 from __future__ import annotations
@@ -112,6 +113,22 @@ def test_each_fixed_reference_row(
 
 def test_apartment_radiators_need_a_connected_company(directory: Any) -> None:
     assert route_type(directory, "heating.cold_radiators", "apartment", uk=False) == "unknown"
+
+
+@pytest.mark.parametrize("scope", ["apartment", "house_common"])
+def test_cold_radiators_are_the_company_first_with_a_supplier_alternative(
+    directory: Any, scope: str
+) -> None:
+    """P6b: «УК первой линией с альтернативой» — организация не называется."""
+    route = resolve_route(
+        RoutingQuery(subtype="heating.cold_radiators", location_scope=scope, house=house()),
+        directory,
+        known_subtypes=SUBTYPES,
+        today=TODAY,
+    )
+    assert route.route_type == "uk_internal" and not route.requires_operator_choice
+    assert [item.route_type for item in route.alternatives] == ["resource_supplier"]
+    assert route.organization_id is None
 
 
 @pytest.mark.parametrize(

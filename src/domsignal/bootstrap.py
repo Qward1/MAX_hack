@@ -45,6 +45,8 @@ logger = logging.getLogger(__name__)
 
 #: Запас к таймауту провайдера: фасад обрывает вызов чуть позже самого клиента.
 ANALYZER_TIMEOUT_MARGIN_SECONDS = 2.0
+#: Таймаут модели без профиля и без `LLM_TIMEOUT_SECONDS` (прежнее значение настроек).
+DEFAULT_LLM_TIMEOUT_SECONDS = 10.0
 
 
 @dataclass
@@ -90,6 +92,11 @@ class Container:
         )
 
     @property
+    def passive_ai_analysis_enabled(self) -> bool:
+        """Разбирает ли модель окна пассивного чтения (`PASSIVE_LLM_ENABLED`)."""
+        return self.ai_analysis_enabled and self.settings.passive_llm_enabled
+
+    @property
     def routes_enabled(self) -> bool:
         """Справочник региона загружен и роутер собран."""
         return self.routing.available
@@ -132,9 +139,9 @@ def build_ai(
 ) -> AiComposition:
     """Собрать анализатор из настроек и профиля модели.
 
-    Таймаут берётся из профиля модели: он измерен по p95 конкретной модели.
-    `LLM_TIMEOUT_SECONDS` переопределяет его только когда задан явно — иначе
-    значение по умолчанию из настроек молча душило бы более медленную модель.
+    Таймаут берётся из профиля модели: он измерен по p99 конкретной модели.
+    `LLM_TIMEOUT_SECONDS` переопределяет его только когда задан непустым
+    значением; пустое значение в Compose означает «не задан» (P6b).
     """
     rules_only = WindowAnalyzer()
     if settings.llm_provider is not LlmProvider.OPENAI_COMPATIBLE:
@@ -142,11 +149,12 @@ def build_ai(
     assert settings.llm_api_key and settings.llm_model  # проверено в Settings
     profile = _profile(settings)
     explicit = settings.model_fields_set
-    timeout = (
-        settings.llm_timeout_seconds
-        if profile is None or "llm_timeout_seconds" in explicit
-        else profile.timeout_seconds
-    )
+    if settings.llm_timeout_seconds is not None:
+        timeout = settings.llm_timeout_seconds
+    elif profile is not None:
+        timeout = profile.timeout_seconds
+    else:
+        timeout = DEFAULT_LLM_TIMEOUT_SECONDS
     schema_mode: SchemaMode = (
         settings.llm_schema_mode.value
         if profile is None or "llm_schema_mode" in explicit

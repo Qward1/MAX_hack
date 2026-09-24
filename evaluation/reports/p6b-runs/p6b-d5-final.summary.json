@@ -1,0 +1,191 @@
+{
+  "dataset": "d5",
+  "config": "gpt5mini_v2_minimal_flexfirst",
+  "calls": {
+    "windows": 70,
+    "calls": 70,
+    "states": {
+      "ok": 70
+    },
+    "valid_json": {
+      "k": 70,
+      "n": 70,
+      "value": 1.0,
+      "ci95": [
+        0.948,
+        1.0
+      ]
+    },
+    "timeouts": 0,
+    "provider_errors": 0,
+    "p50_ms": 3819,
+    "p95_ms": 7099,
+    "p99_ms": 7650,
+    "max_ms": 12414,
+    "rub_total": 2.4396,
+    "rub_per_window": 0.0349,
+    "tokens_in_mean": 6066,
+    "tokens_out_mean": 199,
+    "reasoning_tokens_mean": 0,
+    "quotes": {
+      "k": 3,
+      "n": 217,
+      "value": 0.0138,
+      "ci95": [
+        0.0047,
+        0.0399
+      ]
+    },
+    "dropped_fields": 0,
+    "audit": {},
+    "upstreams": {
+      "openrouter": 70
+    }
+  },
+  "d5": {
+    "danger_found": {
+      "k": 29,
+      "n": 30,
+      "value": 0.9667,
+      "ci95": [
+        0.8333,
+        0.9941
+      ]
+    },
+    "contextual_found": {
+      "k": 10,
+      "n": 10,
+      "value": 1.0,
+      "ci95": [
+        0.7225,
+        1.0
+      ]
+    },
+    "trap_false_alarms": {
+      "k": 11,
+      "n": 30,
+      "value": 0.3667,
+      "ci95": [
+        0.2187,
+        0.5449
+      ]
+    },
+    "rules_danger_found": {
+      "k": 24,
+      "n": 30,
+      "value": 0.8,
+      "ci95": [
+        0.6269,
+        0.9049
+      ]
+    },
+    "rules_contextual_found": {
+      "k": 1,
+      "n": 10,
+      "value": 0.1,
+      "ci95": [
+        0.0179,
+        0.4042
+      ]
+    },
+    "rules_trap_false_alarms": {
+      "k": 11,
+      "n": 30,
+      "value": 0.3667,
+      "ci95": [
+        0.2187,
+        0.5449
+      ]
+    },
+    "misses": [
+      "d5-03"
+    ],
+    "false_alarms": [
+      "d5-33",
+      "d5-40",
+      "d5-42",
+      "d5-43",
+      "d5-44",
+      "d5-47",
+      "d5-51",
+      "d5-54",
+      "d5-56",
+      "d5-58",
+      "d5-59"
+    ],
+    "intake": {
+      "danger_alert": {
+        "k": 24,
+        "n": 30,
+        "value": 0.8,
+        "ci95": [
+          0.6269,
+          0.9049
+        ]
+      },
+      "danger_memo": {
+        "k": 15,
+        "n": 30,
+        "value": 0.5,
+        "ci95": [
+          0.3315,
+          0.6685
+        ]
+      },
+      "contextual_memo": {
+        "k": 0,
+        "n": 10,
+        "value": 0.0,
+        "ci95": [
+          0.0,
+          0.2775
+        ]
+      },
+      "trap_alert": {
+        "k": 15,
+        "n": 30,
+        "value": 0.5,
+        "ci95": [
+          0.3315,
+          0.6685
+        ]
+      },
+      "trap_memo": {
+        "k": 2,
+        "n": 30,
+        "value": 0.0667,
+        "ci95": [
+          0.0185,
+          0.2132
+        ]
+      },
+      "trap_memo_units": [
+        "d5-42",
+        "d5-44"
+      ]
+    },
+    "families": {
+      "contextual": {
+        "windows": 10,
+        "alarm": 10,
+        "rules_alarm": 1,
+        "intake_alert": 1,
+        "memo": 0
+      },
+      "danger": {
+        "windows": 30,
+        "alarm": 29,
+        "rules_alarm": 24,
+        "intake_alert": 24,
+        "memo": 15
+      },
+      "trap": {
+        "windows": 30,
+        "alarm": 11,
+        "rules_alarm": 11,
+        "intake_alert": 15,
+        "memo": 2
+      }
+    }
+  }
+}

@@ -28,7 +28,13 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from domsignal.ai import DangerHit, WindowLine, screen_message_for_danger, split_stream
+from domsignal.ai import (
+    DangerHit,
+    WindowLine,
+    chat_memo_hits,
+    screen_message_for_danger,
+    split_stream,
+)
 from domsignal.ai.masking import author_alias
 from domsignal.bot.max_updates import MaxEvent
 from domsignal.core.signals import BindingState, buffer_text, structural_drop_reason
@@ -411,9 +417,22 @@ class PassiveCaptureService:
             hits=hits,
         )
         signal_id = signal.id
-        if any(not hit.displaced for hit in active):
-            # «В соседнем доме» — без права на памятку в чат.
-            await self._memo(session, binding, line, active, signal_id)
+        memo = chat_memo_hits(active)
+        if memo:
+            # Голос бота в чате — только высокоточные формулировки правил
+            # (P6b): «в соседнем доме», учения, гипотеза, прошлое и «и дымом
+            # тоже тянет» без места памятки не дают; оповещение оператора —
+            # как было, на любое срабатывание без отрицания.
+            await self._memo(session, binding, line, memo, signal_id)
+        elif any(not hit.displaced for hit in active):
+            self.engine.event(
+                session,
+                house_id=binding.house_id,
+                signal_id=signal_id,
+                line_mid=line.mid,
+                kind="chat_memo_not_eligible",
+                details=",".join(dict.fromkeys(hit.kind for hit in active)),
+            )
         return signal_id, created
 
     async def _memo(
