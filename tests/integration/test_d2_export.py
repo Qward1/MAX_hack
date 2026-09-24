@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from datetime import timedelta
+import re
+from datetime import datetime, timedelta
 
 from domsignal.tools.d2_export import ORIGIN, export, message_hash
 from tests.integration.passive_harness import NEIGHBOURS, pv  # noqa: F401
@@ -44,10 +45,30 @@ async def test_the_export_is_the_p6_format_without_identifiers(pv) -> None:  # n
     assert rows[1]["reply_to"] == rows[0]["mid"] == message_hash(binding, first)
     assert rows[0]["reply_to"] is None and rows[0]["mid"].startswith("h:")
     assert rows[0]["sent_at"].endswith("+03:00")
+    # Каждое поле имеет строгую форму — места для MAX id или `mid` в выгрузке нет.
+    assert all(row["session"] == "S1" for row in rows)
+    assert all(HASHED_MID.fullmatch(row["mid"]) for row in rows)
+    assert all(row["reply_to"] is None or HASHED_MID.fullmatch(row["reply_to"]) for row in rows)
+    assert all(datetime.fromisoformat(row["sent_at"]).tzinfo is not None for row in rows)
     dumped = json.dumps(rows, ensure_ascii=False)
     assert first not in dumped and before not in dumped
+    # Идентификатор ищется отдельным токеном: «714» внутри hex-хэша
+    # `h:…df71496…` — совпадение цифр, а не утечка (так упал CI #103).
     for actor in NEIGHBOURS:
-        assert str(actor) not in dumped
+        assert not _token(str(actor)).search(dumped)
+
+
+HASHED_MID = re.compile(r"h:[0-9a-f]{16}")
+
+
+def _token(value: str) -> re.Pattern[str]:
+    return re.compile(rf"(?<![0-9A-Za-z]){re.escape(value)}(?![0-9A-Za-z])")
+
+
+def test_an_id_inside_a_hash_is_not_a_leak_but_a_bare_id_is() -> None:
+    assert not _token("714").search('{"mid": "h:f8dab767df71496a"}')
+    assert _token("714").search('{"author": "714"}')
+    assert _token("714").search('{"mid": "714:abc"}')
 
 
 async def test_the_export_reads_only_the_given_binding_and_changes_nothing(pv) -> None:  # noqa: F811
