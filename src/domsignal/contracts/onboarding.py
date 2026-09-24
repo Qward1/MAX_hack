@@ -195,6 +195,14 @@ class ApplicationStatusView(ContractModel):
     quota_unlimited: bool
     #: `create` — можно создать аккаунт администратора; `active` — он уже создан.
     admin_account: Literal["unavailable", "create", "active"]
+    #: Бот уже пишет в MAX о смене статуса (кто-то открыл его по коду заявки).
+    max_notifications: bool = False
+
+
+class NotifyLink(ContractModel):
+    """Ссылка на бота с одноразовым кодом `ca_…` — «Получать уведомления в MAX»."""
+
+    bot_url: str
 
 
 class AdminInvitationLink(ContractModel):

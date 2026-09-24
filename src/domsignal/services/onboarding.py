@@ -67,6 +67,7 @@ from domsignal.db.models import (
     User,
 )
 from domsignal.db.repositories.reliability import ReliabilityRepository, authority_lock, stable_hash
+from domsignal.services.bot_replies import enqueue_reply
 from domsignal.services.chat_quota import ChatQuotaService, quota_state
 from domsignal.services.employee_auth import EmployeeAuthService
 from domsignal.services.errors import (
@@ -125,6 +126,38 @@ def transition(
     row.decision_reason = reason
     kind = "company_application" if isinstance(row, CompanyOnboardingRequest) else "house_request"
     audit(db, f"{kind}.{target}", actor, row.id, reason)
+
+
+#: Сообщения бота о смене статуса заявки УК (D2, «Получать уведомления в MAX»).
+#: Ссылки статуса в них нет: она секретная и хранится только у заявителя.
+APPLICATION_NOTICES = {
+    "under_review": "Заявка «{name}»: платформа начала проверку.",
+    "needs_info": (
+        "Заявка «{name}»: платформе нужны уточнения. Ответьте на странице статуса "
+        "заявки — по ссылке, которую вы сохранили при подаче."
+    ),
+    "approved": (
+        "Заявка «{name}» одобрена. На странице статуса заявки создайте аккаунт "
+        "администратора — по ссылке, которую вы сохранили при подаче."
+    ),
+    "rejected": "Заявка «{name}» отклонена. Причина — на странице статуса заявки.",
+}
+
+
+async def notify_application(
+    db: AsyncSession, row: CompanyOnboardingRequest, target: str
+) -> None:
+    """Сообщение в личку тому, кто подписался на заявку через бота."""
+    text = APPLICATION_NOTICES.get(target)
+    if row.notify_user_id is None or text is None:
+        return
+    await enqueue_reply(
+        db,
+        user_id=row.notify_user_id,
+        event_id=f"application:{row.id}:{uuid4().hex}",
+        key=f"application-{target}",
+        text=text.format(name=row.short_name),
+    )
 
 
 async def application_messages(db: AsyncSession, obj: UUID) -> list[ApplicationMessageView]:
@@ -387,6 +420,7 @@ class AdministrationService:
         if row is None:
             raise ResourceNotFound("Заявка не найдена")
         transition(db, row, target, actor, reason)
+        await notify_application(db, row, target)
         if target == "needs_info":
             # Вопрос платформы виден заявителю на странице статуса (D2).
             db.add(

@@ -118,3 +118,26 @@ describe("Графики", () => {
     expect(screen.queryByRole("list")).toBeNull(); // одна серия — без легенды
   });
 });
+
+describe("Страница статуса: уведомления в MAX", () => {
+  it("выдаёт одноразовую ссылку на бота и не показывает её до нажатия", async () => {
+    const { ApplicationStatus } = await import("./CompanyApply");
+    const { ApiClient } = await import("../shared/api/client");
+    const view = {
+      status: "submitted", short_name: "УК", submitted_at: "2026-09-24T10:00:00Z", requested_chat_count: 2,
+      house_addresses: [], messages: [], can_reply: false, decision_reason: null, granted_chat_quota: null,
+      quota_unlimited: false, admin_account: "unavailable", max_notifications: false,
+    };
+    const request = vi.spyOn(ApiClient.prototype, "request").mockImplementation(async (path: string) =>
+      path.endsWith("/notify-link") ? { bot_url: "https://max.ru/domsignal_bot?start=ca_abc" } : view);
+    render(<ApplicationStatus token={"t".repeat(43)} />);
+    expect(await screen.findByRole("heading", { name: "Заявка получена" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Открыть бота в MAX" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Получать уведомления в MAX" }));
+    const link = await screen.findByRole("link", { name: "Открыть бота в MAX" });
+    expect(link.getAttribute("href")).toBe("https://max.ru/domsignal_bot?start=ca_abc");
+    const [path, init] = request.mock.calls.find(([p]) => String(p).endsWith("/notify-link")) as [string, RequestInit];
+    expect(path).toBe("/api/v1/onboarding/application-status/notify-link");
+    expect(JSON.parse(String(init.body))).toEqual({ token: "t".repeat(43) });
+  });
+});

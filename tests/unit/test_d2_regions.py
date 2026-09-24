@@ -147,3 +147,37 @@ def test_validator_refuses_a_pack_offering_a_channel_unavailable_in_its_region()
         "<root>.rules.4",
         "municipalities.0.rules.0",
     }
+
+
+def test_csv_export_neutralises_formula_cells() -> None:
+    from datetime import UTC, datetime
+    from uuid import uuid4
+
+    from domsignal.contracts.dashboards import CompanyDashboard, HouseStats
+    from domsignal.contracts.quota import ChatQuotaView
+    from domsignal.services.dashboards import company_csv
+
+    house = HouseStats(
+        house_id=uuid4(),
+        address="=HYPERLINK(\"http://x\")",
+        signals=1,
+        tickets_open=0,
+        tickets_created=0,
+        tickets_closed=0,
+        median_accept_minutes=None,
+        verification_confirmed=0,
+        verification_returned=0,
+        top_categories=[],
+    )
+    dashboard = CompanyDashboard(
+        period_days=7,
+        generated_at=datetime.now(UTC),
+        timezone="Europe/Moscow",
+        scope="company",
+        quota=ChatQuotaView(limit=None, used=0, remaining=None, over_limit=False, exhausted=False),
+        houses=[house],
+        activity=[],
+    )
+    text = company_csv(dashboard)
+    assert text.startswith("﻿Адрес;")
+    assert "\n'=HYPERLINK" in text.replace('"', "")

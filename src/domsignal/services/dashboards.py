@@ -534,6 +534,13 @@ class DashboardService:
         )
 
 
+def csv_cell(value: object) -> object:
+    """Текст, начинающийся с `= + - @`, Excel исполнил бы как формулу: экранируем."""
+    if isinstance(value, str) and value[:1] in {"=", "+", "-", "@", "\t", "\r"}:
+        return "'" + value
+    return value
+
+
 def company_csv(dashboard: CompanyDashboard) -> str:
     """Агрегаты обзора УК по домам. UTF-8 с BOM — Excel открывает кириллицу."""
     buffer = io.StringIO()
@@ -554,7 +561,7 @@ def company_csv(dashboard: CompanyDashboard) -> str:
     for house in dashboard.houses:
         writer.writerow(
             [
-                house.address,
+                csv_cell(house.address),
                 house.signals,
                 house.tickets_open,
                 house.tickets_created,

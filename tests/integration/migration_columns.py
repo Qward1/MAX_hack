@@ -51,6 +51,8 @@ P3B_COLUMNS: dict[str, tuple[str, ...]] = {
         "contact_position",
         "status_token_hash",
         "admin_invite_generation",
+        "notify_code_hash",
+        "notify_user_id",
     ),
     "employee_invitations": ("source",),
 }

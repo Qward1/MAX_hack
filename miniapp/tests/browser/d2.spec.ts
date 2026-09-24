@@ -103,6 +103,8 @@ test("D2 onboarding: status page, quota, expansion, reset and open registration"
     expect(statusUrl).toMatch(/\/company\/apply\/status\/[A-Za-z0-9_-]{43}$/);
     await noOverflow(applicant);
     await axeCheck(applicant);
+    await applicant.getByRole("button", { name: "Получать уведомления в MAX" }).click();
+    await expect(applicant.getByRole("link", { name: "Открыть бота в MAX" })).toHaveAttribute("href", /^https:\/\/max\.ru\/[A-Za-z0-9_]+\?start=ca_[A-Za-z0-9_-]{32}$/);
 
     // 2. Суперадмин входит через единый вход и попадает в обзор платформы.
     const platform = await platformCtx.newPage();

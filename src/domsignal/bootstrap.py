@@ -26,6 +26,7 @@ from domsignal.services.action_cards import ActionCardBuilder
 from domsignal.services.ai_budget import PostgresBudgetGuard
 from domsignal.services.appeal_drafts import AppealDraftService
 from domsignal.services.chat_connections import ChatConnectionService
+from domsignal.services.company_signup import notify_digest
 from domsignal.services.explicit_reports import ExplicitReportService
 from domsignal.services.group_messages import MaxWebhookService
 from domsignal.services.membership import MembershipService
@@ -296,6 +297,7 @@ def build_container(settings: Settings) -> Container:
         bot_username=settings.max_bot_username,
         daily_limit=settings.bot_daily_report_limit,
         hold_seconds=settings.bot_hold_seconds,
+        application_digest=lambda code: notify_digest(settings, code),
     )
     appeal_drafts = AppealDraftService(routing=routing)
     # Пассивное чтение чата: приём и окна в операционном контуре, разбор окна —

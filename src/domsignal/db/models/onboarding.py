@@ -62,6 +62,12 @@ class CompanyOnboardingRequest(ReviewFields, Base):
     #: Поколение ссылки «Создать аккаунт администратора» со страницы статуса:
     #: истёкшее или отозванное приглашение заменяется следующим поколением.
     admin_invite_generation: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    #: Хэш одноразового кода `ca_…` для ссылки на бота «Получать уведомления в MAX».
+    notify_code_hash: Mapped[str | None] = mapped_column(String(64), unique=True)
+    #: Кому бот пишет о смене статуса заявки (тот, кто открыл бота по коду).
+    notify_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
 
 
 class CompanyApplicationMessage(Base):

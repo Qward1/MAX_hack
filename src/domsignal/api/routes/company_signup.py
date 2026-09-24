@@ -32,6 +32,7 @@ from domsignal.contracts.onboarding import (
     JoinCode,
     JoinPreview,
     JoinRegister,
+    NotifyLink,
     OpenRegistrationChange,
     OpenRegistrationView,
 )
@@ -98,6 +99,19 @@ async def application_admin_invitation(
     async with db.begin():
         url = await service.admin_invitation(db, payload.token)
     return AdminInvitationLink(invitation_url=url)
+
+
+@router.post("/onboarding/application-status/notify-link", response_model=NotifyLink)
+async def application_notify_link(
+    payload: ApplicationStatusToken, request: Request, db: DbDep, container: ContainerDep
+) -> NotifyLink:
+    """«Получать уведомления в MAX»: ссылка на бота с одноразовым кодом `ca_…`."""
+    service = CompanySignupService(container.settings)
+    await service.auth.rate(
+        db, ip=ip(request), identifier=f"status:{service.auth.digest(payload.token)}"
+    )
+    async with db.begin():
+        return NotifyLink(bot_url=await service.notify_link(db, payload.token))
 
 
 # --- единый вход ---------------------------------------------------------------------

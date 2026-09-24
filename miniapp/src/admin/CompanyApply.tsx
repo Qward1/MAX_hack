@@ -81,7 +81,17 @@ export function ApplicationStatus({ token }: { token: string }) {
   const [view, setView] = useState<Schema["ApplicationStatusView"] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [botLink, setBotLink] = useState("");
   const data = view ?? (r.error ? undefined : r.data);
+  async function notifyLink() {
+    setBusy(true); setError("");
+    try {
+      const link = await client.request<Schema["NotifyLink"]>("/api/v1/onboarding/application-status/notify-link",
+        { method: "POST", body: JSON.stringify({ token }) });
+      setBotLink(link.bot_url);
+    } catch (e) { setError(e instanceof Error ? e.message : "Не удалось подготовить ссылку на бота"); }
+    finally { setBusy(false); }
+  }
   async function reply(text: string) {
     setBusy(true); setError("");
     try { setView(await client.request<Schema["ApplicationStatusView"]>("/api/v1/onboarding/application-status/reply",
@@ -129,6 +139,16 @@ export function ApplicationStatus({ token }: { token: string }) {
       }}><h2>Ответ платформе</h2>
         <label>Ваш ответ<textarea name="text" required maxLength={2000} /></label>
         <button className="ticket-button" disabled={busy}>{busy ? "Отправляем…" : "Отправить ответ"}</button></form>}
+      <section className="admin-detail notify-max">
+        <h2>Уведомления в MAX</h2>
+        {data.max_notifications && !botLink
+          ? <p>Бот ДомСигнала присылает изменения статуса этой заявки в MAX.</p>
+          : <p>Бот пришлёт в MAX сообщение, когда платформа задаст вопрос или примет решение. Ссылка на эту страницу в сообщениях не передаётся.</p>}
+        {botLink ? <><a className="ticket-button" href={botLink} rel="noopener">Открыть бота в MAX</a>
+          <p className="muted">В боте нажмите «Начать». Ссылка одноразовая.</p></>
+          : <button className="ticket-button secondary" disabled={busy} onClick={() => void notifyLink()}>
+            {data.max_notifications ? "Получать в другой аккаунт MAX" : "Получать уведомления в MAX"}</button>}
+      </section>
       {data.house_addresses.length > 0 && <details><summary>Адреса из заявки</summary><ul>{data.house_addresses.map(a => <li key={a}>{a}</li>)}</ul></details>}
       <Feedback error={error || undefined} />
     </>}

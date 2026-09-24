@@ -53,6 +53,21 @@ def upgrade() -> None:
         "company_onboarding_requests",
         ["status_token_hash"],
     )
+    op.add_column("company_onboarding_requests", sa.Column("notify_code_hash", sa.String(64)))
+    op.add_column("company_onboarding_requests", sa.Column("notify_user_id", sa.Uuid()))
+    op.create_unique_constraint(
+        "uq_company_onboarding_requests_notify_code_hash",
+        "company_onboarding_requests",
+        ["notify_code_hash"],
+    )
+    op.create_foreign_key(
+        "fk_company_onboarding_requests_notify_user_id_users",
+        "company_onboarding_requests",
+        "users",
+        ["notify_user_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
     op.create_check_constraint(
         "requested_chat_count",
         "company_onboarding_requests",
@@ -324,9 +339,19 @@ def downgrade() -> None:
         "ck_company_onboarding_requests_requested_chat_count", "company_onboarding_requests"
     )
     op.drop_constraint(
+        "fk_company_onboarding_requests_notify_user_id_users",
+        "company_onboarding_requests",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "uq_company_onboarding_requests_notify_code_hash", "company_onboarding_requests"
+    )
+    op.drop_constraint(
         "uq_company_onboarding_requests_status_token_hash", "company_onboarding_requests"
     )
     for column in (
+        "notify_user_id",
+        "notify_code_hash",
         "admin_invite_generation",
         "status_token_hash",
         "contact_position",

@@ -66,6 +66,20 @@ from domsignal.settings import Settings
 
 #: Срок одноразовой ссылки сброса пароля/MFA.
 RESET_SECONDS = 24 * 3600
+#: Префикс кода в ссылке на бота «Получать уведомления в MAX».
+NOTIFY_PREFIX = "ca_"
+NOTIFY_LINKED = (
+    "Буду присылать сюда изменения статуса заявки «{name}». Подробности — на "
+    "странице статуса заявки."
+)
+NOTIFY_INVALID = (
+    "Ссылка для уведомлений о заявке устарела. Откройте страницу статуса заявки и "
+    "нажмите «Получать уведомления в MAX» ещё раз."
+)
+
+
+def notify_digest(settings: Settings, code: str) -> str:
+    return EmployeeAuthService(settings).digest(code, "application-notify")
 LINK_INVALID = "Ссылка недействительна или устарела. Запросите новую."
 
 
@@ -135,6 +149,7 @@ class CompanySignupService:
             granted_chat_quota=grant.limit_after if grant else None,
             quota_unlimited=grant is not None and grant.limit_after is None,
             admin_account=await self.admin_account(db, row),
+            max_notifications=row.notify_user_id is not None,
         )
 
     async def reply(self, db: AsyncSession, token: str, text: str) -> ApplicationStatusView:
@@ -148,6 +163,17 @@ class CompanySignupService:
         audit(db, "company_application.answered", None, row.id)
         await db.flush()
         return await self.status(db, token)
+
+    async def notify_link(self, db: AsyncSession, token: str) -> str:
+        """Ссылка на бота с новым одноразовым кодом; прежний код перестаёт работать."""
+        bot = self.settings.max_bot_username
+        if not bot:
+            raise AdministrationConflict("Бот ДомСигнала в MAX сейчас недоступен.")
+        row = await self.application_by_token(db, token, lock=True)
+        code = secrets.token_urlsafe(24)
+        row.notify_code_hash = notify_digest(self.settings, code)
+        audit(db, "company_application.notify_link", None, row.id)
+        return f"https://max.ru/{bot}?start={NOTIFY_PREFIX}{code}"
 
     def derived_invitation(self, token: str, row: CompanyOnboardingRequest) -> str:
         """Ссылка приглашения, воспроизводимая только владельцем ссылки статуса.
