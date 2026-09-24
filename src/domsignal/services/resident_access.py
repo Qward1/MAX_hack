@@ -206,14 +206,31 @@ class ResidentAccessService:
                 if chat is not None:
                     hinted.append(chat)
             candidates = await self._candidates(session, user_id, max_user_id, hinted)
+            # Одним запросом: действующее членство и последние проверки человека.
+            valid = set(
+                await session.scalars(
+                    select(ResidentMembership.chat_binding_id).where(
+                        ResidentMembership.user_id == user_id,
+                        ResidentMembership.source == CHAT_MEMBER_SOURCE,
+                        ResidentMembership.status == "active",
+                        ResidentMembership.expires_at > at,
+                    )
+                )
+            )
+            checks = {
+                check.max_chat_id: check
+                for check in await session.scalars(
+                    select(ChatMemberCheck)
+                    .where(ChatMemberCheck.user_id == user_id)
+                    .execution_options(populate_existing=True)
+                )
+            }
             to_call: list[tuple[str, UUID, int]] = []
             cached: list[tuple[ChatBinding, datetime]] = []
             for binding in candidates:
-                if await self._valid_membership(session, user_id, binding, at):
+                if binding.id in valid:
                     continue
-                check = await session.get(
-                    ChatMemberCheck, (user_id, binding.max_chat_id), populate_existing=True
-                )
+                check = checks.get(binding.max_chat_id)
                 if check is not None and check.checked_at > at - self.check_interval:
                     if check.outcome == "member":
                         cached.append((binding, check.checked_at))
@@ -222,6 +239,8 @@ class ResidentAccessService:
                 await self._record_check(session, user_id, binding.max_chat_id, "error", at)
                 to_call.append((binding.max_chat_id, binding.id, binding.binding_version))
             for binding, checked_at in cached:
+                # Тот же порядок блокировок, что у событий и второй транзакции.
+                await ChatRepository(session).lock(f"chat:{binding.max_chat_id}")
                 await self._grant(session, user_id, binding, checked_at=checked_at)
 
         outcomes = await self._call(max_user_id, [chat for chat, _, _ in to_call])
@@ -338,20 +357,6 @@ class ResidentAccessService:
                 )
             )
         return rows
-
-    async def _valid_membership(
-        self, session: AsyncSession, user_id: UUID, binding: ChatBinding, at: datetime
-    ) -> bool:
-        row = await session.scalar(
-            select(ResidentMembership.id).where(
-                ResidentMembership.user_id == user_id,
-                ResidentMembership.chat_binding_id == binding.id,
-                ResidentMembership.binding_version == binding.binding_version,
-                ResidentMembership.status == "active",
-                ResidentMembership.expires_at > at,
-            )
-        )
-        return row is not None
 
     async def _record_check(
         self, session: AsyncSession, user_id: UUID, chat_id: str, outcome: str, at: datetime
