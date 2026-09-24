@@ -368,6 +368,26 @@ _PAST_WORDS = frozenset(
     }
 )
 _PAST_PHRASES = StemSet(("на прошлой неделе", "в прошлый раз"))
+#: P6c: маркеры прошлого шире — «в прошлом месяце», «в позапрошлом году»,
+#: «как-то раз», «однажды», «когда-то», «в тот раз», «N лет назад». «Давно»
+#: и «тогда» маркерами не стали: «давно пахнет газом» — это сейчас; для них
+#: работает прошедшая форма самого предиката («тогда искрило»).
+_PAST_ADJECTIVES = frozenset(
+    prefix + ending
+    for prefix in ("прошл", "позапрошл")
+    for ending in ("ый", "ая", "ое", "ые", "ого", "ой", "ому", "ым", "ом", "ую", "ых", "ыми")
+)
+_PAST_EVENT_WORDS = frozenset({"однажды"})
+_PAST_EVENT_PHRASES = StemSet(("как то раз", "когда то", "в тот раз"))
+_LONG_UNITS = frozenset(
+    {"лет", "год", "года", "месяц", "месяца", "месяцев"}
+    | {"неделю", "недели", "недель", "дня", "дней"}
+)
+_AGO = "назад"
+#: P6c: прошедшая форма предиката процесса («искрило», «дымило», «полыхало»)
+#: — не формулировка настоящего времени. «Застрял» и «обрушился» сюда не
+#: входят: они описывают состояние сейчас.
+_PAST_ENDINGS = ("л", "ла", "ло", "ли", "лся", "лась", "лось", "лись")
 
 
 def _near(tokens: Sequence[Token], match: StemMatch, radius: int) -> Sequence[Token]:
@@ -475,15 +495,34 @@ def _starts(tokens: Sequence[Token], match: StemMatch, prefixes: tuple[str, ...]
     return tokens[match.first_token].text.startswith(prefixes)
 
 
+def _long_ago(tokens: Sequence[Token]) -> bool:
+    """«Лет пять назад», «месяца три назад», «неделю назад»; «минут 5 назад» — нет."""
+    for index, token in enumerate(tokens):
+        if token.text != _AGO:
+            continue
+        if any(item.text in _LONG_UNITS for item in tokens[max(0, index - 2) : index]):
+            return True
+    return False
+
+
 def _memo_blocked(tokens: Sequence[Token]) -> bool:
     """Гипотеза («если пахнет газом — куда звонить») или прошлое («был дым»)."""
     texts = {token.text for token in tokens}
     return bool(
         texts & _HYPOTHETICAL_WORDS
         or texts & _PAST_WORDS
+        or texts & _PAST_ADJECTIVES
+        or texts & _PAST_EVENT_WORDS
         or _HYPOTHETICAL_PHRASES.find_all(tokens)
         or _PAST_PHRASES.find_all(tokens)
+        or _PAST_EVENT_PHRASES.find_all(tokens)
+        or _long_ago(tokens)
     )
+
+
+def _present(tokens: Sequence[Token], match: StemMatch) -> bool:
+    """Предикат процесса не в прошедшей форме: «искрит», а не «искрило»."""
+    return not tokens[match.first_token].text.endswith(_PAST_ENDINGS)
 
 
 def _memo_pattern(
@@ -506,15 +545,21 @@ def _memo_pattern(
             match
             for match in found[0]
             if tokens[match.first_token].text in _FIRE_NOUNS
-            or _starts(tokens, match, _PRESENT_BURN)
-            or _starts(tokens, match, _SMOKE)
+            or (
+                (_starts(tokens, match, _PRESENT_BURN) or _starts(tokens, match, _SMOKE))
+                and _present(tokens, match)
+            )
         ]
         return _close(strong, places, _MEMO_RADIUS)
     if kind == "electric":
         if len(found) == 2:
             smoking = [match for match in found[1] if _starts(tokens, match, ("дымит",))]
             return _close(found[0], smoking, _MEMO_RADIUS)
-        sparks = [match for match in found[0] if _starts(tokens, match, _SPARK)]
+        sparks = [
+            match
+            for match in found[0]
+            if _starts(tokens, match, _SPARK) and _present(tokens, match)
+        ]
         shock = [match for match in found[0] if _starts(tokens, match, ("током",))]
         return _close(sparks, _ELECTRIC_OBJECTS.find_all(tokens), _MEMO_RADIUS) or _close(
             shock, _SHOCK.find_all(tokens), _MEMO_RADIUS
