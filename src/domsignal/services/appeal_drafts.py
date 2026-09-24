@@ -50,7 +50,6 @@ SELF_FILING_NOTE = "ДомСигнал не отправляет обращен�
 PROBLEM_HEADING = "Суть проблемы или предложения:"
 CHANNEL_FACTS_HEADING = "Что известно о канале:"
 
-_ADDRESS_LABEL = "Адрес"
 _ENTRANCE_LABEL = "Подъезд"
 _FLOOR_LABEL = "Этаж"
 _SINCE_LABEL = "Наблюдается с"
@@ -265,9 +264,8 @@ class AppealDraftService:
         )
         blocks.append(f"{resident} {REQUEST}")
         blocks.append(f"{PROBLEM_HEADING}\n{clean or original}".rstrip())
+        # Адрес уже во вступлении — строкой места он не повторяется (P6b).
         facts: list[str] = []
-        if address:
-            facts.append(f"{_ADDRESS_LABEL}: {address}")
         if incident is not None:
             if incident.location_entrance:
                 facts.append(f"{_ENTRANCE_LABEL}: {incident.location_entrance}")

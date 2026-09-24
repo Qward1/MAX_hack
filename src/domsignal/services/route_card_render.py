@@ -1,10 +1,12 @@
 """Детерминированный текст личного сообщения с карточкой маршрута.
 
 Сообщение собирается из уже готовой `ActionCard` и проверенных данных
-справочника: заголовок маршрута, основание, один-два факта канала с
-источником, дисклеймер. Модель здесь не участвует и её текст
-(`clean_description`) сюда не попадает — он нужен только в черновике
-обращения, где его правит человек.
+справочника: заголовок маршрута, основание, один-два факта канала,
+дисклеймер и в конце одна строка «Информация взята с: …» со ссылкой
+источника (P6b, владелец: без «Источник: …» у каждого факта, без «Проверено
+без входа …» и без повторов). Источники фактов целиком — в карточке mini app.
+Модель здесь не участвует и её текст (`clean_description`) сюда не попадает —
+он нужен только в черновике обращения, где его правит человек.
 
 Продукт не подаёт обращение за человека, поэтому формулировки «заявка
 отправлена», «обращение зарегистрировано» и «передано в …» невозможны: они
@@ -15,6 +17,7 @@
 
 from __future__ import annotations
 
+import re
 from uuid import UUID
 
 from pydantic import Field
@@ -27,6 +30,7 @@ from domsignal.contracts.routing import (
     RouteFact,
     SafetyBlock,
 )
+from domsignal.services.action_cards import EXPLANATIONS_COVERED_BY_BASIS
 
 #: Сколько фактов канала попадает в сообщение.
 MAX_FACTS = 2
@@ -40,6 +44,9 @@ ROUTE_CARD_REF_PREFIX = "r_"
 ROUTE_CARD_INTENT_KIND = "route.action_card.v1"
 
 _SOURCE_PREFIX = "Источник: "
+SOURCES_PREFIX = "Информация взята с: "
+#: Цитата «…» факта, уже показанная в основании, — повтор.
+_QUOTE = re.compile(r"«([^«»]{20,})»")
 
 
 class RouteCardIntent(ContractModel):
@@ -58,6 +65,7 @@ class RouteCardIntent(ContractModel):
     explanation: str
     basis_text: str | None = None
     basis_source_title: str | None = None
+    basis_source_url: str | None = None
     organization_name: str | None = None
     facts: list[RouteFact] = Field(default_factory=list)
     safety: SafetyBlock | None = None
@@ -88,6 +96,7 @@ def build_route_card_intent(
         explanation=card.explanation,
         basis_text=basis.text if basis else None,
         basis_source_title=basis.source_title if basis else None,
+        basis_source_url=basis.source_url if basis else None,
         organization_name=card.route.organization_name,
         facts=list(card.facts[:MAX_FACTS]),
         safety=card.safety,
@@ -109,30 +118,47 @@ def safety_lines(safety: SafetyBlock) -> list[str]:
     return lines
 
 
-def _fact_lines(facts: list[RouteFact]) -> list[str]:
-    return [f"{fact.text}\n{_SOURCE_PREFIX}{fact.source_title}" for fact in facts[:MAX_FACTS]]
+def _display_url(url: str) -> str:
+    """Ссылка для текста сообщения: без схемы и завершающего «/»."""
+    return re.sub(r"^https?://", "", url.strip()).rstrip("/")
+
+
+def _repeats(text: str, shown: str) -> bool:
+    return any(quote in shown for quote in _QUOTE.findall(text))
 
 
 def render_route_card(intent: RouteCardIntent, *, ref: str) -> PersonalMessage:
     """Собрать личное сообщение. Один и тот же снимок даёт один и тот же текст."""
     blocks: list[str] = []
+    sources: list[str] = []
     # Памятка безопасности идёт первой при любом маршруте.
     if intent.dangerous and intent.safety is not None:
-        blocks.append("\n".join(safety_lines(intent.safety)))
+        blocks.append(
+            "\n".join(
+                line for line in safety_lines(intent.safety) if not line.startswith(_SOURCE_PREFIX)
+            )
+        )
+        if intent.safety.source_url:
+            sources.append(intent.safety.source_url)
     blocks.append(intent.title)
-    blocks.append(intent.explanation)
+    if not (intent.basis_text and intent.explanation in EXPLANATIONS_COVERED_BY_BASIS):
+        blocks.append(intent.explanation)
     if intent.basis_text:
-        basis = intent.basis_text
-        if intent.basis_source_title:
-            basis = f"{basis}\n{_SOURCE_PREFIX}{intent.basis_source_title}"
-        blocks.append(basis)
+        blocks.append(intent.basis_text)
+        if intent.basis_source_url:
+            sources.append(intent.basis_source_url)
     if intent.next_step:
         blocks.append(intent.next_step)
-    blocks.extend(_fact_lines(intent.facts))
+    for fact in intent.facts[:MAX_FACTS]:
+        if not _repeats(fact.text, "\n".join(blocks)):
+            blocks.append(fact.text)
     if intent.disclaimer:
         blocks.append(intent.disclaimer)
     if intent.demo_notice:
         blocks.append(intent.demo_notice)
+    shown = list(dict.fromkeys(_display_url(url) for url in sources))
+    if shown:
+        blocks.append(SOURCES_PREFIX + ", ".join(shown))
     return PersonalMessage(
         "\n\n".join(blocks),
         ((MessageButton("open_app", OPEN_CARD_LABEL, ref),),),
