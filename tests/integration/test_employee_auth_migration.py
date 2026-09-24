@@ -12,6 +12,23 @@ from domsignal.services.employee_auth import EmployeeAuthService
 from domsignal.tools.seed_tickets import seed, seed_id
 from tests.integration.test_migrations import migrate
 
+#: Столбцы, добавленные после A10 (D1), и их значение у прежних строк.
+LATER_COLUMNS = {
+    "houses": {
+        "open_resident_access": False,
+        "open_access_changed_at": None,
+        "open_access_changed_by": None,
+    },
+    "users": {"max_dialog_at": None, "max_dialog_stopped_at": None, "group_ack_at": None},
+    "resident_memberships": {
+        "chat_binding_id": None,
+        "binding_version": None,
+        "checked_at": None,
+        "ended_at": None,
+        "end_reason": None,
+    },
+}
+
 
 async def test_employee_migration_preserves_domain_and_guards_history(integration_settings):
     name = "a10_migration_" + uuid4().hex
@@ -66,6 +83,10 @@ async def test_employee_migration_preserves_domain_and_guards_history(integratio
                             "contact_phone",
                         ):
                             assert row[0].pop(key) is None
+                # Аддитивные столбцы D1 появляются с пустыми значениями.
+                for row in after:
+                    for key, empty in LATER_COLUMNS.get(t, {}).items():
+                        assert row[0].pop(key) == empty, (t, key)
                 assert after == before[t]
             assert (
                 await c.execute(text("SELECT count(*) FROM employee_credentials"))

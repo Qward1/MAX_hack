@@ -140,7 +140,27 @@ function PlatformCompany({ id, refresh }: { id: string; refresh: () => void }) {
 function PlatformHouses() {
   const [offset, setOffset] = useState(0);
   const r = useRead<Schema["PlatformHouseView"][]>(`/api/v1/platform/houses?offset=${offset}`);
-  return <><Title>Дома</Title><Feedback loading={r.loading} error={r.error} /><ul className="admin-records">{r.data?.map(h => <li key={h.id}>{h.address}<code>{h.id}</code></li>)}</ul><Pages offset={offset} set={setOffset} count={r.data?.length ?? 0} /></>;
+  return <><Title>Дома</Title><OpenHouses /><h2>Все дома</h2><Feedback loading={r.loading} error={r.error} /><ul className="admin-records">{r.data?.map(h => <li key={h.id}>{h.address}<code>{h.id}</code></li>)}</ul><Pages offset={offset} set={setOffset} count={r.data?.length ?? 0} /></>;
+}
+/** Дома с открытым доступом: платформа видит все и может закрыть с причиной. */
+function OpenHouses() {
+  const r = useRead<Schema["PlatformOpenHouseView"][]>("/api/v1/platform/open-houses");
+  const action = useAction(r.refresh);
+  const [closing, setClosing] = useState<string | null>(null);
+  return <section className="admin-detail" aria-labelledby="open-houses-title"><h2 id="open-houses-title">Открытый доступ</h2>
+    <Feedback loading={r.loading} error={r.error ?? (action.error || undefined)} />
+    {r.data?.length === 0 && <p>Домов с открытым доступом нет.</p>}
+    <ul className="admin-records">{r.data?.map(h => <li key={h.house_id}><span>{h.address}</span><span>{h.company_name}</span>
+      {h.open_access_changed_at && <time>С {new Date(h.open_access_changed_at).toLocaleString("ru-RU")}</time>}
+      {closing !== h.house_id ? <button className="ticket-button secondary" onClick={() => setClosing(h.house_id)}>Закрыть доступ</button>
+        : <form className="inline-form" onSubmit={async e => {
+          const data = submitted(e);
+          const result = await action.run(`/api/v1/platform/houses/${h.house_id}/open-access/close`, { reason: formValue(data, "reason") });
+          if (result) setClosing(null);
+        }}><label>Причина<input name="reason" required minLength={3} maxLength={500} /></label>
+          <button className="ticket-button" disabled={action.busy}>Подтвердить закрытие</button>
+          <button type="button" className="ticket-button secondary" onClick={() => setClosing(null)}>Отмена</button></form>}
+    </li>)}</ul></section>;
 }
 function Disputes() {
   const r = useRead<Schema["PlatformBindingView"][]>("/api/v1/platform/binding-disputes");

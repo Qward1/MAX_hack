@@ -4,6 +4,7 @@ import asyncio
 from datetime import UTC, datetime
 from uuid import UUID
 
+from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 
 from domsignal.db.models import (
@@ -175,7 +176,10 @@ async def seed(settings: Settings | None = None) -> None:
                     ]
                 )
                 .on_conflict_do_nothing(
-                    index_elements=[ResidentMembership.user_id, ResidentMembership.house_id]
+                    index_elements=[ResidentMembership.user_id, ResidentMembership.house_id],
+                    # Уникальность «житель — дом» частичная: у членства по чату
+                    # и открытому доступу действующая запись одна, история — нет.
+                    index_where=text("source NOT IN ('chat_member', 'open_access')"),
                 )
             )
     finally:

@@ -40,6 +40,7 @@ class MaxChatProvider(Protocol):
     async def get_chat_info(self, chat_id: str) -> ChatInfo: ...
     async def get_bot_membership(self, chat_id: str) -> ChatMember: ...
     async def get_chat_admins(self, chat_id: str) -> tuple[ChatMember, ...]: ...
+    async def is_chat_member(self, chat_id: str, user_id: str) -> bool: ...
 
 
 class _ChatResponse(BaseModel):
@@ -74,6 +75,17 @@ class _AdminsResponse(BaseModel):
     marker: StrictInt | None = None
 
 
+class _MemberId(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    user_id: StrictInt
+    is_bot: StrictBool = False
+
+
+class _MembersResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    members: list[_MemberId]
+
+
 class HttpMaxChatProvider:
     def __init__(
         self,
@@ -87,14 +99,18 @@ class HttpMaxChatProvider:
             base_url=base_url, token=token, timeout=timeout, transport=transport,
         )
 
-    async def _get(self, chat_id: str, suffix: str = "") -> Any:
+    async def _get(
+        self, chat_id: str, suffix: str = "", params: dict[str, str] | None = None
+    ) -> Any:
         # External IDs cannot inject URL paths or query strings.
         if not re.fullmatch(r"-?\d{1,20}", chat_id) or str(int(chat_id)) != chat_id:
             raise MaxProviderError("max_invalid_chat_id")
         if not self.client.configured:
             raise MaxProviderError("max_not_configured", temporary=True)
         try:
-            response = await self.client.request("GET", f"/chats/{chat_id}{suffix}")
+            response = await self.client.request(
+                "GET", f"/chats/{chat_id}{suffix}", params=params
+            )
         except (httpx.RequestError, TimeoutError):
             raise MaxProviderError("max_temporarily_unavailable", temporary=True) from None
         if response.status_code == 429 or response.status_code >= 500:
@@ -140,3 +156,24 @@ class HttpMaxChatProvider:
         if value.marker is not None:
             raise MaxProviderError("max_admin_pagination_unsupported")
         return tuple(member.internal() for member in value.members)
+
+    async def is_chat_member(self, chat_id: str, user_id: str) -> bool:
+        """Участник ли человек чата: `GET /chats/{chatId}/members?user_ids=`.
+
+        Точечный вызов по одному идентификатору (RESIDENT-BY-CHAT-2026-09-25):
+        полный список участников не запрашивается. С `user_ids` параметры
+        `count`/`marker` документально игнорируются; бот должен быть
+        администратором чата. Пустой список — человек не участник.
+        """
+        if not re.fullmatch(r"[1-9]\d{0,18}", user_id) or int(user_id) > 2**63 - 1:
+            raise MaxProviderError("max_invalid_user_id")
+        try:
+            value = _MembersResponse.model_validate(
+                await self._get(chat_id, "/members", {"user_ids": user_id})
+            )
+        except ValidationError:
+            raise MaxProviderError("max_invalid_response") from None
+        if any(str(member.user_id) != user_id for member in value.members):
+            # Ответ о другом человеке — не ответ на вопрос.
+            raise MaxProviderError("max_invalid_response")
+        return any(not member.is_bot for member in value.members)

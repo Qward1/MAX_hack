@@ -15,6 +15,9 @@ from domsignal.db.repositories.access import AccessRepository
 from domsignal.db.repositories.sessions import SessionRepository
 from domsignal.services.errors import AuthenticationRequired, ResourceNotFound
 
+#: Имя пользователя, пришедшего из вебхука (см. `resident_access`).
+MAX_USER_PLACEHOLDER = "Пользователь MAX"
+
 
 @dataclass(frozen=True)
 class AuthenticatedUser:
@@ -46,6 +49,9 @@ class SessionService:
             user = await repo.user_by_max_id(max_user_id)
             if user is None:
                 user = await repo.create_max_user(max_user_id, display_name)
+            elif user.display_name == MAX_USER_PLACEHOLDER and display_name.strip():
+                # Пользователь из вебхука получает имя из подписанных initData.
+                user.display_name = display_name.strip()[:200]
             # Called only after the existing /auth/max signature/age validation.
             user.max_identity_verified_at = datetime.now(UTC)
             return self._issue(session, user=user, source="max")

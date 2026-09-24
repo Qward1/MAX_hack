@@ -12,6 +12,12 @@
 Модель здесь не решает, кто отвечает: это делает детерминированный
 Responsibility Router по проверенному справочнику. Заявка УК создаётся только
 для зоны УК; внешнее обращение житель отправляет сам.
+
+Сообщение в личке бота (`dm_report`, D1) проходит тот же путь: окно из одной
+реплики, AI-пул и сторож правил, тот же `_apply`. Отличия — вокруг: дом
+выбран до разбора, карточка уходит всегда, текст, который разбор отнёс к
+болтовне или вопросу, не сохраняется, а при открытой проблеме той же
+категории житель сам выбирает «та же проблема» или «другое».
 """
 
 from __future__ import annotations
@@ -55,18 +61,39 @@ from domsignal.contracts.routing import (
 )
 from domsignal.core.incidents import IncidentStatus, ReportCategory
 from domsignal.core.routing import UNSPECIFIED_SUBTYPE
-from domsignal.db.models import AppealDraft, ExplicitIntake, Incident, Report, RouteOutcome
+from domsignal.db.models import (
+    AppealDraft,
+    ExplicitIntake,
+    Incident,
+    Report,
+    RouteOutcome,
+    Ticket,
+    User,
+)
 from domsignal.db.repositories.access import AccessRepository
 from domsignal.db.repositories.incidents import IncidentRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.services.action_cards import ActionCardBuilder
 from domsignal.services.ai_budget import PostgresBudgetGuard
 from domsignal.services.ai_provenance import execution_provenance
+from domsignal.services.bot_replies import (
+    DUPLICATE_LEAD,
+    DUPLICATE_QUESTION,
+    HELP,
+    HOLD_JOB,
+    NO_ACCESS,
+    NOT_A_PROBLEM,
+    OTHER_PROBLEM_LABEL,
+    SAME_PROBLEM_LABEL,
+    callback_button,
+    enqueue_reply,
+)
 from domsignal.services.chat_connections import ChatConnectionError, ChatConnectionService
 from domsignal.services.context import OperationContext
 from domsignal.services.errors import AccessDenied, ResourceNotFound
 from domsignal.services.membership import MembershipService
 from domsignal.services.reports import ReportService
+from domsignal.services.resident_access import ResidentAccessService, ensure_max_user
 from domsignal.services.route_card_render import (
     ROUTE_CARD_INTENT_KIND,
     RouteCardIntent,
@@ -96,6 +123,21 @@ DISPATCHER_REVIEW_NOTE = (
     "Ответственный пока не определён — разберёт диспетчер управляющей компании."
 )
 
+#: Следующий шаг в личке при зоне УК: заявка есть в очереди УК или проблема
+#: появилась на доске дома, если приём заявок у дома выключен.
+TICKET_QUEUED_NOTE = (
+    "Заявка появилась в очереди вашей управляющей компании. Ход работ — в ДомСигнале."
+)
+BOARD_NOTE = "Проблема появилась на доске дома в ДомСигнале."
+
+#: Реплика из лички ждёт ответа «та же проблема / другое».
+AWAITING_CHOICE = "awaiting_choice"
+
+#: Роли реплики, которые разбор относит к болтовне, вопросу или объявлению.
+NOT_A_PROBLEM_ROLES = frozenset(
+    {"chatter", "out_of_scope", "status_question", "discussion", "announcement"}
+)
+
 #: Опознавательный признак окна явного пути: одна реплика, один автор.
 LINE_ID = "m1"
 AUTHOR_REF = "a1"
@@ -122,7 +164,9 @@ _CLAIM = text(
         state = 'pending'
         OR (state = 'claimed' AND claimed_at < now() - make_interval(secs => :stale))
       )
-    RETURNING chat_id, chat_binding_id, binding_version, external_user_id, text, occurred_at
+      AND (channel = 'group_report' OR house_id IS NOT NULL)
+    RETURNING chat_id, chat_binding_id, binding_version, external_user_id, text, occurred_at,
+              channel, house_id, user_id
     """
 )
 
@@ -149,11 +193,14 @@ class ClaimedIntake:
 
     event_id: str
     chat_id: str
-    chat_binding_id: UUID
-    binding_version: int
+    chat_binding_id: UUID | None
+    binding_version: int | None
     external_user_id: str
     text: str
     occurred_at: datetime
+    channel: str = "group_report"
+    house_id: UUID | None = None
+    user_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -166,7 +213,7 @@ class ReportOrigin:
     жителя и получает ту же карточку в ответе.
     """
 
-    source: Literal["group_report", "form"]
+    source: Literal["group_report", "form", "dm_report"]
     text: str
     occurred_at: datetime
     author_id: UUID
@@ -176,6 +223,8 @@ class ReportOrigin:
     card_dedupe_ref: str | None = None
     #: Категория, выбранная жителем вручную, когда разбор его не убедил.
     category: ReportCategory | None = None
+    #: Личка: карточка уходит при любом исходе — это ответ на сообщение.
+    always_card: bool = False
 
 
 @dataclass(frozen=True)
@@ -204,6 +253,8 @@ class ExplicitReportService:
         analyzer: WindowAnalyzer,
         rules_analyzer: WindowAnalyzer,
         budget: PostgresBudgetGuard | None = None,
+        resident_access: ResidentAccessService | None = None,
+        hold_seconds: int = 1800,
     ) -> None:
         self.sessions = session_factory
         self.chat_connections = chat_connections
@@ -214,6 +265,9 @@ class ExplicitReportService:
         self.rules_analyzer = rules_analyzer
         self.budget = budget
         self.memberships = MembershipService()
+        # Житель = участник чата: автор `/report` проверяется по MAX API (D1).
+        self.resident_access = resident_access
+        self.hold_seconds = hold_seconds
 
     # ------------------------------------------------------------ точки входа
 
@@ -447,6 +501,8 @@ class ExplicitReportService:
             return  # Запись уже взял кто-то другой: тихо завершаемся.
         try:
             outcome = await self._process(intake, use_model=use_model)
+            if outcome.result_kind == AWAITING_CHOICE:
+                return  # Запись ждёт ответа жителя; состояние уже записано.
         except (AccessDenied, ResourceNotFound, ChatConnectionError, ValidationError) as exc:
             # Терминальный отказ: повтор в другом контексте ничего не изменит.
             await self._settle(event_id, "failed", None)
@@ -498,6 +554,9 @@ class ExplicitReportService:
             )
 
     async def _process(self, intake: ClaimedIntake, *, use_model: bool) -> ExplicitOutcome:
+        if intake.channel == "dm_report":
+            return await self._process_dm(intake, use_model=use_model)
+        assert intake.chat_binding_id is not None
         # Свежесть прав проверяется перед каждым групповым эффектом.
         async with self.sessions() as session, session.begin():
             await self.chat_connections.verify_binding_health(session, intake.chat_binding_id)
@@ -529,6 +588,225 @@ class ExplicitReportService:
             )
             return await self._apply(session, origin, context, analysis, decision)
 
+    # ------------------------------------------------------------- личка
+
+    async def _process_dm(self, intake: ClaimedIntake, *, use_model: bool) -> ExplicitOutcome:
+        """Сообщение из лички бота: дом уже выбран, права проверяются по дому."""
+        assert intake.user_id is not None and intake.house_id is not None
+        async with self.sessions() as session, session.begin():
+            try:
+                context = await self.memberships.require_house(
+                    session, user_id=intake.user_id, house_id=intake.house_id, source="max_dm"
+                )
+                self.memberships.require_permission(context, "report.create")
+            except (AccessDenied, ResourceNotFound):
+                await enqueue_reply(
+                    session,
+                    user_id=intake.user_id,
+                    event_id=intake.event_id,
+                    key="noaccess",
+                    text=NO_ACCESS,
+                )
+                await self._forget(session, intake.event_id)
+                return ExplicitOutcome(result_kind="ignored")
+        # Вызов модели — вне транзакции БД.
+        analysis = await self._analyze(intake, entrance=None, use_model=use_model)
+        await self._record(intake.event_id, analysis)
+        decision = decide_explicit_report(analysis)
+        if looks_like_no_problem(analysis, decision):
+            async with self.sessions() as session, session.begin():
+                await enqueue_reply(
+                    session,
+                    user_id=intake.user_id,
+                    event_id=intake.event_id,
+                    key="notproblem",
+                    text=f"{NOT_A_PROBLEM}\n\n{HELP}",
+                )
+                # Такой текст не сохраняется.
+                await self._forget(session, intake.event_id)
+            return ExplicitOutcome(result_kind="not_a_problem")
+        return await self._decide_dm(intake, analysis, decision, ask_duplicates=True)
+
+    async def _decide_dm(
+        self,
+        intake: ClaimedIntake,
+        analysis: WindowAnalysis,
+        decision: ExplicitReportDecision,
+        *,
+        ask_duplicates: bool,
+    ) -> ExplicitOutcome:
+        """Решение по сообщению из лички: вопрос о дубле или общий `_apply`.
+
+        При открытой проблеме той же категории продукт ничего не сливает сам:
+        житель выбирает «та же проблема» или «другое» (семантика join P3c).
+        При опасности вопроса нет — карточка с блоком безопасности сразу.
+        """
+        assert intake.user_id is not None and intake.house_id is not None
+        danger: tuple[DangerKind, ...] = tuple(decision.emergency.kinds)
+        now = datetime.now(UTC)
+        async with self.sessions() as session, session.begin():
+            context = await self.memberships.require_house(
+                session,
+                user_id=intake.user_id,
+                house_id=intake.house_id,
+                source="max_dm",
+                for_write=True,
+            )
+            self.memberships.require_permission(context, "report.create")
+            if ask_duplicates and decision.confident and not danger:
+                duplicates = await self._duplicates(
+                    session,
+                    context,
+                    category=decision.product_category,
+                    entrance=decision.entrance.value if decision.entrance else None,
+                    now=now,
+                )
+                if duplicates:
+                    first = duplicates[0]
+                    await session.execute(
+                        update(ExplicitIntake)
+                        .where(ExplicitIntake.event_id == intake.event_id)
+                        .values(
+                            state=AWAITING_CHOICE,
+                            pending_analysis=analysis.model_dump(mode="json"),
+                            hold_until=now + timedelta(seconds=self.hold_seconds),
+                        )
+                    )
+                    await enqueue_reply(
+                        session,
+                        user_id=intake.user_id,
+                        event_id=intake.event_id,
+                        key="duplicate",
+                        text=f"{DUPLICATE_LEAD.format(title=first.title)}\n{DUPLICATE_QUESTION}",
+                        buttons=[
+                            [
+                                callback_button(
+                                    SAME_PROBLEM_LABEL,
+                                    f"b:same:{intake.event_id}:{first.incident_id}",
+                                )
+                            ],
+                            [callback_button(OTHER_PROBLEM_LABEL, f"b:new:{intake.event_id}")],
+                        ],
+                    )
+                    await ReliabilityRepository(session).add_job(
+                        kind=HOLD_JOB,
+                        payload={"event_id": intake.event_id},
+                        priority=90,
+                        delay_seconds=self.hold_seconds,
+                    )
+                    return ExplicitOutcome(result_kind=AWAITING_CHOICE)
+            origin = ReportOrigin(
+                source="dm_report",
+                text=intake.text,
+                occurred_at=intake.occurred_at,
+                author_id=intake.user_id,
+                idempotency_key=f"explicit:{intake.event_id}",
+                intake_event_id=intake.event_id,
+                card_dedupe_ref=intake.event_id,
+                always_card=True,
+            )
+            return await self._apply(session, origin, context, analysis, decision)
+
+    async def choose_other(self, *, event_id: str, user_id: UUID) -> ExplicitOutcome | None:
+        """«Другое»: разобранное сообщение становится новой проблемой.
+
+        Разбор берётся сохранённый — модель повторно не вызывается. Повторное
+        нажатие и чужая запись ничего не делают.
+        """
+        intake = await self._take_choice(event_id, user_id)
+        if intake is None:
+            return None
+        claimed, payload = intake
+        try:
+            analysis = WindowAnalysis.model_validate(payload)
+            decision = decide_explicit_report(analysis)
+            outcome = await self._decide_dm(claimed, analysis, decision, ask_duplicates=False)
+        except (AccessDenied, ResourceNotFound, ValidationError):
+            await self._settle(event_id, "failed", None)
+            return None
+        await self._settle(event_id, "done", outcome.result_kind)
+        return outcome
+
+    async def joined(self, *, event_id: str, user_id: UUID) -> bool:
+        """«Та же проблема»: житель присоединился — текст сообщения не нужен."""
+        async with self.sessions() as session, session.begin():
+            result = await session.execute(
+                update(ExplicitIntake)
+                .where(
+                    ExplicitIntake.event_id == event_id,
+                    ExplicitIntake.channel == "dm_report",
+                    ExplicitIntake.user_id == user_id,
+                    ExplicitIntake.state == AWAITING_CHOICE,
+                )
+                .values(
+                    state="done",
+                    result_kind="joined",
+                    text="",
+                    clean_description=None,
+                    pending_analysis=None,
+                    hold_until=None,
+                )
+            )
+            return bool(getattr(result, "rowcount", 0))
+
+    async def pending_choice(self, *, event_id: str, user_id: UUID) -> bool:
+        """Ждёт ли запись ответа этого жителя (не истекла ли)."""
+        async with self.sessions() as session, session.begin():
+            intake = await session.get(ExplicitIntake, event_id)
+            return (
+                intake is not None
+                and intake.channel == "dm_report"
+                and intake.user_id == user_id
+                and intake.state == AWAITING_CHOICE
+                and intake.pending_analysis is not None
+                and (intake.hold_until is None or intake.hold_until > datetime.now(UTC))
+            )
+
+    async def _take_choice(
+        self, event_id: str, user_id: UUID
+    ) -> tuple[ClaimedIntake, dict[str, Any]] | None:
+        now = datetime.now(UTC)
+        async with self.sessions() as session, session.begin():
+            intake = await session.get(ExplicitIntake, event_id, with_for_update=True)
+            if (
+                intake is None
+                or intake.channel != "dm_report"
+                or intake.user_id != user_id
+                or intake.state != AWAITING_CHOICE
+                or intake.pending_analysis is None
+                or (intake.hold_until is not None and intake.hold_until <= now)
+            ):
+                return None
+            payload = dict(intake.pending_analysis)
+            claimed = ClaimedIntake(
+                event_id=intake.event_id,
+                chat_id=intake.chat_id,
+                chat_binding_id=None,
+                binding_version=None,
+                external_user_id=intake.external_user_id,
+                text=intake.text,
+                occurred_at=intake.occurred_at,
+                channel=intake.channel,
+                house_id=intake.house_id,
+                user_id=intake.user_id,
+            )
+            # Второе нажатие не применит выбор повторно.
+            intake.state = "claimed"
+            intake.claimed_at = now
+            intake.claimed_by = "bot.choice"
+            intake.pending_analysis = None
+            intake.hold_until = None
+        return claimed, payload
+
+    @staticmethod
+    async def _forget(session: AsyncSession, event_id: str) -> None:
+        """Стереть слова жителя из записи приёма: текст не нужен и не хранится."""
+        await session.execute(
+            update(ExplicitIntake)
+            .where(ExplicitIntake.event_id == event_id)
+            .values(text="", clean_description=None, pending_analysis=None, hold_until=None)
+        )
+
     async def _record(self, event_id: str, analysis: WindowAnalysis) -> None:
         """Провенанс разбора в записи приёма: без текста, для любого исхода."""
         async with self.sessions() as session, session.begin():
@@ -539,19 +817,33 @@ class ExplicitReportService:
             )
 
     async def _context(self, intake: ClaimedIntake) -> tuple[UUID, UUID, str | None] | None:
-        """Кто автор и к какому дому относится чат. Блокировки здесь не держим."""
+        """Кто автор и к какому дому относится чат. Блокировки здесь не держим.
+
+        Житель — участник чата (D1): автора без действующего членства бот
+        проверяет точечным вызовом MAX API по этому чату. Сама реплика доступа
+        не даёт.
+        """
         async with self.sessions() as session, session.begin():
-            actor = await AccessRepository(session).user_by_max_id(intake.external_user_id)
+            actor: User | None
+            if self.resident_access is not None:
+                actor = await ensure_max_user(session, intake.external_user_id, None)
+            else:
+                actor = await AccessRepository(session).user_by_max_id(intake.external_user_id)
             if actor is None:
                 return None  # Автор не найден среди жителей: выходим без действий.
-            context = await self._resolve(session, actor_id=actor.id, intake=intake)
+            actor_id = actor.id
+        if self.resident_access is not None:
+            await self.resident_access.refresh(actor_id, chat_ids=(intake.chat_id,))
+        async with self.sessions() as session, session.begin():
+            context = await self._resolve(session, actor_id=actor_id, intake=intake)
             if context is None:
                 return None
-            return actor.id, context.house_id, context.entrance
+            return actor_id, context.house_id, context.entrance
 
     async def _resolve(
         self, session: AsyncSession, *, actor_id: UUID, intake: ClaimedIntake
     ) -> OperationContext | None:
+        assert intake.chat_binding_id is not None and intake.binding_version is not None
         try:
             return await self.chat_connections.resolve_context(
                 session,
@@ -568,7 +860,7 @@ class ExplicitReportService:
         self, intake: ClaimedIntake, *, entrance: str | None, use_model: bool
     ) -> WindowAnalysis:
         window = WindowInput(
-            channel="group_report",
+            channel="dm_report" if intake.channel == "dm_report" else "group_report",
             lines=(
                 WindowLine(
                     line_id=LINE_ID,
@@ -584,8 +876,12 @@ class ExplicitReportService:
         if self.budget is None:
             return await self.analyzer.analyze(window)
         # Единица бюджета списывается до обращения к провайдеру; исчерпанный
-        # бюджет даёт `fallback_budget` и результат правил без вызова.
-        async with self.budget.reserve(str(intake.chat_binding_id)):
+        # бюджет даёт `fallback_budget` и результат правил без вызова. Личка
+        # делит дневной бюджет по жителю, как группа — по чату.
+        scope = (
+            f"dm:{intake.user_id}" if intake.channel == "dm_report" else str(intake.chat_binding_id)
+        )
+        async with self.budget.reserve(scope):
             return await self.analyzer.analyze(window)
 
     # --------------------------------------------------------------- решение
@@ -677,7 +973,20 @@ class ExplicitReportService:
             source="explicit",
             danger_kinds=danger,
         )
-        if origin.card_dedupe_ref and self._needs_card(db_decision, danger):
+        if origin.card_dedupe_ref and (
+            origin.always_card or self._needs_card(db_decision, danger)
+        ):
+            next_step = None
+            if db_decision == "needs_clarification":
+                next_step = DISPATCHER_REVIEW_NOTE
+            elif db_decision == "ticket" and origin.always_card and report is not None:
+                next_step = (
+                    TICKET_QUEUED_NOTE
+                    if await session.scalar(
+                        select(Ticket.id).where(Ticket.incident_id == report.incident.id)
+                    )
+                    else BOARD_NOTE
+                )
             await self._enqueue_card(
                 session,
                 origin,
@@ -686,7 +995,7 @@ class ExplicitReportService:
                 house_id=context.house_id,
                 recipient_user_id=context.actor_user_id,
                 danger_kinds=danger,
-                next_step=DISPATCHER_REVIEW_NOTE if db_decision == "needs_clarification" else None,
+                next_step=next_step,
             )
         return ExplicitOutcome(
             result_kind=result_kind,
@@ -785,6 +1094,22 @@ class ExplicitReportService:
             payload=intent.model_dump(mode="json"),
             dedupe_key=f"route_card:{origin.card_dedupe_ref}",
         )
+
+
+def looks_like_no_problem(analysis: WindowAnalysis, decision: ExplicitReportDecision) -> bool:
+    """Разбор отнёс реплику к болтовне, вопросу или объявлению — не проблема.
+
+    Правило продукта над типизированным результатом: любая опасность или
+    сигнал в Inbox — это проблема; иначе решает роль реплики.
+    """
+    if decision.emergency.kinds or analysis.semantic_danger:
+        return False
+    if any(not hit.negated for hit in analysis.danger_hits):
+        return False
+    if any(signal.disposition == "inbox" for signal in analysis.signals):
+        return False
+    roles = {line.role for line in analysis.lines if line.line_id == LINE_ID}
+    return bool(roles) and roles <= NOT_A_PROBLEM_ROLES
 
 
 def _form_window(text: str, sent_at: datetime, *, entrance: str | None) -> WindowInput:
@@ -924,4 +1249,5 @@ __all__ = [
     "analysis_provenance",
     "guarded_clean_description",
     "intake_provenance",
+    "looks_like_no_problem",
 ]

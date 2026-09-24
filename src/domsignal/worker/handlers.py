@@ -20,7 +20,9 @@ from domsignal.services.explicit_reports import ExplicitReportService
 from domsignal.services.notifications import TicketNotificationHandler
 from domsignal.services.passive_analysis import PassiveWindowAnalysis
 from domsignal.services.passive_capture import PassiveCaptureService
+from domsignal.services.personal_bot import PersonalBotService
 from domsignal.services.reports import ReportService
+from domsignal.services.resident_access import ResidentAccessService, ensure_max_user
 
 JobHandler = Callable[[dict[str, Any]], Awaitable[None]]
 
@@ -37,6 +39,8 @@ class WorkerHandlers:
         explicit_reports: ExplicitReportService | None = None,
         passive: PassiveCaptureService | None = None,
         passive_analysis: PassiveWindowAnalysis | None = None,
+        personal_bot: PersonalBotService | None = None,
+        resident_access: ResidentAccessService | None = None,
     ) -> None:
         self.session_factory = session_factory
         self.report_service = report_service
@@ -46,6 +50,8 @@ class WorkerHandlers:
         self.explicit_reports = explicit_reports
         self.passive = passive
         self.passive_analysis = passive_analysis
+        self.personal_bot = personal_bot
+        self.resident_access = resident_access
 
     @property
     def mapping(self) -> dict[str, JobHandler]:
@@ -74,6 +80,11 @@ class WorkerHandlers:
             handlers["ai.window.analyze"] = self.passive_analysis.analyze_window
             # Сторож правил — в операционном пуле, как `report.fallback`.
             handlers["chat.window.fallback"] = self.passive_analysis.analyze_with_rules
+        if self.personal_bot:
+            # Личный бот (B-04): ответы, кнопки и срок ожидания — операционный пул.
+            handlers["bot.dm"] = self.personal_bot.handle_dm
+            handlers["bot.callback"] = self.personal_bot.handle_callback
+            handlers["bot.hold.expire"] = self.personal_bot.expire_hold
         return handlers
 
     async def verify_connection(self, payload: dict[str, Any]) -> None:
@@ -102,6 +113,12 @@ class WorkerHandlers:
         # Permission freshness is checked before each actual group side effect.
         async with self.session_factory() as session, session.begin():
             await self.chat_connections.verify_binding_health(session, event.chat_binding_id)
+        if self.resident_access is not None:
+            # Житель — участник чата (D1): автора проверяют по MAX API в этом чате.
+            async with self.session_factory() as session, session.begin():
+                user = await ensure_max_user(session, event.external_user_id, None)
+                user_id = user.id
+            await self.resident_access.refresh(user_id, chat_ids=(event.chat_id,))
         async with self.session_factory() as session, session.begin():
             actor = await AccessRepository(session).user_by_max_id(event.external_user_id)
             if actor is None:

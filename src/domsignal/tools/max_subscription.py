@@ -13,6 +13,8 @@ from pydantic import BaseModel, ConfigDict, StrictBool, ValidationError
 
 from domsignal.settings import AppEnvironment, MaxTransportMode, Settings, get_settings
 
+#: `user_added`/`user_removed` — участники домового чата (D1,
+#: RESIDENT-BY-CHAT-2026-09-25): вступление даёт членство, выход его завершает.
 EXPECTED_UPDATE_TYPES = (
     "bot_started",
     "bot_stopped",
@@ -20,6 +22,8 @@ EXPECTED_UPDATE_TYPES = (
     "bot_removed",
     "message_created",
     "message_callback",
+    "user_added",
+    "user_removed",
 )
 
 

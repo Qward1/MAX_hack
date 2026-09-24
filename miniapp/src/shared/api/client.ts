@@ -28,6 +28,7 @@ export type ReportSubmitted = components["schemas"]["ReportSubmitted"];
 export type DuplicateCandidate = components["schemas"]["DuplicateCandidate"];
 export type AppealDraftView = components["schemas"]["AppealDraftView"];
 export type AppealDraftCreate = components["schemas"]["AppealDraftCreate"];
+export type OpenHouse = components["schemas"]["OpenHouse"];
 
 type Session = components["schemas"]["SessionResponse"];
 
@@ -50,6 +51,9 @@ export interface DomSignalApi extends ResidentTicketApi {
   capabilities(signal?: AbortSignal): Promise<Capabilities>;
   authenticate(capabilities: Capabilities, signal?: AbortSignal): Promise<void>;
   me(signal?: AbortSignal): Promise<Me>;
+  /** Дома с открытым доступом: их может выбрать любой вошедший через MAX. */
+  openHouses(signal?: AbortSignal): Promise<OpenHouse[]>;
+  joinOpenHouse(houseId: string): Promise<OpenHouse>;
   incidents(
     houseId: string,
     signal?: AbortSignal,
@@ -172,6 +176,20 @@ export class ApiClient implements DomSignalApi {
 
   me(signal?: AbortSignal): Promise<Me> {
     return this.request<Me>("/api/v1/me", { signal });
+  }
+
+  async openHouses(signal?: AbortSignal): Promise<OpenHouse[]> {
+    const list = await this.request<components["schemas"]["OpenHouseList"]>(
+      "/api/v1/open-houses", { signal },
+    );
+    return list.items;
+  }
+
+  joinOpenHouse(houseId: string): Promise<OpenHouse> {
+    return this.request<OpenHouse>(
+      `/api/v1/open-houses/${encodeURIComponent(houseId)}/join`,
+      { method: "POST", body: "{}" },
+    );
   }
 
   incidents(

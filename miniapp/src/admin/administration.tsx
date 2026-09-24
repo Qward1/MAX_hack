@@ -73,6 +73,9 @@ export function History({ rows }: { rows: Schema["AuditView"][] }) {
     "house_request.needs_info": "Запрошены уточнения по дому", "house_request.approved": "Заявка на дом одобрена",
     "house_request.rejected": "Заявка на дом отклонена", "house_request.cancelled": "Заявка на дом отменена",
     "management.approved": "Управление домом подтверждено", "platform.bootstrapped": "Оператор платформы создан",
+    "house.open_access_enabled": "Открытый доступ к дому включён",
+    "house.open_access_disabled": "Открытый доступ к дому выключен",
+    "house.open_access_closed_by_platform": "Открытый доступ к дому закрыт платформой",
   };
   return <ol className="admin-history">{rows.map((r, i) => <li key={i}>
     <time>{new Date(r.occurred_at).toLocaleString("ru-RU")}</time> · {labels[r.event.replace(/^administration\./, "")] ?? "Административное действие"}

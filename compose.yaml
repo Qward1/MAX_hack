@@ -74,7 +74,10 @@ services:
     image: domsignal-backend:local
     pull_policy: never
     command: ["python", "-m", "domsignal.worker.main", "--pool", "operational"]
-    environment: *backend-environment
+    environment:
+      <<: *backend-environment
+      # `/version` личного бота отвечает из операционного пула (D1).
+      BUILD_COMMIT: ${BUILD_COMMIT:-dev}
     depends_on:
       db:
         condition: service_healthy

@@ -18,6 +18,19 @@ class HouseAccess(ContractModel):
     is_demo: bool
 
 
+class OpenHouse(ContractModel):
+    """Дом с открытым доступом: его может выбрать любой вошедший через MAX."""
+
+    id: UUID
+    name: str
+    address: str
+    joined: bool
+
+
+class OpenHouseList(ContractModel):
+    items: list[OpenHouse]
+
+
 class MeResponse(ContractModel):
     id: UUID
     display_name: str
@@ -42,6 +55,8 @@ class TestSessionRequest(ContractModel):
         # Синтетический оператор и админ очереди сигналов браузерного стенда P5.
         "p5-operator",
         "p5-admin",
+        # Житель без дома браузерного стенда D1 (создаёт `tests/browser/d1_fixture.py`).
+        "d1-guest",
     ] = "demo"
 
 

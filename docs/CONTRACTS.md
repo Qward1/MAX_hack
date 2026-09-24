@@ -423,7 +423,7 @@ emergency` (виды, источники, доказательства, пони
 псевдонимом и временем. `signal_lines` — роль реплики окна и её связь с
 сигналом, без текста. `signal_events` — события аудита окна и сигнала.
 
-### Голос бота в чате — ровно два сообщения
+### Голос бота в чате — ровно два сообщения (D1: плюс ответ на `/report`, см. срез D1)
 
 `MaxMessagingProvider.send_chat_message(chat_id, message)` — тот же
 документированный `POST /messages`, что и личное сообщение, но с `chat_id`
@@ -847,6 +847,131 @@ P6c: предварительный сигнал из реплики самог�
 УК первой линией, альтернатива «ресурсоснабжающая организация» (организация не
 называется); тип маршрута не меняется. Эталон маршрутов P6 — 75/76 с одним
 осознанным расхождением (`other.unspecified` в общем имуществе → УК).
+
+## Житель — участник чата, открытый доступ, личный бот — срез D1
+
+Решения: [RESIDENT-BY-CHAT-2026-09-25](decisions.md#resident-by-chat-2026-09-25),
+[OPEN-HOUSE-ACCESS-2026-09-25](decisions.md#open-house-access-2026-09-25). Всё —
+аддитивно: прежние DTO, пути и основания членства не меняются.
+
+### Основание членства
+
+`ResidentMembership.source`: прежние значения плюс `chat_member` и `open_access`.
+
+| Основание | Действует, пока | Появляется | Завершается |
+|---|---|---|---|
+| `chat_member` | активна привязка `chat_binding_id` той же `binding_version`, бот в чате, управление домом то же, `expires_at` (проверка + 24 ч) не прошёл | `user_added` в подключённом чате; ответ `GET /chats/{chatId}/members?user_ids=<id>` | `user_removed`, ответ «не участник» (`status=revoked`, `end_reason`), либо основание просто перестаёт действовать (приостановка, отзыв, `bot_removed`) |
+| `open_access` | у дома включён `open_resident_access` | «Присоединиться» в mini app или «Выбрать дом» в личке | выключение переключателя (`end_reason=open_access_closed`) |
+
+Действующая запись новых оснований одна на пару (частичные уникальные индексы),
+завершённые — история; прежние источники сохраняют «один житель — один дом».
+Проверка участия: кандидаты — чат из кнопки `c_…`, дома, где человек встречался
+(`user_added`, псевдоним автора, прежнее членство), все активные привязки при их
+числе ≤ `RESIDENT_CHECK_ALL_MAX_CHATS` (20). Не чаще одного вызова на пару
+«пользователь, чат» за `RESIDENT_CHECK_INTERVAL_SECONDS` (900), таблица
+`chat_member_checks`; ошибка MAX (`error`) — прежний результат до срока, нового
+доступа нет. Вызов идёт вне транзакций БД. Запоздавшее `user_added` не
+перебивает более новый ответ «не участник». Ссылка сама доступа не даёт.
+
+Когда проверяется: `POST /api/v1/auth/max` (с `start_param` подписанных
+`initData`), `GET /api/v1/me`, задачи личного бота, автор `/report` в группе.
+Сбой проверки не ломает вход и список домов.
+
+### Endpoints
+
+| Endpoint | Кто | Результат |
+|---|---|---|
+| `GET /api/v1/open-houses` | вошедший пользователь | `OpenHouseList{items: OpenHouse{id, name, address, joined}}` — дома с открытым доступом и действующим управлением |
+| `POST /api/v1/open-houses/{house_id}/join` | вошедший пользователь | `OpenHouse`; повтор идемпотентен; закрытый и несуществующий дом — одинаковый 404 |
+| `POST /api/v1/companies/{company_id}/houses/{house_id}/open-access` | администратор УК этого дома (cookie + CSRF) | тело `OpenAccessChange{enabled, confirm}`: включение без `confirm=true` — 422; ответ `OpenAccessView{house_id, open_resident_access, open_access_changed_at, ended_memberships}`; чужая УК/дом — 404, оператор — 403; аудит `administration.house.open_access_enabled/disabled` |
+| `GET /api/v1/platform/open-houses` | суперадмин | `PlatformOpenHouseView[]` (дом, УК, время изменения) |
+| `POST /api/v1/platform/houses/{house_id}/open-access/close` | суперадмин | `OpenAccessClose{reason}` → `OpenAccessView`; аудит `…open_access_closed_by_platform` с причиной |
+| `POST /api/v1/chat-bindings/{binding_id}/notice` | право `chat.connect` | `ChatNoticeView{binding_id, queued}` — «Отправить сообщение с кнопкой ещё раз»; не чаще раза в 10 минут на привязку (`queued=false`) |
+
+`CompanyHouseView` дополнен `open_resident_access`, `open_access_changed_at`;
+`TicketView.source` — значение `max_dm`; `TestSessionRequest.actor` — `d1-guest`
+(только вне production).
+
+### Подписка MAX
+
+`EXPECTED_UPDATE_TYPES` — прежние шесть плюс `user_added`, `user_removed` (тот же
+URL, замена guarded-утилитой `max_subscription replace`). У `user_added` и
+`user_removed` берётся участник (`user.user_id`), а не пригласивший; бот как
+участник доступа не получает; каналы не принимаются.
+
+### Личный бот
+
+* `bot_started` без payload или с payload, который не токен `connect_…`, и
+  `/start` — приветствие в 4 строки и кнопки «Открыть ДомСигнал» (`open_app`,
+  payload `home`) и, если у человека нет домов, а открытые есть, «Выбрать дом»
+  (`callback b:houses`). Поток подключения A-07 не меняется.
+* `/help`, `/version` (первые 7 знаков `BUILD_COMMIT`), неизвестная команда — справка.
+* Свободный текст и `/report …` в личке — запись приёма `explicit_intakes`
+  (`channel=dm_report`, `user_id`, дом выбирается после приёма). Один дом —
+  сразу в разбор (`ai.report.analyze` + сторож `report.fallback` через 30 с,
+  при опасности по правилам — сразу); несколько — кнопки с адресами
+  (`b:pick:<event_id>:<house_id>`), текст ждёт до 30 минут и стирается
+  (`bot.hold.expire`); нет домов — объяснение и «Выбрать дом», если открытые есть.
+  При опасности и ожидании выбора дома блок безопасности уходит первым.
+* Разбор — то же ядро (`Channel` = `dm_report`, аддитивно), тот же роутер и
+  `ActionCard`; `route_outcomes.source=dm_report`, `tickets.source=max_dm`. Карточка
+  уходит **при любом исходе**; в зоне УК следующий шаг — «Заявка появилась в
+  очереди вашей управляющей компании» (или «Проблема появилась на доске дома»,
+  если приём заявок у дома выключен).
+* Болтовня, вопрос, объявление без сигнала и без опасности — «Не похоже на
+  описание проблемы. Напишите, что случилось и где» + справка; текст стирается
+  (`result_kind=not_a_problem`).
+* Дубли: при открытой проблеме той же категории (уверенный разбор, без
+  опасности) — «Это та же проблема» (`b:same:<event_id>:<incident_id>`, семантика
+  join P3c) / «Другое» (`b:new:<event_id>`, сохранённый разбор без повторного
+  вызова модели). Закрытая за время выбора проблема разбирается как новая.
+* Предел — `BOT_DAILY_REPORT_LIMIT` (10) сообщений о проблемах за сутки на
+  человека; бюджет модели — общий дневной, доля по жителю (`dm:<user_id>`).
+* Ответы — outbox `bot.reply.v1` (ключ `bot:<вид>:<event_id>`) → доставка
+  `purpose=bot_reply` (`reply_event_id`), `launch_ref` `b_…`; ответ на нажатие —
+  `POST /answers`. Тексты — шаблоны `services/bot_replies.py` под общим
+  контрактным тестом запрещённых формулировок. В журналах — вид события и
+  действие, без текста и MAX id.
+
+Личная доставка (карточки, уведомления, ответы) — в проверенную личность
+(`initData`) **или** начатый диалог (`users.max_dialog_at`, `bot_started` или
+сообщение боту; `bot_stopped` закрывает). Автору `/report` в группе без диалога
+бот один раз отвечает в группе (`purpose=chat_report_ack`): «Принято. Подробности
+пришлю в личные сообщения — откройте диалог с ботом» и ссылка на бота, не чаще
+раза в 10 минут на автора (`users.group_ack_at`). После `bot_started` досылается
+последняя недоставленная карточка не старше 24 ч (через 3 с после приветствия).
+
+### Голос бота в чате
+
+Прежние два сообщения плюс ответ на `/report` выше. Сообщение о чтении чата
+несёт кнопку «Открыть ДомСигнал» (`open_app`, payload — `launch_ref` этой
+доставки `c_…`) и говорит, что бот пишет в чат редко: это сообщение, памятка
+безопасности и короткий ответ на `/report`. Повтор из кабинета без чтения
+переписки — сообщение о подключении (`chat_connection_notice`) без утверждения,
+что бот читает чат. Требование включённого чтения при отправке — только у
+сообщения о чтении и памятки.
+
+### Mini app
+
+Ссылки запуска разрешаются только `w_`/`r_`; `c_…` учитывается сервером при
+входе, прочее игнорируется. Пустое состояние — «Откройте ДомСигнал кнопкой из
+вашего домового чата» и список открытых домов с «Присоединиться»; ошибки — 403
+«Доступ закрыт или ещё не подтверждён…» с «К выбору дома», 404 при выборе дома
+«Этот дом больше нельзя выбрать», 429/503 — своими словами.
+
+### Миграция `20260925_0011`
+
+Аддитивная: `houses.open_resident_access/open_access_changed_at/by`,
+`users.max_dialog_at/max_dialog_stopped_at/group_ack_at`, столбцы основания в
+`resident_memberships` (+ CHECK `chat_basis`, `end_reason`, `ended`, частичные
+уникальные индексы вместо `uq_resident_user_house`), таблица
+`chat_member_checks`, `explicit_intakes.channel/house_id/user_id/hold_until/
+pending_analysis` (привязка у `dm_report` пуста), состояния `awaiting_house`,
+`awaiting_choice`, результаты `not_a_problem`, `expired`, `joined`,
+`route_outcomes.source=dm_report`, доставки `bot_reply`, `chat_connection_notice`,
+`chat_report_ack` и `notification_deliveries.reply_event_id`. Откат отказывает,
+если есть данные новых оснований, лички или новых доставок (восстановление из
+резервной копии), иначе обратим.
 
 ## A-10 employee web-auth contract — 19.09.2026 branch slice
 

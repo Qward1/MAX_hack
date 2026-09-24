@@ -16,14 +16,26 @@ from domsignal.db.base import Base
 from domsignal.db.models.access import Timestamps
 
 #: Назначения доставки в групповой чат: получатель — чат, а не человек.
-CHAT_PURPOSES = ("chat_reading_notice", "chat_safety_memo")
+CHAT_PURPOSES = (
+    "chat_reading_notice",
+    "chat_safety_memo",
+    "chat_connection_notice",
+    "chat_report_ack",
+)
 
 #: Оповещение оператора о критическом сигнале.
 SIGNAL_ALERT_PURPOSE = "signal_alert"
 
+#: Ответ личного бота на событие жителя (D1).
+BOT_REPLY_PURPOSE = "bot_reply"
+
 PURPOSE_CHECK = (
     "purpose IN ('ticket_accepted','work_verification','route_action_card',"
-    "'signal_alert','chat_reading_notice','chat_safety_memo')"
+    "'signal_alert','chat_reading_notice','chat_safety_memo',"
+    "'chat_connection_notice','chat_report_ack','bot_reply')"
+)
+_CHAT_IN = (
+    "('chat_reading_notice','chat_safety_memo','chat_connection_notice','chat_report_ack')"
 )
 
 
@@ -44,7 +56,8 @@ class NotificationDelivery(Timestamps, Base):
         # или привязка чата. Внешний маршрут заявку не создаёт, сообщение в чат
         # относится к привязке, оповещение оператора — к сигналу.
         CheckConstraint(
-            "num_nonnulls(ticket_id, route_outcome_id, signal_id, chat_binding_id) = 1",
+            "num_nonnulls(ticket_id, route_outcome_id, signal_id, chat_binding_id, "
+            "reply_event_id) = 1",
             name="subject",
         ),
         CheckConstraint(
@@ -56,15 +69,19 @@ class NotificationDelivery(Timestamps, Base):
             name="signal_alert_subject",
         ),
         CheckConstraint(
-            "purpose NOT IN ('chat_reading_notice','chat_safety_memo') "
+            f"purpose NOT IN {_CHAT_IN} "
             "OR (chat_binding_id IS NOT NULL AND recipient_user_id IS NULL)",
             name="chat_subject",
+        ),
+        CheckConstraint(
+            "purpose <> 'bot_reply' OR (reply_event_id IS NOT NULL "
+            "AND recipient_user_id IS NOT NULL)",
+            name="bot_reply_subject",
         ),
         # Без получателя — только сообщение в чат или оповещение, которому
         # честно некого оповестить (`skipped` с причиной).
         CheckConstraint(
-            "recipient_user_id IS NOT NULL "
-            "OR purpose IN ('chat_reading_notice','chat_safety_memo') "
+            f"recipient_user_id IS NOT NULL OR purpose IN {_CHAT_IN} "
             "OR (purpose = 'signal_alert' AND status = 'skipped')",
             name="recipient",
         ),
@@ -93,6 +110,8 @@ class NotificationDelivery(Timestamps, Base):
         ForeignKey("chat_bindings.id"), index=True
     )
     work_attempt_id: Mapped[UUID | None] = mapped_column(ForeignKey("work_attempts.id"))
+    # Входящее событие, на которое отвечает личный бот (D1).
+    reply_event_id: Mapped[str | None] = mapped_column(String(200))
     launch_ref: Mapped[str] = mapped_column(String(64), unique=True)
     destination: Mapped[str | None] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(30), default="pending")

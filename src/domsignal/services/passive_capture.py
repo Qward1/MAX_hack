@@ -51,9 +51,11 @@ from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.services.chat_connections import ChatConnectionError, ChatConnectionService
 from domsignal.services.chat_voice import (
     CHAT_MESSAGE_INTENT_KIND,
+    CONNECTION_NOTICE_PURPOSE,
     READING_NOTICE_PURPOSE,
     SAFETY_MEMO_PURPOSE,
     ChatMessageIntent,
+    connection_notice_text,
     reading_notice_text,
     safety_memo_text,
 )
@@ -71,6 +73,8 @@ TICK_PRIORITY = 40
 #: Сторож разбора окна — как `report.fallback` явного пути.
 FALLBACK_PRIORITY = 50
 PURGE_PRIORITY = 90
+#: Повтор сообщения с кнопкой из кабинета — не чаще раза за это время.
+RESEND_INTERVAL_SECONDS = 600
 #: Окно с опасностью разбирается раньше явного `/report` (30) и обычных окон.
 DANGER_WINDOW_PRIORITY = 20
 WINDOW_PRIORITY = 60
@@ -536,9 +540,15 @@ class PassiveCaptureService:
             notice_queued=notice,
         )
 
-    async def _notice(self, session: AsyncSession, binding: ChatBinding) -> bool:
-        """Сообщение о чтении чата: один раз на привязку и версию."""
-        dedupe = f"chat_notice:{binding.id}:{binding.binding_version}"
+    async def _notice(
+        self, session: AsyncSession, binding: ChatBinding, *, dedupe: str | None = None
+    ) -> bool:
+        """Сообщение о чтении чата: один раз на привязку и версию.
+
+        С кнопкой «Открыть ДомСигнал» (D1). Без пассивного чтения — сообщение
+        о подключении: бот не утверждает, что читает переписку.
+        """
+        dedupe = dedupe or f"chat_notice:{binding.id}:{binding.binding_version}"
         repo = PassiveRepository(session)
         if await repo.outbox_exists(dedupe):
             return False
@@ -547,11 +557,13 @@ class PassiveCaptureService:
             .join(HouseManagement, HouseManagement.tenant_id == ManagementCompany.id)
             .where(HouseManagement.id == binding.management_id)
         )
+        reading = binding.passive_capture_enabled
         intent = ChatMessageIntent(
-            purpose=READING_NOTICE_PURPOSE,
+            purpose=READING_NOTICE_PURPOSE if reading else CONNECTION_NOTICE_PURPOSE,
             chat_binding_id=binding.id,
             binding_version=binding.binding_version,
-            text=reading_notice_text(company),
+            text=reading_notice_text(company) if reading else connection_notice_text(company),
+            app_button=True,
         )
         ReliabilityRepository(session).add_outbox(
             kind=CHAT_MESSAGE_INTENT_KIND,
@@ -560,6 +572,35 @@ class PassiveCaptureService:
             dedupe_key=dedupe,
         )
         return True
+
+    async def resend_notice(
+        self, session: AsyncSession, *, binding_id: UUID, actor_id: UUID
+    ) -> bool:
+        """«Отправить сообщение с кнопкой ещё раз» для подключённого чата.
+
+        Право — как у подключения (`chat.connect`). Не чаще раза в 10 минут на
+        привязку: повтор в том же интервале ничего не отправляет.
+        """
+        repo = ChatRepository(session)
+        binding = await repo.binding(binding_id)
+        if binding is None:
+            raise ResourceNotFound("Resource was not found")
+        request = await self.connections.locked_request(session, binding.connection_request_id)
+        await self.connections.require_authority(session, request, actor_id)
+        binding = await repo.binding(binding_id)
+        assert binding is not None
+        if binding.status != "active":
+            raise ChatConnectionError("binding_not_active")
+        bucket = int(datetime.now(UTC).timestamp()) // RESEND_INTERVAL_SECONDS
+        queued = await self._notice(
+            session,
+            binding,
+            dedupe=f"chat_notice_again:{binding.id}:{binding.binding_version}:{bucket}",
+        )
+        if queued:
+            self.connections.audit(session, binding, "notice_resent")
+        await session.flush()
+        return queued
 
     # -------------------------------------------------------- срок хранения
 

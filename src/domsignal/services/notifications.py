@@ -39,15 +39,26 @@ from domsignal.db.models import (
     TicketEvent,
     User,
 )
-from domsignal.db.models.notifications import CHAT_PURPOSES, SIGNAL_ALERT_PURPOSE
+from domsignal.db.models.notifications import (
+    BOT_REPLY_PURPOSE,
+    CHAT_PURPOSES,
+    SIGNAL_ALERT_PURPOSE,
+)
 from domsignal.db.repositories.notifications import NotificationRepository
 from domsignal.db.repositories.passive import PassiveRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.db.repositories.tickets import TicketRepository
+from domsignal.services.bot_replies import (
+    BOT_REF_PREFIX,
+    BOT_REPLY_INTENT_KIND,
+    BotReplyIntent,
+    render_bot_reply,
+)
 from domsignal.services.chat_voice import (
     ALERT_REF_PREFIX,
     CHAT_MESSAGE_INTENT_KIND,
     CHAT_REF_PREFIX,
+    READING_PURPOSES,
     ChatMessageIntent,
     SignalAlertIntent,
     chat_message,
@@ -75,6 +86,11 @@ NO_RESIDENT_RECIPIENT = "NO_RESIDENT_RECIPIENT"
 
 #: Коды, при которых доставка пропускается, а не считается несостоявшейся.
 SKIPPED_CODES = frozenset({"NO_MAX_IDENTITY", NO_RESIDENT_RECIPIENT})
+
+#: Карточка не ушла, потому что диалога с ботом ещё не было: после
+#: `bot_started` её можно дослать (D1).
+REARMABLE_CODES = ("NO_MAX_IDENTITY", "MAX_FORBIDDEN", "MAX_NOT_FOUND", "MAX_REJECTED")
+REARM_DELAY = timedelta(seconds=3)
 
 
 @dataclass(frozen=True)
@@ -119,6 +135,8 @@ class TicketNotificationHandler:
             return await self._route_card_snapshot(session, delivery)
         if delivery.purpose == SIGNAL_ALERT_PURPOSE:
             return await self._signal_alert_snapshot(session, delivery)
+        if delivery.purpose == BOT_REPLY_PURPOSE:
+            return await self._bot_reply_snapshot(session, delivery)
         if delivery.purpose in CHAT_PURPOSES:
             return await self._chat_snapshot(session, delivery)
         return await self._ticket_snapshot(session, delivery)
@@ -244,7 +262,9 @@ class TicketNotificationHandler:
             or binding.id != intent.chat_binding_id
             or binding.status != "active"
             or binding.binding_version != intent.binding_version
-            or not binding.passive_capture_enabled
+            # Сообщение о чтении и памятка — только пока чат читается; ответ на
+            # `/report` и сообщение о подключении — пока привязка активна.
+            or (intent.purpose in READING_PURPOSES and not binding.passive_capture_enabled)
         ):
             raise ResourceNotFound("CHAT_BINDING_INACTIVE")
         chat = await session.scalar(
@@ -254,12 +274,17 @@ class TicketNotificationHandler:
         )
         if chat is None or not chat.bot_present:
             raise ResourceNotFound("CHAT_BINDING_INACTIVE")
-        return DeliverySnapshot(binding.max_chat_id, chat_message(intent))
+        return DeliverySnapshot(binding.max_chat_id, chat_message(intent, delivery.launch_ref))
 
     async def _identity(self, user: User, delivery: NotificationDelivery) -> str:
-        """Личная доставка возможна только в подтверждённую личность MAX."""
+        """Личная доставка возможна только в подтверждённую личность MAX.
+
+        Подтверждение — вход в mini app по подписанным `initData` или диалог с
+        ботом, начатый этим человеком (подписанный вебхук, D1): бот не может
+        написать первым тому, кто диалог не начинал.
+        """
         if (
-            not user.max_identity_verified_at
+            not (user.max_identity_verified_at or user.dialog_open)
             or not user.max_user_id
             or not re.fullmatch(r"[1-9]\d{0,18}", user.max_user_id)
             or int(user.max_user_id) > 2**63 - 1
@@ -268,6 +293,23 @@ class TicketNotificationHandler:
         if delivery.destination and user.max_user_id != delivery.destination:
             raise ResourceNotFound("MAX_IDENTITY_CHANGED")
         return user.max_user_id
+
+    async def _bot_reply_snapshot(
+        self,
+        session: AsyncSession,
+        delivery: NotificationDelivery,
+    ) -> DeliverySnapshot:
+        """Ответ личного бота: текст шаблона из outbox, получатель — автор события."""
+        user = await self._recipient(session, delivery)
+        outbox = await session.get(OutboxMessage, delivery.outbox_message_id)
+        if outbox is None:
+            raise ResourceNotFound("INVALID_INTENT")
+        try:
+            intent = BotReplyIntent.model_validate(outbox.payload)
+        except ValidationError as exc:
+            raise ResourceNotFound("INVALID_INTENT") from exc
+        destination = await self._identity(user, delivery)
+        return DeliverySnapshot(destination, render_bot_reply(intent))
 
     async def _route_card_snapshot(
         self,
@@ -490,6 +532,73 @@ class TicketNotificationHandler:
                     self._stop(delivery, code, datetime.now(UTC))
             outbox.status = "processed"
             await session.flush()
+        return True
+
+    async def consume_bot_replies_once(self) -> bool:
+        """Ответ личного бота из outbox → одна адресная доставка."""
+        async with self.sessions() as session, session.begin():
+            repo = NotificationRepository(session)
+            outbox = await repo.intent(BOT_REPLY_INTENT_KIND)
+            if outbox is None:
+                return False
+            try:
+                intent = BotReplyIntent.model_validate(outbox.payload)
+            except ValidationError:
+                outbox.status, outbox.last_error = "processed", "INVALID_INTENT"
+                return True
+            if not await repo.by_outbox(outbox.id):
+                delivery = NotificationDelivery(
+                    id=uuid4(),
+                    outbox_message_id=outbox.id,
+                    recipient_user_id=intent.recipient_user_id,
+                    channel="max",
+                    purpose=BOT_REPLY_PURPOSE,
+                    reply_event_id=intent.reply_event_id,
+                    launch_ref=BOT_REF_PREFIX + secrets.token_urlsafe(24),
+                    status="pending",
+                    desired_version=0,
+                )
+                session.add(delivery)
+                try:
+                    snapshot = await self._snapshot(session, delivery)
+                    delivery.destination = snapshot.destination
+                except (AccessDenied, ResourceNotFound) as exc:
+                    self._stop(delivery, str(exc) or "NO_MAX_IDENTITY", datetime.now(UTC))
+            outbox.status = "processed"
+            await session.flush()
+        return True
+
+    @staticmethod
+    async def rearm_route_card(session: AsyncSession, *, user_id: UUID, now: datetime) -> bool:
+        """После `bot_started` дослать последнюю недоставленную карточку ≤ 24 ч.
+
+        Карточка по `/report` из группы не уходила, пока человек не начал
+        диалог с ботом (`NO_MAX_IDENTITY` или отказ MAX). Доставка та же: доступ
+        к дому перепроверяется при отправке.
+        """
+        delivery = await session.scalar(
+            select(NotificationDelivery)
+            .where(
+                NotificationDelivery.recipient_user_id == user_id,
+                NotificationDelivery.purpose == ROUTE_CARD_PURPOSE,
+                NotificationDelivery.status.in_(["skipped", "failed"]),
+                NotificationDelivery.last_error_code.in_(REARMABLE_CODES),
+                NotificationDelivery.provider_message_id.is_(None),
+                NotificationDelivery.created_at > now - timedelta(hours=24),
+            )
+            .order_by(NotificationDelivery.created_at.desc())
+            .limit(1)
+            .with_for_update()
+        )
+        if delivery is None:
+            return False
+        delivery.status = "pending"
+        delivery.destination = None
+        # Сначала приветствие, потом досланная карточка.
+        delivery.next_attempt_at = now + REARM_DELAY
+        delivery.retry_count = 0
+        delivery.last_error_code = None
+        delivery.last_error_at = None
         return True
 
     async def consume_chat_messages_once(self) -> bool:

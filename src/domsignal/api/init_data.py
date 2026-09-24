@@ -38,6 +38,19 @@ class MaxUserData(BaseModel):
         return " ".join(part for part in [self.first_name, self.last_name] if part)
 
 
+def start_param_of(raw: str) -> str | None:
+    """`start_param` уже проверенных `initData`. Доступа он сам не даёт.
+
+    Вызывается только после `validate_init_data`: параметр входит в подпись.
+    """
+    try:
+        values = dict(parse_qsl(raw, keep_blank_values=True, strict_parsing=True))
+    except ValueError:
+        return None
+    value = values.get("start_param")
+    return value if value and len(value) <= 512 else None
+
+
 def validate_init_data(
     raw: str,
     *,

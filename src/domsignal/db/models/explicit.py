@@ -38,11 +38,31 @@ from sqlalchemy.orm import Mapped, mapped_column
 from domsignal.db.base import Base
 from domsignal.db.models.access import Timestamps
 
-#: Состояния записи приёма явного пути.
-INTAKE_STATES = ("pending", "claimed", "done", "failed")
+#: Состояния записи приёма явного пути. `awaiting_house` — сообщение в
+#: личке ждёт выбора дома, `awaiting_choice` — разобранное сообщение ждёт
+#: ответа жителя «та же проблема / другое».
+INTAKE_STATES = (
+    "pending",
+    "claimed",
+    "done",
+    "failed",
+    "awaiting_house",
+    "awaiting_choice",
+)
 
 #: Чем закончился разбор одной реплики.
-INTAKE_RESULT_KINDS = ("ticket", "external_route", "needs_clarification", "ignored")
+INTAKE_RESULT_KINDS = (
+    "ticket",
+    "external_route",
+    "needs_clarification",
+    "ignored",
+    "not_a_problem",
+    "expired",
+    "joined",
+)
+
+#: Откуда реплика: `/report` в домовом чате или сообщение в личке бота.
+INTAKE_CHANNELS = ("group_report", "dm_report")
 
 #: Решение маршрутизации, сохранённое для метрик и карточки жителя.
 ROUTE_DECISIONS = ("ticket", "external", "needs_clarification")
@@ -58,25 +78,50 @@ class ExplicitIntake(Base):
     __tablename__ = "explicit_intakes"
     __table_args__ = (
         CheckConstraint(
-            "state IN ('pending', 'claimed', 'done', 'failed')",
+            "state IN ('pending', 'claimed', 'done', 'failed', 'awaiting_house', "
+            "'awaiting_choice')",
             name="state",
         ),
         CheckConstraint(
             "result_kind IS NULL OR result_kind IN "
-            "('ticket', 'external_route', 'needs_clarification', 'ignored')",
+            "('ticket', 'external_route', 'needs_clarification', 'ignored', "
+            "'not_a_problem', 'expired', 'joined')",
             name="result_kind",
         ),
         CheckConstraint(
-            "(state = 'pending') = (claimed_at IS NULL)",
+            "(state IN ('pending', 'awaiting_house')) = (claimed_at IS NULL)",
             name="claimed_at",
         ),
+        CheckConstraint("channel IN ('group_report','dm_report')", name="channel"),
+        CheckConstraint(
+            "(channel = 'group_report' AND chat_binding_id IS NOT NULL "
+            "AND binding_version IS NOT NULL) OR "
+            "(channel = 'dm_report' AND chat_binding_id IS NULL AND user_id IS NOT NULL)",
+            name="origin",
+        ),
         Index("ix_explicit_intakes_state", "state"),
+        Index("ix_explicit_intakes_user_created", "user_id", "created_at"),
     )
 
     event_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    #: `/report` в домовом чате или сообщение в личке бота (D1).
+    channel: Mapped[str] = mapped_column(
+        String(20), default="group_report", server_default="group_report"
+    )
     chat_id: Mapped[str] = mapped_column(String(200), index=True)
-    chat_binding_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("chat_bindings.id"))
-    binding_version: Mapped[int] = mapped_column(Integer)
+    #: Привязка чата — только у `/report` в группе; у лички её нет.
+    chat_binding_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("chat_bindings.id"))
+    binding_version: Mapped[int | None] = mapped_column(Integer)
+    #: Дом сообщения из лички: выбирается после приёма (один дом — сразу).
+    house_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("houses.id", ondelete="CASCADE")
+    )
+    #: Автор сообщения из лички.
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    #: До какого момента текст ждёт выбора жителя; потом стирается.
+    hold_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: Разбор, ждущий ответа «та же проблема / другое». Стирается после ответа.
+    pending_analysis: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     external_user_id: Mapped[str] = mapped_column(String(200))
     # Текст реплики нужен для разбора и для черновика; он живёт здесь, а не в
     # `inbox_receipts`, который умышленно не хранит содержимое сообщений.
@@ -112,7 +157,9 @@ class RouteOutcome(Base):
 
     __tablename__ = "route_outcomes"
     __table_args__ = (
-        CheckConstraint("source IN ('group_report', 'form', 'passive')", name="source"),
+        CheckConstraint(
+            "source IN ('group_report', 'form', 'passive', 'dm_report')", name="source"
+        ),
         CheckConstraint(
             "decision IN ('ticket', 'external', 'needs_clarification')",
             name="decision",

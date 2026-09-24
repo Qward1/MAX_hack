@@ -74,6 +74,15 @@ class _Lifecycle(_Update):
     payload: str | None = Field(default=None, max_length=512)
 
 
+#: События жизненного цикла: бот в чате/диалоге и участники чата (D1).
+LIFECYCLE_KINDS = frozenset(
+    {"bot_started", "bot_stopped", "bot_added", "bot_removed", "user_added", "user_removed"}
+)
+
+#: Нажатие кнопки личного бота: `b:<действие>[:<аргумент>[:<аргумент>]]`.
+BOT_CALLBACK = re.compile(r"b:([a-z_]{1,20})(?::([A-Za-z0-9_.:-]{1,300}))?")
+
+
 class _Created(_Update):
     message: _Message
 
@@ -91,6 +100,17 @@ class _CallbackUpdate(_Update):
 
 
 @dataclass(frozen=True)
+class BotCallback:
+    """Нажатие кнопки личного бота в диалоге. Права проверяет обработчик."""
+
+    callback_id: str
+    actor: str
+    message_id: str
+    action: str
+    argument: str | None
+
+
+@dataclass(frozen=True)
 class MaxEvent:
     event_id: str
     kind: str
@@ -105,6 +125,13 @@ class MaxEvent:
     # Идентичность события по-прежнему считается от `mid` выше.
     mid: str | None = None
     reply_to_mid: str | None = None
+    #: `chat` — групповой чат, `dialog` — личка бота (D1).
+    chat_type: str | None = None
+    bot_callback: BotCallback | None = None
+
+    @property
+    def in_dialog(self) -> bool:
+        return self.chat_type == "dialog"
 
 
 def parse_update(payload: dict[str, Any]) -> MaxEvent:
@@ -114,14 +141,18 @@ def parse_update(payload: dict[str, Any]) -> MaxEvent:
         if header.timestamp <= 0 or at > datetime.now(UTC) + timedelta(seconds=30):
             raise ValueError("Invalid timestamp")
         identity: list[str | int | bool] = [header.update_type, header.timestamp]
-        if header.update_type in {"bot_started", "bot_added", "bot_removed"}:
+        if header.update_type in LIFECYCLE_KINDS:
             event = _Lifecycle.model_validate(payload)
             identity.extend([event.chat_id, event.user.user_id, event.is_channel])
             if event.payload:
                 identity.append(hashlib.sha256(event.payload.encode()).hexdigest())
             fields: dict[str, Any] = dict(
                 chat_id=str(event.chat_id),
-                actor=str(event.user.user_id),
+                # У `user_added`/`user_removed` это участник, которого
+                # добавили или который вышел; бот сам себя здесь не видит.
+                actor=None
+                if header.update_type in {"user_added", "user_removed"} and event.user.is_bot
+                else str(event.user.user_id),
                 is_channel=event.is_channel,
                 token=event.payload if event.update_type == "bot_started" else None,
             )
@@ -137,14 +168,16 @@ def parse_update(payload: dict[str, Any]) -> MaxEvent:
             fields = dict(
                 chat_id=str(message.recipient.chat_id),
                 actor=str(message.sender.user_id) if message.sender else None,
+                # Текст — только у человека в группе или в личке бота.
                 text=message.body.text
                 if message.body
                 and message.sender
-                and message.recipient.chat_type == "chat"
+                and message.recipient.chat_type in {"chat", "dialog"}
                 and not message.sender.is_bot
                 else None,
                 mid=message.body.mid if message.body else None,
                 reply_to_mid=_reply_to_mid(message.link),
+                chat_type=message.recipient.chat_type,
             )
         elif header.update_type == "message_callback":
             value = _CallbackUpdate.model_validate(payload)
@@ -155,6 +188,25 @@ def parse_update(payload: dict[str, Any]) -> MaxEvent:
                 r"(w_[A-Za-z0-9_-]{32}):(resolved|unresolved)", callback.payload or ""
             )
             callback_message = value.message
+            bot = BOT_CALLBACK.fullmatch(callback.payload or "")
+            if (
+                bot
+                and not callback.user.is_bot
+                and callback_message
+                and callback_message.body
+                and callback_message.recipient.chat_type == "dialog"
+            ):
+                fields = dict(
+                    actor=str(callback.user.user_id),
+                    chat_type="dialog",
+                    bot_callback=BotCallback(
+                        callback_id=callback.callback_id,
+                        actor=str(callback.user.user_id),
+                        message_id=callback_message.body.mid,
+                        action=bot[1],
+                        argument=bot[2],
+                    ),
+                )
             if (
                 match
                 and not callback.user.is_bot

@@ -12,6 +12,8 @@ class FakeMaxChatProvider:
     admins: dict[str, tuple[ChatMember, ...]] = field(default_factory=dict)
     failures: dict[str, str] = field(default_factory=dict)
     calls: list[tuple[str, str]] = field(default_factory=list)
+    # Участники чатов по MAX id: точечная проверка RESIDENT-BY-CHAT.
+    members: dict[str, set[str]] = field(default_factory=dict)
 
     def configure(self, chat_id: str, *, connector: str = "101") -> None:
         self.chats[chat_id] = ChatInfo(chat_id, "chat", "Synthetic chat", True)
@@ -41,3 +43,7 @@ class FakeMaxChatProvider:
     async def get_chat_admins(self, chat_id: str) -> tuple[ChatMember, ...]:
         self.check(chat_id, "admins")
         return self.admins[chat_id]
+
+    async def is_chat_member(self, chat_id: str, user_id: str) -> bool:
+        self.check(chat_id, "members")
+        return user_id in self.members.get(chat_id, set())

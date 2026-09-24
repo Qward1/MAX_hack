@@ -1,4 +1,8 @@
-"""Group intake: explicit `/report` and passive capture. No participant sync or grants.
+"""MAX webhook intake: group `/report`, passive capture, membership events, personal bot.
+
+No bulk participant sync. Membership grants come only from `user_added` in a
+chat with an active binding or from a point check of the MAX API
+(RESIDENT-BY-CHAT-2026-09-25); `bot_added` and links grant nothing.
 
 Две формы одной команды. `/report <код категории> <текст>` — прежний ручной
 путь без разбора. `/report <свободный текст>` — запись приёма плюс две задачи:
@@ -11,7 +15,10 @@
 Команды в буфер не попадают: у них свой путь.
 """
 
+from __future__ import annotations
+
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +31,10 @@ from domsignal.db.repositories.chat_connections import ChatRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.services.chat_connections import ChatConnectionService
 from domsignal.services.passive_capture import PassiveCaptureService
+
+if TYPE_CHECKING:
+    from domsignal.services.personal_bot import PersonalBotService
+    from domsignal.services.resident_access import ResidentAccessService
 
 REPORT_COMMAND = "/report "
 
@@ -66,9 +77,13 @@ class MaxWebhookService:
         self,
         connections: ChatConnectionService,
         passive: PassiveCaptureService | None = None,
+        resident_access: ResidentAccessService | None = None,
+        bot: PersonalBotService | None = None,
     ) -> None:
         self.connections = connections
         self.passive = passive
+        self.resident_access = resident_access
+        self.bot = bot
 
     async def accept(self, session: AsyncSession, event: MaxEvent) -> InboundAccepted:
         async with session.begin():
@@ -94,10 +109,55 @@ class MaxWebhookService:
                     priority=20,
                 )
                 job_id = job.id
-            elif event.kind == "bot_started" and event.token and event.actor:
-                await self.connections.claim(
-                    session, token=event.token, connector=event.actor, occurred_at=event.occurred_at
+            elif event.kind == "message_callback" and event.bot_callback and self.bot:
+                job_id = await self.bot.on_callback(session, event)
+            elif event.kind == "bot_started" and event.actor:
+                if event.token:
+                    await self.connections.claim(
+                        session,
+                        token=event.token,
+                        connector=event.actor,
+                        occurred_at=event.occurred_at,
+                    )
+                if self.bot:
+                    job_id = await self.bot.on_started(session, event)
+            elif event.kind == "bot_stopped" and self.bot:
+                await self.bot.on_stopped(session, event)
+            elif (
+                event.kind == "user_added"
+                and event.chat_id
+                and event.actor
+                and self.resident_access
+                and not event.is_channel
+            ):
+                await self.resident_access.user_added(
+                    session,
+                    chat_id=event.chat_id,
+                    max_user_id=event.actor,
+                    display_name=None,
+                    occurred_at=event.occurred_at,
                 )
+            elif (
+                event.kind == "user_removed"
+                and event.chat_id
+                and event.actor
+                and self.resident_access
+            ):
+                await self.resident_access.user_removed(
+                    session,
+                    chat_id=event.chat_id,
+                    max_user_id=event.actor,
+                    occurred_at=event.occurred_at,
+                )
+            elif (
+                event.kind == "message_created"
+                and event.in_dialog
+                and event.chat_id
+                and event.actor
+                and self.bot
+            ):
+                # Личка бота: команды и сообщения о проблемах (B-04).
+                job_id = await self.bot.on_dialog_message(session, event)
             elif event.kind == "bot_added" and event.chat_id and event.actor:
                 await self.connections.bot_added(
                     session,
@@ -112,6 +172,7 @@ class MaxWebhookService:
                 )
             elif (
                 event.kind == "message_created"
+                and event.chat_type == "chat"
                 and event.chat_id
                 and event.actor
                 and event.text
@@ -172,7 +233,20 @@ class MaxWebhookService:
                         job_id = analyze.id
                     # Свободный текст короче минимума не создаёт ни записи,
                     # ни задач: команда неполная, как и раньше.
-            if event.kind == "message_created" and self.passive is not None:
+                    if self.bot and (by_code or free_text is not None):
+                        # Бот не пишет первым: автору без диалога — ответ в группе.
+                        await self.bot.on_group_report(
+                            session,
+                            binding=binding,
+                            actor=event.actor,
+                            event_id=event.event_id,
+                            occurred_at=event.occurred_at,
+                        )
+            if (
+                event.kind == "message_created"
+                and event.chat_type == "chat"
+                and self.passive is not None
+            ):
                 # Пассивное чтение: вся реплика привязанного чата, кроме команд.
                 # Структурный фильтр внутри; приём не падает из-за правил,
                 # сборщика окон или роутера.

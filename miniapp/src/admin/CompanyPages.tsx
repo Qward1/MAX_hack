@@ -77,7 +77,7 @@ export function MyHouses({ base }: { base: string }) {
   return <><Title description="Дома, на которые вы назначены">Мои дома</Title><Feedback loading={r.loading} error={r.error} />
     {!r.error && <HouseList houses={r.data ?? []} />}</>;
 }
-export function HouseList({ houses }: { houses: House[] }) {
+export function HouseList({ houses, manage }: { houses: House[]; manage?: { base: string; refresh: () => void } }) {
   return houses.length ? <div className="house-cards">{houses.map(h => <section className="admin-detail" key={h.management_id}>
     <h2>{h.address}</h2><p>Управление с {new Date(h.valid_from).toLocaleDateString("ru-RU")}{h.valid_to && ` до ${new Date(h.valid_to).toLocaleDateString("ru-RU")}`}</p>
     <p>{h.open_ticket_count} открытых заявок · {h.operator_count} операторов · {h.responsible_count} ответственных</p>
@@ -85,7 +85,38 @@ export function HouseList({ houses }: { houses: House[] }) {
     <h3>Подключение MAX</h3>{!h.bindings.length && <p className="muted">Чат пока не подключён</p>}
     {h.bindings.map(b => <p key={b.id}>{b.title ?? "MAX-чат"} · <Status value={b.status} />{b.suspension_reason && ` · ${b.suspension_reason}`}
       {b.status === "active" && b.passive_capture_enabled != null && ` · Чтение чата: ${b.passive_capture_enabled ? "включено" : "выключено"}`}</p>)}
+    {manage && <OpenAccessSwitch base={manage.base} house={h} refresh={manage.refresh} />}
   </section>)}</div> : <p className="state-panel">Доступных домов пока нет.</p>;
+}
+
+/** Открытый доступ к дому (OPEN-HOUSE-ACCESS-2026-09-25): включение — с подтверждением. */
+export function OpenAccessSwitch({ base, house, refresh }: { base: string; house: House; refresh: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const action = useAction(refresh);
+  const enabled = house.open_resident_access === true;
+  const change = async () => {
+    const result = await action.run<Schema["OpenAccessView"]>(`${base}/houses/${house.house_id}/open-access`,
+      enabled ? { enabled: false } : { enabled: true, confirm: true });
+    if (result) setConfirming(false);
+  };
+  return <div className="passive-switch">
+    <h3>Открытый доступ</h3>
+    <p>Открытый доступ: <strong>{enabled ? "включён" : "выключен"}</strong></p>
+    <p className="muted">{enabled
+      ? "Любой пользователь MAX может выбрать этот дом и сообщать о проблемах."
+      : "Сообщать о проблемах и видеть доску могут только участники домового чата."}</p>
+    <Feedback error={action.error || undefined} />
+    {!confirming ? <button className="ticket-button secondary" disabled={action.busy} onClick={() => setConfirming(true)}>
+      {enabled ? "Выключить открытый доступ" : "Включить открытый доступ"}</button>
+    : <div className="admin-feedback" role="group" aria-label="Подтверждение открытого доступа">
+      <p>{enabled
+        ? "Жители, выбравшие дом сами, сразу потеряют доступ. Их заявки и история останутся у вас."
+        : "Любой пользователь MAX сможет выбрать этот дом, сообщать о проблемах и видеть доску дома."}</p>
+      <button className="ticket-button" disabled={action.busy} onClick={() => void change()}>
+        {enabled ? "Подтвердить: выключить" : "Подтвердить: включить"}</button>
+      <button className="ticket-button secondary" disabled={action.busy} onClick={() => setConfirming(false)}>Отмена</button>
+    </div>}
+  </div>;
 }
 export function CompanyHouses({ base }: { base: string }) {
   const houses = useRead<House[]>(`${base}/houses`);
@@ -106,7 +137,7 @@ export function CompanyHouses({ base }: { base: string }) {
       <p className="muted">Доступ к дому появится после решения платформы. Совпадение адреса не подтверждает управление.</p>
       <button className="ticket-button" disabled={action.busy}>Подать заявку на управление</button></form>}
     <Feedback loading={houses.loading} error={houses.error ?? requests.error ?? action.error} />
-    {!houses.error && <HouseList houses={houses.data ?? []} />}
+    {!houses.error && <HouseList houses={houses.data ?? []} manage={{ base, refresh: houses.refresh }} />}
     <h2>Заявки на управление</h2>{requests.data?.map(r => <section className="admin-detail" key={r.id}>
       <h3>{r.requested_address}</h3><Status value={r.status} /><p>{r.decision_reason}</p><History rows={r.history ?? []} />
     </section>)}
@@ -132,6 +163,7 @@ export function ChatConnections({ base }: { base: string }) {
         {b.status === "active" && <PassiveSwitch binding={b} available={available} aiAnalysis={aiAnalysis} busy={action.busy}
           confirming={confirm === b.id} ask={() => setConfirm(b.id)} cancel={() => setConfirm(null)}
           change={async enabled => { await action.run(`/api/v1/chat-bindings/${b.id}/passive-capture`, { enabled }); setConfirm(null); }} />}
+        {b.status === "active" && <NoticeAgain binding={b.id} />}
       </div>)}
       <button className="ticket-button" disabled={action.busy} onClick={async () => {
         const result = await action.run<Schema["ConnectionView"]>(`/api/v1/houses/${h.house_id}/chat-connections`, { scope_type: "house" });
@@ -147,6 +179,24 @@ export function ChatConnections({ base }: { base: string }) {
       </div>)}
     </section>)}
   </>;
+}
+
+/** «Отправить сообщение с кнопкой ещё раз» для уже подключённого чата. */
+export function NoticeAgain({ binding }: { binding: string }) {
+  const action = useAction();
+  const [result, setResult] = useState<string>("");
+  return <div className="passive-switch">
+    <button className="ticket-button secondary" disabled={action.busy} onClick={async () => {
+      setResult("");
+      const view = await action.run<Schema["ChatNoticeView"]>(`/api/v1/chat-bindings/${binding}/notice`);
+      if (view) setResult(view.queued
+        ? "Сообщение с кнопкой «Открыть ДомСигнал» поставлено в очередь отправки в чат."
+        : "Сообщение уже отправлялось в последние 10 минут. Повторите позже.");
+    }}>Отправить сообщение с кнопкой ещё раз</button>
+    {action.busy && <p role="status">Отправляем…</p>}
+    {result && <p role="status" className="muted">{result}</p>}
+    <Feedback error={action.error || undefined} />
+  </div>;
 }
 
 export function PassiveSwitch({ binding, available, aiAnalysis, busy, confirming, ask, cancel, change }: {

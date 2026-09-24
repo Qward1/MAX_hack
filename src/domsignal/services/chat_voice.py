@@ -1,11 +1,16 @@
 """Голос бота в домовом чате и оповещение оператора — только шаблоны продукта.
 
-В групповом чате бот пишет ровно два вида сообщений: сообщение о чтении чата
-(один раз на привязку и её версию) и памятку безопасности при срабатывании
-правил опасности без отрицания и без «не у нас / не сейчас». Это самый строгий
-уровень голоса: текст модели сюда не попадает никогда, памятка берётся из
-проверенного `regions/_federal/safety.yaml`, а семантическая опасность,
-найденная только моделью, даёт оповещение оператора, но не сообщение в чат.
+В групповом чате бот пишет только шаблоны: сообщение о подключении и чтении
+чата (с кнопкой «Открыть ДомСигнал», D1), памятку безопасности при
+срабатывании правил опасности без отрицания и без «не у нас / не сейчас» и
+короткий ответ на явный `/report` автору, который ещё не начал диалог с ботом
+(не чаще раза в 10 минут). Это самый строгий уровень голоса: текст модели
+сюда не попадает никогда, памятка берётся из проверенного
+`regions/_federal/safety.yaml`, а семантическая опасность, найденная только
+моделью, даёт оповещение оператора, но не сообщение в чат.
+
+Кнопка «Открыть ДомСигнал» несёт непрозрачную ссылку доставки `c_…`: она
+только подсказывает, какой чат проверить, и доступа сама не даёт.
 
 Оповещение оператора — личное сообщение сотруднику с доступом к дому. В нём
 только шаблон, подписи видов опасности, дословная цитата жителя и ссылка на
@@ -22,7 +27,7 @@ from uuid import UUID
 
 from pydantic import Field
 
-from domsignal.bot.messaging import PersonalMessage
+from domsignal.bot.messaging import MessageButton, PersonalMessage
 from domsignal.contracts.common import ContractModel
 from domsignal.contracts.routing import SafetyBlock
 from domsignal.core.display_time import DEFAULT_DISPLAY_TIMEZONE, staff_moment
@@ -37,15 +42,29 @@ SIGNAL_ALERT_INTENT_KIND = "signal.alert.v1"
 
 #: Префиксы `launch_ref`. Резолвер запуска их не принимает: у сообщения в чат
 #: и у оповещения нет экрана, на который можно было бы честно вести ссылкой.
+#: Ссылка `c_…` из кнопки сообщения в чате только сужает, какой чат проверить
+#: при входе в mini app (RESIDENT-BY-CHAT-2026-09-25).
 CHAT_REF_PREFIX = "c_"
 ALERT_REF_PREFIX = "s_"
 
-ChatPurpose = Literal["chat_reading_notice", "chat_safety_memo"]
+ChatPurpose = Literal[
+    "chat_reading_notice",
+    "chat_safety_memo",
+    "chat_connection_notice",
+    "chat_report_ack",
+]
 
 _UNNAMED_COMPANY = "управляющая компания дома"
 
 READING_NOTICE_PURPOSE: ChatPurpose = "chat_reading_notice"
 SAFETY_MEMO_PURPOSE: ChatPurpose = "chat_safety_memo"
+CONNECTION_NOTICE_PURPOSE: ChatPurpose = "chat_connection_notice"
+REPORT_ACK_PURPOSE: ChatPurpose = "chat_report_ack"
+
+#: Назначения, которым нужно включённое пассивное чтение привязки.
+READING_PURPOSES = frozenset({READING_NOTICE_PURPOSE, SAFETY_MEMO_PURPOSE})
+
+OPEN_APP_LABEL = "Открыть ДомСигнал"
 
 _MEMO_LEAD = "ДомСигнал: в чате написали о признаках опасности."
 _ALERT_LEAD = "ДомСигнал: возможная опасность в домовом чате."
@@ -72,6 +91,8 @@ class ChatMessageIntent(ContractModel):
     text: str = Field(min_length=1, max_length=4000)
     signal_id: UUID | None = None
     danger_kinds: list[str] = Field(default_factory=list)
+    #: Кнопка «Открыть ДомСигнал» со ссылкой этой доставки (D1).
+    app_button: bool = False
 
 
 class SignalAlertIntent(ContractModel):
@@ -111,10 +132,26 @@ def reading_notice_text(company_name: str | None) -> str:
             f"ДомСигнал подключён к этому чату — подключение подтверждено {who}.",
             "Бот читает сообщения этого чата, чтобы замечать проблемы дома — "
             "например, неработающий лифт или протечку.",
-            "Сам бот почти никогда не пишет сюда: только это сообщение и памятку "
-            "безопасности, если в чате напишут о признаках опасности.",
+            "Сам бот пишет сюда редко: это сообщение, памятку безопасности, если в "
+            "чате напишут о признаках опасности, и короткий ответ на /report.",
+            "Сообщить о проблеме и следить за ходом работ — кнопка «Открыть "
+            "ДомСигнал» ниже или личные сообщения боту.",
             "Сообщение в этом чате не является официальным обращением.",
             f"Отключить чтение может {subject}. "
+            "Администратор чата может удалить бота из чата.",
+        )
+    )
+
+
+def connection_notice_text(company_name: str | None) -> str:
+    """Сообщение о подключении без чтения переписки: бот читает только /report."""
+    who = _company(company_name)
+    return "\n".join(
+        (
+            f"ДомСигнал подключён к этому чату — подключение подтверждено {who}.",
+            "Сообщить о проблеме дома: команда /report и описание, личные сообщения "
+            "боту или кнопка «Открыть ДомСигнал» ниже.",
+            "Сообщение в этом чате не является официальным обращением.",
             "Администратор чата может удалить бота из чата.",
         )
     )
@@ -168,8 +205,16 @@ def operator_alert_message(
     return PersonalMessage("\n".join(lines), ())
 
 
-def chat_message(intent: ChatMessageIntent) -> PersonalMessage:
-    """Сообщение в чат без кнопок: голос бота здесь — только текст."""
+def chat_message(intent: ChatMessageIntent, ref: str | None = None) -> PersonalMessage:
+    """Сообщение в чат: текст шаблона и, у сообщения о подключении, кнопка.
+
+    Кнопка открывает mini app со ссылкой этой доставки `c_…`; ссылка лишь
+    подсказывает, какой чат проверить, и доступа сама не даёт.
+    """
+    if intent.app_button and ref:
+        return PersonalMessage(
+            intent.text, ((MessageButton("open_app", OPEN_APP_LABEL, ref),),)
+        )
     return PersonalMessage(intent.text, ())
 
 
@@ -177,13 +222,17 @@ __all__ = [
     "ALERT_REF_PREFIX",
     "CHAT_MESSAGE_INTENT_KIND",
     "CHAT_REF_PREFIX",
+    "CONNECTION_NOTICE_PURPOSE",
     "READING_NOTICE_PURPOSE",
+    "READING_PURPOSES",
+    "REPORT_ACK_PURPOSE",
     "SAFETY_MEMO_PURPOSE",
     "SIGNAL_ALERT_INTENT_KIND",
     "ChatMessageIntent",
     "ChatPurpose",
     "SignalAlertIntent",
     "chat_message",
+    "connection_notice_text",
     "operator_alert_message",
     "reading_notice_text",
     "safety_memo_text",

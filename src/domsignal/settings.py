@@ -118,6 +118,17 @@ class Settings(BaseSettings):
     passive_analysis_fallback_seconds: int = Field(default=90, ge=5, le=3600)
     # Часовой пояс времени в сообщениях сотрудникам (кабинет показывает МСК).
     display_timezone: str = "Europe/Moscow"
+    # Житель = участник домового чата (RESIDENT-BY-CHAT-2026-09-25). Если
+    # активных привязок не больше этого числа, при входе проверяются все.
+    resident_check_all_max_chats: int = Field(default=20, ge=0, le=200)
+    # Один вызов MAX API на пару «пользователь, чат» не чаще, чем раз в N с.
+    resident_check_interval_seconds: int = Field(default=900, ge=60, le=86400)
+    # Срок членства по чату после проверки или события.
+    resident_membership_ttl_seconds: int = Field(default=86400, ge=3600, le=604800)
+    # Личный бот: сообщений о проблемах на пользователя за сутки.
+    bot_daily_report_limit: int = Field(default=10, ge=1, le=100)
+    # Сколько текст из лички ждёт выбора дома или ответа «та же проблема».
+    bot_hold_seconds: int = Field(default=1800, ge=60, le=86400)
     build_commit: str = "dev"
     public_base_url: str = "http://localhost:8000"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]

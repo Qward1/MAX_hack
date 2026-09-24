@@ -31,10 +31,14 @@ from domsignal.contracts.onboarding import (
     InvitationToken,
     InvitationView,
     MembershipView,
+    OpenAccessChange,
+    OpenAccessClose,
+    OpenAccessView,
     PlatformBindingView,
     PlatformBootstrap,
     PlatformHealth,
     PlatformHouseView,
+    PlatformOpenHouseView,
     ReviewDecision,
     Role,
     StaffDetail,
@@ -310,6 +314,24 @@ async def house_detail(
     return found
 
 
+@router.post(
+    "/companies/{company_id}/houses/{house_id}/open-access", response_model=OpenAccessView
+)
+async def set_open_access(
+    company_id: UUID,
+    house_id: UUID,
+    payload: OpenAccessChange,
+    user: CurrentUserDep,
+    db: DbDep,
+    container: ContainerDep,
+) -> OpenAccessView:
+    """Открытый доступ к дому (OPEN-HOUSE-ACCESS-2026-09-25), с аудитом."""
+    async with db.begin():
+        return await AdministrationService(container.settings).set_open_access(
+            db, user.id, company_id, house_id, payload
+        )
+
+
 @router.get("/companies/{company_id}/organization", response_model=CompanyView)
 async def organization(
     company_id: UUID, user: CurrentUserDep, db: DbDep, container: ContainerDep
@@ -525,6 +547,25 @@ async def platform_houses(
     async with db.begin():
         await require_platform(db, user.id)
         return await AdministrationService(container.settings).platform_houses(db, offset)
+
+
+@router.get("/platform/open-houses", response_model=list[PlatformOpenHouseView])
+async def platform_open_houses(
+    user: Employee, db: DbDep, container: ContainerDep
+) -> list[PlatformOpenHouseView]:
+    async with db.begin():
+        await require_platform(db, user.id)
+        return await AdministrationService(container.settings).platform_open_houses(db)
+
+
+@router.post("/platform/houses/{house_id}/open-access/close", response_model=OpenAccessView)
+async def platform_close_open_access(
+    house_id: UUID, payload: OpenAccessClose, user: Employee, db: DbDep, container: ContainerDep
+) -> OpenAccessView:
+    async with db.begin():
+        return await AdministrationService(container.settings).platform_close_open_access(
+            db, user.id, house_id, payload.reason
+        )
 
 
 @router.post(

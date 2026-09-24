@@ -4,19 +4,51 @@ from datetime import datetime
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import ColumnElement, and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domsignal.db.models import (
+    ChatBinding,
     House,
     HouseAssignment,
     HouseManagement,
     ManagementCompany,
+    MAXChat,
     OrganizationMembership,
     ResidentMembership,
     User,
 )
+from domsignal.db.models.access import CHAT_MEMBER_SOURCE, EVENT_SOURCES, OPEN_ACCESS_SOURCE
 from domsignal.db.repositories.reliability import authority_lock
+
+
+def _basis_holds() -> ColumnElement[bool]:
+    """Основание членства по-прежнему в силе.
+
+    `chat_member` — привязка той же версии активна, бот в чате, управление
+    дома то же, что у привязки: отзыв, приостановка и `bot_removed` снимают
+    доступ сразу, без записи в членство. `open_access` — переключатель дома
+    включён. Прежние источники проверяются как раньше.
+    """
+    binding_ok = (
+        select(ChatBinding.id)
+        .join(MAXChat, MAXChat.max_chat_id == ChatBinding.max_chat_id)
+        .where(
+            ChatBinding.id == ResidentMembership.chat_binding_id,
+            ChatBinding.house_id == ResidentMembership.house_id,
+            ChatBinding.management_id == HouseManagement.id,
+            ChatBinding.status == "active",
+            ChatBinding.binding_version == ResidentMembership.binding_version,
+            MAXChat.bot_present.is_(True),
+            MAXChat.binding_version == ResidentMembership.binding_version,
+        )
+        .exists()
+    )
+    return or_(
+        ResidentMembership.source.not_in(EVENT_SOURCES),
+        and_(ResidentMembership.source == OPEN_ACCESS_SOURCE, House.open_resident_access.is_(True)),
+        and_(ResidentMembership.source == CHAT_MEMBER_SOURCE, binding_ok),
+    )
 
 
 class AccessRepository:
@@ -98,6 +130,7 @@ class AccessRepository:
                     or_(
                         ResidentMembership.expires_at.is_(None), ResidentMembership.expires_at > now
                     ),
+                    _basis_holds(),
                 ),
             )
             .where(
@@ -107,8 +140,28 @@ class AccessRepository:
                 or_(HouseManagement.valid_to.is_(None), HouseManagement.valid_to > now),
                 or_(OrganizationMembership.id.is_not(None), ResidentMembership.id.is_not(None)),
             )
-            .order_by(House.address)
+            .order_by(House.address, House.id, ResidentMembership.created_at)
         )
         if house_id is not None:
             statement = statement.where(House.id == house_id)
-        return list((await self.session.execute(statement)).tuples())
+        rows = list((await self.session.execute(statement)).tuples())
+        # У жителя может быть несколько действующих оснований в одном доме
+        # (чат и открытый доступ, два чата дома) — дом в ответе один.
+        unique: dict[UUID, int] = {}
+        result: list[
+            tuple[
+                House,
+                HouseManagement,
+                OrganizationMembership | None,
+                HouseAssignment | None,
+                ResidentMembership | None,
+            ]
+        ] = []
+        for row in rows:
+            index = unique.get(row[0].id)
+            if index is None:
+                unique[row[0].id] = len(result)
+                result.append(row)
+            elif result[index][4] is None and row[4] is not None:
+                result[index] = row
+        return result
