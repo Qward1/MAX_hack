@@ -413,3 +413,28 @@ async def test_reception_slots_booking_capacity_and_reminder(d3) -> None:  # noq
     assert cancelled.json()["slots"][0]["free"] == 1
     reminders = await deliveries(d3, purpose="reception_reminder")
     assert len(reminders) == 1 and isinstance(reminders[0], NotificationDelivery)
+
+
+async def test_an_operator_enables_the_digest_for_staff_without_a_cabinet_login(
+    d3,  # noqa: F811
+    monkeypatch,
+) -> None:
+    from domsignal.db.models import InboxReceipt, OrganizationMembership
+    from domsignal.tools import daily_digest
+
+    monkeypatch.setattr(daily_digest, "get_settings", lambda: d3.container.settings)
+    code = await daily_digest.enable(d3.ids["admin1"], d3.ids["t1"], "d3-test", "Живой шаг сводки")
+    assert code == 0
+    enabled = await d3.scalar(
+        select(OrganizationMembership.daily_digest_enabled).where(
+            OrganizationMembership.user_id == d3.ids["admin1"]
+        )
+    )
+    assert enabled is True
+    receipt = await d3.scalar(
+        select(InboxReceipt).where(
+            InboxReceipt.event_type == "administration.staff_digest.enabled_by_operator"
+        )
+    )
+    assert receipt is not None and receipt.payload["reason"].startswith("d3-test")
+    assert await daily_digest.enable(d3.ids["admin1"], d3.ids["t2"], "d3-test", "чужая УК") == 2
