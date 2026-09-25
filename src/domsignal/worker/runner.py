@@ -119,6 +119,7 @@ class WorkerRunner:
                 handled = await self.notifications.consume_once()
                 handled = await self.notifications.consume_route_cards_once() or handled
                 handled = await self.notifications.consume_chat_messages_once() or handled
+                handled = await self.notifications.consume_ticket_chat_once() or handled
                 handled = await self.notifications.consume_bot_replies_once() or handled
                 handled = await self.notifications.deliver_once(now=now) or handled
             except Exception as exc:

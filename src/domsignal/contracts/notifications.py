@@ -13,10 +13,12 @@ class NotificationLaunch(BaseModel):
     получатель доставки, членство в доме и актуальные права.
     """
 
-    kind: Literal["ticket", "route_card"] = "ticket"
+    kind: Literal["ticket", "route_card", "poll", "announcements"] = "ticket"
     incident_id: UUID | None = None
     house_id: UUID
     route_outcome_id: UUID | None = None
+    #: Опрос из поста или личного сообщения рассылки (D3).
+    poll_id: UUID | None = None
     work_attempt_id: UUID | None
     stale: bool
 

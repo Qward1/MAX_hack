@@ -17,10 +17,12 @@ from domsignal.api.routes import (
     appeals,
     auth,
     chat_connections,
+    community,
     company_signup,
     dashboards,
     employee_auth,
     incidents,
+    mailings,
     max_ingress,
     me,
     signals,
@@ -78,6 +80,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(chat_connections.router)
     app.include_router(tickets.router)
     app.include_router(signals.router)
+    # D3: жилищный навигатор, домовое сообщество, рассылки.
+    app.include_router(community.router)
+    app.include_router(mailings.router)
 
     def problem_openapi() -> dict[str, Any]:
         if app.openapi_schema is None:

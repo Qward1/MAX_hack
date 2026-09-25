@@ -25,21 +25,33 @@ from domsignal.db.session import create_engine, create_session_factory
 from domsignal.services.action_cards import ActionCardBuilder
 from domsignal.services.ai_budget import PostgresBudgetGuard
 from domsignal.services.appeal_drafts import AppealDraftService
+from domsignal.services.broadcasts import BroadcastService
 from domsignal.services.chat_connections import ChatConnectionService
+from domsignal.services.chat_settings import ChatSettingsService
 from domsignal.services.company_signup import notify_digest
+from domsignal.services.digest import TICK_JOB as DIGEST_TICK_JOB
+from domsignal.services.digest import DigestService
 from domsignal.services.explicit_reports import ExplicitReportService
+from domsignal.services.followups import CALLBACK_ACTION as FOLLOWUP_ACTION
+from domsignal.services.followups import TICK_JOB as FOLLOWUP_TICK_JOB
+from domsignal.services.followups import FollowupService
 from domsignal.services.group_messages import MaxWebhookService
 from domsignal.services.membership import MembershipService
+from domsignal.services.my_activity import MyActivityService
+from domsignal.services.navigator import NavigatorService
 from domsignal.services.notifications import TicketNotificationHandler
 from domsignal.services.passive_analysis import PassiveWindowAnalysis
 from domsignal.services.passive_capture import PassiveCaptureService
 from domsignal.services.personal_bot import PersonalBotService
+from domsignal.services.reception import TICK_JOB as RECEPTION_TICK_JOB
+from domsignal.services.reception import ReceptionService
 from domsignal.services.reports import DemoRule, ReportService
 from domsignal.services.resident_access import ResidentAccessService
 from domsignal.services.routing import RoutingService, load_directory_or_none
 from domsignal.services.sessions import SessionService
 from domsignal.services.signal_inbox import SignalInboxService
 from domsignal.services.signals import PassiveConfig, SignalEngine
+from domsignal.services.ticket_chat import TicketChatService
 from domsignal.services.tickets import TicketService
 from domsignal.settings import LlmProvider, MaxTransportMode, Settings
 from domsignal.worker.handlers import WorkerHandlers
@@ -79,6 +91,15 @@ class Container:
     signal_inbox: SignalInboxService
     resident_access: ResidentAccessService
     personal_bot: PersonalBotService
+    # D3: навигатор, сообщество, рассылки, сопровождение.
+    chat_settings: ChatSettingsService
+    navigator: NavigatorService
+    broadcasts: BroadcastService
+    my_activity: MyActivityService
+    ticket_chat: TicketChatService
+    followups: FollowupService
+    digest: DigestService
+    reception: ReceptionService
     ai_budget: PostgresBudgetGuard | None = None
     ai_provider: OpenAICompatibleProvider | None = field(default=None, repr=False)
     #: Таймаут одного вызова модели; `None` — модель не подключена.
@@ -299,7 +320,36 @@ def build_container(settings: Settings) -> Container:
         hold_seconds=settings.bot_hold_seconds,
         application_digest=lambda code: notify_digest(settings, code),
     )
-    appeal_drafts = AppealDraftService(routing=routing)
+    appeal_drafts = AppealDraftService(routing=routing, followup_days=settings.appeal_followup_days)
+    # D3: жилищный навигатор и домовое сообщество (BOT-VOICE-HUMAN-2026-09-27).
+    chat_settings = ChatSettingsService(chat_connections)
+    navigator = NavigatorService(routing)
+    broadcasts = BroadcastService(
+        session_factory=session_factory, public_base_url=settings.public_base_url
+    )
+    ticket_chat = TicketChatService(
+        session_factory=session_factory,
+        reports=report_service,
+        resident_access=resident_access,
+        notifications=notifications,
+        answer_enabled=webhook_mode,
+    )
+    followups = FollowupService(session_factory=session_factory, routing=routing)
+    digest = DigestService(
+        session_factory=session_factory,
+        public_base_url=settings.public_base_url,
+        hour_msk=settings.daily_digest_hour_msk,
+    )
+    reception = ReceptionService(session_factory=session_factory, navigator=navigator)
+    notifications.keyed.update(
+        {
+            "appeal_followup": followups.snapshot,
+            "staff_digest": digest.snapshot,
+            "reception_reminder": reception.snapshot,
+        }
+    )
+    personal_bot.followups[FOLLOWUP_ACTION] = followups.answer
+    notifications.dm_quiet_window = settings.broadcast_dm_quiet_window
     # Пассивное чтение чата: приём и окна в операционном контуре, разбор окна —
     # тем же анализатором, что и явный путь, в AI-пуле.
     signals = SignalEngine(routing, PassiveConfig.from_settings(settings))
@@ -331,6 +381,13 @@ def build_container(settings: Settings) -> Container:
         passive_analysis=passive_analysis,
         personal_bot=personal_bot,
         resident_access=resident_access,
+        broadcasts=broadcasts,
+        ticket_chat=ticket_chat,
+        extra={
+            FOLLOWUP_TICK_JOB: followups.tick,
+            DIGEST_TICK_JOB: digest.tick,
+            RECEPTION_TICK_JOB: reception.tick,
+        },
     )
     return Container(
         settings=settings,
@@ -365,6 +422,14 @@ def build_container(settings: Settings) -> Container:
         ),
         resident_access=resident_access,
         personal_bot=personal_bot,
+        chat_settings=chat_settings,
+        navigator=navigator,
+        broadcasts=broadcasts,
+        my_activity=MyActivityService(),
+        ticket_chat=ticket_chat,
+        followups=followups,
+        digest=digest,
+        reception=reception,
         ai_budget=ai.budget,
         ai_provider=ai.provider,
         ai_timeout_seconds=ai.timeout_seconds,

@@ -9,7 +9,10 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
+from pydantic import Field
+
 from domsignal.contracts.common import ContractModel
+from domsignal.contracts.community import PollResults
 from domsignal.contracts.quota import ChatQuotaView
 
 PeriodDays = Literal[7, 14, 30]
@@ -148,3 +151,5 @@ class CompanyDashboard(ContractModel):
     quota: ChatQuotaView
     houses: list[HouseStats]
     activity: list[CompanyDay]
+    #: Итоги последних опросов УК (D3): только числа и доли.
+    polls: list[PollResults] = Field(default_factory=list)

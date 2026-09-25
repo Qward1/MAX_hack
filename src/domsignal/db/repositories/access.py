@@ -55,6 +55,37 @@ class AccessRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    async def resident_ids(
+        self, house_ids: list[UUID], *, now: datetime
+    ) -> list[tuple[UUID, UUID]]:
+        """Жители домов с действующим основанием: пары «пользователь, дом».
+
+        То же основание, что у политики доступа, кроме суточного срока
+        проверки участия в чате: рассылка в личку идёт участникам, которых
+        чат не исключил (`user_removed`), даже если mini app они давно не
+        открывали. Доступа к данным дома это не даёт.
+        """
+        if not house_ids:
+            return []
+        rows = await self.session.execute(
+            select(ResidentMembership.user_id, ResidentMembership.house_id)
+            .join(House, House.id == ResidentMembership.house_id)
+            .join(HouseManagement, HouseManagement.house_id == House.id)
+            .join(ManagementCompany, ManagementCompany.id == HouseManagement.tenant_id)
+            .where(
+                ResidentMembership.house_id.in_(house_ids),
+                ResidentMembership.status == "active",
+                ManagementCompany.status == "active",
+                HouseManagement.status == "active",
+                HouseManagement.valid_from <= now,
+                or_(HouseManagement.valid_to.is_(None), HouseManagement.valid_to > now),
+                _basis_holds(),
+            )
+            .distinct()
+            .order_by(ResidentMembership.user_id, ResidentMembership.house_id)
+        )
+        return [(row[0], row[1]) for row in rows]
+
     async def user_by_id(self, user_id: UUID) -> User | None:
         return await self.session.get(User, user_id)
 

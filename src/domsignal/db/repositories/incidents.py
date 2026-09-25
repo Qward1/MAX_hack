@@ -43,6 +43,7 @@ class IncidentRepository:
         description: str,
         classification_mode: str,
         provenance: str,
+        joined: bool = False,
     ) -> Report:
         report = Report(
             incident_id=incident_id,
@@ -52,6 +53,7 @@ class IncidentRepository:
             description=description,
             classification_mode=classification_mode,
             provenance=provenance,
+            joined=joined,
         )
         self.session.add(report)
         await self.session.flush()

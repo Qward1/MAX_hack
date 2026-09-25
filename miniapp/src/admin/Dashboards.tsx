@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { adminClient, Feedback, Title, useRead, type Schema } from "./administration";
 import { ColumnChart, Funnel, PeriodSwitch, QuotaMeter, SERIES, STRENGTH, StatTile, formatNumber } from "./charts";
+import { PollResultsView } from "./CommunityPages";
 
 type Days = 7 | 14 | 30;
 const categories: Record<string, string> = { elevator: "Лифт", water: "Вода", lighting: "Освещение", waste: "Отходы", other: "Другое" };
@@ -71,6 +72,11 @@ export function CompanyOverview({ base }: { base: string }) {
         <p className="muted">Сутки считаются по московскому времени. Медиана — от создания заявки до её принятия, по заявкам периода.
           Тексты жителей в обзор не попадают.</p>
       </>}
+      {(data.polls ?? []).length > 0 && <section aria-label="Опросы жителей">
+        <h2>Опросы жителей</h2>
+        <div className="house-cards">{(data.polls ?? []).map(poll => <div className="admin-detail" key={poll.poll_id}>
+          <PollResultsView poll={poll} /></div>)}</div>
+      </section>}
     </div>}
   </>;
 }

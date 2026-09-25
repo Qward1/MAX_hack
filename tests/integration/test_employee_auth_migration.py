@@ -18,8 +18,21 @@ LATER_COLUMNS = {
         "open_resident_access": False,
         "open_access_changed_at": None,
         "open_access_changed_by": None,
+        # D3: сведения о доме «по данным УК» у прежних домов пусты.
+        "entrance_count": None,
+        "floor_count": None,
+        "facts_updated_at": None,
+        "facts_updated_by": None,
     },
-    "users": {"max_dialog_at": None, "max_dialog_stopped_at": None, "group_ack_at": None},
+    "users": {
+        "max_dialog_at": None,
+        "max_dialog_stopped_at": None,
+        "group_ack_at": None,
+        # D3: от рассылок никто не отписан.
+        "broadcast_opt_out_at": None,
+    },
+    # D3: ежедневная сводка у прежних сотрудников выключена.
+    "organization_memberships": {"daily_digest_enabled": False},
     "resident_memberships": {
         "chat_binding_id": None,
         "binding_version": None,

@@ -11,6 +11,7 @@ from sqlalchemy.engine import make_url
 
 from domsignal.db.session import create_engine
 from domsignal.settings import Settings
+from tests.integration.migration_columns import without_added_columns
 
 
 async def migrate(url: str, *args: str) -> None:
@@ -167,14 +168,24 @@ async def test_a15_upgrade_preserves_grants_and_guards_a07_history(
             ]:
                 await conn.execute(text(sql), values)
             before = (
-                await conn.execute(text("SELECT row_to_json(t) FROM organization_memberships t"))
+                await conn.execute(
+                    text(
+                        f"SELECT {without_added_columns('organization_memberships')} "
+                        "FROM organization_memberships t"
+                    )
+                )
             ).all()
         await engine.dispose()
         await migrate(url, "upgrade", "head")
         await migrate(url, "check")
         async with engine.begin() as conn:
             assert (
-                await conn.execute(text("SELECT row_to_json(t) FROM organization_memberships t"))
+                await conn.execute(
+                    text(
+                        f"SELECT {without_added_columns('organization_memberships')} "
+                        "FROM organization_memberships t"
+                    )
+                )
             ).all() == before
             assert await conn.scalar(text("SELECT count(*) FROM chat_bindings")) == 0
             await conn.execute(

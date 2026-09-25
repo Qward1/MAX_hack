@@ -14,6 +14,7 @@ from domsignal.contracts.incidents import ReportCreate
 from domsignal.contracts.jobs import DiagnosticJobRequest, NormalizedInboundEvent
 from domsignal.core.chat_connections import TERMINAL
 from domsignal.db.repositories.access import AccessRepository
+from domsignal.services.broadcasts import POLL_CLOSE_JOB, SEND_JOB, BroadcastService
 from domsignal.services.chat_connections import ChatConnectionError, ChatConnectionService
 from domsignal.services.errors import AccessDenied, ResourceNotFound
 from domsignal.services.explicit_reports import ExplicitReportService
@@ -23,6 +24,7 @@ from domsignal.services.passive_capture import PassiveCaptureService
 from domsignal.services.personal_bot import PersonalBotService
 from domsignal.services.reports import ReportService
 from domsignal.services.resident_access import ResidentAccessService, ensure_max_user
+from domsignal.services.ticket_chat import GROUP_CALLBACK_JOB, TicketChatService
 
 JobHandler = Callable[[dict[str, Any]], Awaitable[None]]
 
@@ -41,6 +43,9 @@ class WorkerHandlers:
         passive_analysis: PassiveWindowAnalysis | None = None,
         personal_bot: PersonalBotService | None = None,
         resident_access: ResidentAccessService | None = None,
+        broadcasts: BroadcastService | None = None,
+        ticket_chat: TicketChatService | None = None,
+        extra: dict[str, JobHandler] | None = None,
     ) -> None:
         self.session_factory = session_factory
         self.report_service = report_service
@@ -52,6 +57,10 @@ class WorkerHandlers:
         self.passive_analysis = passive_analysis
         self.personal_bot = personal_bot
         self.resident_access = resident_access
+        self.broadcasts = broadcasts
+        self.ticket_chat = ticket_chat
+        #: Задачи D3 без отдельного сервиса в конструкторе (сопровождение, сводка, приём).
+        self.extra = dict(extra or {})
 
     @property
     def mapping(self) -> dict[str, JobHandler]:
@@ -85,6 +94,13 @@ class WorkerHandlers:
             handlers["bot.dm"] = self.personal_bot.handle_dm
             handlers["bot.callback"] = self.personal_bot.handle_callback
             handlers["bot.hold.expire"] = self.personal_bot.expire_hold
+        if self.broadcasts:
+            # Рассылки и опросы (D3): отправка по расписанию и закрытие в срок.
+            handlers[SEND_JOB] = self.broadcasts.send_due
+            handlers[POLL_CLOSE_JOB] = self.broadcasts.close_due
+        if self.ticket_chat:
+            handlers[GROUP_CALLBACK_JOB] = self.ticket_chat.handle_callback
+        handlers.update(self.extra)
         return handlers
 
     async def verify_connection(self, payload: dict[str, Any]) -> None:

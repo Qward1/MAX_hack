@@ -23,7 +23,7 @@ P6b после живого прогона: «слишком кратко, бе�
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
@@ -69,9 +69,11 @@ class StaleDraftVersion(ServiceError):
 class AppealDraftService:
     """Один и тот же сервис вызывают REST и (в будущем) бот."""
 
-    def __init__(self, *, routing: RoutingService) -> None:
+    def __init__(self, *, routing: RoutingService, followup_days: int = 14) -> None:
         self.routing = routing
         self.memberships = MembershipService()
+        # Сопровождение A-09: когда спросить «Пришёл ли ответ?» (D3).
+        self.followup_after = timedelta(days=followup_days)
 
     # --------------------------------------------------------------- команды
 
@@ -153,6 +155,9 @@ class AppealDraftService:
             if draft.filed_at is None:
                 draft.filed_at = datetime.now(UTC)
                 draft.filed_reference = payload.reference
+                # Через `APPEAL_FOLLOWUP_DAYS` бот спросит в личке, пришёл ли
+                # ответ. Юридического срока здесь нет: это просто напоминание.
+                draft.followup_due_at = draft.filed_at + self.followup_after
                 await session.flush()
                 await session.refresh(draft)
             return await self._view(session, draft, outcome, context)

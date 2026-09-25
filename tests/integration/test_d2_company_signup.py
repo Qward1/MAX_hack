@@ -384,7 +384,14 @@ async def test_open_registration_lifecycle(env):  # noqa: F811
     member, _ = await join(env, code, "d2.joined.operator")
     boot = (await member.get("/api/v1/admin/bootstrap")).json()
     assert boot["companies"][0]["company_id"] == str(company)
-    assert boot["companies"][0]["surfaces"] == ["tickets", "signals", "assigned_houses", "overview"]
+    assert boot["companies"][0]["surfaces"] == [
+        "tickets",
+        "signals",
+        "assigned_houses",
+        "overview",
+        "notices",
+        "reception",
+    ]
     async with env["container"].session_factory() as db:
         user = await db.scalar(
             select(EmployeeCredential.user_id).where(
@@ -483,11 +490,15 @@ async def test_responsible_sees_chat_connections_only_for_own_houses(env):  # no
         "assigned_houses",
         "overview",
         "chat_connections",
+        "mailings",
+        "notices",
+        "reception",
     ]
     houses = (await responsible.get(f"/api/v1/companies/{company}/houses")).json()
     assert [(h["house_id"], h["can_connect_chats"]) for h in houses] == [(str(seed_id("a1")), True)]
     operator = (await env["operator"].get("/api/v1/admin/bootstrap")).json()["companies"][0]
     assert "chat_connections" not in operator["surfaces"]
+    assert "mailings" not in operator["surfaces"]
     admin = (await env["admin"].get(f"/api/v1/companies/{company}/houses")).json()
     assert {h["can_connect_chats"] for h in admin} == {True} and len(admin) == 2
     # Ответственный подключает чат своего дома (право chat.connect действующей политики).

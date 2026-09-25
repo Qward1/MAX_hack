@@ -56,7 +56,7 @@ test("P5-a thread of 7 lines → one card → create ticket → accepted in Tick
   await page.setViewportSize({ width: 1366, height: 900 });
   await openQueue(page);
   const nav = page.getByRole("navigation", { name: "Разделы кабинета" });
-  await expect(nav.getByRole("link")).toHaveText(["Заявки", "Сигналы", "Мои дома", "Обзор"]);
+  await expect(nav.getByRole("link")).toHaveText(["Заявки", "Сигналы", "Мои дома", "Обзор", "Уведомления", "Приём"]);
   await expect(nav.getByRole("link", { name: "Сигналы" })).toHaveAttribute("aria-current", "page");
   // Правила дают слабый сигнал: он свёрнут в «Возможные (N)».
   const weak = page.getByRole("button", { name: /^Возможные \(\d+\)$/ });

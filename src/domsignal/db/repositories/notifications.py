@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +13,7 @@ from domsignal.db.models import (
     Report,
     Signal,
 )
+from domsignal.db.models.notifications import BROADCAST_PURPOSES
 
 #: Вид outbox-сообщения A-16, из которого рождается доставка по заявке.
 TICKET_INTENT_KIND = "ticket.notification_intent.v1"
@@ -96,11 +97,40 @@ class NotificationRepository:
                         and_(d.status == "processing", d.lease_until <= now),
                     ),
                 )
-                .order_by(d.updated_at, d.id)
+                # Личные уведомления о заявках и ответы бота — впереди массовых
+                # рассылок (D3): длинная рассылка не задерживает работу по заявке.
+                .order_by(
+                    case((d.purpose.in_(BROADCAST_PURPOSES), 1), else_=0),
+                    d.updated_at,
+                    d.id,
+                )
                 .with_for_update(skip_locked=True)
                 .limit(1)
             ),
         )
+
+    async def pace(self, gate: str, now: datetime, *, spacing_ms: int) -> datetime | None:
+        """Общий темп: не чаще раза в `spacing_ms` на весь поток ворот `gate`.
+
+        Возвращает момент, до которого ждать, или `None` — можно сейчас (и
+        следующий слот уже занят). Аренды нет: цикл воркера последовательный,
+        а ворота только разводят начала отправок во времени.
+        """
+        await self.session.execute(
+            insert(MaxDestinationLimit)
+            .values(destination=gate, next_allowed_at=now)
+            .on_conflict_do_nothing(index_elements=["destination"])
+        )
+        row = await self.session.scalar(
+            select(MaxDestinationLimit)
+            .where(MaxDestinationLimit.destination == gate)
+            .with_for_update()
+        )
+        assert row is not None
+        if row.next_allowed_at > now:
+            return row.next_allowed_at
+        row.next_allowed_at = now + timedelta(milliseconds=spacing_ms)
+        return None
 
     async def reserve_destination(
         self,

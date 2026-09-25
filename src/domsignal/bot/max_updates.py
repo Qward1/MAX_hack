@@ -111,6 +111,22 @@ class BotCallback:
 
 
 @dataclass(frozen=True)
+class GroupCallback:
+    """Нажатие кнопки поста бота в групповом чате (D3). Права проверяет обработчик."""
+
+    callback_id: str
+    actor: str
+    chat_id: str
+    message_id: str
+    action: str
+    ref: str
+
+
+#: Кнопка поста о заявке в группе: `g:<действие>:t_<ссылка>`.
+GROUP_CALLBACK = re.compile(r"g:([a-z]{1,10}):(t_[A-Za-z0-9_-]{32})")
+
+
+@dataclass(frozen=True)
 class MaxEvent:
     event_id: str
     kind: str
@@ -128,6 +144,7 @@ class MaxEvent:
     #: `chat` — групповой чат, `dialog` — личка бота (D1).
     chat_type: str | None = None
     bot_callback: BotCallback | None = None
+    group_callback: GroupCallback | None = None
     #: Сообщение отправил бот (в том числе сам ДомСигнал): на него не отвечают.
     from_bot: bool = False
 
@@ -208,6 +225,27 @@ def parse_update(payload: dict[str, Any]) -> MaxEvent:
                         message_id=callback_message.body.mid,
                         action=bot[1],
                         argument=bot[2],
+                    ),
+                )
+            group = GROUP_CALLBACK.fullmatch(callback.payload or "")
+            if (
+                group
+                and not callback.user.is_bot
+                and callback_message
+                and callback_message.body
+                and callback_message.recipient.chat_type == "chat"
+            ):
+                fields = dict(
+                    actor=str(callback.user.user_id),
+                    chat_id=str(callback_message.recipient.chat_id),
+                    chat_type="chat",
+                    group_callback=GroupCallback(
+                        callback_id=callback.callback_id,
+                        actor=str(callback.user.user_id),
+                        chat_id=str(callback_message.recipient.chat_id),
+                        message_id=callback_message.body.mid,
+                        action=group[1],
+                        ref=group[2],
                     ),
                 )
             if (

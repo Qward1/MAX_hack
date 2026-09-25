@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -101,6 +101,12 @@ from domsignal.services.resident_access import ResidentAccessService, ensure_max
 from domsignal.services.route_card_render import safety_lines
 from domsignal.services.routing import RoutingService
 
+#: Обработчик кнопки сопровождения: (житель, аргумент) → ответ и кнопки.
+FollowupCallback = Callable[[UUID, str | None], Awaitable[tuple[str, list[list["ReplyButton"]]]]]
+
+#: Всплывающий ответ на «Не получать рассылки» (D3).
+UNSUBSCRIBED_SHORT = "Готово: рассылки больше не придут в личные сообщения."
+
 logger = logging.getLogger(__name__)
 
 #: Короче — не описание проблемы, а подсказка по использованию.
@@ -168,6 +174,8 @@ class PersonalBotService:
         self.memberships = MembershipService()
         # Хэш кода `ca_…` ссылки «Получать уведомления в MAX» (D2).
         self.application_digest = application_digest
+        #: Кнопки сопровождения обращения (A-09, D3): действие → обработчик.
+        self.followups: dict[str, FollowupCallback] = {}
 
     # ============================================================ вебхук
 
@@ -559,6 +567,16 @@ class PersonalBotService:
         user_id = UUID(str(payload["user_id"]))
         action = str(payload["action"])
         argument = payload.get("argument")
+        if action == "unsub":
+            # «Не получать рассылки» (D3): ответ — всплывающее уведомление,
+            # сообщение рассылки остаётся как было.
+            await self._unsubscribe(user_id)
+            logger.info("bot_callback_handled", extra={"action": action})
+            if self.answer_enabled:
+                await self.notifications.provider.notify_callback(
+                    str(payload["callback_id"]), UNSUBSCRIBED_SHORT
+                )
+            return
         text, buttons = await self._callback(user_id, action, argument)
         logger.info("bot_callback_handled", extra={"action": action})
         if not self.answer_enabled:
@@ -571,9 +589,18 @@ class PersonalBotService:
             # Действие уже сохранено и идемпотентно; повтор задачи ответит снова.
             raise
 
+    async def _unsubscribe(self, user_id: UUID) -> None:
+        async with self.sessions() as session, session.begin():
+            user = await session.get(User, user_id, with_for_update=True)
+            if user is not None and user.broadcast_opt_out_at is None:
+                user.broadcast_opt_out_at = datetime.now(UTC)
+
     async def _callback(
         self, user_id: UUID, action: str, argument: str | None
     ) -> tuple[str, list[list[ReplyButton]]]:
+        followup = self.followups.get(action) if self.followups else None
+        if followup is not None:
+            return await followup(user_id, argument)
         if action == "houses":
             async with self.sessions() as session, session.begin():
                 houses = await self.resident_access.open_houses(session, user_id=user_id)

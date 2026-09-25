@@ -45,6 +45,10 @@ services:
       PASSIVE_ANALYSIS_FALLBACK_SECONDS: ${PASSIVE_ANALYSIS_FALLBACK_SECONDS:-90}
       # Время в сообщениях сотрудникам — в поясе показа, подпись «МСК».
       DISPLAY_TIMEZONE: ${DISPLAY_TIMEZONE:-Europe/Moscow}
+      # D3: сопровождение обращения, сводка сотрудникам, ночное окно личных рассылок.
+      APPEAL_FOLLOWUP_DAYS: ${APPEAL_FOLLOWUP_DAYS:-14}
+      DAILY_DIGEST_HOUR_MSK: ${DAILY_DIGEST_HOUR_MSK:-9}
+      BROADCAST_DM_QUIET_HOURS: ${BROADCAST_DM_QUIET_HOURS:-22:00-08:00}
       PUBLIC_BASE_URL: https://${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN}
       CORS_ORIGINS: https://${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN}
     logging: *production-logging

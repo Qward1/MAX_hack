@@ -34,6 +34,17 @@ import { RouteCard } from "../features/routing/RouteCard";
 import { ResidentWorkProgress } from "../features/tickets/ResidentWorkProgress";
 import { NoHouse } from "../features/houses/NoHouse";
 import {
+  AnnouncementsScreen,
+  type CommunityLinks,
+  type CommunityView,
+  MyActivityScreen,
+  MyHouseScreen,
+  PollScreen,
+  ReceptionScreen,
+  WorksScreen,
+} from "../features/community/CommunityScreens";
+import { type CommunityApi, communityApi } from "../shared/api/community";
+import {
   categoryLabel,
   formatDate,
   knownActions,
@@ -53,15 +64,35 @@ type Loaded = {
   /** Дома с открытым доступом — для жителя, у которого домов ещё нет. */
   openHouses?: OpenHouse[];
   openHousesFailed?: boolean;
+  /** Раздел сообщества D3: «Мой дом», объявления, опрос, работы, обращения, приём. */
+  view?: CommunityView;
+};
+
+const VIEWS: CommunityView[] = ["home", "news", "poll", "works", "mine", "reception"];
+const VIEW_TITLES: Record<CommunityView, string> = {
+  home: "Мой дом",
+  news: "Объявления",
+  poll: "Опрос",
+  works: "Выполненные работы",
+  mine: "Мои обращения",
+  reception: "Запись на приём",
 };
 
 /**
  * Ссылки запуска, которые разрешает резолвер: `w_` — работа по заявке, `r_` —
- * карточка маршрута. Ссылка `c_…` из кнопки в чате уже учтена при входе
- * (сервер проверил участие в этом чате), остальные параметры ничего не значат.
+ * карточка маршрута, `t_` — пост о заявке в чате, `p_` — пост объявления или
+ * опроса в чате, `n_` — личное сообщение рассылки (D3). Ссылка `c_…` из
+ * кнопки в чате уже учтена при входе (сервер проверил участие в этом чате),
+ * остальные параметры ничего не значат.
  */
-const LAUNCH_REF = /^[wr]_[A-Za-z0-9_-]{32}$/;
-type Target = FlowTarget & { house?: string; offset?: number };
+const LAUNCH_REF = /^[wrtpn]_[A-Za-z0-9_-]{32}$/;
+type Target = FlowTarget & {
+  house?: string;
+  offset?: number;
+  view?: CommunityView;
+  poll?: string;
+  report?: boolean;
+};
 function routeUrl(target: Target = {}) {
   // Never propagate MAX launch/auth parameters into DOM links or copied navigation URLs.
   const url = new URL(window.location.pathname, window.location.origin);
@@ -73,10 +104,29 @@ function routeUrl(target: Target = {}) {
   if (target.card) url.searchParams.set("card", target.card);
   if (target.draft) url.searchParams.set("draft", target.draft);
   if (target.offset) url.searchParams.set("offset", String(target.offset));
+  if (target.view) url.searchParams.set("view", target.view);
+  if (target.poll) url.searchParams.set("poll", target.poll);
+  if (target.report) url.searchParams.set("report", "1");
   return url.pathname + url.search;
 }
 
-export function App({ client = apiClient }: { client?: DomSignalApi }) {
+export function App({
+  client = apiClient,
+  community,
+}: {
+  client?: DomSignalApi;
+  /** Запросы D3; по умолчанию — поверх того же вошедшего клиента. */
+  community?: CommunityApi;
+}) {
+  const [communityClient] = useState<CommunityApi>(
+    () =>
+      community ??
+      communityApi(
+        "request" in client
+          ? (client as unknown as Parameters<typeof communityApi>[0])
+          : apiClient,
+      ),
+  );
   const [location, setLocation] = useState(() => window.location.href);
   const [reportOpen, setReportOpen] = useState(false);
   const [launchPending, setLaunchPending] = useState(true);
@@ -87,7 +137,11 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
   const incidentId = route.searchParams.get("incident");
   const cardId = route.searchParams.get("card");
   const draftId = route.searchParams.get("draft");
-  const detail = Boolean(incidentId || cardId || draftId);
+  const rawView = route.searchParams.get("view");
+  const view = VIEWS.find((item) => item === rawView);
+  const pollId = route.searchParams.get("poll");
+  const reportParam = route.searchParams.get("report") === "1";
+  const detail = Boolean(incidentId || cardId || draftId || view);
   const offset = Math.max(
     0,
     Math.min(
@@ -95,7 +149,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       Number.parseInt(route.searchParams.get("offset") ?? "0") || 0,
     ),
   );
-  const key = JSON.stringify([houseId, incidentId, cardId, draftId, offset, launchPending]);
+  const key = JSON.stringify([houseId, incidentId, cardId, draftId, offset, launchPending, view, pollId]);
   const navigate = useCallback((href: string) => {
     window.history.pushState(null, "", href);
     setLocation(window.location.href);
@@ -125,6 +179,15 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       if (launchRef && capabilities.features.miniapp) {
         const target = await client.notificationLaunch(launchRef, signal);
         const home = me.houses.find((house) => house.id === target.house_id);
+        // Пост объявления или опроса и личная рассылка ведут в раздел дома (D3).
+        if (target.kind === "poll" || target.kind === "announcements")
+          return {
+            capabilities,
+            me,
+            notificationLaunch: target,
+            house: home,
+            view: target.kind === "poll" ? "poll" : "news",
+          };
         // Карточка маршрута ведёт на свой экран: у внешнего маршрута заявки нет.
         if (target.kind === "route_card" && target.route_outcome_id) {
           if (!capabilities.features.routes)
@@ -137,6 +200,27 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
           return { capabilities, me, incident, notificationLaunch: target, house: home };
         }
         return { capabilities, me, notificationLaunch: target, unavailable: true };
+      }
+      if (view && capabilities.features.miniapp) {
+        const house = houseId !== null
+          ? me.houses.find((item) => item.id === houseId)
+          : me.houses.length === 1
+            ? me.houses[0]
+            : undefined;
+        // Чужой дом в адресе — тот же отказ, что у доски.
+        if (houseId !== null && !house)
+          throw new ApiProblem({
+            status: 403,
+            type: "about:blank",
+            code: "house_access_denied",
+            title: "",
+            detail: "",
+            trace_id: "",
+            retryable: false,
+          });
+        // «Мои обращения» и опрос не требуют выбранного дома; остальные разделы — дома.
+        if (!house && !["mine", "poll"].includes(view)) return { capabilities, me };
+        return { capabilities, me, house, view };
       }
       if (
         !capabilities.features.miniapp ||
@@ -205,7 +289,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       const incidents = await client.incidents(house.id, signal, offset);
       return { capabilities, me, house, incidents };
     },
-    [client, houseId, incidentId, cardId, draftId, detail, offset, launchPending],
+    [client, houseId, incidentId, cardId, draftId, detail, offset, launchPending, view],
   );
   const resource = useResource(key, load);
   const data = resource.data;
@@ -221,13 +305,25 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       routeUrl(
         target.kind === "route_card"
           ? { house: target.house_id, card: target.route_outcome_id ?? undefined }
-          : { house: target.house_id, incident: target.incident_id ?? undefined },
+          : target.kind === "poll"
+            ? { house: target.house_id, view: "poll", poll: target.poll_id ?? undefined }
+            : target.kind === "announcements"
+              ? { house: target.house_id, view: "news" }
+              : { house: target.house_id, incident: target.incident_id ?? undefined },
       ),
     );
     setLocation(window.location.href);
   }, [data?.notificationLaunch, launchPending]);
   const back = useCallback(() => {
-    // Из черновика возвращаемся к его карточке, из остального — на доску дома.
+    // Из опроса — к объявлениям, из черновика — к его карточке, из остального — на доску.
+    if (view === "poll" && houseId) {
+      navigate(routeUrl({ house: houseId, view: "news" }));
+      return;
+    }
+    if (view === "reception" && houseId) {
+      navigate(routeUrl({ house: houseId, view: "home" }));
+      return;
+    }
     if (data?.draft) {
       navigate(routeUrl({ house: data.draft.house_id, card: data.draft.route_outcome_id }));
       return;
@@ -237,7 +333,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
         house: data?.incident?.house_id ?? data?.card?.house_id ?? houseId ?? undefined,
       }),
     );
-  }, [navigate, data?.incident?.house_id, data?.card?.house_id, data?.draft, houseId]);
+  }, [navigate, data?.incident?.house_id, data?.card?.house_id, data?.draft, houseId, view]);
   useEffect(
     () => (detail ? maxBridge.subscribeBack(back) : undefined),
     [detail, back],
@@ -252,14 +348,34 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       К выбору дома
     </Button>
   );
-  const headerTitle = cardId
+  useEffect(() => {
+    // «Сообщить о проблеме» из пустых разделов открывает форму на доске.
+    if (!reportParam || !data?.incidents) return;
+    setReportOpen(true);
+    window.history.replaceState(null, "", routeUrl({ house: houseId ?? undefined }));
+    setLocation(window.location.href);
+  }, [reportParam, data?.incidents, houseId]);
+  const links: CommunityLinks = {
+    board: (house) => routeUrl({ house }),
+    view: (target, extra) => routeUrl({ view: target, house: extra?.house, poll: extra?.poll }),
+    incident: (house, incident) => routeUrl({ house, incident }),
+    card: (house, card) => routeUrl({ house, card }),
+    draft: (house, draft) => routeUrl({ house, draft }),
+    report: (house) => routeUrl({ house, report: true }),
+    navigate,
+  };
+  const headerTitle = view
+    ? VIEW_TITLES[view]
+    : cardId
     ? "Следующий шаг"
     : draftId
       ? "Черновик обращения"
       : incidentId
         ? "Проблема дома"
         : "Мой дом";
-  const loadingTitle = cardId
+  const loadingTitle = view
+    ? `Загрузка раздела «${VIEW_TITLES[view]}»`
+    : cardId
     ? "Загрузка карточки маршрута"
     : draftId
       ? "Загрузка черновика"
@@ -298,6 +414,54 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
         />
       </main>
     );
+  if (data.view && (data.house || ["mine", "poll"].includes(data.view))) {
+    const home = data.house;
+    return (
+      <main className="app-shell detail-shell">
+        <Flex justify="space-between" align="center" wrap="wrap" gap={12} className="toolbar">
+          <Button variant="ghost" onClick={back}>
+            {data.view === "poll" && home
+              ? "← К объявлениям"
+              : data.view === "reception" && home
+                ? "← К разделу «Мой дом»"
+                : "← К доске дома"}
+          </Button>
+        </Flex>
+        <PageHeader
+          title={VIEW_TITLES[data.view]}
+          subtitle={home?.address}
+          eyebrow={home ? "Дом" : "ДомСигнал"}
+        >
+          {home?.is_demo && <DemoBadge />}
+        </PageHeader>
+        {home && data.view !== "poll" && (
+          <SectionNav house={home.id} current={data.view} links={links} />
+        )}
+        {data.view === "home" && home && (
+          <MyHouseScreen api={communityClient} houseId={home.id} links={links} />
+        )}
+        {data.view === "news" && home && (
+          <AnnouncementsScreen api={communityClient} houseId={home.id} links={links} />
+        )}
+        {data.view === "works" && home && (
+          <WorksScreen api={communityClient} houseId={home.id} links={links} />
+        )}
+        {data.view === "reception" && home && (
+          <ReceptionScreen api={communityClient} houseId={home.id} links={links} />
+        )}
+        {data.view === "mine" && (
+          <MyActivityScreen api={communityClient} houseId={home?.id} links={links} />
+        )}
+        {data.view === "poll" && pollId && (
+          <PollScreen api={communityClient} pollId={pollId} houseId={home?.id} links={links} />
+        )}
+        {data.view === "poll" && !pollId && (
+          <StatePanel title="Опрос не найден" detail="Вернитесь к объявлениям дома." />
+        )}
+        {import.meta.env.DEV && <Diagnostics />}
+      </main>
+    );
+  }
   if (!data.house && !data.incident && !data.card && !data.draft)
     return (
       <main className="app-shell">
@@ -603,6 +767,7 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
         </label>
       )}
       {notice}
+      <SectionNav house={house.id} current="board" links={links} />
       <Panel className="board-summary">
         <Flex gap={24} wrap="wrap" align="center">
           <Typography.Text variant="header" className="summary-value">
@@ -715,6 +880,46 @@ export function App({ client = apiClient }: { client?: DomSignalApi }) {
       </footer>
       {import.meta.env.DEV && <Diagnostics />}
     </main>
+  );
+}
+
+/** Разделы дома: доска и разделы D3. Ссылки, а не вкладки: у каждого раздела свой адрес. */
+function SectionNav({
+  house,
+  current,
+  links,
+}: {
+  house: string;
+  current: CommunityView | "board";
+  links: CommunityLinks;
+}) {
+  const items: [CommunityView | "board", string][] = [
+    ["board", "Проблемы дома"],
+    ["home", "Мой дом"],
+    ["news", "Объявления"],
+    ["works", "Выполненные работы"],
+    ["mine", "Мои обращения"],
+  ];
+  return (
+    <nav className="section-nav" aria-label="Разделы дома">
+      {items.map(([target, label]) => {
+        const href = target === "board" ? links.board(house) : links.view(target, { house });
+        return (
+          <a
+            key={target}
+            href={href}
+            aria-current={current === target ? "page" : undefined}
+            onClick={(event) => {
+              if (event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
+              event.preventDefault();
+              links.navigate(href);
+            }}
+          >
+            {label}
+          </a>
+        );
+      })}
+    </nav>
   );
 }
 

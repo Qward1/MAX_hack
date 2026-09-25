@@ -107,7 +107,8 @@ describe("Графики", () => {
       { key: "a", label: "Создано", color: "#235dcc", values: [1, 0, 3] },
       { key: "b", label: "Закрыто", color: "#eb6834", values: [0, 1, 2] },
     ]} />);
-    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("максимум 3");
+    // Первый — сам график; столбцы тоже `img` с подписью дня (UX-D3, axe).
+    expect(screen.getAllByRole("img")[0].getAttribute("aria-label")).toContain("максимум 3");
     expect(screen.getAllByText("Создано").length).toBeGreaterThan(0);
     fireEvent.focus(screen.getAllByRole("img")[0].querySelectorAll("rect")[2]);
     expect(screen.getByRole("status").textContent).toContain("3");

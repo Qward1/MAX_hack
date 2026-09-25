@@ -21,6 +21,7 @@ from uuid import UUID
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from domsignal.contracts.community import PollResults
 from domsignal.contracts.dashboards import (
     CategoryCount,
     CompanyDashboard,
@@ -38,6 +39,7 @@ from domsignal.contracts.dashboards import (
     PlatformTotals,
 )
 from domsignal.db.models import (
+    Broadcast,
     ChatBinding,
     ChatQuotaRequest,
     CompanyOnboardingRequest,
@@ -45,7 +47,9 @@ from domsignal.db.models import (
     HouseAssignment,
     HouseManagement,
     ManagementCompany,
+    Poll,
 )
+from domsignal.services.broadcasts import poll_closed, tally
 from domsignal.services.chat_quota import quota_state
 from domsignal.services.onboarding import OPEN, current_management, require_company
 
@@ -531,7 +535,38 @@ class DashboardService:
                 )
                 for day in day_list
             ],
+            polls=await self._polls(db, company),
         )
+
+    @staticmethod
+    async def _polls(db: AsyncSession, company: UUID) -> list[PollResults]:
+        """Итоги пяти последних отправленных опросов УК."""
+        rows = await db.scalars(
+            select(Poll)
+            .join(Broadcast, Broadcast.id == Poll.broadcast_id)
+            .where(
+                Broadcast.tenant_id == company,
+                Broadcast.status == "sent",
+                Broadcast.retracted_at.is_(None),
+            )
+            .order_by(Broadcast.sent_at.desc())
+            .limit(5)
+        )
+        results = []
+        for poll in rows:
+            options, voters = await tally(db, poll)
+            results.append(
+                PollResults(
+                    poll_id=poll.id,
+                    question=poll.question,
+                    multiple=poll.multiple,
+                    closes_at=poll.closes_at,
+                    closed=poll_closed(poll),
+                    voters=voters,
+                    options=options,
+                )
+            )
+        return results
 
 
 def csv_cell(value: object) -> object:

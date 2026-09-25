@@ -539,10 +539,15 @@ class AdministrationService:
                             "staff",
                             "chat_connections",
                             "organization",
+                            "mailings",
+                            "notices",
+                            "reception",
                         ]
                         if m.role == "company_admin"
                         else ["tickets", "signals", "assigned_houses", "overview"]
-                        + (["chat_connections"] if c.id in responsible else [])
+                        # Ответственный за дом подключает чаты и пишет жителям (D3).
+                        + (["chat_connections", "mailings"] if c.id in responsible else [])
+                        + ["notices", "reception"]
                     ),
                 )
                 for c, m in rows
@@ -975,6 +980,9 @@ class AdministrationService:
                     open_access_changed_at=house.open_access_changed_at,
                     can_connect_chats=member.role == "company_admin"
                     or own_roles.get(management.id) == "responsible",
+                    entrance_count=house.entrance_count,
+                    floor_count=house.floor_count,
+                    facts_updated_at=house.facts_updated_at,
                 )
             )
         return result

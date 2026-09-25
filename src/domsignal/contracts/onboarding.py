@@ -24,6 +24,10 @@ Surface = Literal[
     "staff",
     "chat_connections",
     "organization",
+    # D3: объявления, рассылки и опросы; уведомления платформы и сводка; приём.
+    "mailings",
+    "notices",
+    "reception",
 ]
 Plain = Annotated[str, Field(min_length=1, max_length=2000)]
 #: Телефон заявки УК: цифры с обычными разделителями и необязательный добавочный.
@@ -351,6 +355,10 @@ class CompanyHouseView(ContractModel):
     open_access_changed_at: datetime | None = None
     #: Может ли текущий сотрудник подключать чаты этого дома (`chat.connect`, D2).
     can_connect_chats: bool = False
+    #: Сведения о доме «по данным УК» (D3, аддитивно).
+    entrance_count: int | None = None
+    floor_count: int | None = None
+    facts_updated_at: datetime | None = None
 
 
 class OpenAccessChange(ContractModel):

@@ -3,6 +3,7 @@
 import logging
 import re
 import secrets
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -23,6 +24,8 @@ from domsignal.core.display_time import DEFAULT_DISPLAY_TIMEZONE
 from domsignal.core.incidents import CATEGORY_TITLES
 from domsignal.core.signals import quote_text
 from domsignal.db.models import (
+    Broadcast,
+    BroadcastHouse,
     ChatBinding,
     House,
     HouseManagement,
@@ -31,6 +34,7 @@ from domsignal.db.models import (
     NotificationDelivery,
     OrganizationMembership,
     OutboxMessage,
+    Poll,
     Report,
     RouteOutcome,
     Signal,
@@ -41,8 +45,13 @@ from domsignal.db.models import (
 )
 from domsignal.db.models.notifications import (
     BOT_REPLY_PURPOSE,
+    BROADCAST_CHAT_PURPOSE,
+    BROADCAST_DM_PURPOSE,
+    BROADCAST_STAFF_PURPOSE,
     CHAT_PURPOSES,
+    KEYED_PURPOSES,
     SIGNAL_ALERT_PURPOSE,
+    TICKET_CHAT_PURPOSE,
 )
 from domsignal.db.repositories.notifications import NotificationRepository
 from domsignal.db.repositories.passive import PassiveRepository
@@ -65,6 +74,17 @@ from domsignal.services.chat_voice import (
     operator_alert_message,
     signal_cabinet_url,
 )
+from domsignal.services.community_delivery import (
+    BULK_GATE,
+    BULK_PURPOSES,
+    BULK_SPACING_MS,
+    STOP_CODES,
+    broadcast_chat_message,
+    broadcast_dm_message,
+    broadcast_staff_message,
+    defer_until,
+    max_destination,
+)
 from domsignal.services.errors import AccessDenied, ResourceNotFound
 from domsignal.services.notification_render import actionable, render
 from domsignal.services.route_card_render import (
@@ -74,6 +94,13 @@ from domsignal.services.route_card_render import (
     render_route_card,
 )
 from domsignal.services.signals import evidence_mid
+from domsignal.services.ticket_chat import (
+    TICKET_CHAT_INTENT_KIND,
+    TicketChatIntent,
+    new_delivery,
+    ticket_chat_message,
+    touch_ticket_chat,
+)
 from domsignal.services.tickets import TicketService
 
 logger = logging.getLogger(__name__)
@@ -85,12 +112,33 @@ ROUTE_CARD_PURPOSE = "route_action_card"
 NO_RESIDENT_RECIPIENT = "NO_RESIDENT_RECIPIENT"
 
 #: Коды, при которых доставка пропускается, а не считается несостоявшейся.
-SKIPPED_CODES = frozenset({"NO_MAX_IDENTITY", NO_RESIDENT_RECIPIENT})
+SKIPPED_CODES = frozenset(
+    {"NO_MAX_IDENTITY", NO_RESIDENT_RECIPIENT, "UNSUBSCRIBED", "CHAT_SETTING_OFF", "NO_DIALOG"}
+)
+
+#: Снимок личного сообщения D3 по ключу (`reply_event_id`): получатель, текст.
+KeyedSnapshot = Callable[
+    [AsyncSession, NotificationDelivery], Awaitable[tuple[str, PersonalMessage, int]]
+]
 
 #: Карточка не ушла, потому что диалога с ботом ещё не было: после
 #: `bot_started` её можно дослать (D1).
 REARMABLE_CODES = ("NO_MAX_IDENTITY", "MAX_FORBIDDEN", "MAX_NOT_FOUND", "MAX_REJECTED")
 REARM_DELAY = timedelta(seconds=3)
+
+#: Отправка отложена тихими часами (статистика рассылки).
+QUIET_HOURS = "QUIET_HOURS"
+
+#: Назначения D3: их причины остановки видны в статистике как есть.
+COMMUNITY_PURPOSES = frozenset(
+    {
+        BROADCAST_CHAT_PURPOSE,
+        BROADCAST_DM_PURPOSE,
+        BROADCAST_STAFF_PURPOSE,
+        TICKET_CHAT_PURPOSE,
+        *KEYED_PURPOSES,
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -99,6 +147,16 @@ class DeliverySnapshot:
     message: PersonalMessage
     # У карточки маршрута нет состояния работы: она не относится к заявке.
     view: ResidentWorkStatus | None = None
+    #: Версия текста для правки того же сообщения (D3: рассылки, пост о заявке).
+    version: int | None = None
+
+
+def _versioned(
+    built: tuple[str, PersonalMessage, int],
+) -> tuple[str, PersonalMessage, None, int]:
+    """Снимок D3 без состояния работы: адрес, текст и версия текста."""
+    destination, message, version = built
+    return destination, message, None, version
 
 
 class DeferredNotification(Exception):
@@ -125,6 +183,10 @@ class TicketNotificationHandler:
         self.public_base_url = public_base_url
         # Пояс времени в сообщениях сотрудникам (кабинет показывает МСК).
         self.display_timezone = display_timezone
+        #: Личные сообщения D3 по ключу: сопровождение, сводка, напоминание.
+        self.keyed: dict[str, KeyedSnapshot] = {}
+        #: Ночное окно личных рассылок (`BROADCAST_DM_QUIET_HOURS`), минуты МСК.
+        self.dm_quiet_window: tuple[int, int] | None = (22 * 60, 8 * 60)
 
     async def _snapshot(
         self,
@@ -137,6 +199,22 @@ class TicketNotificationHandler:
             return await self._signal_alert_snapshot(session, delivery)
         if delivery.purpose == BOT_REPLY_PURPOSE:
             return await self._bot_reply_snapshot(session, delivery)
+        if delivery.purpose == BROADCAST_CHAT_PURPOSE:
+            return DeliverySnapshot(*_versioned(await broadcast_chat_message(session, delivery)))
+        if delivery.purpose == BROADCAST_DM_PURPOSE:
+            return DeliverySnapshot(*_versioned(await broadcast_dm_message(session, delivery)))
+        if delivery.purpose == BROADCAST_STAFF_PURPOSE:
+            return DeliverySnapshot(
+                *_versioned(await broadcast_staff_message(session, delivery, self.public_base_url))
+            )
+        if delivery.purpose == TICKET_CHAT_PURPOSE:
+            chat_id, message, version, _ = await ticket_chat_message(session, delivery)
+            return DeliverySnapshot(chat_id, message, None, version)
+        if delivery.purpose in KEYED_PURPOSES:
+            build = self.keyed.get(delivery.purpose)
+            if build is None:
+                raise ResourceNotFound("INVALID_INTENT")
+            return DeliverySnapshot(*_versioned(await build(session, delivery)))
         if delivery.purpose in CHAT_PURPOSES:
             return await self._chat_snapshot(session, delivery)
         return await self._ticket_snapshot(session, delivery)
@@ -277,22 +355,8 @@ class TicketNotificationHandler:
         return DeliverySnapshot(binding.max_chat_id, chat_message(intent, delivery.launch_ref))
 
     async def _identity(self, user: User, delivery: NotificationDelivery) -> str:
-        """Личная доставка возможна только в подтверждённую личность MAX.
-
-        Подтверждение — вход в mini app по подписанным `initData` или диалог с
-        ботом, начатый этим человеком (подписанный вебхук, D1): бот не может
-        написать первым тому, кто диалог не начинал.
-        """
-        if (
-            not (user.max_identity_verified_at or user.dialog_open)
-            or not user.max_user_id
-            or not re.fullmatch(r"[1-9]\d{0,18}", user.max_user_id)
-            or int(user.max_user_id) > 2**63 - 1
-        ):
-            raise ResourceNotFound("NO_MAX_IDENTITY")
-        if delivery.destination and user.max_user_id != delivery.destination:
-            raise ResourceNotFound("MAX_IDENTITY_CHANGED")
-        return user.max_user_id
+        """Личная доставка — только в подтверждённую личность MAX (D1)."""
+        return max_destination(user, delivery)
 
     async def _bot_reply_snapshot(
         self,
@@ -437,6 +501,8 @@ class TicketNotificationHandler:
                         delivery.status = "retry_wait"
                         delivery.retry_count = 0
                         delivery.next_attempt_at = None
+            # Сообщение бота о заявке в чате догоняет новый статус правкой (B-06).
+            await touch_ticket_chat(session, ticket.incident_id)
             purposes = {"accepted": "ticket_accepted", "work_reported": "work_verification"}
             purpose = purposes.get(event.kind)
             if purpose:
@@ -643,6 +709,55 @@ class TicketNotificationHandler:
             await session.flush()
         return True
 
+    async def consume_ticket_chat_once(self) -> bool:
+        """Пост о заявке из outbox → одна доставка в чат (одна на заявку).
+
+        Выключенная настройка «Статусы заявок» или неактивная привязка дают
+        пропуск с причиной: запись о том, что сообщение не публиковалось.
+        """
+        async with self.sessions() as session, session.begin():
+            repo = NotificationRepository(session)
+            outbox = await repo.intent(TICKET_CHAT_INTENT_KIND)
+            if outbox is None:
+                return False
+            try:
+                intent = TicketChatIntent.model_validate(outbox.payload)
+            except ValidationError:
+                outbox.status, outbox.last_error = "processed", "INVALID_INTENT"
+                return True
+            ticket = await session.get(Ticket, intent.ticket_id)
+            binding = await session.get(ChatBinding, intent.chat_binding_id)
+            existing = await session.scalar(
+                select(NotificationDelivery.id).where(
+                    NotificationDelivery.ticket_id == intent.ticket_id,
+                    NotificationDelivery.purpose == TICKET_CHAT_PURPOSE,
+                )
+            )
+            if (
+                ticket is None
+                or binding is None
+                or outbox.aggregate_id != intent.ticket_id
+                or existing is not None
+            ):
+                outbox.status = "processed"
+                outbox.last_error = None if existing is not None else "INVALID_INTENT"
+                return True
+            delivery = new_delivery(outbox.id, intent, desired_version=0)
+            session.add(delivery)
+            now = datetime.now(UTC)
+            if binding.binding_version != intent.binding_version:
+                self._stop(delivery, "CHAT_BINDING_INACTIVE", now)
+            else:
+                try:
+                    snapshot = await self._snapshot(session, delivery)
+                    delivery.destination = snapshot.destination
+                    delivery.desired_version = snapshot.version or 0
+                except (AccessDenied, ResourceNotFound) as exc:
+                    self._stop(delivery, str(exc) or "CHAT_BINDING_INACTIVE", now)
+            outbox.status = "processed"
+            await session.flush()
+        return True
+
     async def _staff_recipients(self, session: AsyncSession, house_id: UUID) -> list[User]:
         """Сотрудники текущей УК дома с отображением в MAX и доступом к дому.
 
@@ -776,9 +891,28 @@ class TicketNotificationHandler:
                 return True  # The previous POST may have committed; never blindly resend.
             try:
                 snapshot = await self._snapshot(session, delivery)
-            except (AccessDenied, ResourceNotFound):
-                self._stop(delivery, "ACCESS_REVOKED", at)
+            except (AccessDenied, ResourceNotFound) as exc:
+                # Причина остановки D3 попадает в статистику рассылки; прежние
+                # назначения по-прежнему останавливаются как «доступ отозван».
+                code = (
+                    str(exc)
+                    if delivery.purpose in COMMUNITY_PURPOSES and str(exc) in STOP_CODES
+                    else "ACCESS_REVOKED"
+                )
+                self._stop(delivery, code, at)
                 return True
+            until = await defer_until(session, delivery, at, dm_window=self.dm_quiet_window)
+            if until is not None:
+                # Тихие часы: отправка или необязательная правка ждут утра.
+                delivery.next_attempt_at = until
+                if delivery.provider_message_id is None:
+                    delivery.last_error_code = QUIET_HOURS
+                return True
+            if delivery.purpose in BULK_PURPOSES:
+                paced = await repo.pace(BULK_GATE, at, spacing_ms=BULK_SPACING_MS)
+                if paced is not None:
+                    delivery.next_attempt_at = paced
+                    return True
             if (
                 delivery.provider_message_id is None
                 and snapshot.view is not None
@@ -903,12 +1037,17 @@ class TicketNotificationHandler:
                 delivery.provider_message_id = message_id
                 delivery.accepted_at = delivery.accepted_at or finished
                 delivery.applied_version = (
-                    snapshot.view.version or 0 if snapshot.view is not None else 0
+                    snapshot.version
+                    if snapshot.version is not None
+                    else snapshot.view.version or 0
+                    if snapshot.view is not None
+                    else 0
                 )
                 delivery.desired_version = max(delivery.desired_version, delivery.applied_version)
                 delivery.retry_count = 0
                 delivery.next_attempt_at = None
                 delivery.last_error_code = None
+                delivery.last_error_at = None
             delivery.lease_token = None
             delivery.lease_until = None
             logger.info(
@@ -935,10 +1074,14 @@ class TicketNotificationHandler:
         различий в тексте, поэтому по ответу нельзя узнать, существует ли
         ссылка вообще.
         """
-        if not re.fullmatch(r"[wr]_[A-Za-z0-9_-]{32}", ref):
+        if not re.fullmatch(r"[wrtpn]_[A-Za-z0-9_-]{32}", ref):
             raise ResourceNotFound("Resource was not found")
         delivery = await NotificationRepository(session).by_ref(ref)
-        if delivery is None or delivery.recipient_user_id != actor_id:
+        if delivery is None:
+            raise ResourceNotFound("Resource was not found")
+        if delivery.purpose in {TICKET_CHAT_PURPOSE, BROADCAST_CHAT_PURPOSE, BROADCAST_DM_PURPOSE}:
+            return await self._community_launch(session, delivery, actor_id)
+        if delivery.recipient_user_id != actor_id:
             raise ResourceNotFound("Resource was not found")
         try:
             snapshot = await self._snapshot(session, delivery)
@@ -958,6 +1101,69 @@ class TicketNotificationHandler:
                 delivery.work_attempt_id and (not latest or latest.id != delivery.work_attempt_id)
             ),
         )
+
+    async def _community_launch(
+        self, session: AsyncSession, delivery: NotificationDelivery, actor_id: UUID
+    ) -> NotificationLaunch:
+        """Пост в чате и личное сообщение рассылки: доступ к дому проверяется заново.
+
+        Ссылка поста в группе общая для всех участников чата, поэтому
+        получателя у неё нет: открывает тот, у кого есть доступ к дому поста
+        (участие в чате проверено при входе по этой же ссылке, D1).
+        """
+        house_id: UUID | None = None
+        if delivery.purpose == BROADCAST_DM_PURPOSE and delivery.recipient_user_id != actor_id:
+            raise ResourceNotFound("Resource was not found")
+        if delivery.chat_binding_id is not None:
+            binding = await session.get(ChatBinding, delivery.chat_binding_id)
+            house_id = binding.house_id if binding is not None else None
+        if delivery.purpose == TICKET_CHAT_PURPOSE:
+            ticket = await session.get(Ticket, delivery.ticket_id)
+            if ticket is None or house_id is None or ticket.house_id != house_id:
+                raise ResourceNotFound("Resource was not found")
+            await self._readable_house(session, actor_id, ticket.house_id)
+            return NotificationLaunch(
+                kind="ticket",
+                incident_id=ticket.incident_id,
+                house_id=ticket.house_id,
+                work_attempt_id=None,
+                stale=False,
+            )
+        broadcast = await session.get(Broadcast, delivery.broadcast_id)
+        if broadcast is None or broadcast.status != "sent" or broadcast.retracted_at is not None:
+            raise ResourceNotFound("Resource was not found")
+        audience = list(
+            await session.scalars(
+                select(BroadcastHouse.house_id).where(BroadcastHouse.broadcast_id == broadcast.id)
+            )
+        )
+        candidates = [house_id] if house_id is not None else audience
+        chosen = None
+        for candidate in candidates:
+            if candidate not in audience:
+                continue
+            try:
+                await self._readable_house(session, actor_id, candidate)
+            except (AccessDenied, ResourceNotFound):
+                continue
+            chosen = candidate
+            break
+        if chosen is None:
+            raise ResourceNotFound("Resource was not found")
+        poll_id = await session.scalar(select(Poll.id).where(Poll.broadcast_id == broadcast.id))
+        return NotificationLaunch(
+            kind="poll" if poll_id is not None else "announcements",
+            house_id=chosen,
+            poll_id=poll_id,
+            work_attempt_id=None,
+            stale=False,
+        )
+
+    async def _readable_house(self, session: AsyncSession, actor_id: UUID, house_id: UUID) -> None:
+        context = await self.tickets.memberships.require_house(
+            session, user_id=actor_id, house_id=house_id
+        )
+        self.tickets.memberships.require_permission(context, "incident.read")
 
     async def _route_card_launch(
         self, session: AsyncSession, delivery: NotificationDelivery

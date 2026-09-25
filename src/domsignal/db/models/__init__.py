@@ -9,6 +9,18 @@ from domsignal.db.models.access import (
     User,
 )
 from domsignal.db.models.chat_connections import ChatBinding, ConnectionRequest, MAXChat
+from domsignal.db.models.community import (
+    Broadcast,
+    BroadcastCompany,
+    BroadcastHouse,
+    CompanyProfile,
+    Poll,
+    PollBallot,
+    PollChoice,
+    PollOption,
+    ReceptionBooking,
+    ReceptionSlot,
+)
 from domsignal.db.models.employee_auth import (
     AuthChallenge,
     AuthRateLimit,
@@ -53,6 +65,16 @@ from domsignal.db.models.tickets import (
 )
 
 __all__ = [
+    "Broadcast",
+    "BroadcastCompany",
+    "BroadcastHouse",
+    "CompanyProfile",
+    "Poll",
+    "PollBallot",
+    "PollChoice",
+    "PollOption",
+    "ReceptionBooking",
+    "ReceptionSlot",
     "ChatMemberCheck",
     "CompanyOnboardingRequest", "EmployeeInvitation", "HouseManagementRequest",
     "CompanyApplicationMessage", "EmployeeCredentialReset",

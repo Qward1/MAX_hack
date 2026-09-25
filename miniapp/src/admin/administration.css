@@ -91,7 +91,7 @@
 .stat-tile { background: #fff; border: 1px solid #d5dfe9; border-radius: 12px; padding: 16px 18px; }
 .stat-tile dt { color: #536379; font-size: 14px; }
 .stat-tile dd { margin: 6px 0 0; font-size: 30px; font-weight: 650; line-height: 1.1; }
-.stat-tile p { margin: 6px 0 0; font-size: 13px; }
+.stat-tile p, .stat-tile dd.stat-note { margin: 6px 0 0; font-size: 13px; font-weight: 400; line-height: 1.4; }
 .stat-link { font: inherit; color: #235dcc; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
 .chart { margin: 0; background: #fff; border: 1px solid #d5dfe9; border-radius: 12px; padding: 16px 18px; display: grid; gap: 8px; min-width: 0; }
 .chart figcaption h3 { margin: 0; }

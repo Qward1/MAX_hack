@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Feedback, History, OneTimeLink, Status, Title, connectionErrors, dateInput, formValue, submitted, useAction, useRead, type Schema } from "./administration";
 import { QuotaMeter } from "./charts";
+import { ChatSettingsPanel, CompanyProfileForm, HouseFactsForm } from "./CommunityPages";
 
 type House = Schema["CompanyHouseView"];
 export function Organization({ base }: { base: string }) {
@@ -9,7 +10,8 @@ export function Organization({ base }: { base: string }) {
     <dl className="admin-facts"><dt>Полное наименование</dt><dd>{r.data.legal_name ?? r.data.name}</dd>
       <dt>ИНН</dt><dd>{r.data.inn ?? "Не указан"}</dd><dt>Статус</dt><dd><Status value={r.data.status} /></dd>
       <dt>Контакт</dt><dd>{[r.data.contact_name, r.data.contact_email, r.data.contact_phone].filter(Boolean).join(" · ") || "Не указан"}</dd>
-    </dl>}</>;
+    </dl>}
+    {!r.error && <CompanyProfileForm base={base} />}</>;
 }
 export function Staff({ base }: { base: string }) {
   const people = useRead<Schema["MembershipView"][]>(`${base}/staff`);
@@ -107,6 +109,7 @@ export function HouseList({ houses, manage }: { houses: House[]; manage?: { base
     {h.bindings.map(b => <p key={b.id}>{b.title ?? "MAX-чат"} · <Status value={b.status} />{b.suspension_reason && ` · ${b.suspension_reason}`}
       {b.status === "active" && b.passive_capture_enabled != null && ` · Чтение чата: ${b.passive_capture_enabled ? "включено" : "выключено"}`}</p>)}
     {manage && <OpenAccessSwitch base={manage.base} house={h} refresh={manage.refresh} />}
+    {manage && <HouseFactsForm base={manage.base} house={h} refresh={manage.refresh} />}
   </section>)}</div> : <p className="state-panel">Доступных домов пока нет.</p>;
 }
 
@@ -199,6 +202,7 @@ export function ChatConnections({ base, canRequest = true }: { base: string; can
           confirming={confirm === b.id} ask={() => setConfirm(b.id)} cancel={() => setConfirm(null)}
           change={async enabled => { await action.run(`/api/v1/chat-bindings/${b.id}/passive-capture`, { enabled }); setConfirm(null); }} />}
         {b.status === "active" && <NoticeAgain binding={b.id} />}
+        {b.status === "active" && <ChatSettingsPanel bindingId={b.id} />}
       </div>)}
       {h.can_connect_chats ? <button className="ticket-button" disabled={action.busy} onClick={async () => {
         const result = await action.run<Schema["ConnectionView"]>(`/api/v1/houses/${h.house_id}/chat-connections`, { scope_type: "house" });

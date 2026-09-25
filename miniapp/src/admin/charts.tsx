@@ -95,7 +95,7 @@ export function ColumnChart({ title, description, days, series, stacked = false,
             })}
             {i % labelEvery === 0 && <text x={center} y={height - 8} textAnchor="middle" className="chart-tick">{dayLabel(day)}</text>}
             <rect x={left + band * i} y={top} width={band} height={plotH} className={`chart-hit ${active === i ? "is-active" : ""}`}
-              tabIndex={0} aria-label={`${dayLabel(day)}: ${series.map(s => `${s.label} ${formatNumber(s.values[i])}`).join(", ")}`}
+              role="img" tabIndex={0} aria-label={`${dayLabel(day)}: ${series.map(s => `${s.label} ${formatNumber(s.values[i])}`).join(", ")}`}
               onPointerEnter={() => setActive(i)} onFocus={() => setActive(i)} onBlur={() => setActive(null)} />
           </g>;
         })}
@@ -139,7 +139,8 @@ export function Funnel({ steps }: { steps: { label: string; value: number }[] })
 }
 
 export function StatTile({ label, value, note }: { label: string; value: ReactNode; note?: ReactNode }) {
-  return <div className="stat-tile"><dt>{label}</dt><dd>{value}</dd>{note && <p className="muted">{note}</p>}</div>;
+  // Пояснение — второе определение термина: в группе `dl` допустимы только dt/dd.
+  return <div className="stat-tile"><dt>{label}</dt><dd>{value}</dd>{note && <dd className="muted stat-note">{note}</dd>}</div>;
 }
 
 export function PeriodSwitch({ value, onChange }: { value: number; onChange: (days: 7 | 14 | 30) => void }) {

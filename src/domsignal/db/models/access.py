@@ -43,6 +43,9 @@ class User(Base):
     # Последний ответ бота в домовом чате на `/report` этого автора (не чаще
     # раза в 10 минут).
     group_ack_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # «Не получать рассылки» (D3): личные сообщения рассылок УК и платформы
+    # этому человеку не отправляются. Статусы его заявок и ответы бота — как раньше.
+    broadcast_opt_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -57,6 +60,12 @@ class User(Base):
 
 class House(Base):
     __tablename__ = "houses"
+    __table_args__ = (
+        CheckConstraint(
+            "entrance_count IS NULL OR entrance_count BETWEEN 1 AND 100", name="entrance_count"
+        ),
+        CheckConstraint("floor_count IS NULL OR floor_count BETWEEN 1 AND 200", name="floor_count"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(200))
@@ -69,6 +78,13 @@ class House(Base):
     open_resident_access: Mapped[bool] = mapped_column(Boolean, server_default="false")
     open_access_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     open_access_changed_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    # Сведения о доме «по данным УК» (D3): необязательны, продукт их не проверяет.
+    entrance_count: Mapped[int | None] = mapped_column(Integer)
+    floor_count: Mapped[int | None] = mapped_column(Integer)
+    facts_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    facts_updated_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
     created_at: Mapped[datetime] = mapped_column(
@@ -282,6 +298,8 @@ class OrganizationMembership(Timestamps, Base):
     )
     role: Mapped[str] = mapped_column(String(30))
     status: Mapped[str] = mapped_column(String(30), default="active", server_default="active")
+    # Ежедневная сводка в 09:00 МСК в личку MAX (D3); включает сам сотрудник.
+    daily_digest_enabled: Mapped[bool] = mapped_column(Boolean, server_default="false")
 
 
 class HouseAssignment(Timestamps, Base):

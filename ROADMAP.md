@@ -230,6 +230,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Ограничение:** сначала один полезный AI-шаг. Training сложной модели, vector DB и универсальный RAG не часть этой задачи.
 
 ### A-09 — сопровождение: reminders, escalation, мои действия
+- **D3, 25.09.2026:** минимальное сопровождение ([COMMUNITY-D3](docs/decisions.md#community-d3-2026-09-27)): через `APPEAL_FOLLOWUP_DAYS` после «Я отправил» — вопрос «Пришёл ли ответ?» в личку, следующий шаг только из справочника, fake clock в тестах; ежедневная сводка сотрудникам. Нормативные напоминания по срокам по-прежнему PLANNED — юридических сроков продукт не называет.
 - **Delivery slice 18.09.2026:** reusable current-access/staleness delivery safeguards verified through A-05. No deadline reminder, scheduler or escalation implemented; A-09 reminder requirements remain PLANNED.
 - **Owner:** DEV-B. **P1 · M · Depends:** A-04/A-05/A-06/Product. **Allowed paths:** services/scheduling/appeals, API/contracts, общие jobs/outbox, DB, tests.
 - **Сделать:** персональные/обоснованные нормативные напоминания, отмена/перенос, мои обращения, «нет ответа» → следующий допустимый маршрут/черновик с источником, история. Уведомлять только пользователя, которому разрешено отправлять DM.
@@ -239,6 +240,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **ARCH target / Depends дополнительно A-15:** адресаты и записи tenant-scoped; актуальные полномочия/доступ/канал проверяются перед отправкой, не только при создании reminder. Проверка fake clock + отозванный сотрудник/приостановленная УК: доставки чужих данных нет, история/собственные обращения не удалены (MT-10/16).
 
 ### A-10 — backend веб-кабинета, заявки УК, лимиты и назначения
+- **D3, 25.09.2026:** профиль УК «по данным УК», сведения о доме, настройки бота в чате и тихие часы с историей, рассылки/опросы УК и платформы, запись на приём ([COMMUNITY-D3](docs/decisions.md#community-d3-2026-09-27)).
 - **D2, 24.09.2026:** страница статуса заявки по секретной ссылке, вопросы/ответы, квота при одобрении и запросы расширения, аккаунт первого администратора со страницы статуса, сброс пароля/MFA сотрудника по ссылке, открытая регистрация сотрудников, дашборды платформы и УК из БД ([COMPANY-SIGNUP](docs/decisions.md#company-signup-2026-09-26), [DASHBOARDS](docs/decisions.md#dashboards-2026-09-26)). Лимиты теперь по чатам, не по домам. Настройки дома/тихие часы и модерация — по-прежнему открыты.
 
 - **Administrative onboarding slice, 19.09.2026:** public company application, audited platform decisions, atomic company/first invitation, existing A-10 new/existing employee MFA, staff/house assignments, last-admin guard, revoke with retained Ticket history, house-management requests and company suspension IMPLEMENTED IN BRANCH `dev/b-experience`. Current checks/deploy evidence: [DEV-B](docs/status/dev-b.md). Parent remains **PARTIAL**: limits/reservations, house settings/quiet hours, categories/moderation and second-region scope remain.
@@ -344,12 +346,14 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Проверка:** real MAX web+mobile, synthetic fixture data явны; без реального внешнего обращения пользователя тестируется только handoff и self-report, не выдуманная регистрация.
 
 ### B-05 — редактор обращения и мои действия
+- **D3, 25.09.2026:** «Мои обращения» в mini app ([COMMUNITY-D3](docs/decisions.md#community-d3-2026-09-27)): карточки внешнего маршрута, черновики с отметкой «Я отправил», свои сообщения и заявки со статусом, «Меня тоже касается»; пагинация и пустое состояние с действием.
 - **Owner:** DEV-B. **P0 · M · Depends:** A-01/A-04; B-02.
 - **Allowed paths:** `miniapp/src/features/appeals/`, onboarding/shared API client, UI/e2e tests.
 - **Сделать:** route panel, объяснение источника/ограничения, draft edit с autosave/debounce, preview, copy/open external, возвращение из MAX, self-reported number/date, мои черновики/действия. Autosave и submit не создают гонку потери текста.
 - **Acceptance:** изменения переживают reload; 409 предлагает восстановить/сопоставить, не стирает текст; отсутствие due_at понятно; пользователь редактирует только своё. Внешний переход виден и инициируется человеком; test markers читаемы, но не загромождают каждый экран.
 
 ### B-06 — «одна карточка вместо шума»
+- **D3, 25.09.2026:** групповая карточка заявки ([COMMUNITY-D3](docs/decisions.md#community-d3-2026-09-27), [BOT-VOICE-HUMAN](docs/decisions.md#bot-voice-human-2026-09-27)): одно сообщение бота на заявку из решения оператора или `/report`, правка при смене статуса и новом участнике, «Меня тоже касается» с проверкой участия, тихие часы и настройки чата. Реакция на ручное удаление поста администратором чата не реализована.
 - **Delivery slice 18.09.2026:** personal work card reconciliation and safe callbacks IMPLEMENTED IN BRANCH. Group cards, quiet-hours, shared counts/removal behavior remain outside this slice; B-06 remains PARTIAL.
 - **Owner:** DEV-B. **P1 · M · Depends:** B-03, A-06/Product, A-07; реальный group gate B-01. A-06/AI ranking optional и не принимает merge decision.
 - **Allowed paths:** `src/domsignal/bot/`, product services/cards/group handlers, scenario tests.
@@ -369,6 +373,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **ARCH target:** мастер подтверждения ConnectionRequest по A-07, подписанная идентичность подключающего и явный дом; приглашённый admin чата не получает кабинет/роль УК. Проверка MT-05/06/07/11/19: чужой/replayed/expired контекст отклонён, Mini App вне чата и web fallback не угадывают дом. Нет копирования приватного текста между чатами.
 
 ### B-08 — история, результаты и следующий шаг
+- **D3, 25.09.2026:** «Выполненные работы» дома (отчёт исполнителя и итог проверки жителями за 30/90 дней) и следующий шаг при «нет ответа» по сопровождению ([COMMUNITY-D3](docs/decisions.md#community-d3-2026-09-27)).
 - **Delivery slice 18.09.2026:** personal notification opens B-14 work result; callback/Mini App observation reuses A-16 and reconciles MAX card. IMPLEMENTED IN BRANCH; reminder settings, escalation and remaining history scope are not DONE.
 - **Owner:** DEV-B. **P1 · M · Depends:** A-06/Product, A-09; B-02/B-04.
 - **Allowed paths:** miniapp incident/appeal features, bot reminder/feedback cards, product API integration.
@@ -376,6 +381,7 @@ Pydantic/OpenAPI — источник формата; `docs/CONTRACTS.md` — с
 - **Acceptance:** статус не скрывает источник; старое «решено» не переносится на новый случай; ручная отметка filing не выглядит ответом УК; пустой/неприменимый нормативный срок не заменяется случайным отсчётом. Напоминание открывает актуальный экран и правильный incident.
 
 ### B-09 — отдельный веб-кабинет: подключение и готовность дома
+- **D3, 25.09.2026:** разделы «Рассылки», «Уведомления», «Приём», настройки бота в «MAX-чатах», контакты для жителей, опросы в обзоре; платформа — «Сообщения» ([COMMUNITY-D3](docs/decisions.md#community-d3-2026-09-27)).
 - **D2, 24.09.2026:** страница продукта и единый вход `/login` ([SITE-ENTRY](docs/decisions.md#site-entry-2026-09-26)), обзоры с SVG-графиками и CSV, квота в «MAX-чатах», запросы квоты и открытая регистрация у платформы; браузерный сценарий `miniapp/tests/browser/d2.spec.ts`.
 - **Administrative UI slice, 19.09.2026:** public apply, separate Company Admin/Operator/Platform layouts, server-driven multi-company contexts, staff and house requests, metadata-only platform review and A-07 MAX connection UI IMPLEMENTED IN BRANCH. Parent remains **PARTIAL**: limits, settings/quiet hours, auto-react control and extended moderation are outside this slice. B-14 queue is reused; no new ticket workflow. Current evidence: [DEV-B](docs/status/dev-b.md).
 - **Owner:** DEV-B. **P1 · M · Depends:** A-07/A-10; B-02.

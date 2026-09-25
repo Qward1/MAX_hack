@@ -8,6 +8,7 @@ class RecordingMaxMessagingProvider:
         self.sent: list[tuple[str, str, PersonalMessage]] = []
         self.edited: list[tuple[str, PersonalMessage]] = []
         self.answered: list[tuple[str, PersonalMessage]] = []
+        self.notified: list[tuple[str, str]] = []
         self.chat_sent: list[tuple[str, str, PersonalMessage]] = []
         self.errors: list[MessagingError] = []
         # Номера сообщений не повторяются, даже если тест убрал запись из списка:
@@ -44,3 +45,7 @@ class RecordingMaxMessagingProvider:
         mid = f"mid.chat-{self.chat_count}"
         self.chat_sent.append((chat_id, mid, message))
         return SentMessage(mid)
+
+    async def notify_callback(self, callback_id: str, text: str) -> None:
+        self.fail_if_requested()
+        self.notified.append((callback_id, text))

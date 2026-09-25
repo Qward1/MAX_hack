@@ -403,6 +403,8 @@ async def platform_bootstrap(user: Employee, db: DbDep) -> PlatformBootstrap:
                 "binding-disputes",
                 "health",
                 "audit",
+                # D3: сообщения платформы УК и в домовые чаты.
+                "mailings",
             ],
         )
 

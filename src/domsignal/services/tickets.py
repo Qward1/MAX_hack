@@ -70,6 +70,7 @@ from domsignal.services.errors import (
     ServiceError,
 )
 from domsignal.services.membership import MembershipService
+from domsignal.services.ticket_chat import enqueue_ticket_post
 
 
 class TicketConflict(ServiceError):
@@ -164,6 +165,20 @@ class TicketService:
             reason=reason,
             visibility="resident",
         )
+        if (
+            context.source == "max_group"
+            and context.chat_binding_id.value is not None
+            and context.binding_version.value is not None
+        ):
+            # Житель отправил `/report` в группе: одно сообщение бота о заявке в
+            # этот чат (B-06, BOT-VOICE-HUMAN-2026-09-27). Настройку чата
+            # проверяет доставка.
+            await enqueue_ticket_post(
+                session,
+                ticket_id=ticket.id,
+                chat_binding_id=context.chat_binding_id.value,
+                binding_version=context.binding_version.value,
+            )
         return ticket
 
     async def _context(

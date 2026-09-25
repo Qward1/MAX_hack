@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
@@ -71,6 +72,9 @@ class Report(Base):
     description: Mapped[str] = mapped_column(Text)
     classification_mode: Mapped[str] = mapped_column(String(30), default="manual")
     provenance: Mapped[str] = mapped_column(String(30), default="api")
+    # «Меня тоже касается» / «Это та же проблема» (D3): житель присоединился к
+    # уже описанной проблеме, а не описал свою. Только серверное значение.
+    joined: Mapped[bool] = mapped_column(Boolean, server_default="false")
     # Происхождение разбора: режим, состояния, версии, подтип, территория,
     # флаги, число отброшенных полей, идентификатор модели. **Без текста
     # реплики** — он уже лежит в `description`, дублировать его незачем.
