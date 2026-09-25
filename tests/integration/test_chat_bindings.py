@@ -275,6 +275,26 @@ async def test_cb06_required_bot_permissions(cb, admin, permissions):
     assert response.json()["code"] == "bot_permission_missing"
 
 
+async def test_cb06_rights_granted_after_detection_are_rechecked_on_approve(cb):
+    """Живой D2: в MAX бота сначала добавляют в группу, права выдают следом.
+
+    Проверка после bot_added успевает увидеть бота без прав; подтверждение УК
+    проверяет заново и подключает чат, когда права уже выданы.
+    """
+    cb.fake.configure("-101")
+    granted = cb.fake.bots["-101"]
+    cb.fake.bots["-101"] = replace(granted, is_admin=False, permissions=frozenset())
+    request = await cb.initiate()
+    await cb.detect(request)
+    await cb.drain()
+    row = await cb.scalar(select(ConnectionRequest))
+    assert (row.status, row.last_error_code) == ("chat_detected", "bot_permission_missing")
+    cb.fake.bots["-101"] = granted
+    response = await cb.approve(request)
+    assert response.status_code == 200, response.text
+    assert (await cb.scalar(select(ChatBinding))).status == "active"
+
+
 async def test_cb07_expired_cannot_activate(cb):
     cb.fake.configure("-101")
     request = await cb.initiate()
