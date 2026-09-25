@@ -29,7 +29,7 @@ from domsignal.core.incidents import ReportCategory
 from domsignal.db.models import ExplicitIntake, InboxReceipt
 from domsignal.db.repositories.chat_connections import ChatRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
-from domsignal.services.chat_connections import ChatConnectionService
+from domsignal.services.chat_connections import ChatConnectionService, typed_connect_token
 from domsignal.services.passive_capture import PassiveCaptureService
 
 if TYPE_CHECKING:
@@ -103,6 +103,7 @@ class MaxWebhookService:
                 )
             )
             job_id = None
+            typed = typed_connect_token(event.text) if event.in_dialog else None
             if event.kind == "message_callback" and event.callback:
                 job = await reliability.add_job(
                     kind="max.ticket.callback", payload=event.callback.model_dump(mode="json"),
@@ -112,14 +113,17 @@ class MaxWebhookService:
             elif event.kind == "message_callback" and event.bot_callback and self.bot:
                 job_id = await self.bot.on_callback(session, event)
             elif event.kind == "bot_started" and event.actor:
+                request = None
                 if event.token:
-                    await self.connections.claim(
+                    request = await self.connections.claim(
                         session,
                         token=event.token,
                         connector=event.actor,
                         occurred_at=event.occurred_at,
                     )
-                if self.bot:
+                if self.bot and event.token and event.token.startswith("connect_"):
+                    await self.bot.on_connect(session, event, request)
+                elif self.bot:
                     job_id = await self.bot.on_started(session, event)
             elif event.kind == "bot_stopped" and self.bot:
                 await self.bot.on_stopped(session, event)
@@ -149,6 +153,20 @@ class MaxWebhookService:
                     max_user_id=event.actor,
                     occurred_at=event.occurred_at,
                 )
+            elif (
+                event.kind == "message_created"
+                and event.in_dialog
+                and not event.from_bot
+                and event.actor
+                and typed
+            ):
+                # `/start connect_…`, набранная вручную, — то же, что ссылка запуска
+                # бота с этим токеном (A-07); текст с токеном нигде не сохраняется.
+                request = await self.connections.claim(
+                    session, token=typed, connector=event.actor, occurred_at=event.occurred_at
+                )
+                if self.bot:
+                    await self.bot.on_connect(session, event, request)
             elif (
                 event.kind == "message_created"
                 and event.in_dialog

@@ -185,9 +185,12 @@ export function ChatConnections({ base, canRequest = true }: { base: string; can
       : <Feedback loading={houses.loading} error={houses.error ?? (action.error || undefined)} />}
     {token && <section className="one-time-link"><h2>Продолжите в MAX</h2>
       {remaining?.limit != null && <p>После подключения останется свободных слотов: {Math.max((remaining.remaining ?? 0) - 1, 0)} из {remaining.limit}.</p>}
-      <p>Передайте администратору чата эту команду для личного сообщения боту ДомСигнал:</p>
+      <p>1. Администратор чата открывает бота ДомСигнал по кнопке — код подключения передаётся сам, бот ответит, что делать дальше.</p>
+      {capabilities.data?.bot_url && <a className="ticket-button" href={`${capabilities.data.bot_url}?start=${token}`} target="_blank" rel="noopener noreferrer">Открыть бота в MAX</a>}
+      <p className="muted">Или отправьте боту в личные сообщения эту команду целиком:</p>
       <input aria-label="Команда подключения MAX" readOnly value={`/start ${token}`} onFocus={e => e.target.select()} />
-      <p>Затем администратор добавляет существующего бота в группу. После проверки обновите страницу и подтвердите подключение.</p></section>}
+      <p>2. После ответа бота администратор добавляет бота в группу дома и делает его администратором с правом читать все сообщения.</p>
+      <p>3. Обновите эту страницу и нажмите «Подтвердить подключение».</p></section>}
     {!houses.error && houses.data?.map(h => <section className="admin-detail" key={h.management_id}><h2>{h.address}</h2>
       {h.bindings.map(b => <div key={b.id} className="connection-row">
         <p>{b.title ?? "MAX-чат"} · <Status value={b.status} /> · {b.scope_type === "entrance" ? `Подъезд ${b.scope_value}` : "Весь дом"}
