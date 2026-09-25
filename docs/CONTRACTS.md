@@ -1885,3 +1885,67 @@ CHAT_QUOTA_EXCEEDED`, `detail` — «Лимит подключённых чат�
 production — она же (SITE-ENTRY); `/login` — единый вход;
 `/company/apply/status/<token>`, `/join/<код>`, `/admin/reset/<token>` —
 страницы соответствующих шагов.
+
+## Жилищный навигатор и домовое сообщество — срез D3
+
+Решения: [BOT-VOICE-HUMAN-2026-09-27](decisions.md#bot-voice-human-2026-09-27),
+[COMMUNITY-D3-2026-09-27](decisions.md#community-d3-2026-09-27). Миграция
+`20260927_0013` аддитивна (откат отказывается, если есть рассылки, приём или
+доставки D3). Прежние DTO меняются только новыми необязательными полями.
+
+### Изменения существующих контрактов
+
+- `NotificationLaunch.kind` += `poll`, `announcements`; `poll_id` (необязательно).
+  Резолвер `/notification-launch/{ref}` принимает `t_` (пост о заявке в чате →
+  `kind=ticket`), `p_` (пост рассылки/опроса), `n_` (личная рассылка →
+  `poll`/`announcements`). Пост в группе без получателя: открывает тот, у кого
+  есть доступ к дому поста; личная ссылка — только её получатель.
+- Кнопки бота: `g:me:t_<32>` — «Меня тоже касается» в группе (новое
+  `MaxEvent.group_callback`, задача `chat.callback`); `b:unsub` — «Не получать
+  рассылки»; `b:fu:<черновик>:resolved|answered|none` — ответ на
+  сопровождение. Порт MAX += `notify_callback` (`POST /answers` с
+  `notification`, сообщение не заменяется).
+- `CompanyDashboard.polls[]` (`PollResults`) — итоги пяти последних опросов.
+- `CompanyHouseView` += `entrance_count`, `floor_count`, `facts_updated_at`.
+- `AdminBootstrap.surfaces`: администратор УК += `mailings`, `notices`,
+  `reception`; ответственный += `mailings`; все сотрудники += `notices`,
+  `reception`. `PlatformBootstrap.surfaces` += `mailings`.
+- Политика доступа += право `broadcast.send` (администратор УК и
+  ответственный за дом).
+- `NotificationDelivery.purpose` += `broadcast_chat`, `chat_ticket_status`
+  (в чат), `broadcast_dm`, `broadcast_staff`, `appeal_followup`,
+  `staff_digest`, `reception_reminder` (в личку); поле `broadcast_id`.
+  Настройки: `APPEAL_FOLLOWUP_DAYS` (14), `DAILY_DIGEST_HOUR_MSK` (9),
+  `BROADCAST_DM_QUIET_HOURS` (`22:00-08:00`, пусто — без окна).
+
+### Житель (`/api/v1`, Bearer из MAX)
+
+| Метод и путь | Ответ | Правило |
+|---|---|---|
+| `GET /houses/{id}/overview` | `HouseOverview` | житель дома; сотрудник без основания — 403, посторонний — 404 |
+| `GET /houses/{id}/completed-works?days=30\|90` | `CompletedWorkList` | отчёт исполнителя (`AttemptPublic.public_description`), итог `confirmed\|returned`, без имён |
+| `GET /houses/{id}/announcements` | `AnnouncementList` | отправленные и не удалённые сообщения дома; опрос — всегда |
+| `GET /polls/{id}` / `POST /polls/{id}/vote` | `PollView` | `{option_ids}`; не житель — 403, закрыт — 409 `poll_closed`, чужой вариант — 422 |
+| `GET /me/activity` | `ActivityList` | `route_card`, `appeal_draft`, `report`, `joined`; пагинация |
+| `GET\|POST /me/preferences` | `ResidentPreferences` | `broadcast_opt_out` |
+| `GET /houses/{id}/reception`, `POST …/reception/bookings`, `POST …/bookings/{id}/cancel` | `ReceptionOverview` | мест нет — 409 `slot_full` |
+
+### Кабинет
+
+| Метод и путь | Правило |
+|---|---|
+| `GET\|POST /companies/{id}/profile` | чтение — сотрудник УК, запись — администратор УК |
+| `POST /companies/{id}/houses/{house}/facts` | администратор УК текущего управления |
+| `GET /companies/{id}/broadcast-houses` | дома, доступные автору |
+| `GET\|POST /companies/{id}/broadcasts` | `POST` — черновик, `Idempotency-Key`; чужой дом в аудитории — 422 |
+| `GET\|POST /platform/broadcasts`, `GET /platform/broadcast-regions` | только суперадмин (вход с MFA) |
+| `GET /broadcasts/{id}`, `GET …/preview` | `BroadcastView` со статистикой; `BroadcastPreview` |
+| `POST /broadcasts/{id}/update\|confirm\|cancel\|edit\|retract\|close-poll` | `expected_version`; не то состояние или версия — 409 `broadcast_conflict`; `confirm` требует `service_only: true` |
+| `GET /companies/{id}/platform-notices` | лента сообщений платформы |
+| `GET\|POST /companies/{id}/me/settings` | `daily_digest_enabled`; `max_linked` — может ли бот написать |
+| `GET\|POST /chat-bindings/{id}/settings` | чтение — `ticket.read` дома, запись — `chat.connect`; история с автором |
+| `GET\|POST /companies/{id}/reception-slots`, `POST …/{slot}/cancel` | создаёт и отменяет администратор УК |
+
+Статистика (`ChannelStats`): `accepted`, `failed`, `unknown`, `pending`,
+`deferred_quiet_hours`, `skipped` по причинам (`UNSUBSCRIBED`, `NO_DIALOG`,
+`CHAT_SETTING_OFF`, `RETRACTED`, `ACCESS_REVOKED`, `CHAT_BINDING_INACTIVE`).

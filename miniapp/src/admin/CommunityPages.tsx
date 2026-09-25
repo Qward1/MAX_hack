@@ -12,6 +12,7 @@ type Audience = Schema["BroadcastAudience"];
 type Channel = Schema["BroadcastCreate"]["channels"][number];
 
 export const SERVICE_ONLY_RULE = "Только сервисные сообщения для жителей. Реклама запрещена.";
+const PLATFORM_RULE = "Только сервисные сообщения. Реклама запрещена.";
 const kindLabels: Record<string, string> = { announcement: "Объявление", mailing: "Рассылка", poll: "Опрос" };
 const topicLabels: Record<string, string> = { outage: "Отключение", works: "Работы", meeting: "Собрание", other: "Другое" };
 const statusLabels: Record<string, string> = {
@@ -58,12 +59,12 @@ export function Mailings({ base, platform = false }: { base: string; platform?: 
     {selected && <MailingDetail key={selected} id={selected} base={base} platform={platform}
       close={() => { select(null); refresh(); }} refresh={refresh} />}
     <Feedback loading={list.loading && !list.data} error={list.error} />
-    {list.data && !list.error && (list.data.items.length ? <ul className="admin-records">
+    {list.data && !list.error && !creating && !selected && (list.data.items.length ? <ul className="admin-records">
       {list.data.items.map(item => <li key={item.id}>
         <button className="record-link" onClick={() => { setCreating(false); select(item.id); }}>{item.title}</button>
         <span>{kindLabels[item.kind]}</span>
         <span className={`admin-status status-${item.status}`}>{item.retracted_at ? "Удалено" : statusLabels[item.status]}</span>
-        <time>{item.sent_at ? `Отправлено ${when(item.sent_at)}` : item.scheduled_at ? `На ${when(item.scheduled_at)}` : `Создано ${when(item.created_at)}`}</time>
+        <time>{item.sent_at ? when(item.sent_at) : item.scheduled_at ? `на ${when(item.scheduled_at)}` : `создано ${when(item.created_at)}`}</time>
         {item.author_name && <span className="muted">{item.author_name}</span>}
       </li>)}</ul> : <p className="state-panel">Сообщений пока нет. Начните с «Новое сообщение».</p>)}
     {list.data && list.data.page.total > 20 && <div className="button-row">
@@ -133,7 +134,7 @@ function MailingEditor({ base, platform, source, onDone }: {
   }
   return <form className="ticket-form admin-detail mailing-form" onSubmit={save}>
     <h2>{source ? "Изменить черновик" : "Новое сообщение"}</h2>
-    <p className="admin-feedback"><strong>{SERVICE_ONLY_RULE}</strong> Сообщение уйдёт от имени {platform ? "ДомСигнала" : "вашей УК"}.</p>
+    <p className="admin-feedback"><strong>{platform ? PLATFORM_RULE : SERVICE_ONLY_RULE}</strong> Сообщение уйдёт от имени {platform ? "ДомСигнала" : "вашей УК"}.</p>
     <fieldset className="choice-row"><legend>Вид</legend>
       {(platform ? ["mailing", "announcement"] : ["announcement", "mailing", "poll"]).map(kind =>
         <label key={kind} className="checkbox-label"><input type="radio" name="kind" checked={draft.kind === kind}
@@ -260,7 +261,7 @@ function MailingDetail({ id, base, platform, close, refresh }: {
         }}>
           <h3>Подтверждение</h3>
           <label className="checkbox-label"><input type="checkbox" checked={service} onChange={e => setService(e.target.checked)} required />
-            Это сервисное сообщение для жителей, не реклама</label>
+            {platform ? "Это сервисное сообщение, не реклама" : "Это сервисное сообщение для жителей, не реклама"}</label>
           <fieldset className="choice-row"><legend>Когда отправить</legend>
             <label className="checkbox-label"><input type="radio" name="when" checked={!later} onChange={() => setLater(false)} />Сейчас</label>
             <label className="checkbox-label"><input type="radio" name="when" checked={later} onChange={() => setLater(true)} />По расписанию</label>

@@ -239,13 +239,16 @@ body {
     border-bottom: 1px solid var(--ds-line);
   }
   /* D3: разделов стало больше — меню переносится строками, а не столбцом. */
-  .admin-sidebar nav {
+  .admin-shell .admin-sidebar nav {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
   }
-  .admin-sidebar nav .admin-nav-link {
-    padding: 8px 12px;
+  .admin-shell .admin-sidebar nav .admin-nav-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 6px 12px;
     border: 1px solid #c9d6e6;
   }
   .admin-sidebar-note {
