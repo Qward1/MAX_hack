@@ -28,6 +28,7 @@ from domsignal.db.models import (
     User,
 )
 from domsignal.main import create_app
+from domsignal.services.bot_replies import CONNECT_CLAIMED
 from domsignal.worker.pools import WorkerPool
 from domsignal.worker.runner import WorkerRunner
 from tests.fakes.max_chat import FakeMaxChatProvider
@@ -111,6 +112,11 @@ class PassiveHarness:
                 .values(activated_at=datetime.now(UTC) - timedelta(hours=3))
             )
         await self.drain()
+        # D2: бот сразу подтверждает администратору чата, что код подключения
+        # принят; дальше стенд проверяет только сообщения после привязки.
+        connect = [item for item in self.messaging.sent if item[2].text == CONNECT_CLAIMED]
+        assert [item[0] for item in connect] == [str(connector)]
+        self.messaging.sent.remove(connect[0])
         if enable:
             await self.set_capture(binding_id, admin=admin, enabled=True)
         return binding_id

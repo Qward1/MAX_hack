@@ -166,6 +166,8 @@ test("D2 onboarding: status page, quota, expansion, reset and open registration"
     await admin.getByRole("button", { name: "Подключить существующий MAX-чат" }).click();
     await expect(admin.getByText("После подключения останется свободных слотов: 0 из 1.")).toBeVisible();
     const first = (await admin.getByLabel("Команда подключения MAX").inputValue()).replace("/start ", "");
+    // Живой D2: кнопка открывает бота сразу с кодом — набирать команду не нужно.
+    await expect(admin.getByRole("link", { name: "Открыть бота в MAX" })).toHaveAttribute("href", new RegExp(`\\?start=${first}$`));
     expect(d2("connect", first, `d2-${suffix}-1`, adminLogin).status).toBe("active");
     await admin.getByRole("button", { name: "Обновить", exact: true }).click();
     await expect(admin.getByText("1 из 1")).toBeVisible();

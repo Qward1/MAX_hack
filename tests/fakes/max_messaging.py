@@ -10,6 +10,10 @@ class RecordingMaxMessagingProvider:
         self.answered: list[tuple[str, PersonalMessage]] = []
         self.chat_sent: list[tuple[str, str, PersonalMessage]] = []
         self.errors: list[MessagingError] = []
+        # Номера сообщений не повторяются, даже если тест убрал запись из списка:
+        # MAX не выдаёт один mid дважды (уникальность provider_message_id).
+        self.personal_count = 0
+        self.chat_count = 0
 
     def fail_if_requested(self) -> None:
         if self.errors:
@@ -21,7 +25,8 @@ class RecordingMaxMessagingProvider:
         message: PersonalMessage,
     ) -> SentMessage:
         self.fail_if_requested()
-        mid = f"mid.test-{len(self.sent) + 1}"
+        self.personal_count += 1
+        mid = f"mid.test-{self.personal_count}"
         self.sent.append((destination, mid, message))
         return SentMessage(mid)
 
@@ -35,6 +40,7 @@ class RecordingMaxMessagingProvider:
 
     async def send_chat_message(self, chat_id: str, message: PersonalMessage) -> SentMessage:
         self.fail_if_requested()
-        mid = f"mid.chat-{len(self.chat_sent) + 1}"
+        self.chat_count += 1
+        mid = f"mid.chat-{self.chat_count}"
         self.chat_sent.append((chat_id, mid, message))
         return SentMessage(mid)

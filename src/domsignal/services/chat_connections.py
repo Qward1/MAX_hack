@@ -45,6 +45,16 @@ class ChatConnectionError(ServiceError):
         self.retryable = status == 503
 
 
+def typed_connect_token(text: str | None) -> str | None:
+    """Команда `/start connect_…`, набранная в личке вручную, → токен подключения.
+
+    Равнозначна ссылке запуска бота с тем же токеном (A-07). Формат токена
+    проверяет `claim`: неполный токен получает ответ «код не подошёл».
+    """
+    match = re.fullmatch(r"/start(?:@[A-Za-z0-9_]{1,100})?\s+(connect_\S*)", (text or "").strip())
+    return match[1] if match else None
+
+
 class ChatConnectionService:
     def __init__(
         self,

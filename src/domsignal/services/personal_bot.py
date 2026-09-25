@@ -40,6 +40,7 @@ from domsignal.core.routing import HouseRoutingContext
 from domsignal.db.models import (
     ChatBinding,
     CompanyOnboardingRequest,
+    ConnectionRequest,
     ExplicitIntake,
     House,
     User,
@@ -50,6 +51,9 @@ from domsignal.services.bot_replies import (
     CALLBACK_JOB,
     CHOOSE_HOUSE,
     CHOOSE_HOUSE_LABEL,
+    CONNECT_BUSY,
+    CONNECT_CLAIMED,
+    CONNECT_INVALID,
     DM_JOB,
     EXPIRED,
     GREETING,
@@ -119,6 +123,12 @@ def split_command(text: str) -> tuple[str | None, str]:
     return match[1], (match[2] or "").strip()
 
 
+#: Запрос подключения, который ещё ждёт группу или подтверждения УК.
+CONNECT_OPEN = frozenset(
+    {"connector_claimed", "chat_detected", "max_verified", "awaiting_approval"}
+)
+
+
 def _touch_dialog(user: User, at: datetime) -> None:
     if user.max_dialog_at is None or user.max_dialog_at < at:
         user.max_dialog_at = at
@@ -172,6 +182,33 @@ class PersonalBotService:
             await self._subscribe_application(session, event, user)
             return None
         return await self._job(session, event.event_id, user.id, "start")
+
+    async def on_connect(
+        self, session: AsyncSession, event: MaxEvent, request: ConnectionRequest | None
+    ) -> None:
+        """Код подключения чата (A-07) — по ссылке или набранной командой.
+
+        Отвечает, что делать дальше: без ответа администратор чата не знает,
+        принят ли код. Сам токен в ответ и в журнал не попадает.
+        """
+        assert event.actor
+        user = await ensure_max_user(session, event.actor, None)
+        _touch_dialog(user, event.occurred_at)
+        if (
+            request is not None
+            and request.connector_max_user_id == event.actor
+            and (request.status in CONNECT_OPEN)
+        ):
+            text = CONNECT_CLAIMED
+        elif request is not None and (
+            request.last_error_code == "connector_connection_in_progress"
+        ):
+            text = CONNECT_BUSY
+        else:
+            text = CONNECT_INVALID
+        await enqueue_reply(
+            session, user_id=user.id, event_id=event.event_id, key="connect", text=text
+        )
 
     async def _subscribe_application(
         self, session: AsyncSession, event: MaxEvent, user: User
