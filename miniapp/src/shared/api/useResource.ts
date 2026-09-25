@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { problemStatus } from "./client";
 
 // One fetch layer for both surfaces. reload resolves only after the authoritative GET.
@@ -53,21 +53,31 @@ export function useResource<T>(
     refresh();
     return () => active.current?.abort();
   }, [key, load, refresh]);
-  const [stale, setStale] = useState(false);
+  // «Данные могли измениться» относится к конкретной загрузке: новая загрузка
+  // снимает отметку сама, а не эффектом, который может опоздать за событием.
+  const shown = useRef(state.updatedAt);
+  useLayoutEffect(() => {
+    shown.current = state.updatedAt;
+  }, [state.updatedAt]);
+  const [staleFor, setStaleFor] = useState<number>();
   useEffect(() => {
-    setStale(false);
-    const timer = window.setTimeout(() => setStale(true), 60000);
+    const updatedAt = state.updatedAt;
+    if (updatedAt === undefined) return;
+    const timer = window.setTimeout(() => setStaleFor(updatedAt), 60000);
+    return () => clearTimeout(timer);
+  }, [state.updatedAt]);
+  useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === "visible") setStale(true);
+      if (document.visibilityState === "visible") setStaleFor(shown.current);
     };
     window.addEventListener("online", onVisible);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
-      clearTimeout(timer);
       window.removeEventListener("online", onVisible);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [state.updatedAt]);
+  }, []);
+  const stale = staleFor !== undefined && staleFor === state.updatedAt;
   return {
     ...(state.key === key ? state : { key, loading: true }),
     stale,
