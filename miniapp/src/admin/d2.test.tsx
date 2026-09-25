@@ -177,3 +177,40 @@ describe("Заявка УК: понятные ошибки полей", () => {
     expect(request).not.toHaveBeenCalled();
   });
 });
+
+describe("Приглашение при уже открытом входе", () => {
+  async function renderWith(destinations: Schema["EmployeeDestinations"]) {
+    vi.spyOn(adminClient, "request").mockImplementation(async (path: string) => {
+      if (path === "/api/v1/auth/employee/destinations") return destinations;
+      throw new Error(`unexpected ${path}`);
+    });
+    const { InvitationAccept } = await import("./InvitationAccept");
+    render(<InvitationAccept token={"i".repeat(43)} />);
+  }
+
+  it("администратор платформы не принимает приглашение УК — только отдельный аккаунт", async () => {
+    await renderWith({ platform: true, companies: [] });
+    expect(await screen.findByRole("button", { name: "Выйти и создать аккаунт сотрудника" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Принять этим аккаунтом" })).toBeNull();
+  });
+
+  it("сотрудник выбирает: этим аккаунтом или отдельным", async () => {
+    await renderWith({ platform: false, companies: [] });
+    expect(await screen.findByRole("button", { name: "Принять этим аккаунтом" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Создать отдельный аккаунт" })).toBeTruthy();
+  });
+});
+
+describe("Страница статуса до решения", () => {
+  it("показывает, сколько чатов запрошено", async () => {
+    const { ApplicationStatus } = await import("./CompanyApply");
+    const { ApiClient } = await import("../shared/api/client");
+    vi.spyOn(ApiClient.prototype, "request").mockResolvedValue({
+      status: "under_review", short_name: "УК", submitted_at: "2026-09-24T10:00:00Z", requested_chat_count: 2,
+      house_addresses: [], messages: [], can_reply: false, decision_reason: null, granted_chat_quota: null,
+      quota_unlimited: false, admin_account: "unavailable", max_notifications: true,
+    });
+    render(<ApplicationStatus token={"t".repeat(43)} />);
+    expect(await screen.findByText("Запрошено: 2 чата. Итоговую квоту назначит платформа.")).toBeTruthy();
+  });
+});
