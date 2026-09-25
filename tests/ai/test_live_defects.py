@@ -157,11 +157,7 @@ async def test_refutation_quoted_from_context_cannot_downgrade_rules_danger() ->
 
 async def test_summary_cannot_borrow_facts_from_context_line() -> None:
     response = model_response(
-        [
-            model_signal(
-                summary={"text": "Лифт в 3 подъезде не работает.", "sources": ["m1", "m2"]}
-            )
-        ],
+        [model_signal(summary={"text": "Лифт в 3 подъезде не работает.", "sources": ["m1", "m2"]})],
         roles={"m2": "new_problem"},
         refs={"m2": ["new:1"]},
     )
@@ -428,8 +424,14 @@ async def test_rules_never_split_a_thread_on_the_e0c_stream() -> None:
 
     rows = metrics.load_jsonl(metrics.DATASETS / "chat_stream.v1.jsonl")
     lines = [
-        metrics._line(row["n"], row["text"], author=row["author"], minute=row["minute"],
-                      line_id=row["id"], reply_to=row["reply_to"])
+        metrics._line(
+            row["n"],
+            row["text"],
+            author=row["author"],
+            minute=row["minute"],
+            line_id=row["id"],
+            reply_to=row["reply_to"],
+        )
         for row in rows
     ]
     analyzer = WindowAnalyzer()

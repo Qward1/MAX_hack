@@ -107,7 +107,8 @@ class MaxWebhookService:
             typed = typed_connect_token(event.text) if event.in_dialog else None
             if event.kind == "message_callback" and event.callback:
                 job = await reliability.add_job(
-                    kind="max.ticket.callback", payload=event.callback.model_dump(mode="json"),
+                    kind="max.ticket.callback",
+                    payload=event.callback.model_dump(mode="json"),
                     priority=20,
                 )
                 job_id = job.id

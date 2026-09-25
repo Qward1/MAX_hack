@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Feedback, History, OneTimeLink, Status, Title, dateInput, formValue, submitted, useAction, useRead, useRoute, type Schema } from "./administration";
 import { QuotaMeter } from "./charts";
 import { PlatformOverview } from "./Dashboards";
+import { Mailings } from "./CommunityPages";
 
 const navigation: Record<string, string> = { overview: "Обзор", applications: "Заявки УК", "quota-requests": "Запросы квоты", companies: "Организации",
-  "house-management-requests": "Заявки на дома", houses: "Дома", "binding-disputes": "Спорные MAX-привязки", health: "Состояние системы", audit: "Аудит" };
+  "house-management-requests": "Заявки на дома", houses: "Дома", "binding-disputes": "Спорные MAX-привязки", health: "Состояние системы", audit: "Аудит",
+  mailings: "Сообщения" };
 export function PlatformApp() {
   const bootstrap = useRead<Schema["PlatformBootstrap"]>("/api/v1/platform/bootstrap");
   const { url, navigate } = useRoute();
@@ -31,6 +33,7 @@ function PlatformPage({ page, open }: { page: string; open: (page: string) => vo
   if (page === "binding-disputes") return <Disputes />;
   if (page === "health") return <Health />;
   if (page === "audit") return <Audit />;
+  if (page === "mailings") return <Mailings base="" platform />;
   return <Title>Раздел не найден</Title>;
 }
 function ApplicationReview() {

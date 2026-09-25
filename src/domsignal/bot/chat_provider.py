@@ -96,7 +96,10 @@ class HttpMaxChatProvider:
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self.client = MaxHttpClient(
-            base_url=base_url, token=token, timeout=timeout, transport=transport,
+            base_url=base_url,
+            token=token,
+            timeout=timeout,
+            transport=transport,
         )
 
     async def _get(
@@ -108,9 +111,7 @@ class HttpMaxChatProvider:
         if not self.client.configured:
             raise MaxProviderError("max_not_configured", temporary=True)
         try:
-            response = await self.client.request(
-                "GET", f"/chats/{chat_id}{suffix}", params=params
-            )
+            response = await self.client.request("GET", f"/chats/{chat_id}{suffix}", params=params)
         except (httpx.RequestError, TimeoutError):
             raise MaxProviderError("max_temporarily_unavailable", temporary=True) from None
         if response.status_code == 429 or response.status_code >= 500:

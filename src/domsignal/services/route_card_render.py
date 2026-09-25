@@ -102,11 +102,7 @@ def build_route_card_intent(
     """Снять с карточки ровно то, что попадёт в личное сообщение."""
     basis = card.route.basis
     prepare = next(
-        (
-            action
-            for action in card.actions
-            if action.type == "prepare_appeal" and action.enabled
-        ),
+        (action for action in card.actions if action.type == "prepare_appeal" and action.enabled),
         None,
     )
     steps = (

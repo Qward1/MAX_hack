@@ -352,9 +352,7 @@ def analyze_with_rules(
             matches = _distinct_subtypes(facts)
             if not matches:
                 unspecified = tax.get(UNSPECIFIED)
-                candidates = [
-                    (UNSPECIFIED, unspecified.product_category, unspecified.label)
-                ]
+                candidates = [(UNSPECIFIED, unspecified.product_category, unspecified.label)]
             else:
                 candidates = [
                     (

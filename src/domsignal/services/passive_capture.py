@@ -287,9 +287,7 @@ class PassiveCaptureService:
             await self._schedule_tick(session, window)
         return window.id
 
-    def _reason(
-        self, window: ConversationWindow, at: datetime, lines: list[BufferedLine]
-    ) -> str:
+    def _reason(self, window: ConversationWindow, at: datetime, lines: list[BufferedLine]) -> str:
         """Подпись причины для аудита. Решение уже принято политикой ядра."""
         policy = self.config.policy
         if (at - window.last_line_at).total_seconds() > policy.silence_seconds:
@@ -379,9 +377,7 @@ class PassiveCaptureService:
 
     def _silent(self, lines: list[BufferedLine], now: datetime) -> bool:
         """Закрыла бы политика ядра окно, если бы следующая реплика пришла сейчас."""
-        probe = WindowLine(
-            line_id="__tick__", author_ref="__tick__", text=_PROBE_TEXT, sent_at=now
-        )
+        probe = WindowLine(line_id="__tick__", author_ref="__tick__", text=_PROBE_TEXT, sent_at=now)
         groups = split_stream([*map(_window_line, lines), probe], self.config.policy)
         return len(groups[-1]) == 1 and groups[-1][0].line_id == "__tick__"
 

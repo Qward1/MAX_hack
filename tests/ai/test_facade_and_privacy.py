@@ -92,9 +92,7 @@ def test_provider_request_hides_product_identifiers_and_personal_data() -> None:
         line(2, "я из кв. 45, ссылка https://vk.com/id1", author="user-7", seconds=30),
         line(3, "и ещё раз", author="user-42", seconds=60),
     )
-    request, mapping = build_request(
-        WindowInput(channel="group_passive", lines=lines)
-    )
+    request, mapping = build_request(WindowInput(channel="group_passive", lines=lines))
     payload = request.model_dump_json()
     assert "user-42" not in payload and "user-7" not in payload
     assert "line-1" not in payload

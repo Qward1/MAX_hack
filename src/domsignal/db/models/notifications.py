@@ -177,9 +177,7 @@ class NotificationDelivery(Timestamps, Base):
     signal_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("signals.id", ondelete="CASCADE"), index=True
     )
-    chat_binding_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("chat_bindings.id"), index=True
-    )
+    chat_binding_id: Mapped[UUID | None] = mapped_column(ForeignKey("chat_bindings.id"), index=True)
     work_attempt_id: Mapped[UUID | None] = mapped_column(ForeignKey("work_attempts.id"))
     # Входящее событие, на которое отвечает личный бот (D1), или ключ личного
     # сообщения D3 (`followup:<черновик>`, `digest:<день>:<УК>`, `reception:<запись>`).

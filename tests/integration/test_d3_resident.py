@@ -204,6 +204,16 @@ async def test_my_activity_lists_reports_route_cards_drafts_and_joined(d3) -> No
     )
     assert filed.status_code == 200, filed.text
 
+    # Вторая карточка без черновика остаётся карточкой; с черновиком — только черновик.
+    second = await call(
+        d3,
+        "POST",
+        f"/api/v1/houses/{d3.ids['h1']}/reports/submit",
+        who="resident",
+        json={"description": "На улице у перекрёстка не горят уличные фонари, темно"},
+        idempotency=key(),
+    )
+    assert second.status_code == 201, second.text
     activity = await call(d3, "GET", "/api/v1/me/activity", who="resident", params={"limit": 10})
     assert activity.status_code == 200, activity.text
     items = activity.json()["items"]
@@ -214,6 +224,8 @@ async def test_my_activity_lists_reports_route_cards_drafts_and_joined(d3) -> No
     assert report["status_label"] == "Заявка у УК: ждёт принятия в работу"
     appeal = next(item for item in items if item["kind"] == "appeal_draft")
     assert appeal["status_label"] == "Вы отметили: «Я отправил»" and appeal["filed_at"]
+    cards = [item for item in items if item["kind"] == "route_card"]
+    assert [card["route_outcome_id"] for card in cards] == [second.json()["route_outcome_id"]]
     page = await call(
         d3, "GET", "/api/v1/me/activity", who="resident", params={"limit": 1, "offset": 1}
     )

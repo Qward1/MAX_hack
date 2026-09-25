@@ -237,9 +237,7 @@ def test_zero_budget_refuses_everything() -> None:
     assert not guard.try_acquire(None)
 
 
-@pytest.mark.parametrize(
-    ("daily", "share"), [(-1, 0.5), (10, 0.0), (10, 1.5)]
-)
+@pytest.mark.parametrize(("daily", "share"), [(-1, 0.5), (10, 0.0), (10, 1.5)])
 def test_budget_rejects_impossible_limits(daily: int, share: float) -> None:
     with pytest.raises(ValueError):
         InMemoryBudgetGuard(daily, chat_share=share)

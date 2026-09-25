@@ -173,9 +173,7 @@ def _bullets(guide: dict[Any, str], order: tuple[str, ...]) -> str:
 
 
 def _subtype_bullets(taxonomy: Taxonomy) -> str:
-    return "\n".join(
-        f"- `{subtype.code}` — {subtype.description}" for subtype in taxonomy.subtypes
-    )
+    return "\n".join(f"- `{subtype.code}` — {subtype.description}" for subtype in taxonomy.subtypes)
 
 
 def render_system_prompt(
@@ -278,7 +276,5 @@ def build_messages(
         for example in load_examples(spec.version):
             messages.append({"role": "user", "content": example.user})
             messages.append({"role": "assistant", "content": example.assistant})
-    messages.append(
-        {"role": "user", "content": render_user_message(request, compact=spec.compact)}
-    )
+    messages.append({"role": "user", "content": render_user_message(request, compact=spec.compact)})
     return messages

@@ -67,9 +67,7 @@ class _Collector:
 
     def drop(self, signal_ref: str | None, details: str) -> None:
         self.dropped += 1
-        self.events.append(
-            AuditEvent(kind="field_dropped", signal_ref=signal_ref, details=details)
-        )
+        self.events.append(AuditEvent(kind="field_dropped", signal_ref=signal_ref, details=details))
 
 
 @dataclass(frozen=True)
@@ -144,9 +142,7 @@ def _facet(context: _Context, raw: ModelFacet, collector: _Collector, ref: str, 
         return _UNCLEAR
     line_id, _reason = context.own_line(raw.msg)
     valid = (
-        bool(raw.quote)
-        and line_id is not None
-        and context.quote_valid(line_id, raw.quote or "")
+        bool(raw.quote) and line_id is not None and context.quote_valid(line_id, raw.quote or "")
     )
     if value == "no" and not valid:
         collector.drop(ref, f"facets.{name}: «no» без валидной цитаты")
@@ -361,9 +357,9 @@ def validate_output(
     signals: list[SignalDraft] = []
     semantic_all: list[SemanticDanger] = []
     for index, (ref, raw) in enumerate(drafts):
-        line_ids = lines_by_ref[ref] or [
-            line.line_id for line in window.lines if not line.is_context
-        ][:1]
+        line_ids = (
+            lines_by_ref[ref] or [line.line_id for line in window.lines if not line.is_context][:1]
+        )
         code = raw.subtype if taxonomy.is_known(raw.subtype) else UNSPECIFIED
         if code != raw.subtype:
             collector.drop(ref, f"subtype: неизвестный код {raw.subtype!r}")
@@ -434,9 +430,7 @@ def validate_output(
     )
 
 
-def _rules_place(
-    rules: RulesOutcome, line_ids: Sequence[str], name: str
-) -> Evidence | None:
+def _rules_place(rules: RulesOutcome, line_ids: Sequence[str], name: str) -> Evidence | None:
     """Подъезд, этаж или «с какого времени» из правил — по репликам сигнала.
 
     Единственный источник этих полей в режиме модели (P6b): у модели при
@@ -478,9 +472,7 @@ def _flags(taxonomy: Taxonomy, code: str, rules: RulesOutcome) -> tuple[str, ...
     return ("rules_agree",) if rules.categories[0] == category else ("rules_disagree",)
 
 
-def _signals_from_rules(
-    rules: RulesOutcome, orphan_hits: Sequence[DangerHit]
-) -> list[SignalDraft]:
+def _signals_from_rules(rules: RulesOutcome, orphan_hits: Sequence[DangerHit]) -> list[SignalDraft]:
     """Опасность правил не теряется, даже если модель не вернула сигналов."""
     lines = {hit.line_id for hit in orphan_hits}
     kept = [signal for signal in rules.signals if lines & set(signal.line_ids)]

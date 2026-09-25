@@ -264,8 +264,10 @@ class AppealDraftService:
         if organization:
             blocks.append(f"{_RECIPIENT_LABEL}: {organization}")
         blocks.append(GREETING)
-        resident = f"Обращаюсь как житель дома по адресу: {address}." if address else (
-            "Обращаюсь как житель многоквартирного дома."
+        resident = (
+            f"Обращаюсь как житель дома по адресу: {address}."
+            if address
+            else ("Обращаюсь как житель многоквартирного дома.")
         )
         blocks.append(f"{resident} {REQUEST}")
         blocks.append(f"{PROBLEM_HEADING}\n{clean or original}".rstrip())

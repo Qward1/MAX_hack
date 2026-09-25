@@ -159,7 +159,7 @@ def test_csv_export_neutralises_formula_cells() -> None:
 
     house = HouseStats(
         house_id=uuid4(),
-        address="=HYPERLINK(\"http://x\")",
+        address='=HYPERLINK("http://x")',
         signals=1,
         tickets_open=0,
         tickets_created=0,

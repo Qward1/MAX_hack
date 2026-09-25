@@ -150,6 +150,7 @@ class Settings(BaseSettings):
             int(start[:2]) * 60 + int(start[3:]),
             int(end[:2]) * 60 + int(end[3:]),
         )
+
     build_commit: str = "dev"
     public_base_url: str = "http://localhost:8000"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]

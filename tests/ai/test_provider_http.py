@@ -239,8 +239,7 @@ async def test_request_body_carries_only_masked_texts_and_aliases() -> None:
     assert "8 927 123 45 67" not in body
     assert "кв. 45" not in body
     assert any(
-        marker in body
-        for marker in ('\\"id\\": \\"m1\\"', '\\"id\\":\\"m1\\"', '"id": "m1"')
+        marker in body for marker in ('\\"id\\": \\"m1\\"', '\\"id\\":\\"m1\\"', '"id": "m1"')
     )
 
 

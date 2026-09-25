@@ -3808,7 +3808,7 @@ export interface components {
             /** Role */
             role?: ("operator" | "company_admin") | null;
             /** Surfaces */
-            surfaces: ("overview" | "tickets" | "signals" | "assigned_houses" | "houses" | "staff" | "chat_connections" | "organization")[];
+            surfaces: ("overview" | "tickets" | "signals" | "assigned_houses" | "houses" | "staff" | "chat_connections" | "organization" | "mailings" | "notices" | "reception")[];
         };
         /** CompanyDashboard */
         CompanyDashboard: {
@@ -3826,6 +3826,8 @@ export interface components {
              * @enum {integer}
              */
             period_days: 7 | 14 | 30;
+            /** Polls */
+            polls?: components["schemas"]["PollResults"][];
             quota: components["schemas"]["ChatQuotaView"];
             /**
              * Scope
@@ -3877,6 +3879,12 @@ export interface components {
             can_connect_chats: boolean;
             /** Connection Requests */
             connection_requests: components["schemas"]["ConnectionView"][];
+            /** Entrance Count */
+            entrance_count?: number | null;
+            /** Facts Updated At */
+            facts_updated_at?: string | null;
+            /** Floor Count */
+            floor_count?: number | null;
             /**
              * House Id
              * Format: uuid

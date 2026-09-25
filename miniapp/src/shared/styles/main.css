@@ -541,6 +541,133 @@ textarea {
   border: 1px solid var(--ds-line);
   border-radius: 12px;
 }
+/* D3: разделы дома — «Мой дом», объявления, опрос, работы, обращения. */
+.section-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 0 20px;
+}
+.section-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--ds-line);
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+}
+.section-nav a[aria-current="page"] {
+  background: var(--ds-action);
+  border-color: var(--ds-action);
+  color: #fff;
+}
+.community-list {
+  display: grid;
+  gap: 16px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+.community-list > li {
+  min-width: 0;
+}
+.detail-section .community-list > li {
+  display: grid;
+  gap: 6px;
+  padding-block: 12px;
+  border-top: 1px solid var(--ds-line);
+}
+.community-card {
+  height: auto;
+}
+.community-steps {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-inline-start: 22px;
+  line-height: 1.5;
+}
+.community-steps a,
+.community-list a[href^="tel:"] {
+  font-weight: 650;
+}
+.community-source {
+  font-size: 14px;
+}
+.community-steps a[href^="tel:"],
+.community-list a[href^="tel:"],
+.info-row a[href^="tel:"] {
+  white-space: nowrap;
+}
+.clamped-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  overflow: hidden;
+}
+.honesty-inline {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--background-secondary);
+  line-height: 1.5;
+}
+.poll-options {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.poll-options legend {
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+.poll-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.poll-option input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+.poll-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+.result-bar {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--background-tertiary);
+  overflow: hidden;
+}
+.result-bar span {
+  display: block;
+  height: 100%;
+  background: var(--ds-action);
+}
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.segmented [aria-pressed="true"] {
+  background: var(--ds-action);
+  border-color: var(--ds-action);
+  color: #fff;
+}
 @media (max-width: 767px) {
   .incident-grid {
     grid-template-columns: minmax(0, 1fr);

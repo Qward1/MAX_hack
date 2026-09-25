@@ -234,9 +234,7 @@ class ManagementCompany(Timestamps, Base):
     # Включает и закрывает суперадмин; в базе только хэш кода ссылки.
     open_registration_enabled: Mapped[bool] = mapped_column(Boolean, server_default="false")
     open_registration_code_hash: Mapped[str | None] = mapped_column(String(64), unique=True)
-    open_registration_changed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    open_registration_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     open_registration_changed_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )

@@ -320,9 +320,7 @@ def build_container(settings: Settings) -> Container:
         hold_seconds=settings.bot_hold_seconds,
         application_digest=lambda code: notify_digest(settings, code),
     )
-    appeal_drafts = AppealDraftService(
-        routing=routing, followup_days=settings.appeal_followup_days
-    )
+    appeal_drafts = AppealDraftService(routing=routing, followup_days=settings.appeal_followup_days)
     # D3: жилищный навигатор и домовое сообщество (BOT-VOICE-HUMAN-2026-09-27).
     chat_settings = ChatSettingsService(chat_connections)
     navigator = NavigatorService(routing)

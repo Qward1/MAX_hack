@@ -973,9 +973,7 @@ class ExplicitReportService:
             source="explicit",
             danger_kinds=danger,
         )
-        if origin.card_dedupe_ref and (
-            origin.always_card or self._needs_card(db_decision, danger)
-        ):
+        if origin.card_dedupe_ref and (origin.always_card or self._needs_card(db_decision, danger)):
             next_step = None
             if db_decision == "needs_clarification":
                 next_step = DISPATCHER_REVIEW_NOTE

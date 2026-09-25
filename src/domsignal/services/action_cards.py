@@ -108,9 +108,7 @@ def _phone_channel(channels: Sequence[RouteChannel]) -> RouteChannel | None:
 
 def _open_channel_action(channel: RouteChannel) -> ActionCardAction:
     if channel.url:
-        return _action(
-            "open_official_channel", f"Перейти: {channel.label}", url=channel.url
-        )
+        return _action("open_official_channel", f"Перейти: {channel.label}", url=channel.url)
     reason = _NO_URL_REASON
     if channel.entry_hint:
         reason = f"{_NO_URL_REASON} Вход: {channel.entry_hint}"
@@ -259,9 +257,7 @@ def build_action_card(
     dangerous = bool(danger_kinds) or route.route_type == "emergency_service"
     block = safety if dangerous else None
     if block is not None and block.phone:
-        emergency_call = _action(
-            "call_phone", f"Позвонить {block.phone}", phone=block.phone
-        )
+        emergency_call = _action("call_phone", f"Позвонить {block.phone}", phone=block.phone)
         actions = [emergency_call] + [
             action
             for action in actions

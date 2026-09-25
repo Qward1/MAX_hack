@@ -48,6 +48,9 @@ RESIDENT_SURFACES: tuple[str, ...] = (
     "miniapp/src/admin/SignalCommon.tsx",
     "miniapp/src/admin/SignalDetail.tsx",
     "miniapp/src/admin/signalPresentation.ts",
+    # D3: «Мой дом», объявления, опросы, работы, «Мои обращения», приём; кабинет рассылок.
+    "miniapp/src/features/community/CommunityScreens.tsx",
+    "miniapp/src/admin/CommunityPages.tsx",
 )
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 

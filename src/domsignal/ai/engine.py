@@ -33,9 +33,7 @@ DEFAULT_AUDIT_RATE = 10
 NO_EMERGENCY = EmergencyDecision(is_emergency=False)
 
 
-def decide_strength(
-    emergency: EmergencyDecision, facets: Facets
-) -> tuple[SignalStrength, str]:
+def decide_strength(emergency: EmergencyDecision, facets: Facets) -> tuple[SignalStrength, str]:
     """Сила сигнала сверху вниз, первая подошедшая строка, с кодом причины."""
     if emergency.is_emergency:
         return "critical", "emergency"
@@ -224,8 +222,8 @@ def decide_explicit_report(analysis: WindowAnalysis) -> ExplicitReportDecision:
     elif len(inbox) > 1:
         reason = "multiple_signals"
     elif analysis.mode == "model":
-        reason = "confident" if "rules_agree" in (single.flags if single else ()) else (
-            "rules_disagree"
+        reason = (
+            "confident" if "rules_agree" in (single.flags if single else ()) else ("rules_disagree")
         )
     else:
         categories = {signal.product_category for signal in analysis.signals}

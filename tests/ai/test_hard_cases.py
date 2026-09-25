@@ -28,9 +28,7 @@ async def test_gas_shutdown_is_not_an_emergency() -> None:
 
 
 async def test_nobody_is_trapped_is_a_lift_problem() -> None:
-    role, categories, _subtypes, emergency = await analyse(
-        "никто не застрял, лифт просто не едет"
-    )
+    role, categories, _subtypes, emergency = await analyse("никто не застрял, лифт просто не едет")
     assert role == "new_problem"
     assert categories == {"elevator"}
     assert not emergency

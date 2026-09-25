@@ -235,6 +235,8 @@ async def test_nd12_13_launch_and_no_disclosure(nd):
         "incident_id": d["incident"],
         "house_id": str(d["ids"]["a1"]),
         "route_outcome_id": None,
+        # D3: опрос из поста или рассылки — у ссылки `w_` его нет.
+        "poll_id": None,
         "work_attempt_id": aid,
         "stale": False,
     }

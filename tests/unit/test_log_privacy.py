@@ -125,7 +125,7 @@ def test_application_access_log_has_request_id_and_truncated_network(
     assert f'request_id="{response.headers["X-Request-ID"]}"' in line
     assert f'client_net="{network}"' in line
     assert 'path="/api/v1/me"' in line and "private-query" not in line
-    assert 'status=401' in line and 'method="GET"' in line
+    assert "status=401" in line and 'method="GET"' in line
     assert client not in journal.getvalue()
     assert full_addresses(journal.getvalue()) == []
 
@@ -186,9 +186,7 @@ def test_configure_logging_guards_uvicorn_handlers_and_is_idempotent() -> None:
 
 
 def test_private_formatter_output_has_no_full_address() -> None:
-    record = logging.LogRecord(
-        "domsignal.x", logging.INFO, "", 0, "peer %s", (CLIENT_V4,), None
-    )
+    record = logging.LogRecord("domsignal.x", logging.INFO, "", 0, "peer %s", (CLIENT_V4,), None)
     assert full_addresses(PrivateFormatter().format(record)) == []
 
 

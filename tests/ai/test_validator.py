@@ -109,8 +109,7 @@ async def test_no_without_a_quote_becomes_unclear() -> None:
 
 async def test_location_scope_without_a_quote_becomes_unknown() -> None:
     response = model_response(
-        [model_signal(location_scope={"value": "municipal_territory", "quote": None,
-                                      "msg": None})],
+        [model_signal(location_scope={"value": "municipal_territory", "quote": None, "msg": None})],
         roles={"m1": "new_problem"},
         refs={"m1": ["new:1"]},
     )

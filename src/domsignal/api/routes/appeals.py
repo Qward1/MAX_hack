@@ -19,18 +19,14 @@ from domsignal.contracts.appeals import (
 router = APIRouter(prefix="/api/v1", tags=["appeals"])
 
 
-@router.post(
-    "/appeal-drafts", response_model=AppealDraftView, status_code=status.HTTP_201_CREATED
-)
+@router.post("/appeal-drafts", response_model=AppealDraftView, status_code=status.HTTP_201_CREATED)
 async def create_draft(
     payload: AppealDraftCreate,
     current_user: CurrentUserDep,
     session: DbDep,
     container: ContainerDep,
 ) -> AppealDraftView:
-    return await container.appeal_drafts.create(
-        session, actor_id=current_user.id, payload=payload
-    )
+    return await container.appeal_drafts.create(session, actor_id=current_user.id, payload=payload)
 
 
 @router.get("/appeal-drafts/{draft_id}", response_model=AppealDraftView)

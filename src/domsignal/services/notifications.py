@@ -129,6 +129,17 @@ REARM_DELAY = timedelta(seconds=3)
 #: Отправка отложена тихими часами (статистика рассылки).
 QUIET_HOURS = "QUIET_HOURS"
 
+#: Назначения D3: их причины остановки видны в статистике как есть.
+COMMUNITY_PURPOSES = frozenset(
+    {
+        BROADCAST_CHAT_PURPOSE,
+        BROADCAST_DM_PURPOSE,
+        BROADCAST_STAFF_PURPOSE,
+        TICKET_CHAT_PURPOSE,
+        *KEYED_PURPOSES,
+    }
+)
+
 
 @dataclass(frozen=True)
 class DeliverySnapshot:
@@ -194,9 +205,7 @@ class TicketNotificationHandler:
             return DeliverySnapshot(*_versioned(await broadcast_dm_message(session, delivery)))
         if delivery.purpose == BROADCAST_STAFF_PURPOSE:
             return DeliverySnapshot(
-                *_versioned(
-                    await broadcast_staff_message(session, delivery, self.public_base_url)
-                )
+                *_versioned(await broadcast_staff_message(session, delivery, self.public_base_url))
             )
         if delivery.purpose == TICKET_CHAT_PURPOSE:
             chat_id, message, version, _ = await ticket_chat_message(session, delivery)
@@ -883,7 +892,14 @@ class TicketNotificationHandler:
             try:
                 snapshot = await self._snapshot(session, delivery)
             except (AccessDenied, ResourceNotFound) as exc:
-                self._stop(delivery, str(exc) if str(exc) in STOP_CODES else "ACCESS_REVOKED", at)
+                # Причина остановки D3 попадает в статистику рассылки; прежние
+                # назначения по-прежнему останавливаются как «доступ отозван».
+                code = (
+                    str(exc)
+                    if delivery.purpose in COMMUNITY_PURPOSES and str(exc) in STOP_CODES
+                    else "ACCESS_REVOKED"
+                )
+                self._stop(delivery, code, at)
                 return True
             until = await defer_until(session, delivery, at, dm_window=self.dm_quiet_window)
             if until is not None:

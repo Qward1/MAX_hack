@@ -282,9 +282,7 @@ class Rule:
     #: только у правил экстренной службы: опасность ортогональна маршруту.
     danger_kinds: tuple[str, ...] = ()
 
-    def matches(
-        self, subtype: str, location_scope: str, danger_kinds: Sequence[str] = ()
-    ) -> bool:
+    def matches(self, subtype: str, location_scope: str, danger_kinds: Sequence[str] = ()) -> bool:
         """Совпадение по подтипу или по пересечению видов опасности.
 
         `location_scopes` остаётся дополнительным фильтром; пустой список
@@ -353,9 +351,7 @@ class UkDefault:
             raise DirectoryError(f"{where}: subtypes must not be empty")
         return cls(
             subtypes=subtypes,
-            resource_supplier_alternatives=_codes(
-                entry, "resource_supplier_alternatives", where
-            ),
+            resource_supplier_alternatives=_codes(entry, "resource_supplier_alternatives", where),
             basis=Basis.parse(entry.get("basis"), f"{where}.basis"),
             verification=Verification.parse(entry.get("verification"), f"{where}.verification"),
             apartment_subtypes=_codes(entry, "apartment_subtypes", where),
@@ -523,9 +519,7 @@ def parse_safety(document: Any) -> tuple[SafetyBlockData, ...]:
                 lines=lines,
                 phone=_optional_text(block, "phone", where),
                 steps=tuple(steps),
-                verification=Verification.parse(
-                    block.get("verification"), f"{where}.verification"
-                ),
+                verification=Verification.parse(block.get("verification"), f"{where}.verification"),
             )
         )
     return tuple(blocks)
@@ -550,9 +544,9 @@ class ResponsibilityDirectory:
         self.safety = tuple(safety)
         self._cache: dict[tuple[str | None, str | None], EffectiveDirectory] = {}
 
-    def layers_for(self, region_code: str | None, municipality_code: str | None) -> list[
-        DirectoryLayer
-    ]:
+    def layers_for(
+        self, region_code: str | None, municipality_code: str | None
+    ) -> list[DirectoryLayer]:
         layers = [self.federal]
         if region_code and region_code in self.regions:
             layers.append(self.regions[region_code])

@@ -94,6 +94,13 @@ class MyActivityService:
             RouteOutcome.author_id == actor_id,
             RouteOutcome.decision == "external",
             RouteOutcome.house_id.in_(houses),
+            # Есть черновик — показывается он: из него открывается и карточка.
+            ~select(AppealDraft.id)
+            .where(
+                AppealDraft.route_outcome_id == RouteOutcome.id,
+                AppealDraft.author_id == actor_id,
+            )
+            .exists(),
         )
         drafts = select(
             literal("appeal_draft").label("kind"),

@@ -135,9 +135,7 @@ class PassiveRepository:
         )
         value = int(following or 0)
         self.session.add(
-            ChatAuthorAlias(
-                house_id=house_id, external_user_id=external_user_id, alias_index=value
-            )
+            ChatAuthorAlias(house_id=house_id, external_user_id=external_user_id, alias_index=value)
         )
         await self.session.flush()
         return value
@@ -414,9 +412,7 @@ class PassiveRepository:
     async def recount(self, signal_id: uuid.UUID) -> None:
         await self.session.execute(_RECOUNT, {"signal_id": signal_id})
 
-    async def evidence_line(
-        self, signal: Signal, mid: str
-    ) -> tuple[str, str, datetime] | None:
+    async def evidence_line(self, signal: Signal, mid: str) -> tuple[str, str, datetime] | None:
         """Реплика-доказательство: цитата сигнала, иначе реплика буфера привязки.
 
         Возвращает (текст, псевдоним автора, время). Буфер живёт не дольше

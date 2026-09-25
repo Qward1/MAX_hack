@@ -80,6 +80,8 @@ NOTIFY_INVALID = (
 
 def notify_digest(settings: Settings, code: str) -> str:
     return EmployeeAuthService(settings).digest(code, "application-notify")
+
+
 LINK_INVALID = "Ссылка недействительна или устарела. Запросите новую."
 
 

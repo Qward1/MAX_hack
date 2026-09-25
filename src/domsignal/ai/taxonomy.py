@@ -172,10 +172,7 @@ def _build_subtype(raw: Any, fuzzy: Sequence[str]) -> Subtype:
         if not isinstance(groups, list) or not groups:
             raise TaxonomyError(f"{code}: pattern 'all' must be a non-empty list")
         patterns.append(
-            tuple(
-                StemSet(_as_list(group, "pattern group", code), fuzzy)
-                for group in groups
-            )
+            tuple(StemSet(_as_list(group, "pattern group", code), fuzzy) for group in groups)
         )
     exclude = StemSet(_as_list(entry.get("exclude") or [], "exclude", code), fuzzy)
     danger_kind = entry.get("danger_kind")

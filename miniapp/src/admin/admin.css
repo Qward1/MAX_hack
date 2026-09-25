@@ -231,13 +231,22 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
   .admin-sidebar {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: stretch;
     padding: 16px;
-    gap: 16px;
+    gap: 12px;
     border-right: 0;
     border-bottom: 1px solid var(--ds-line);
+  }
+  /* D3: разделов стало больше — меню переносится строками, а не столбцом. */
+  .admin-sidebar nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .admin-sidebar nav .admin-nav-link {
+    padding: 8px 12px;
+    border: 1px solid #c9d6e6;
   }
   .admin-sidebar-note {
     display: none;

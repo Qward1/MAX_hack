@@ -5,12 +5,15 @@ import { adminClient, Feedback, Title, useRoute, type Schema } from "./administr
 import { useResource } from "../shared/api/useResource";
 import { ChatConnections, CompanyHouses, MyHouses, Organization, Staff } from "./CompanyPages";
 import { CompanyOverview } from "./Dashboards";
+import { Mailings, Notices, ReceptionAdmin } from "./CommunityPages";
 
 type Context = Schema["CompanyContext"];
 const names: Record<string, string> = { overview: "Обзор", tickets: "Заявки", signals: "Сигналы", houses: "Дома",
-  assigned_houses: "Мои дома", staff: "Сотрудники", chat_connections: "MAX-чаты", organization: "Организация" };
+  assigned_houses: "Мои дома", staff: "Сотрудники", chat_connections: "MAX-чаты", organization: "Организация",
+  mailings: "Рассылки", notices: "Уведомления", reception: "Приём" };
 const paths: Record<string, string> = { overview: "", tickets: "tickets", signals: "signals", houses: "houses",
-  assigned_houses: "houses", staff: "staff", chat_connections: "max", organization: "organization" };
+  assigned_houses: "houses", staff: "staff", chat_connections: "max", organization: "organization",
+  mailings: "mailings", notices: "notices", reception: "reception" };
 // Очередь сигналов живёт в query-навигации, как заявки: ?section=signals&signal=<id>.
 const isSignalsRoute = (url: URL) => url.searchParams.get("section") === "signals" || url.searchParams.has("signal");
 
@@ -94,6 +97,9 @@ function CompanyWorkspace({ company, surface, href, navigate, visit }: Workspace
     case "staff": return <Staff base={base} />;
     case "chat_connections": return <ChatConnections base={base} />;
     case "organization": return <Organization base={base} />;
+    case "mailings": return <Mailings key={visit} base={base} />;
+    case "notices": return <Notices base={base} />;
+    case "reception": return <ReceptionAdmin base={base} admin />;
     default: return <DeniedRoute base={base} surface={surface} />;
   }
 }
@@ -105,6 +111,9 @@ function OperatorWorkspace({ company, surface, href, navigate, visit }: Workspac
   if (surface === "overview") return <CompanyOverview base={base} />;
   if (surface === "chat_connections" && company.surfaces.includes("chat_connections"))
     return <ChatConnections base={base} canRequest={false} />;
+  if (surface === "mailings" && company.surfaces.includes("mailings")) return <Mailings key={visit} base={base} />;
+  if (surface === "notices") return <Notices base={base} />;
+  if (surface === "reception") return <ReceptionAdmin base={base} admin={false} />;
   return <DeniedRoute base={base} surface={surface} />;
 }
 function DeniedRoute({ base, surface }: { base: string; surface: string }) {

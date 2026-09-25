@@ -58,9 +58,7 @@ def test_an_announcement_needs_a_topic_and_a_poll_needs_a_poll() -> None:
     with pytest.raises(ValidationError):
         BroadcastCreate(kind="poll", title="Опрос", channels=["chat"])
     with pytest.raises(ValidationError):
-        BroadcastCreate(
-            kind="mailing", title="Рассылка", body="Текст", channels=["chat", "chat"]
-        )
+        BroadcastCreate(kind="mailing", title="Рассылка", body="Текст", channels=["chat", "chat"])
 
 
 def test_company_profile_rejects_unsafe_links_and_bad_phones() -> None:

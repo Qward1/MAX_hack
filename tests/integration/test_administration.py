@@ -311,6 +311,9 @@ async def test_new_employee_mfa_boundary_and_replay(env):
         "staff",
         "chat_connections",
         "organization",
+        "mailings",
+        "notices",
+        "reception",
     ]
     await auth_post(
         c,

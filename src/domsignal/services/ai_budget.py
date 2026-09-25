@@ -141,9 +141,7 @@ class PostgresBudgetGuard:
                     scoped: int | None = None
                     allowed = daily is not None
                     if allowed and scope_key is not None:
-                        scoped = await self._charge(
-                            session, day, scope_key, self.per_scope_limit
-                        )
+                        scoped = await self._charge(session, day, scope_key, self.per_scope_limit)
                         allowed = scoped is not None
                     if allowed:
                         await session.commit()

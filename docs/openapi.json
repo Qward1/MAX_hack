@@ -3251,7 +3251,10 @@
                 "houses",
                 "staff",
                 "chat_connections",
-                "organization"
+                "organization",
+                "mailings",
+                "notices",
+                "reception"
               ],
               "type": "string"
             },
@@ -3297,6 +3300,13 @@
             ],
             "title": "Period Days",
             "type": "integer"
+          },
+          "polls": {
+            "items": {
+              "$ref": "#/components/schemas/PollResults"
+            },
+            "title": "Polls",
+            "type": "array"
           },
           "quota": {
             "$ref": "#/components/schemas/ChatQuotaView"
@@ -3410,6 +3420,40 @@
             },
             "title": "Connection Requests",
             "type": "array"
+          },
+          "entrance_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entrance Count"
+          },
+          "facts_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facts Updated At"
+          },
+          "floor_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floor Count"
           },
           "house_id": {
             "format": "uuid",
