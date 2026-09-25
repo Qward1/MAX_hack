@@ -13,6 +13,14 @@ export function useRead<T>(path: string, revision = 0) {
     return () => window.removeEventListener("administration-refresh", refresh); }, [resource.refresh]);
   return resource;
 }
+/** Текст ошибки для формы: при 422 — какие поля исправить (по словарю `fields`), иначе detail проблемы. */
+export function problemText(e: unknown, fields: Record<string, string> = {}, fallback = "Не удалось сохранить. Повторите попытку."): string {
+  if (e instanceof ApiProblem && e.problem.code === "validation_error") {
+    const named = (e.problem.field_errors ?? []).map(f => fields[f.field.split(".")[1] ?? f.field]).filter(Boolean);
+    return named.length ? `Проверьте: ${[...new Set(named)].join("; ")}.` : "Проверьте заполнение полей формы.";
+  }
+  return e instanceof Error ? e.message : fallback;
+}
 export function useAction(refresh?: () => void) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -26,7 +34,7 @@ export function useAction(refresh?: () => void) {
       refresh?.();
       return result;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось сохранить. Повторите попытку.");
+      setError(problemText(e));
       setCode(e instanceof ApiProblem ? e.problem.code : "");
     }
     finally { setBusy(false); }

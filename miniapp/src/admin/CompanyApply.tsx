@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { ApiClient } from "../shared/api/client";
 import { useResource } from "../shared/api/useResource";
-import { Feedback, formValue, submitted, type Schema } from "./administration";
+import { Feedback, formValue, problemText, submitted, type Schema } from "./administration";
 
 const client = new ApiClient();
 const STATUS_TITLES: Record<string, string> = {
@@ -9,6 +9,21 @@ const STATUS_TITLES: Record<string, string> = {
   approved: "Заявка одобрена", rejected: "Заявка отклонена", cancelled: "Заявка отменена",
 };
 const STEPS = ["submitted", "under_review", "approved"] as const;
+/** Что исправить, если сервер отклонил поле заявки (422). */
+const APPLY_FIELDS: Record<string, string> = {
+  legal_name: "полное наименование — от 2 символов", short_name: "краткое наименование — от 2 символов",
+  inn: "ИНН — 10 или 12 цифр", requested_chat_count: "число чатов — от 1 до 1000",
+  house_addresses: "адреса домов — каждый не короче 5 символов, не больше 50 строк",
+  contact_name: "контактное лицо — от 2 символов", contact_position: "должность — до 200 символов",
+  contact_email: "электронную почту — в виде name@example.ru", contact_phone: "телефон — цифры, например +7 900 000-00-00",
+  body: "контакты — укажите телефон или электронную почту", comment: "комментарий — до 2000 символов",
+};
+/** Проверка адресов до отправки: называет строку, которую нужно исправить. */
+export function addressProblem(lines: string[]): string {
+  if (lines.length > 50) return "Укажите не больше 50 адресов — остальные можно передать платформе позже.";
+  const short = lines.findIndex(line => line.length < 5);
+  return short < 0 ? "" : `Адрес в строке ${short + 1} слишком короткий: укажите город, улицу и дом.`;
+}
 
 function PublicHeader() {
   return <header className="public-header">
@@ -43,9 +58,13 @@ export function CompanyApply() {
     </div>}
     <p className="muted">Заявка сама по себе не создаёт аккаунт и не открывает доступ к домам.</p></> :
     <form className="ticket-form" onSubmit={async e => {
-      const data = submitted(e); setBusy(true); setError("");
+      const data = submitted(e);
+      const addresses = formValue(data, "addresses").split("\n").map(line => line.trim()).filter(Boolean);
+      const invalid = addressProblem(addresses)
+        || (formValue(data, "email") || formValue(data, "phone") ? "" : "Укажите телефон или электронную почту.");
+      if (invalid) { setError(invalid); return; }
+      setBusy(true); setError("");
       try {
-        const addresses = formValue(data, "addresses").split("\n").map(line => line.trim()).filter(Boolean);
         setReceived(await client.request<Schema["ApplicationReceived"]>("/api/v1/onboarding/company-applications", { method: "POST", body: JSON.stringify({
           legal_name: formValue(data, "legal_name"), short_name: formValue(data, "short_name"), inn: formValue(data, "inn"),
           contact_name: formValue(data, "contact_name"), contact_position: formValue(data, "contact_position") || null,
@@ -53,7 +72,7 @@ export function CompanyApply() {
           comment: formValue(data, "comment") || null, requested_chat_count: Number(formValue(data, "chats")),
           house_addresses: addresses,
         }) }));
-      } catch (e) { setError(e instanceof Error ? e.message : "Не удалось отправить заявку"); }
+      } catch (e) { setError(problemText(e, APPLY_FIELDS, "Не удалось отправить заявку")); }
       finally { setBusy(false); }
     }}><h2>Заявка управляющей компании</h2>
       <label>Полное наименование<input name="legal_name" required minLength={2} maxLength={300} autoComplete="organization" /></label>
@@ -65,8 +84,8 @@ export function CompanyApply() {
       <label>Адреса домов<textarea name="addresses" maxLength={25000} placeholder={"Необязательно. Один адрес в строке, например:\nКазань, ул. Баумана, 1"} /></label>
       <label>Контактное лицо<input name="contact_name" required minLength={2} maxLength={200} autoComplete="name" /></label>
       <label>Должность<input name="contact_position" maxLength={200} autoComplete="organization-title" /></label>
-      <label>Электронная почта<input type="email" name="email" maxLength={254} autoComplete="email" /></label>
-      <label>Телефон<input type="tel" name="phone" maxLength={40} autoComplete="tel" /></label>
+      <label>Электронная почта<input type="email" name="email" maxLength={254} autoComplete="email" pattern="[^\s@]+@[^\s@]+\.[^\s@]+" title="Адрес вида name@example.ru" /></label>
+      <label>Телефон<input type="tel" name="phone" maxLength={40} autoComplete="tel" placeholder="+7 900 000-00-00" /></label>
       <p className="muted">Укажите хотя бы один способ связи: телефон или почту.</p>
       <label>Комментарий<textarea name="comment" maxLength={2000} /></label>
       <Feedback error={error} /><button className="ticket-button" disabled={busy}>{busy ? "Отправляем…" : "Подать заявку"}</button>

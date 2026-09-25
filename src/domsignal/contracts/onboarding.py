@@ -26,6 +26,8 @@ Surface = Literal[
     "organization",
 ]
 Plain = Annotated[str, Field(min_length=1, max_length=2000)]
+#: Телефон заявки УК: цифры с обычными разделителями и необязательный добавочный.
+PHONE = re.compile(r"\+?[0-9() .\-–]{5,30}(?:\s*(?:доб\.?|ext\.?|#)\s*[0-9]{1,6})?", re.IGNORECASE)
 
 
 class PlainInput(ContractModel):
@@ -73,14 +75,30 @@ class CompanyApplicationCreate(PlainInput):
             return [item for item in cleaned if item != ""]
         return value
 
+    # Формат почты и телефона проверяется на своём поле: ошибка 422 называет
+    # поле, и форма показывает, что именно исправить.
+    @field_validator("contact_email")
+    @classmethod
+    def email_syntax(cls, value: str | None) -> str | None:
+        if not value:
+            return None
+        if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", value):
+            raise ValueError("Invalid email syntax")
+        return value
+
+    @field_validator("contact_phone")
+    @classmethod
+    def phone_syntax(cls, value: str | None) -> str | None:
+        if not value:
+            return None
+        if not PHONE.fullmatch(value) or sum(c.isdigit() for c in value) < 5:
+            raise ValueError("Invalid phone syntax")
+        return value
+
     @model_validator(mode="after")
     def contact(self) -> Self:
         if not self.contact_email and not self.contact_phone:
             raise ValueError("Phone or email required")
-        if self.contact_email and not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", self.contact_email):
-            raise ValueError("Invalid email syntax")
-        if self.contact_phone and not re.fullmatch(r"[+0-9() .-]{5,40}", self.contact_phone):
-            raise ValueError("Invalid phone syntax")
         return self
 
 
