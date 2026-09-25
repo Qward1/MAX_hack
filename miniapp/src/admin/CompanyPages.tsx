@@ -203,7 +203,8 @@ export function ChatConnections({ base, canRequest = true }: { base: string; can
       }}>Подключить существующий MAX-чат</button> : <p className="muted">Чаты этого дома подключает администратор УК или ответственный за дом.</p>}
       {h.connection_requests.map(r => <div className="connection-row" key={r.id}><Status value={r.status} />
         {r.last_error_code && <p>{connectionErrors[r.last_error_code] ?? r.last_error_code}</p>}
-        {["max_verified", "awaiting_approval"].includes(r.status) && <button className="ticket-button" disabled={action.busy}
+        {r.status === "chat_detected" && r.last_error_code && <p className="muted">Исправьте это в MAX и нажмите «Подтвердить подключение» — проверка пройдёт заново.</p>}
+        {["chat_detected", "max_verified", "awaiting_approval"].includes(r.status) && <button className="ticket-button" disabled={action.busy}
           onClick={() => void action.run(`/api/v1/chat-connections/${r.id}/approve`, { confirm: true })}>Подтвердить подключение</button>}
         {!["completed", "rejected", "cancelled", "expired"].includes(r.status) && <>
           <button className="ticket-button secondary" disabled={action.busy} onClick={() => void action.run(`/api/v1/chat-connections/${r.id}/cancel`)}>Отменить подключение</button>
