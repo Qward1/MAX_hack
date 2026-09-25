@@ -129,6 +129,11 @@ class Settings(BaseSettings):
     bot_daily_report_limit: int = Field(default=10, ge=1, le=100)
     # Сколько текст из лички ждёт выбора дома или ответа «та же проблема».
     bot_hold_seconds: int = Field(default=1800, ge=60, le=86400)
+    # Сопровождение обращения (A-09, D3): через столько дней после отметки
+    # «Я отправил» бот спрашивает в личке, пришёл ли ответ.
+    appeal_followup_days: int = Field(default=14, ge=1, le=90)
+    # Ежедневная сводка сотрудникам: час по Москве (D3).
+    daily_digest_hour_msk: int = Field(default=9, ge=0, le=23)
     build_commit: str = "dev"
     public_base_url: str = "http://localhost:8000"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]

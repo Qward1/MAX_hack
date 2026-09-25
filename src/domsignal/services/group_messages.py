@@ -31,6 +31,7 @@ from domsignal.db.repositories.chat_connections import ChatRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.services.chat_connections import ChatConnectionService, typed_connect_token
 from domsignal.services.passive_capture import PassiveCaptureService
+from domsignal.services.ticket_chat import GROUP_CALLBACK_JOB
 
 if TYPE_CHECKING:
     from domsignal.services.personal_bot import PersonalBotService
@@ -112,6 +113,23 @@ class MaxWebhookService:
                 job_id = job.id
             elif event.kind == "message_callback" and event.bot_callback and self.bot:
                 job_id = await self.bot.on_callback(session, event)
+            elif event.kind == "message_callback" and event.group_callback:
+                # «Меня тоже касается» в посте о заявке (B-06): решение — в задаче.
+                pressed = event.group_callback
+                job = await reliability.add_job(
+                    kind=GROUP_CALLBACK_JOB,
+                    payload={
+                        "event_id": event.event_id,
+                        "callback_id": pressed.callback_id,
+                        "actor": pressed.actor,
+                        "chat_id": pressed.chat_id,
+                        "message_id": pressed.message_id,
+                        "action": pressed.action,
+                        "ref": pressed.ref,
+                    },
+                    priority=15,
+                )
+                job_id = job.id
             elif event.kind == "bot_started" and event.actor:
                 request = None
                 if event.token:

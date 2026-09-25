@@ -100,6 +100,10 @@ class ChatBinding(Timestamps, Base):
             unique=True,
             postgresql_where=text("status = 'active'"),
         ),
+        CheckConstraint(
+            "quiet_start_minute BETWEEN 0 AND 1439 AND quiet_end_minute BETWEEN 0 AND 1439",
+            name="quiet_hours",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -123,4 +127,19 @@ class ChatBinding(Timestamps, Base):
     # Пассивное чтение чата. Выключено — реплики не сохраняются вовсе.
     passive_capture_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default="false"
+    )
+    # Что бот может публиковать в этом чате по решению человека
+    # (BOT-VOICE-HUMAN-2026-09-27). Памятка и сообщение о чтении этими
+    # настройками не отключаются. Только серверные значения по умолчанию:
+    # вставки прежних ревизий (проверки миграций) о столбцах не знают.
+    post_ticket_status: Mapped[bool] = mapped_column(Boolean, server_default="true")
+    post_company_messages: Mapped[bool] = mapped_column(Boolean, server_default="true")
+    post_polls: Mapped[bool] = mapped_column(Boolean, server_default="true")
+    post_platform_messages: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    # Тихие часы — минуты суток по Москве; начало = конец — тихих часов нет.
+    quiet_start_minute: Mapped[int] = mapped_column(Integer, server_default="1320")
+    quiet_end_minute: Mapped[int] = mapped_column(Integer, server_default="480")
+    settings_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    settings_changed_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
     )

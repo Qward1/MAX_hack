@@ -22,4 +22,7 @@ class AccessPolicy:
         ):
             permissions.add("chat.connect")
             permissions.add("ticket.manage")
+            # Объявления, рассылки и опросы жителям своих домов (D3); оператор
+            # без роли ответственного их не отправляет.
+            permissions.add("broadcast.send")
         return frozenset(permissions)

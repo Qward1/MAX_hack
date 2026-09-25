@@ -21,6 +21,9 @@ CHAT_PURPOSES = (
     "chat_safety_memo",
     "chat_connection_notice",
     "chat_report_ack",
+    # D3 (BOT-VOICE-HUMAN-2026-09-27): пост по решению человека.
+    "broadcast_chat",
+    "chat_ticket_status",
 )
 
 #: Оповещение оператора о критическом сигнале.
@@ -29,13 +32,47 @@ SIGNAL_ALERT_PURPOSE = "signal_alert"
 #: Ответ личного бота на событие жителя (D1).
 BOT_REPLY_PURPOSE = "bot_reply"
 
-PURPOSE_CHECK = (
-    "purpose IN ('ticket_accepted','work_verification','route_action_card',"
-    "'signal_alert','chat_reading_notice','chat_safety_memo',"
-    "'chat_connection_notice','chat_report_ack','bot_reply')"
+#: D3: объявление/рассылка/опрос — в чат, жителю в личку, сотруднику в личку.
+BROADCAST_CHAT_PURPOSE = "broadcast_chat"
+BROADCAST_DM_PURPOSE = "broadcast_dm"
+BROADCAST_STAFF_PURPOSE = "broadcast_staff"
+BROADCAST_PURPOSES = (BROADCAST_CHAT_PURPOSE, BROADCAST_DM_PURPOSE, BROADCAST_STAFF_PURPOSE)
+#: D3: одно сообщение бота в чате о заявке, созданной по решению человека.
+TICKET_CHAT_PURPOSE = "chat_ticket_status"
+#: D3: личные сообщения по ключу (`reply_event_id`): сопровождение обращения
+#: (A-09), ежедневная сводка сотруднику, напоминание о записи на приём.
+APPEAL_FOLLOWUP_PURPOSE = "appeal_followup"
+STAFF_DIGEST_PURPOSE = "staff_digest"
+RECEPTION_REMINDER_PURPOSE = "reception_reminder"
+KEYED_PURPOSES = (APPEAL_FOLLOWUP_PURPOSE, STAFF_DIGEST_PURPOSE, RECEPTION_REMINDER_PURPOSE)
+
+ALL_PURPOSES = (
+    "ticket_accepted",
+    "work_verification",
+    "route_action_card",
+    SIGNAL_ALERT_PURPOSE,
+    *CHAT_PURPOSES[:4],
+    BOT_REPLY_PURPOSE,
+    BROADCAST_CHAT_PURPOSE,
+    BROADCAST_DM_PURPOSE,
+    BROADCAST_STAFF_PURPOSE,
+    TICKET_CHAT_PURPOSE,
+    *KEYED_PURPOSES,
 )
-_CHAT_IN = (
-    "('chat_reading_notice','chat_safety_memo','chat_connection_notice','chat_report_ack')"
+
+
+def _in(values: tuple[str, ...]) -> str:
+    return "(" + ",".join(f"'{value}'" for value in values) + ")"
+
+
+PURPOSE_CHECK = f"purpose IN {_in(ALL_PURPOSES)}"
+_CHAT_IN = _in(CHAT_PURPOSES)
+_SUBJECTS = "ticket_id, route_outcome_id, signal_id, reply_event_id, broadcast_id"
+#: Предмет доставки ровно один; у сообщений бота о чате (подключение, чтение,
+#: памятка) предмет — сама привязка.
+SUBJECT_CHECK = (
+    f"num_nonnulls({_SUBJECTS}) = 1 "
+    f"OR (num_nonnulls({_SUBJECTS}) = 0 AND chat_binding_id IS NOT NULL)"
 )
 
 
@@ -43,23 +80,44 @@ class NotificationDelivery(Timestamps, Base):
     __tablename__ = "notification_deliveries"
     __table_args__ = (
         UniqueConstraint("outbox_message_id", "recipient_user_id", "channel", name="uq_delivery"),
-        # У сообщения в чат получателя-человека нет: одна доставка на запись outbox.
+        # У сообщения в чат получателя-человека нет: одна доставка на пару
+        # «запись outbox, чат» (рассылка — одна запись на много чатов).
         Index(
-            "uq_delivery_outbox_without_recipient",
+            "uq_delivery_outbox_chat",
             "outbox_message_id",
+            "chat_binding_id",
             unique=True,
             postgresql_where=text("recipient_user_id IS NULL"),
+            postgresql_nulls_not_distinct=True,
+        ),
+        # Одно сообщение бота в чате на заявку (B-06).
+        Index(
+            "uq_delivery_ticket_chat",
+            "ticket_id",
+            unique=True,
+            postgresql_where=text("purpose = 'chat_ticket_status'"),
+        ),
+        # Повтор рассылки не дублирует: один пост на чат, одно сообщение на человека.
+        Index(
+            "uq_delivery_broadcast_chat",
+            "broadcast_id",
+            "chat_binding_id",
+            unique=True,
+            postgresql_where=text("purpose = 'broadcast_chat'"),
+        ),
+        Index(
+            "uq_delivery_broadcast_person",
+            "broadcast_id",
+            "purpose",
+            "recipient_user_id",
+            unique=True,
+            postgresql_where=text("purpose IN ('broadcast_dm','broadcast_staff')"),
         ),
         CheckConstraint("channel = 'max'", name="channel"),
         CheckConstraint(PURPOSE_CHECK, name="purpose"),
-        # Предмет доставки ровно один: заявка, исход маршрутизации, сигнал
-        # или привязка чата. Внешний маршрут заявку не создаёт, сообщение в чат
-        # относится к привязке, оповещение оператора — к сигналу.
-        CheckConstraint(
-            "num_nonnulls(ticket_id, route_outcome_id, signal_id, chat_binding_id, "
-            "reply_event_id) = 1",
-            name="subject",
-        ),
+        # Предмет доставки: заявка, исход маршрутизации, сигнал, ключ ответа
+        # или сообщение УК/платформы; привязка чата — адрес поста в чат.
+        CheckConstraint(SUBJECT_CHECK, name="subject"),
         CheckConstraint(
             "purpose <> 'route_action_card' OR route_outcome_id IS NOT NULL",
             name="route_card_subject",
@@ -77,6 +135,19 @@ class NotificationDelivery(Timestamps, Base):
             "purpose <> 'bot_reply' OR (reply_event_id IS NOT NULL "
             "AND recipient_user_id IS NOT NULL)",
             name="bot_reply_subject",
+        ),
+        CheckConstraint(
+            f"purpose NOT IN {_in(BROADCAST_PURPOSES)} OR broadcast_id IS NOT NULL",
+            name="broadcast_subject",
+        ),
+        CheckConstraint(
+            "purpose <> 'chat_ticket_status' OR ticket_id IS NOT NULL",
+            name="ticket_chat_subject",
+        ),
+        CheckConstraint(
+            f"purpose NOT IN {_in(KEYED_PURPOSES)} "
+            "OR (reply_event_id IS NOT NULL AND recipient_user_id IS NOT NULL)",
+            name="keyed_subject",
         ),
         # Без получателя — только сообщение в чат или оповещение, которому
         # честно некого оповестить (`skipped` с причиной).
@@ -110,8 +181,13 @@ class NotificationDelivery(Timestamps, Base):
         ForeignKey("chat_bindings.id"), index=True
     )
     work_attempt_id: Mapped[UUID | None] = mapped_column(ForeignKey("work_attempts.id"))
-    # Входящее событие, на которое отвечает личный бот (D1).
+    # Входящее событие, на которое отвечает личный бот (D1), или ключ личного
+    # сообщения D3 (`followup:<черновик>`, `digest:<день>:<УК>`, `reception:<запись>`).
     reply_event_id: Mapped[str | None] = mapped_column(String(200))
+    # Объявление, рассылка или опрос (D3).
+    broadcast_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("broadcasts.id", ondelete="CASCADE"), index=True
+    )
     launch_ref: Mapped[str] = mapped_column(String(64), unique=True)
     destination: Mapped[str | None] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(30), default="pending")

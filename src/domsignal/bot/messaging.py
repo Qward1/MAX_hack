@@ -51,6 +51,7 @@ class MaxMessagingProvider(Protocol):
     async def edit_message(self, message_id: str, message: PersonalMessage) -> None: ...
     async def answer_callback(self, callback_id: str, message: PersonalMessage) -> None: ...
     async def send_chat_message(self, chat_id: str, message: PersonalMessage) -> SentMessage: ...
+    async def notify_callback(self, callback_id: str, text: str) -> None: ...
 
 
 class _Body(BaseModel):
@@ -236,4 +237,18 @@ class HttpMaxMessagingProvider:
             "/answers",
             {"callback_id": callback_id},
             {"message": self._body(message, notify=False)},
+        )
+
+    async def notify_callback(self, callback_id: str, text: str) -> None:
+        """Ответ на нажатие всплывающим уведомлением, без замены сообщения.
+
+        Документированный `POST /answers` принимает `notification` — одноразовое
+        уведомление нажавшему. Пост бота в групповом чате при этом не меняется:
+        `message` заменил бы его для всех участников.
+        """
+        await self._boolean(
+            "POST",
+            "/answers",
+            {"callback_id": callback_id},
+            {"notification": text[:200]},
         )

@@ -77,7 +77,15 @@ from domsignal.core.incidents import (
 )
 from domsignal.core.routing import UNSPECIFIED_SUBTYPE, HouseRoutingContext
 from domsignal.core.signals import DANGER_LABELS, author_label
-from domsignal.db.models import HouseManagement, Incident, RouteOutcome, Signal, SignalEvent
+from domsignal.db.models import (
+    ChatBinding,
+    HouseManagement,
+    Incident,
+    RouteOutcome,
+    Signal,
+    SignalEvent,
+    Ticket,
+)
 from domsignal.db.models.passive import OPEN_SIGNAL_STATUSES
 from domsignal.db.repositories.incidents import OPEN_STATUSES as OPEN_INCIDENT_STATUSES
 from domsignal.db.repositories.incidents import IncidentRepository
@@ -106,6 +114,7 @@ from domsignal.services.signal_texts import (
     subtype_title,
     ticket_description,
 )
+from domsignal.services.ticket_chat import enqueue_ticket_post
 
 #: Право чтения очереди — то же, что у очереди заявок.
 READ_PERMISSION = "ticket.read"
@@ -402,6 +411,19 @@ class SignalInboxService:
                 decision="ticket",
                 report_id=created.report_id,
             )
+            # Оператор создал заявку из сигнала чата: одно сообщение бота о ней
+            # в тот же чат (B-06, BOT-VOICE-HUMAN-2026-09-27).
+            ticket_id = await session.scalar(
+                select(Ticket.id).where(Ticket.incident_id == created.incident.id)
+            )
+            binding = await session.get(ChatBinding, signal.chat_binding_id)
+            if ticket_id is not None and binding is not None and binding.status == "active":
+                await enqueue_ticket_post(
+                    session,
+                    ticket_id=ticket_id,
+                    chat_binding_id=binding.id,
+                    binding_version=binding.binding_version,
+                )
             return "signal_converted", category.value
 
         return await self._decide(

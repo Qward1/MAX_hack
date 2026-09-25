@@ -31,6 +31,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -224,6 +225,20 @@ class AppealDraft(Timestamps, Base):
             "filed_at IS NOT NULL OR filed_reference IS NULL",
             name="filed_reference",
         ),
+        CheckConstraint(
+            "followup_answer IS NULL OR followup_answer IN "
+            "('resolved','answered_unresolved','no_answer')",
+            name="followup_answer",
+        ),
+        CheckConstraint(
+            "(followup_answer IS NULL) = (followup_answered_at IS NULL)",
+            name="followup_answered",
+        ),
+        Index(
+            "ix_appeal_drafts_followup_due",
+            "followup_due_at",
+            postgresql_where=text("followup_sent_at IS NULL AND followup_answer IS NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -241,6 +256,12 @@ class AppealDraft(Timestamps, Base):
     # Отметка жителя «я отправил сам». Не подтверждение внешней регистрации.
     filed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     filed_reference: Mapped[str | None] = mapped_column(String(200))
+    # Сопровождение A-09 (D3): через `APPEAL_FOLLOWUP_DAYS` после отметки бот
+    # спрашивает в личке «Пришёл ли ответ?». Ответ — утверждение жителя.
+    followup_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    followup_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    followup_answer: Mapped[str | None] = mapped_column(String(30))
+    followup_answered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AiCallBudget(Base):

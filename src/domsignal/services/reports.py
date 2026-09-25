@@ -30,6 +30,7 @@ from domsignal.services.context import OperationContext, OperationSource
 from domsignal.services.errors import IdempotencyConflict, ResourceNotFound, ServiceError
 from domsignal.services.membership import MembershipService
 from domsignal.services.routing import RoutingService
+from domsignal.services.ticket_chat import touch_ticket_chat
 from domsignal.services.tickets import TicketService
 
 
@@ -288,7 +289,10 @@ class ReportService:
                 description=incident.description,
                 classification_mode="manual",
                 provenance=context.source,
+                joined=True,
             )
+            # Счётчик «Касается жителей» в сообщении бота о заявке (B-06).
+            await touch_ticket_chat(session, incident.id)
             detail = self._detail(
                 incident,
                 await repo.reports(incident_id),
