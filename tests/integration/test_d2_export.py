@@ -36,8 +36,8 @@ async def test_the_export_is_the_p6_format_without_identifiers(pv) -> None:  # n
 
     assert [row["text"] for row in rows] == list(LINES), "только интервал сессии, по времени"
     assert all(
-        set(row) == {"session", "mid", "sent_at", "author", "reply_to", "text", "synthetic",
-                     "origin"}
+        set(row)
+        == {"session", "mid", "sent_at", "author", "reply_to", "text", "synthetic", "origin"}
         for row in rows
     )
     assert all(row["synthetic"] is True and row["origin"] == ORIGIN for row in rows)

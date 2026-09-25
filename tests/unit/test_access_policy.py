@@ -34,6 +34,9 @@ def test_policy(org: str | None, assignment: str | None, resident: bool, allowed
     assert ("ticket.read" in permissions) is employee
     assert ("ticket.work" in permissions) is employee
     assert ("work.observe" in permissions) is resident
+    # D3: объявления и опросы — администратор УК и ответственный за дом.
+    manager = org == "company_admin" or (org == "operator" and assignment == "responsible")
+    assert ("broadcast.send" in permissions) is manager
     assert not permissions & {"admin", "support.impersonate"}
 
 

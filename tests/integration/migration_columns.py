@@ -55,7 +55,37 @@ P3B_COLUMNS: dict[str, tuple[str, ...]] = {
         "notify_user_id",
     ),
     "employee_invitations": ("source",),
+    # D3: сведения о доме, отписка от рассылок, настройки чата, сводка,
+    # «Меня тоже касается», сопровождение обращения, доставка рассылок.
+    "houses_d3": (),
 }
+
+D3_COLUMNS: dict[str, tuple[str, ...]] = {
+    "houses": ("entrance_count", "floor_count", "facts_updated_at", "facts_updated_by"),
+    "users": ("broadcast_opt_out_at",),
+    "chat_bindings": (
+        "post_ticket_status",
+        "post_company_messages",
+        "post_polls",
+        "post_platform_messages",
+        "quiet_start_minute",
+        "quiet_end_minute",
+        "settings_changed_at",
+        "settings_changed_by",
+    ),
+    "organization_memberships": ("daily_digest_enabled",),
+    "reports": ("joined",),
+    "appeal_drafts": (
+        "followup_due_at",
+        "followup_sent_at",
+        "followup_answer",
+        "followup_answered_at",
+    ),
+    "notification_deliveries": ("broadcast_id",),
+}
+for _table, _columns in D3_COLUMNS.items():
+    P3B_COLUMNS[_table] = (*P3B_COLUMNS.get(_table, ()), *_columns)
+P3B_COLUMNS.pop("houses_d3")
 
 
 #: Значение, которое миграция ставит существующим строкам. Столбцы, которых
@@ -71,6 +101,17 @@ ADDED_DEFAULTS: dict[str, object] = {
     "open_registration_enabled": False,
     "source": "invitation",
     "admin_invite_generation": 0,
+    # D3: прежним чатам разрешены статусы заявок, сообщения УК и опросы,
+    # сообщения платформы выключены, тихие часы 22:00–08:00 МСК; сводка
+    # выключена; прежние сообщения — не «Меня тоже касается».
+    "post_ticket_status": True,
+    "post_company_messages": True,
+    "post_polls": True,
+    "post_platform_messages": False,
+    "quiet_start_minute": 1320,
+    "quiet_end_minute": 480,
+    "daily_digest_enabled": False,
+    "joined": False,
 }
 
 

@@ -164,10 +164,7 @@ async def test_the_rules_signal_carries_route_quotes_and_line_roles(pv) -> None:
     )
     assert outcome.source == "passive" and outcome.signal_id == signal.id
     assert outcome.route_type == "uk_internal" and outcome.decision == "needs_clarification"
-    roles = {
-        line.line_mid: line.role
-        for line in await pv.all(select(SignalLine))
-    }
+    roles = {line.line_mid: line.role for line in await pv.all(select(SignalLine))}
     assert sorted(roles.values(), key=str) == sorted(
         ["new_problem", "new_problem", "me_too", "status_question"], key=str
     )
@@ -483,9 +480,9 @@ async def test_two_houses_never_mix_lines_windows_or_signals(pv) -> None:  # noq
         assert mids and {chat_of_mid[mid] for mid in mids} == {chat_of_house[signal.house_id]}
     by_house = {signal.house_id: signal for signal in signals if signal.house_id == pv.ids["h1"]}
     assert by_house[pv.ids["h1"]].subtype == "elevator.stopped"
-    assert {
-        signal.product_category for signal in signals if signal.house_id == pv.ids["h2"]
-    } == {"lighting"}
+    assert {signal.product_category for signal in signals if signal.house_id == pv.ids["h2"]} == {
+        "lighting"
+    }
     # Одни и те же люди — разные псевдонимы в разных домах начинаются заново.
     aliases = {
         (line.max_chat_id, line.author_ref)
@@ -504,9 +501,14 @@ async def test_purge_removes_consumed_and_expired_lines_but_keeps_quotes(pv) -> 
     await pv.bind()
     await conversation(pv, LIFT_FIRST + LIFT_SECOND, start=900)
     await settle(pv)
-    assert await pv.scalar(
-        select(func.count()).select_from(ChatMessage).where(ChatMessage.consumed_at.is_not(None))
-    ) == 7
+    assert (
+        await pv.scalar(
+            select(func.count())
+            .select_from(ChatMessage)
+            .where(ChatMessage.consumed_at.is_not(None))
+        )
+        == 7
+    )
     # Свежая неразобранная реплика и одна просроченная.
     await pv.say("Ещё открытое окно", at=ago(5))
     await pv.say("Совсем старая реплика", at=ago(4))
@@ -525,9 +527,12 @@ async def test_purge_removes_consumed_and_expired_lines_but_keeps_quotes(pv) -> 
     assert "Совсем старая реплика" not in {line.text for line in remaining}
     assert "Ещё открытое окно" in {line.text for line in remaining}
     signal = await pv.scalar(select(Signal))
-    assert await pv.scalar(
-        select(func.count()).select_from(SignalQuote).where(SignalQuote.signal_id == signal.id)
-    ) == 3
+    assert (
+        await pv.scalar(
+            select(func.count()).select_from(SignalQuote).where(SignalQuote.signal_id == signal.id)
+        )
+        == 3
+    )
     assert signal.report_count == 6
     purge = (await pv.jobs("chat.buffer.purge"))[0]
     assert purge.status == "pending" and purge.next_attempt_at > datetime.now(UTC)

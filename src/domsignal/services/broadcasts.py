@@ -1452,15 +1452,16 @@ async def tally(session: AsyncSession, poll: Poll) -> tuple[list[PollOptionResul
             select(PollOption).where(PollOption.poll_id == poll.id).order_by(PollOption.position)
         )
     )
-    counts = dict(
-        (
+    counts = {
+        row[0]: row[1]
+        for row in (
             await session.execute(
                 select(PollChoice.option_id, func.count())
                 .where(PollChoice.poll_id == poll.id)
                 .group_by(PollChoice.option_id)
             )
-        ).tuples()
-    )
+        )
+    }
     voters = (
         await session.scalar(
             select(func.count()).select_from(PollBallot).where(PollBallot.poll_id == poll.id)
@@ -1486,9 +1487,12 @@ def poll_closed(poll: Poll, now: datetime | None = None) -> bool:
     return poll.closed_at is not None or poll.closes_at <= (now or datetime.now(UTC))
 
 
-def dm_quiet_until(at: datetime) -> datetime | None:
-    """Личные рассылки ночью не приходят: 22:00–08:00 МСК, как у чатов по умолчанию."""
-    return quiet_until(DEFAULT_QUIET_START, DEFAULT_QUIET_END, at)
+def dm_quiet_until(
+    at: datetime, window: tuple[int, int] | None = (DEFAULT_QUIET_START, DEFAULT_QUIET_END)
+) -> datetime | None:
+    """Личные рассылки ночью не приходят: `BROADCAST_DM_QUIET_HOURS`, по умолчанию
+    22:00–08:00 МСК, как у чатов. `None` — без окна."""
+    return quiet_until(window[0], window[1], at) if window else None
 
 
 __all__ = [

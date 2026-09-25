@@ -204,8 +204,9 @@ class ReceptionService:
                 .limit(50)
             )
         )
-        counts = dict(
-            (
+        counts = {
+            row[0]: row[1]
+            for row in (
                 await session.execute(
                     select(ReceptionBooking.slot_id, func.count())
                     .where(
@@ -214,8 +215,8 @@ class ReceptionService:
                     )
                     .group_by(ReceptionBooking.slot_id)
                 )
-            ).tuples()
-        )
+            )
+        }
         mine = list(
             await session.scalars(
                 select(ReceptionBooking)

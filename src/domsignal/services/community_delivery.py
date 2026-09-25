@@ -242,12 +242,16 @@ async def broadcast_staff_message(
 
 
 async def defer_until(
-    session: AsyncSession, delivery: NotificationDelivery, at: datetime
+    session: AsyncSession,
+    delivery: NotificationDelivery,
+    at: datetime,
+    *,
+    dm_window: tuple[int, int] | None = None,
 ) -> datetime | None:
     """До какого момента отложить отправку или правку. `None` — сейчас."""
     edit = delivery.provider_message_id is not None
     if delivery.purpose == BROADCAST_DM_PURPOSE:
-        return None if edit else dm_quiet_until(at)
+        return None if edit else dm_quiet_until(at, dm_window)
     if delivery.purpose not in {BROADCAST_CHAT_PURPOSE, TICKET_CHAT_PURPOSE}:
         return None
     binding = await session.get(ChatBinding, delivery.chat_binding_id)

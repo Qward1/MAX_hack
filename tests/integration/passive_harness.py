@@ -93,7 +93,9 @@ class PassiveHarness:
         assert initiated.status_code == 201, initiated.text
         request = initiated.json()
         await self.lifecycle(
-            "bot_started", chat=str(connector), actor=connector,
+            "bot_started",
+            chat=str(connector),
+            actor=connector,
             payload=request["correlation_token"],
         )
         await self.lifecycle("bot_added", chat=chat, actor=connector, is_channel=False)

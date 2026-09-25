@@ -174,6 +174,8 @@ class TicketNotificationHandler:
         self.display_timezone = display_timezone
         #: Личные сообщения D3 по ключу: сопровождение, сводка, напоминание.
         self.keyed: dict[str, KeyedSnapshot] = {}
+        #: Ночное окно личных рассылок (`BROADCAST_DM_QUIET_HOURS`), минуты МСК.
+        self.dm_quiet_window: tuple[int, int] | None = (22 * 60, 8 * 60)
 
     async def _snapshot(
         self,
@@ -883,7 +885,7 @@ class TicketNotificationHandler:
             except (AccessDenied, ResourceNotFound) as exc:
                 self._stop(delivery, str(exc) if str(exc) in STOP_CODES else "ACCESS_REVOKED", at)
                 return True
-            until = await defer_until(session, delivery, at)
+            until = await defer_until(session, delivery, at, dm_window=self.dm_quiet_window)
             if until is not None:
                 # Тихие часы: отправка или необязательная правка ждут утра.
                 delivery.next_attempt_at = until

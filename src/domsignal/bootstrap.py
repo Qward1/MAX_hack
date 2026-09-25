@@ -351,6 +351,7 @@ def build_container(settings: Settings) -> Container:
         }
     )
     personal_bot.followups[FOLLOWUP_ACTION] = followups.answer
+    notifications.dm_quiet_window = settings.broadcast_dm_quiet_window
     # Пассивное чтение чата: приём и окна в операционном контуре, разбор окна —
     # тем же анализатором, что и явный путь, в AI-пуле.
     signals = SignalEngine(routing, PassiveConfig.from_settings(settings))

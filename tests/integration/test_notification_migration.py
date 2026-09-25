@@ -69,9 +69,7 @@ async def test_nd_migration_populated_a16_and_history_guard(integration_settings
                 await c.execute(text(sql), ids)
             tables = ["tickets", "ticket_events", "reports", "outbox_messages"]
             before = {
-                t: (
-                    await c.execute(text(f"SELECT {without_added_columns(t)} FROM {t} t"))
-                ).all()
+                t: (await c.execute(text(f"SELECT {without_added_columns(t)} FROM {t} t"))).all()
                 for t in tables
             }
         await engine.dispose()

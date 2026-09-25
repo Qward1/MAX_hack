@@ -196,8 +196,9 @@ class DigestService:
         ]
         if not houses:
             return None
-        signals = dict(
-            (
+        signals = {
+            row[0]: row[1]
+            for row in (
                 await session.execute(
                     select(Signal.strength, func.count())
                     .where(
@@ -209,8 +210,8 @@ class DigestService:
                     )
                     .group_by(Signal.strength)
                 )
-            ).tuples()
-        )
+            )
+        }
         managed = and_(Ticket.house_id.in_(houses))
         unassigned = await session.scalar(
             select(func.count())

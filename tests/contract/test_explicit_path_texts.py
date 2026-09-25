@@ -23,7 +23,11 @@ from domsignal.services import (
     appeal_drafts,
     bot_replies,
     chat_voice,
+    community_texts,
     explicit_reports,
+    followups,
+    my_activity,
+    navigator,
     notification_render,
     route_card_render,
     signal_inbox,
@@ -60,6 +64,12 @@ TEMPLATE_MODULES: tuple[ModuleType, ...] = (
     # Очередь сигналов оператора: причина силы, подписи, описание заявки.
     signal_inbox,
     signal_texts,
+    # D3: посты в чат и личные сообщения по решению человека, «Мой дом»,
+    # «Мои обращения», сопровождение обращения.
+    community_texts,
+    navigator,
+    my_activity,
+    followups,
 )
 
 

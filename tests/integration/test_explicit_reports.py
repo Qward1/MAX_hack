@@ -46,9 +46,7 @@ async def _past_due(harness: Any) -> None:
 
 async def _cards(harness: Any) -> list[NotificationDelivery]:
     return await harness.all(
-        select(NotificationDelivery).where(
-            NotificationDelivery.purpose == "route_action_card"
-        )
+        select(NotificationDelivery).where(NotificationDelivery.purpose == "route_action_card")
     )
 
 
