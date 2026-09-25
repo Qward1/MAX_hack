@@ -141,3 +141,39 @@ describe("Страница статуса: уведомления в MAX", () =>
     expect(JSON.parse(String(init.body))).toEqual({ token: "t".repeat(43) });
   });
 });
+
+describe("Заявка УК: понятные ошибки полей", () => {
+  async function fill() {
+    const { CompanyApply } = await import("./CompanyApply");
+    const { container } = render(<CompanyApply />);
+    const field = (name: string, value: string) =>
+      fireEvent.change(container.querySelector(`[name="${name}"]`) as HTMLInputElement, { target: { value } });
+    field("legal_name", "ООО «Проверка»"); field("short_name", "Проверка"); field("inn", "7712345678");
+    field("chats", "2"); field("contact_name", "Иван Петров"); field("email", "test@mail.ru");
+    return { field, submit: () => fireEvent.submit(container.querySelector("form") as HTMLFormElement) };
+  }
+
+  it("отказ сервера (422) называет поле по-русски, а не общим текстом", async () => {
+    const { ApiClient, ApiProblem } = await import("../shared/api/client");
+    vi.spyOn(ApiClient.prototype, "request").mockRejectedValue(new ApiProblem({
+      type: "about:blank", title: "Request validation failed", status: 422, code: "validation_error",
+      detail: "One or more request fields are invalid", retryable: false,
+      field_errors: [{ field: "body.contact_email", code: "value_error", message: "Invalid value" }],
+    } as never));
+    const { submit } = await fill();
+    submit();
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe("Проверьте: электронную почту — в виде name@example.ru.");
+    expect(alert.textContent).not.toContain("One or more");
+  });
+
+  it("короткий адрес ловится до отправки и называет строку", async () => {
+    const { ApiClient } = await import("../shared/api/client");
+    const request = vi.spyOn(ApiClient.prototype, "request");
+    const { field, submit } = await fill();
+    field("addresses", "Казань, ул. Баумана, 1\nд. 5");
+    submit();
+    expect((await screen.findByRole("alert")).textContent).toBe("Адрес в строке 2 слишком короткий: укажите город, улицу и дом.");
+    expect(request).not.toHaveBeenCalled();
+  });
+});

@@ -221,6 +221,8 @@ async def test_public_application_no_access_duplicate_no_oracle_and_validation(e
     for patch in (
         {"inn": "abc"},
         {"contact_email": None},
+        {"contact_email": "test@mail"},
+        {"house_addresses": ["д. 5"]},
         {"comment": "<script>"},
         {"comment": "a" * 2001},
         {"requested_chat_count": 0},
