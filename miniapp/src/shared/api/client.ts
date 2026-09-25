@@ -321,7 +321,12 @@ export class ApiClient implements DomSignalApi {
     return response.blob();
   }
 
-  async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  /**
+   * `silentAccess`: отказ этого запроса (например, счётчика в меню) не
+   * сбрасывает сессию кабинета — он необязателен для работы экрана.
+   */
+  async request<T>(path: string, options: RequestInit & { silentAccess?: boolean } = {}): Promise<T> {
+    const { silentAccess = false, ...init } = options;
     const headers = new Headers(init.headers);
     headers.set("Content-Type", "application/json");
     if (this.token) headers.set("Authorization", `Bearer ${this.token}`);
@@ -358,9 +363,9 @@ export class ApiClient implements DomSignalApi {
         } catch {
           // Keep the safe generic problem when the proxy returned non-JSON.
         }
-        if (response.status === 401) this.token = null;
+        if (response.status === 401 && !silentAccess) this.token = null;
         if (this.surface === "employee" && [401, 403].includes(response.status) &&
-            !path.startsWith("/api/v1/auth/"))
+            !path.startsWith("/api/v1/auth/") && !silentAccess)
           window.dispatchEvent(new CustomEvent("employee-access-lost", { detail: response.status }));
         throw new ApiProblem(problem);
       }

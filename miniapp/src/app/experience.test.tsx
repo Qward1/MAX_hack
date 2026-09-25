@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -29,7 +30,7 @@ describe("board/detail experience", () => {
       "/?WebAppData=test-only-secret#launch-secret",
     );
     render(<App client={apiWith()} />);
-    const link = await screen.findByRole("link", { name: /Открыть:/ });
+    const link = await screen.findByRole("link", { name: new RegExp(incident.title) });
     expect(link.getAttribute("href")).not.toContain("secret");
     expect(link.getAttribute("href")).not.toContain("WebAppData");
   });
@@ -49,7 +50,7 @@ describe("board/detail experience", () => {
       if (detail)
         window.history.replaceState(null, "", `/?incident=${incident.id}`);
       render(<App client={client} />);
-      await screen.findByText("Этот раздел сейчас отключён");
+      await screen.findByText("Этот раздел сейчас выключен");
       expect(client.incidents).not.toHaveBeenCalled();
       expect(client.incident).not.toHaveBeenCalled();
     },
@@ -61,10 +62,11 @@ describe("board/detail experience", () => {
       title: `Проблема ${i}`,
     }));
     render(<App client={apiWith(items)} />);
-    const links = await screen.findAllByRole("link", { name: /Открыть:/ });
+    const list = await screen.findByRole("list", { name: "Проблемы дома" });
+    const links = within(list).getAllByRole("link");
     expect(links).toHaveLength(100);
-    expect(links[0].textContent).toContain("Открыть");
-    expect(links[99].getAttribute("aria-label")).toBe("Открыть: Проблема 99");
+    expect(links[0].textContent).toContain("Проблема 0");
+    expect(links[99].textContent).toContain("Проблема 99");
   });
   it.each([401, 403, 404])(
     "shows safe %i without leaking prior private data",
@@ -73,32 +75,33 @@ describe("board/detail experience", () => {
       render(<App client={client} />);
       await screen.findByText(house.address);
       vi.mocked(client.incidents).mockRejectedValueOnce(error(status));
-      fireEvent.click(screen.getByRole("button", { name: "Обновить" }));
+      fireEvent(document, new Event("visibilitychange"));
+      fireEvent.click(await screen.findByRole("button", { name: "Обновить" }));
       await waitFor(() => expect(screen.queryByText(house.address)).toBeNull());
       expect(screen.queryByText("PRIVATE")).toBeNull();
-      expect(screen.queryByText("Попробовать снова")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Повторить" })).toBeNull();
     },
   );
   it("initial network failure can be retried", async () => {
     const client = apiWith();
     vi.mocked(client.incidents).mockRejectedValueOnce(new Error("network"));
     render(<App client={client} />);
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Попробовать снова" }),
-    );
-    expect(await screen.findByRole("link", { name: /Открыть:/ })).toBeTruthy();
+    expect(await screen.findByText("Не удалось загрузить проблемы дома")).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: "Повторить" }));
+    expect(await screen.findByRole("link", { name: new RegExp(incident.title) })).toBeTruthy();
   });
   it("retains stale data after refetch failure, then reloads from server", async () => {
     const client = apiWith();
     render(<App client={client} />);
     await screen.findByText(house.address);
     vi.mocked(client.incidents).mockRejectedValueOnce(error(503));
-    fireEvent.click(screen.getByRole("button", { name: "Обновить" }));
-    expect(await screen.findByText(/Показаны ранее загруженные/)).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Открыть:/ })).toBeTruthy();
+    fireEvent(document, new Event("visibilitychange"));
+      fireEvent.click(await screen.findByRole("button", { name: "Обновить" }));
+    expect(await screen.findByText(/Показаны данные, загруженные раньше/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: new RegExp(incident.title) })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Повторить" }));
     await waitFor(() =>
-      expect(screen.queryByText(/Показаны ранее загруженные/)).toBeNull(),
+      expect(screen.queryByText(/Показаны данные, загруженные раньше/)).toBeNull(),
     );
     expect(client.incidents).toHaveBeenCalledTimes(3);
   });
@@ -110,34 +113,35 @@ describe("board/detail experience", () => {
         <App client={client} />
       </MaxUI>,
     );
-    const link = await screen.findByRole("link", { name: /Открыть:/ });
+    const link = await screen.findByRole("link", { name: new RegExp(incident.title) });
     link.focus();
     await user.keyboard("{Enter}");
-    await screen.findByText("Что делать сейчас");
+    await screen.findByRole("heading", { name: "Что известно" });
     expect(new URL(window.location.href).searchParams.get("incident")).toBe(
       incident.id,
     );
     expect(document.activeElement?.id).toBe("page-title");
     mounted.unmount();
     render(<App client={client} />);
-    await screen.findByText("Что делать сейчас");
+    await screen.findByRole("heading", { name: "Что известно" });
     expect(client.incident).toHaveBeenCalledTimes(2);
-    fireEvent.click(screen.getByRole("button", { name: /К доске дома/ }));
-    expect(await screen.findByRole("link", { name: /Открыть:/ })).toBeTruthy();
+    // После перезагрузки истории внутри приложения нет: «Назад» ведёт к проблемам дома.
+    fireEvent.click(screen.getByRole("button", { name: /Назад/ }));
+    expect(await screen.findByRole("link", { name: new RegExp(incident.title) })).toBeTruthy();
   });
   it("ignores late responses after navigation and cancels pending requests", async () => {
     const pending = deferred<IncidentDetail>();
     const client = apiWith();
     vi.mocked(client.incident).mockReturnValueOnce(pending.promise);
     render(<App client={client} />);
-    fireEvent.click(await screen.findByRole("link", { name: /Открыть:/ }));
-    await screen.findByText("Загрузка проблемы");
+    fireEvent.click(await screen.findByRole("link", { name: new RegExp(incident.title) }));
+    await screen.findByText("Загружаем проблему");
     const signal = vi.mocked(client.incident).mock.calls[0]?.[1];
     await act(async () => {
       window.history.replaceState(null, "", "/");
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
-    await screen.findByRole("link", { name: /Открыть:/ });
+    await screen.findByRole("link", { name: new RegExp(incident.title) });
     expect(signal?.aborted).toBe(true);
     await act(async () =>
       pending.resolve({ ...incident, title: "OLD PRIVATE DETAIL" }),
@@ -157,7 +161,8 @@ describe("board/detail experience", () => {
     } as unknown as IncidentDetail;
     render(<App client={apiWith([future])} />);
     expect(await screen.findByText("Состояние обновилось")).toBeTruthy();
-    expect(screen.getByText("Не определён")).toBeTruthy();
+    // Срока нет — строки «Срок» нет, и он не выдумывается.
+    expect(screen.queryByText("Срок")).toBeNull();
     expect(screen.queryByText("Официальный источник")).toBeNull();
     expect(screen.queryByRole("button", { name: "future" })).toBeNull();
   });
@@ -197,15 +202,16 @@ describe("board/detail experience", () => {
     expect(client.incidents).not.toHaveBeenCalled();
     expect(screen.queryByText(house.address)).toBeNull();
   });
-  it("requires an explicit selection with multiple houses", async () => {
+  it("with several houses opens the first one and offers a switcher in the header", async () => {
     const client = apiWith();
     vi.mocked(client.me).mockResolvedValue({
       ...(await client.me()), houses: [house, { ...house, id: "second", address: "Второй дом" }],
     });
     render(<App client={client} />);
-    await screen.findByText("Выберите дом");
-    expect(client.incidents).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Второй дом" }));
+    const switcher = (await screen.findByRole("combobox", { name: "Дом" })) as HTMLSelectElement;
+    expect(switcher.value).toBe(house.id);
+    await waitFor(() => expect(client.incidents).toHaveBeenCalledWith(house.id, expect.any(AbortSignal), 0));
+    fireEvent.change(switcher, { target: { value: "second" } });
     await waitFor(() => expect(client.incidents).toHaveBeenCalledWith("second", expect.any(AbortSignal), 0));
   });
   it("passes the explicit house selector to the server on incident navigation", async () => {
@@ -221,23 +227,22 @@ describe("board/detail experience", () => {
     window.history.replaceState(null, "", `/?incident=${incident.id}`);
     const client = apiWith([{ ...incident, participant_count: null, report_count: 4 }]);
     render(<App client={client} />);
-    await screen.findByText("Что делать сейчас");
-    expect(screen.getByText("Участников").nextElementSibling?.textContent).toBe("Нет данных");
-    expect(screen.getByText("Сообщений по проблеме").nextElementSibling?.textContent).toBe("4");
+    await screen.findByRole("heading", { name: "Что известно" });
+    expect(screen.getByText("Сообщили").nextElementSibling?.textContent).toBe("Нет данных, 4 сообщения");
     expect(screen.queryByRole("button", { name: "Подготовить обращение" })).toBeNull();
   });
   it("does not offer report retry when the producer forbids it", async () => {
     const client = apiWith([]);
     vi.mocked(client.previewReport).mockRejectedValue(error(403));
     render(<App client={client} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Сообщить" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Описание" }), {
+    fireEvent.click(await screen.findByRole("button", { name: "Сообщить о проблеме" }));
+    fireEvent.change(await screen.findByRole("textbox", { name: "Опишите проблему" }), {
       target: { value: "Не работает лифт" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Дальше" }));
+    fireEvent.click(screen.getByRole("button", { name: "Проверить описание" }));
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).not.toContain("Попробуйте ещё раз");
-    expect((screen.getByRole("button", { name: "Дальше" }) as HTMLButtonElement).disabled).toBe(
+    expect(alert.textContent).not.toContain("попробуйте ещё раз");
+    expect((screen.getByRole("button", { name: "Проверить описание" }) as HTMLButtonElement).disabled).toBe(
       true,
     );
     expect(screen.queryByText("PRIVATE")).toBeNull();
@@ -246,11 +251,13 @@ describe("board/detail experience", () => {
     const client = apiWith([]);
     vi.mocked(client.submitReport).mockRejectedValueOnce(new Error("network"));
     render(<App client={client} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Сообщить" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Описание" }), {
+    fireEvent.click(await screen.findByRole("button", { name: "Сообщить о проблеме" }));
+    fireEvent.change(await screen.findByRole("textbox", { name: "Опишите проблему" }), {
       target: { value: "Не работает лифт" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Дальше" }));
+    fireEvent.click(screen.getByRole("button", { name: "Проверить описание" }));
+    // Перед отправкой виден адрес дома.
+    expect(await screen.findByText(house.address)).toBeTruthy();
     const send = await screen.findByRole("button", { name: "Всё верно, отправить" });
     fireEvent.click(send);
     await screen.findByRole("alert");
@@ -308,7 +315,8 @@ describe("route card and appeal draft navigation", () => {
       route_outcome_id: outcome.id,
     });
     await waitFor(() => expect(window.location.search).toContain(`draft=${draft.id}`));
-    fireEvent.click(screen.getByRole("button", { name: /К карточке маршрута/ }));
+    // «Назад» возвращает туда, откуда пришли, — к карточке.
+    fireEvent.click(screen.getByRole("button", { name: /Назад/ }));
     await screen.findByText(actionCard.title);
   });
 
@@ -336,7 +344,7 @@ describe("route card and appeal draft navigation", () => {
     });
     render(<App client={client} />);
     expect(
-      await screen.findByText("Маршрут уточнён — показываем актуальный."),
+      await screen.findByText("Сведения обновились — показываем актуальные."),
     ).toBeTruthy();
   });
 
@@ -352,7 +360,7 @@ describe("route card and appeal draft navigation", () => {
       features: { ...capabilities.features, [flag]: false },
     });
     render(<App client={client} />);
-    await screen.findByText("Этот раздел сейчас отключён");
+    await screen.findByText("Этот раздел сейчас выключен");
     expect(client.routeOutcome).not.toHaveBeenCalled();
     expect(client.appealDraft).not.toHaveBeenCalled();
   });
@@ -362,7 +370,7 @@ describe("route card and appeal draft navigation", () => {
     const client = apiWith();
     vi.mocked(client.routeOutcome).mockRejectedValue(error(404));
     render(<App client={client} />);
-    await screen.findByText("Проблема не найдена");
+    await screen.findByText("Не нашли эту страницу");
     expect(screen.queryByText(actionCard.title)).toBeNull();
     expect(screen.queryByText("PRIVATE")).toBeNull();
   });

@@ -1,5 +1,7 @@
 import type { components } from "../../shared/api/schema";
 import type { ReportCreate } from "../../shared/api/client";
+import { formatDay as formatDayOnly, formatWhen } from "../../shared/ui/format";
+import { residentIncidentStatus } from "../../shared/ui/status";
 
 export const categoryLabels: Record<ReportCreate["category"], string> = {
   elevator: "Лифт",
@@ -8,15 +10,10 @@ export const categoryLabels: Record<ReportCreate["category"], string> = {
   waste: "Отходы",
   other: "Другое",
 };
-export const statusLabels: Record<string, string> = {
-  detected: "Обнаружена проблема",
-  open: "Открыта",
-  reported: "Житель отметил отправку",
-  overdue: "Срок истёк",
-  escalated: "Передано на следующий уровень",
-  resolved: "Решена",
-  dismissed: "Не подтверждена",
-};
+/** Подписи статусов проблемы — из общего словаря (shared/ui/status.ts). */
+export const statusLabels: Record<string, string> = Object.fromEntries(
+  Object.entries(residentIncidentStatus).map(([code, entry]) => [code, entry.label]),
+);
 export const actionLabels = {
   prepare_appeal: "Подготовить обращение",
   edit_draft: "Редактировать черновик",
@@ -74,20 +71,8 @@ export function knownActions(raw: unknown): ActionDescriptor[] {
   return result;
 }
 
-export function formatDay(value?: string | null): string | null {
-  // Дата проверки справочника приходит без времени; выдумывать его не нужно.
-  if (!value) return null;
-  const date = new Date(`${value}T00:00:00Z`);
-  if (!Number.isFinite(date.getTime())) return null;
-  return new Intl.DateTimeFormat("ru", { dateStyle: "long", timeZone: "UTC" }).format(date);
-}
+/** День проверки справочника — без выдуманного времени (shared/ui/format.ts). */
+export const formatDay = formatDayOnly;
 
-export function formatDate(value?: string | null): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return null;
-  return new Intl.DateTimeFormat("ru", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
+/** Дата для жителя: «сегодня, 14:05» (shared/ui/format.ts). */
+export const formatDate = formatWhen;

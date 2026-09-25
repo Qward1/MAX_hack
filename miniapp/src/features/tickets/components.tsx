@@ -1,35 +1,16 @@
-import { formatDate } from "../incidents/presentation";
-import type {
-  Attempt,
-  PageMeta,
-  TicketEvent,
-  WorkStatus,
-} from "../../shared/api/tickets";
+import type { Attempt, PageMeta, TicketEvent, WorkStatus } from "../../shared/api/tickets";
 import { problemStatus, retryable } from "../../shared/api/client";
+import { Button } from "../../shared/ui/Button";
+import { countLabel, formatStaffTime, formatWhen } from "../../shared/ui/format";
+import { StatusTag } from "../../shared/ui/semantic";
+import { residentTicketStatus, staffTicketStatus, statusOf } from "../../shared/ui/status";
 import { eventLabels, ticketStatus } from "./presentation";
 import { safeError } from "./useTicketMutation";
 
-export function TicketStatusBadge({
-  status,
-  resident = false,
-}: {
-  status: string | null;
-  resident?: boolean;
-}) {
-  const tone =
-    status === "closed"
-      ? "calm"
-      : status === "verification_pending"
-        ? "attention"
-        : ["new", "accepted", "in_progress"].includes(status ?? "")
-          ? "active"
-          : "neutral";
-  return (
-    <span className={`status-badge tone-${tone}`}>
-      {ticketStatus(status, resident)}
-    </span>
-  );
+export function TicketStatusBadge({ status, resident = false }: { status: string | null; resident?: boolean }) {
+  return <StatusTag entry={statusOf(resident ? residentTicketStatus : staffTicketStatus, status)} />;
 }
+
 export function ObservationSummary({
   resolved,
   unresolved,
@@ -51,37 +32,25 @@ export function ObservationSummary({
               : "Ожидается ответ жителей."}
       </strong>
       {(resolved > 0 || unresolved > 0) && (
-        <p className="muted">
-          Подтверждений: {resolved}. Сообщений о сохранившейся проблеме:{" "}
-          {unresolved}. Это наблюдения жителей; большинство не определяет
-          результат.
+        <p className="ds-subtle">
+          Подтвердили: {countLabel(resolved, ["житель", "жителя", "жителей"])}. Сообщили, что проблема осталась:{" "}
+          {countLabel(unresolved, ["житель", "жителя", "жителей"])}. Большинство не определяет результат.
         </p>
       )}
     </div>
   );
 }
-export function WorkAttemptCard({
-  attempt,
-  current,
-}: {
-  attempt: Attempt;
-  current: boolean;
-}) {
+
+export function WorkAttemptCard({ attempt, current }: { attempt: Attempt; current: boolean }) {
   return (
-    <article
-      className={`work-attempt ${current ? "current-attempt" : "historical-attempt"}`}
-    >
+    <article className={`work-attempt ${current ? "current-attempt" : "historical-attempt"}`}>
       <div className="ticket-line">
         <h3>Попытка №{attempt.number}</h3>
-        <span className="muted">
-          {current ? "Последняя работа" : "История"}
-        </span>
+        <span className="ds-meta">{current ? "Последняя работа" : "История"}</span>
       </div>
-      <time dateTime={attempt.created_at}>
-        {formatDate(attempt.created_at)}
-      </time>
-      <p>Исполнитель: {attempt.performer_name ?? "Имя не указано"}</p>
-      <p className="full-text">{attempt.public_description}</p>
+      <time dateTime={attempt.created_at}>{formatStaffTime(attempt.created_at)}</time>
+      <p>Исполнитель: {attempt.performer_name ?? "имя не указано"}</p>
+      <p className="ds-prose">{attempt.public_description}</p>
       <ObservationSummary
         resolved={attempt.resolved_count ?? 0}
         unresolved={attempt.unresolved_count ?? 0}
@@ -90,29 +59,35 @@ export function WorkAttemptCard({
     </article>
   );
 }
+
+const creationReasons: Record<string, string> = {
+  single_responsible: "Назначен ответственный за дом",
+  multiple_responsibles: "В общей очереди дома",
+  no_responsible: "Ответственный за дом не назначен",
+  unknown_category: "Требуется уточнить категорию",
+};
+
 export function TicketTimeline({ events }: { events: TicketEvent[] }) {
   return (
-    <ol className="timeline">
+    <ol className="ds-timeline">
       {events.map((event) => (
         <li key={event.id}>
-          <strong>{event.kind === "assigned" && event.reason === "employee_revoked"
-            ? "Исполнитель снят с заявки" : eventLabels[event.kind] ?? "Заявка обновлена"}</strong>
-          <time dateTime={event.created_at}>
-            {formatDate(event.created_at)}
-          </time>
-          <span>{ticketStatus(event.to_status)}</span>
+          <p className="ds-strong">
+            {event.kind === "assigned" && event.reason === "employee_revoked"
+              ? "Исполнитель снят с заявки"
+              : (eventLabels[event.kind] ?? "Заявка обновлена")}
+          </p>
+          <p className="ds-meta">
+            <time dateTime={event.created_at}>{formatStaffTime(event.created_at)}</time>
+            {event.to_status && ` · ${ticketStatus(event.to_status)}`}
+          </p>
           {event.reason && (
-            <p className="full-text">
+            <p className="ds-prose">
               {event.kind === "created"
-                ? ((
-                    {
-                      single_responsible: "Назначен ответственный за дом",
-                      multiple_responsibles: "Передано в общую очередь дома",
-                      no_responsible: "Ответственный за дом не назначен",
-                      unknown_category: "Требуется уточнить категорию",
-                    } as Record<string, string>
-                  )[event.reason] ?? "Заявка передана в обработку")
-                : event.reason === "employee_revoked" ? "Доступ сотрудника к УК отозван. История работы сохранена." : event.reason}
+                ? (creationReasons[event.reason] ?? "Заявка создана")
+                : event.reason === "employee_revoked"
+                  ? "Доступ сотрудника к УК отозван. История работы сохранена."
+                  : event.reason}
             </p>
           )}
         </li>
@@ -120,11 +95,8 @@ export function TicketTimeline({ events }: { events: TicketEvent[] }) {
     </ol>
   );
 }
-export function TicketDeadlines({
-  deadlines,
-}: {
-  deadlines: WorkStatus["deadlines"];
-}) {
+
+export function TicketDeadlines({ deadlines, resident = false }: { deadlines: WorkStatus["deadlines"]; resident?: boolean }) {
   const kinds: Record<string, string> = {
     response: "Ответ",
     completion: "Выполнение работы",
@@ -135,31 +107,27 @@ export function TicketDeadlines({
     agreed: "Согласованный срок",
     normative: "Нормативный срок",
   };
+  const when = resident ? formatWhen : formatStaffTime;
   if (!deadlines.length) return null;
   return (
-    <section className="ticket-panel">
-      <h2>Сроки и обновления</h2>
-      <dl>
+    <section className="ds-group" aria-label="Сроки">
+      <h3>Сроки</h3>
+      <dl className="ds-kv">
         {deadlines.map((d) => (
-          <div className="info-row" key={`${d.kind}-${d.basis}`}>
+          <div className="ds-kv-row" key={`${d.kind}-${d.basis}`}>
             <dt>{kinds[d.kind] ?? "Срок"}</dt>
             <dd>
-              {formatDate(d.due_at) ?? "Не определён"}
-              <p className="muted">
+              <p>{when(d.due_at) ?? "Не определён"}</p>
+              <p className="ds-meta">
                 {bases[d.basis] ?? "Основание не указано"}
+                {d.rule_source ? `: ${d.rule_source}${d.rule_version ? `, ${d.rule_version}` : ""}` : ""}
               </p>
-              <p>
-                Отсчёт: {formatDate(d.started_at)} · редакция {d.revision}
-              </p>
-              {d.rule_source && (
-                <p>
-                  {d.rule_source}
-                  {d.rule_version ? ` · ${d.rule_version}` : ""}
+              {!resident && (
+                <p className="ds-meta">
+                  Отсчёт: {formatStaffTime(d.started_at)} · редакция {d.revision}
                 </p>
               )}
-              {d.agreement_recorded && (
-                <p>Согласование зафиксировано сотрудником.</p>
-              )}
+              {d.agreement_recorded && <p className="ds-meta">Согласование зафиксировано сотрудником.</p>}
             </dd>
           </div>
         ))}
@@ -167,36 +135,43 @@ export function TicketDeadlines({
     </section>
   );
 }
+
+/** Загрузка, ошибка с «Повторить», истёкшая сессия — без технических деталей. */
 export function TicketState({
   loading = false,
   error,
   retry,
+  resident = false,
 }: {
   loading?: boolean;
   error?: unknown;
   retry?: () => void;
+  resident?: boolean;
 }) {
   return (
-    <section className="state-panel" aria-busy={loading}>
-      <p role={loading ? "status" : "alert"}>
-        {loading ? "Загружаем актуальные данные…" : safeError(error)}
-      </p>
+    <div className={`ds-state ${loading ? "ds-state-loading" : "ds-state-error"}`} aria-busy={loading}>
+      <p role={loading ? "status" : "alert"}>{loading ? "Загружаем актуальные данные…" : safeError(error, false, resident)}</p>
+      {loading && (
+        <div className="ds-skeleton" aria-hidden="true">
+          <span />
+        </div>
+      )}
       {!loading && retry && retryable(error) && (
-        <button className="ticket-button secondary" onClick={retry}>
-          Повторить загрузку
-        </button>
+        <div className="ds-actions">
+          <Button onClick={retry}>Повторить</Button>
+        </div>
       )}
-      {!loading && problemStatus(error) === 401 && (
-        <button
-          className="ticket-button secondary"
-          onClick={() => window.location.reload()}
-        >
-          Войти снова
-        </button>
+      {!loading && problemStatus(error) === 401 && !resident && (
+        <div className="ds-actions">
+          <Button variant="primary" onClick={() => window.location.reload()}>
+            Войти снова
+          </Button>
+        </div>
       )}
-    </section>
+    </div>
   );
 }
+
 export function Pagination({
   page,
   count,
@@ -213,24 +188,15 @@ export function Pagination({
   if (page.total <= page.limit && page.offset === 0) return null;
   return (
     <nav className="pagination" aria-label={label}>
-      <button
-        className="ticket-button secondary"
-        disabled={busy || page.offset === 0}
-        onClick={() => change(Math.max(0, page.offset - page.limit))}
-      >
+      <Button small disabled={busy || page.offset === 0} onClick={() => change(Math.max(0, page.offset - page.limit))}>
         Предыдущие
-      </button>
-      <span>
-        {count ? `${page.offset + 1}–${page.offset + count}` : 0} из{" "}
-        {page.total}
+      </Button>
+      <span className="ds-meta">
+        {count ? `${page.offset + 1}–${page.offset + count}` : 0} из {page.total}
       </span>
-      <button
-        className="ticket-button secondary"
-        disabled={busy || page.offset + count >= page.total}
-        onClick={() => change(page.offset + page.limit)}
-      >
+      <Button small disabled={busy || page.offset + count >= page.total} onClick={() => change(page.offset + page.limit)}>
         Следующие
-      </button>
+      </Button>
     </nav>
   );
 }

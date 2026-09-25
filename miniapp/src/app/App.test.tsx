@@ -53,8 +53,11 @@ function clientWith(items: IncidentDetail[] = []): DomSignalApi {
 describe('house board', () => {
   it('renders a real empty state after loading API data', async () => {
     render(<App client={clientWith()} />);
-    expect(screen.getByText('Загрузка доски дома')).toBeTruthy();
-    expect(await screen.findByText('На доске пока пусто')).toBeTruthy();
+    expect(screen.getByText('Загружаем проблемы дома')).toBeTruthy();
+    expect(await screen.findByText('О проблемах пока не сообщали')).toBeTruthy();
+    // Пустое состояние говорит, что здесь появится и что сделать.
+    expect(screen.getByText(/Здесь появятся проблемы, о которых сообщили соседи/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Сообщить о проблеме' })).toBeTruthy();
   });
 
   it('allows retry after an API error', async () => {
@@ -63,9 +66,9 @@ describe('house board', () => {
       .mockRejectedValueOnce(new Error('Сеть недоступна'))
       .mockResolvedValueOnce(await clientWith().capabilities());
     render(<App client={client} />);
-    expect(await screen.findByText('Доска временно недоступна')).toBeTruthy();
-    fireEvent.click(screen.getByText('Попробовать снова'));
-    await waitFor(() => expect(screen.getByText('На доске пока пусто')).toBeTruthy());
+    expect(await screen.findByText('Не удалось загрузить проблемы дома')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Повторить' }));
+    await waitFor(() => expect(screen.getByText('О проблемах пока не сообщали')).toBeTruthy());
   });
 });
 
@@ -91,14 +94,14 @@ describe('no house yet (D1)', () => {
     render(<App client={houseless()} />);
     expect(await screen.findByText('Откройте ДомСигнал кнопкой из вашего домового чата.')).toBeTruthy();
     expect(screen.queryByText('Выберите дом')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Обновить' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Проверить снова' })).toBeTruthy();
   });
 
   it('lists open houses and joins one, then shows its board', async () => {
     const client = houseless([open]);
     vi.mocked(client.joinOpenHouse).mockResolvedValue({ ...open, joined: true });
     render(<App client={client} />);
-    const join = await screen.findByRole('button', { name: `Присоединиться: ${open.address}` });
+    const join = await screen.findByRole('button', { name: `Выбрать дом: ${open.address}` });
     vi.mocked(client.me).mockResolvedValue({
       id: 'user',
       display_name: 'Гость',
@@ -106,8 +109,8 @@ describe('no house yet (D1)', () => {
     } as never);
     fireEvent.click(join);
     await waitFor(() => expect(client.joinOpenHouse).toHaveBeenCalledWith(open.id));
-    expect(await screen.findByRole('heading', { name: open.address })).toBeTruthy();
-    expect(await screen.findByText('На доске пока пусто')).toBeTruthy();
+    expect(await screen.findByText(open.address)).toBeTruthy();
+    expect(await screen.findByText('О проблемах пока не сообщали')).toBeTruthy();
   });
 
   it('says in plain words when the house can no longer be chosen', async () => {
@@ -115,7 +118,7 @@ describe('no house yet (D1)', () => {
     const { error } = await import('../test/fixtures');
     vi.mocked(client.joinOpenHouse).mockRejectedValue(error(404));
     render(<App client={client} />);
-    fireEvent.click(await screen.findByRole('button', { name: `Присоединиться: ${open.address}` }));
+    fireEvent.click(await screen.findByRole('button', { name: `Выбрать дом: ${open.address}` }));
     expect(await screen.findByText('Этот дом больше нельзя выбрать. Обновите список.')).toBeTruthy();
     expect(screen.queryByText('PRIVATE')).toBeNull();
   });

@@ -1,91 +1,93 @@
-import { Button, Flex, Panel, Typography } from "@maxhub/max-ui";
-import { type ReactNode, useId } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import {
   type ActionCode,
   actionLabels,
-  formatDate,
   knownActions,
   type Source,
-  statusLabels,
   warnUnknown,
 } from "../../features/incidents/presentation";
 import { maxBridge, safeUrl } from "../max/bridge";
+import { Button } from "./Button";
+import { formatDay, formatWhen } from "./format";
+import { residentIncidentStatus, type StatusEntry, statusOf, TONE_MARK, type Tone } from "./status";
 
-export function StatusBadge({ status }: { status: string }) {
-  const known = Object.hasOwn(statusLabels, status);
-  if (!known) warnUnknown("status");
-  const tone = !known
-    ? "neutral"
-    : ["resolved", "dismissed"].includes(status)
-      ? "calm"
-      : ["overdue", "escalated"].includes(status)
-        ? "attention"
-        : "active";
+/** Тег статуса: текст, знак и тон. Не кликабелен — это состояние, а не действие. */
+export function StatusTag({ entry }: { entry: StatusEntry }) {
   return (
-    <span className={`status-badge tone-${tone}`}>
-      <span aria-hidden="true">
-        {tone === "calm" ? "✓" : tone === "attention" ? "!" : "●"}
-      </span>{" "}
-      {known ? statusLabels[status] : "Состояние обновилось"}
+    <span className={`ds-tag ds-tone-${entry.tone}`}>
+      <span aria-hidden="true" className="ds-tag-mark">
+        {TONE_MARK[entry.tone]}
+      </span>
+      {entry.label}
     </span>
   );
 }
 
+/** Статус проблемы дома по словарю жителя. */
+export function StatusBadge({ status }: { status: string }) {
+  return <StatusTag entry={statusOf(residentIncidentStatus, status)} />;
+}
+
 export function DemoBadge() {
+  return <span className="ds-tag ds-tone-neutral ds-tag-demo">Демонстрационные данные</span>;
+}
+
+/**
+ * Блок-уведомление рядом с тем, к чему относится. Тон — только по смыслу:
+ * danger — безопасность и ошибки, warning — «требует сверки», info — пояснение.
+ */
+export function Notice({
+  tone = "info",
+  title,
+  children,
+  role,
+  id,
+  className,
+}: {
+  tone?: Exclude<Tone, "neutral"> | "neutral";
+  title?: ReactNode;
+  children?: ReactNode;
+  role?: "alert" | "status" | "note";
+  id?: string;
+  className?: string;
+}) {
   return (
-    <span className="demo-badge">
-      <span aria-hidden="true">◇</span> Демонстрационные данные
-    </span>
+    <div className={`ds-notice ds-tone-${tone}${className ? ` ${className}` : ""}`} role={role} id={id}>
+      {title && <p className="ds-notice-title">{title}</p>}
+      {children}
+    </div>
   );
 }
 
 const sourceLabels: Record<string, string> = {
   official: "Официальный источник",
   product_derived: "Рассчитано ДомСигналом",
-  user_reported: "Указано пользователем",
+  user_reported: "Со слов жителей",
   demo: "Демонстрационные данные",
 };
-export function SourceChip({ source }: { source: Source | null | undefined }) {
+
+/** Происхождение сведений: видно сразу, подробности — по нажатию. */
+export function SourceChip({ source, label = "Источник" }: { source: Source | null | undefined; label?: string }) {
   if (!source) return null;
   const known = Object.hasOwn(sourceLabels, source.origin ?? "");
   if (!known) warnUnknown("source");
-  // Incomplete official records cannot earn an official badge.
-  const verified = formatDate(source.verified_at);
-  const valid =
-    known &&
-    (source.origin !== "official" || Boolean(source.source_title && verified));
-  const title = valid
-    ? sourceLabels[source.origin ?? ""]
-    : "Происхождение не подтверждено";
+  // Неполная официальная запись не получает «официальный» знак.
+  const verified = formatDay(source.verified_at);
+  const valid = known && (source.origin !== "official" || Boolean(source.source_title && verified));
+  const title = valid ? sourceLabels[source.origin ?? ""] : "Происхождение не подтверждено";
   const url = safeUrl(source.source_url);
+  const recorded = formatWhen(source.recorded_at);
   return (
-    <details
-      className={`source-chip ${source.origin === "demo" ? "source-demo" : ""}`}
-    >
+    <details className={`ds-disclosure ds-source${source.origin === "demo" ? " is-demo" : ""}`}>
       <summary>
-        <span aria-hidden="true">
-          {source.origin === "demo"
-            ? "◇"
-            : source.origin === "user_reported"
-              ? "◌"
-              : "ⓘ"}
-        </span>{" "}
-        {title}
+        {label}: {title}
       </summary>
-      <div className="source-details">
-        {source.source_title && (
-          <Typography.Text variant="body-strong">
-            {source.source_title}
-          </Typography.Text>
-        )}
-        {source.note && <p className="full-text">{source.note}</p>}
-        {source.origin === "user_reported" && (
-          <p>Внешней системой не подтверждено.</p>
-        )}
+      <div className="ds-disclosure-body">
+        {source.source_title && <p className="ds-strong">{source.source_title}</p>}
+        {source.note && <p className="ds-prose">{source.note}</p>}
+        {source.origin === "user_reported" && <p>Внешней системой не подтверждено.</p>}
         {verified && <p>Проверено: {verified}</p>}
-        {formatDate(source.recorded_at) && (
-          <p>Зафиксировано: {formatDate(source.recorded_at)}</p>
-        )}
+        {recorded && <p>Записано: {recorded}</p>}
         {url && (
           <a
             href={url}
@@ -95,7 +97,7 @@ export function SourceChip({ source }: { source: Source | null | undefined }) {
               if (maxBridge.openLink(url)) event.preventDefault();
             }}
           >
-            Открыть источник ↗
+            Открыть источник<span className="ds-visually-hidden"> (в новом окне)</span>
           </a>
         )}
       </div>
@@ -103,41 +105,45 @@ export function SourceChip({ source }: { source: Source | null | undefined }) {
   );
 }
 
+/** Заголовок экрана: говорит, что здесь можно сделать или узнать. Один h1. */
 export function PageHeader({
   title,
   subtitle,
-  eyebrow = "ДомСигнал",
   children,
 }: {
   title: string;
-  subtitle?: string;
-  eyebrow?: string;
+  subtitle?: ReactNode;
   children?: ReactNode;
 }) {
   return (
-    <header className="page-header">
-      <Typography.Text variant="label-strong" className="eyebrow">
-        {eyebrow}
-      </Typography.Text>
-      <Typography.Headline asChild>
-        <h1 tabIndex={-1} id="page-title">
-          {title}
-        </h1>
-      </Typography.Headline>
-      {subtitle && (
-        <Typography.Text asChild color="secondary">
-          <p>{subtitle}</p>
-        </Typography.Text>
-      )}
+    <header className="ds-page-header">
+      <h1 tabIndex={-1} id="page-title">
+        {title}
+      </h1>
+      {subtitle && <p className="ds-subtle">{subtitle}</p>}
       {children}
     </header>
   );
 }
 
+/** «Назад» — всегда правда: возвращает туда, откуда человек пришёл. */
+export function BackLink({ onBack, label = "Назад" }: { onBack: () => void; label?: string }) {
+  return (
+    <button type="button" className="ds-back" onClick={onBack}>
+      <span aria-hidden="true">←</span> {label}
+    </button>
+  );
+}
+
+/**
+ * Состояния экрана: загрузка (каркас без скачков), пусто (что здесь появится
+ * и что сделать), ошибка (что случилось и «Повторить»).
+ */
 export function StatePanel({
   title,
   detail,
   loading = false,
+  kind,
   action,
   onAction,
   back,
@@ -145,42 +151,73 @@ export function StatePanel({
   title: string;
   detail?: string;
   loading?: boolean;
+  kind?: "loading" | "empty" | "error";
   action?: string;
   onAction?: () => void;
   back?: ReactNode;
 }) {
+  const state = kind ?? (loading ? "loading" : "empty");
   return (
-    <Panel className="state-panel" aria-busy={loading}>
-      <div role={loading ? "status" : "alert"} aria-live="polite">
-        <div className="state-symbol" aria-hidden="true">
-          {loading ? "…" : "↗"}
-        </div>
-        <Typography.Title asChild>
-          <h2>{title}</h2>
-        </Typography.Title>
+    <section className={`ds-state ds-state-${state}`} aria-busy={state === "loading"}>
+      <div role={state === "loading" ? "status" : state === "error" ? "alert" : undefined}>
+        <h2 className="ds-state-title">{title}</h2>
         {detail && <p>{detail}</p>}
       </div>
-      {loading && <div className="skeleton" aria-hidden="true" />}
-      <Flex gap={12} wrap="wrap" justify="center">
-        {action && onAction && <Button onClick={onAction}>{action}</Button>}
-        {back}
-      </Flex>
-    </Panel>
+      {state === "loading" && (
+        <div className="ds-skeleton" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+      )}
+      {(action && onAction) || back ? (
+        <div className="ds-actions">
+          {action && onAction && (
+            <Button variant={state === "error" ? "primary" : "secondary"} onClick={onAction}>
+              {action}
+            </Button>
+          )}
+          {back}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
-export function InfoRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
+export function InfoRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="info-row">
+    <div className="ds-kv-row">
       <dt>{label}</dt>
       <dd>{children}</dd>
     </div>
+  );
+}
+
+/**
+ * Список «ключ — значение» с «Изменить» у пункта — как check answers:
+ * правка возвращает к нужному полю, а после неё — обратно к проверке.
+ */
+export function CheckAnswers({
+  items,
+}: {
+  items: { label: string; value: ReactNode; change?: () => void; changeLabel?: string }[];
+}) {
+  return (
+    <dl className="ds-kv ds-check">
+      {items.map((item) => (
+        <div className="ds-kv-row" key={item.label}>
+          <dt>{item.label}</dt>
+          <dd>{item.value}</dd>
+          {item.change && (
+            <dd className="ds-kv-change">
+              <button type="button" className="ds-link-button" onClick={item.change}>
+                Изменить<span className="ds-visually-hidden">: {item.changeLabel ?? item.label.toLowerCase()}</span>
+              </button>
+            </dd>
+          )}
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -194,76 +231,134 @@ export function NextAction({
   busy?: boolean;
 }) {
   const id = useId();
-  // A known label is not an implemented endpoint. Only supplied handlers may expose a CTA.
-  const available = knownActions(actions).filter(
-    (action) => handlers[action.code],
-  );
+  // Известная подпись — ещё не реализованный шаг: без обработчика кнопки нет.
+  const available = knownActions(actions).filter((action) => handlers[action.code]);
+  if (!available.length) return null;
   return (
-    <Panel className="next-action" aria-labelledby={id}>
-      <Typography.Text variant="label-strong" className="eyebrow">
-        Следующий шаг
-      </Typography.Text>
-      <Typography.Title asChild>
-        <h2 id={id}>Что делать сейчас</h2>
-      </Typography.Title>
-      {available.length ? (
-        <Flex direction="column" gap={12}>
-          {available.map((action) => (
-            <div key={action.code}>
-              <Button
-                stretched
-                disabled={busy || !action.enabled}
-                aria-describedby={
-                  action.reason ? `${id}-${action.code}` : undefined
-                }
-                onClick={() => {
-                  if (action.enabled && !busy) handlers[action.code]?.();
-                }}
-              >
-                {actionLabels[action.code]}
-              </Button>
-              {action.reason && (
-                <p id={`${id}-${action.code}`} className="muted">
-                  {action.reason}
-                </p>
-              )}
-            </div>
-          ))}
-        </Flex>
-      ) : (
-        <p>
-          Пока нет доступных действий. Здесь можно проверить описание и
-          сообщения по проблеме.
-        </p>
-      )}
-    </Panel>
+    <section className="ds-section" aria-labelledby={id}>
+      <h2 id={id}>Что можно сделать</h2>
+      <div className="ds-stack">
+        {available.map((action, index) => (
+          <Button
+            key={action.code}
+            variant={index === 0 ? "primary" : "secondary"}
+            stretched
+            disabled={busy || !action.enabled}
+            reason={action.enabled ? null : action.reason}
+            onClick={() => handlers[action.code]?.()}
+          >
+            {actionLabels[action.code]}
+          </Button>
+        ))}
+      </div>
+    </section>
   );
 }
 
+/** Хронология: после нескольких записей свёрнута, раскрывается по кнопке. */
 export function Timeline({
   events,
+  collapseAfter = 3,
+  label = "записи",
 }: {
-  events: {
-    id: string;
-    title: string;
-    detail?: string | null;
-    occurred_at: string;
-  }[];
+  events: { id: string; title: string; detail?: string | null; occurred_at: string }[];
+  collapseAfter?: number;
+  label?: string;
 }) {
+  const [open, setOpen] = useState(false);
+  const listId = useId();
   if (!events.length) return null;
+  const hidden = events.length - collapseAfter;
+  const shown = open || hidden <= 0 ? events : events.slice(0, collapseAfter);
   return (
-    <ol className="timeline">
-      {events.map((event) => (
-        <li key={event.id}>
-          <Typography.Text variant="body-strong">{event.title}</Typography.Text>
-          {formatDate(event.occurred_at) && (
-            <time dateTime={event.occurred_at}>
-              {formatDate(event.occurred_at)}
-            </time>
-          )}
-          {event.detail && <p className="full-text">{event.detail}</p>}
-        </li>
-      ))}
-    </ol>
+    <>
+      <ol className="ds-timeline" id={listId}>
+        {shown.map((event) => (
+          <li key={event.id}>
+            <p className="ds-strong">{event.title}</p>
+            {formatWhen(event.occurred_at) && (
+              <time dateTime={event.occurred_at} className="ds-meta">
+                {formatWhen(event.occurred_at)}
+              </time>
+            )}
+            {event.detail && <p className="ds-prose">{event.detail}</p>}
+          </li>
+        ))}
+      </ol>
+      {hidden > 0 && (
+        <button
+          type="button"
+          className="ds-link-button"
+          aria-expanded={open}
+          aria-controls={listId}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? "Свернуть" : `Показать все ${label} (${events.length})`}
+        </button>
+      )}
+    </>
+  );
+}
+
+/**
+ * Диалог подтверждения — только для необратимых и значимых действий.
+ * Esc и «Отмена» закрывают его, фокус возвращается к кнопке, которая его открыла.
+ */
+export function ConfirmDialog({
+  title,
+  children,
+  confirmLabel,
+  cancelLabel = "Отмена",
+  busy = false,
+  busyLabel,
+  tone = "primary",
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  children?: ReactNode;
+  confirmLabel: string;
+  cancelLabel?: string;
+  busy?: boolean;
+  busyLabel?: string;
+  tone?: "primary" | "danger";
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  useEffect(() => {
+    const trigger = document.activeElement as HTMLElement | null;
+    const dialog = ref.current;
+    if (dialog && !dialog.open) {
+      if (typeof dialog.showModal === "function") dialog.showModal();
+      else dialog.setAttribute("open", "");
+    }
+    return () => {
+      if (dialog?.open) dialog.close?.();
+      trigger?.focus?.();
+    };
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className="ds-dialog"
+      aria-labelledby={titleId}
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!busy) onCancel();
+      }}
+    >
+      <h2 id={titleId}>{title}</h2>
+      {children}
+      <div className="ds-actions">
+        <Button variant={tone} loading={busy} loadingLabel={busyLabel} onClick={onConfirm}>
+          {confirmLabel}
+        </Button>
+        <Button variant="secondary" disabled={busy} onClick={onCancel}>
+          {cancelLabel}
+        </Button>
+      </div>
+    </dialog>
   );
 }
