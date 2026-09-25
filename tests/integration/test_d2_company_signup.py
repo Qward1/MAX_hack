@@ -123,6 +123,32 @@ async def test_approval_with_smaller_quota_and_self_service_admin(env):  # noqa:
     }
 
 
+async def test_platform_account_cannot_take_company_invitation(env):  # noqa: F811
+    """Живой D2: суперадмин открыл «Создать аккаунт администратора» в своём браузере."""
+    obj = await application(env)
+    company = (await decide(env, obj, "approve", {"chat_quota": 1}))["application"]["company_id"]
+    link = await admin_link(env, obj)
+    token = link["invitation_url"].split("/")[-1]
+    for step in ("claim", "accept"):
+        r = await env["platform"].post(AUTH + f"/invitations/{step}", json={"token": token})
+        assert r.status_code == 409 and r.json()["code"] == "platform_account_invitation", r.text
+    async with env["container"].session_factory() as db:
+        invitation = await db.scalar(select(EmployeeInvitation))
+        assert invitation is not None and invitation.status == "pending"
+        assert invitation.claimed_by_user_id is None
+        assert not await db.scalar(
+            select(OrganizationMembership).where(
+                OrganizationMembership.user_id == env["platform_id"]
+            )
+        )
+    assert (await status(env, obj))["admin_account"] == "create"
+    # Та же ссылка создаёт отдельный аккаунт администратора УК.
+    admin, _ = await register(env, await admin_link(env, obj), login="d2.separate.admin")
+    boot = (await admin.get("/api/v1/admin/bootstrap")).json()
+    assert [c["company_id"] for c in boot["companies"]] == [company]
+    assert (await status(env, obj))["admin_account"] == "active"
+
+
 async def test_unlimited_and_default_quota_on_approval(env):  # noqa: F811
     unlimited = await application(env)
     result = await decide(env, unlimited, "approve", {"unlimited": True})

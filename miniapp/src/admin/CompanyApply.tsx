@@ -149,6 +149,8 @@ export function ApplicationStatus({ token }: { token: string }) {
       </section>}
       {data.status === "rejected" && data.decision_reason && <section className="admin-detail"><h2>Причина</h2><p>{data.decision_reason}</p></section>}
       {["submitted", "under_review"].includes(data.status) && <p>Платформа проверяет организацию. Решение и вопросы появятся на этой странице — сохраните её в закладки.</p>}
+      {data.status !== "approved" && data.requested_chat_count != null &&
+        <p className="muted">Запрошено: {data.requested_chat_count} {plural(data.requested_chat_count)}. Итоговую квоту назначит платформа.</p>}
       {data.messages.length > 0 && <section className="admin-detail"><h2>Вопросы и ответы</h2>
         <ol className="message-list">{data.messages.map((m, i) => <li key={i} className={`message-${m.author}`}>
           <strong>{m.author === "platform" ? "Платформа" : "Вы"}</strong><time>{new Date(m.created_at).toLocaleString("ru-RU")}</time><p>{m.text}</p></li>)}</ol></section>}

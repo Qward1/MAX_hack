@@ -95,6 +95,18 @@ class AdministrationConflict(ServiceError):
     title = "Состояние изменилось"
 
 
+class PlatformAccountInvitation(AdministrationConflict):
+    """Аккаунт управления платформой не получает роль в УК по приглашению."""
+
+    code = "platform_account_invitation"
+
+
+PLATFORM_ACCOUNT_INVITATION = (
+    "Аккаунт управления платформой не вступает в УК по приглашению. Выйдите и создайте "
+    "по этой ссылке отдельный аккаунт сотрудника."
+)
+
+
 def audit(
     db: AsyncSession, event: str, actor: UUID | None, obj: UUID, reason: str | None = None
 ) -> None:
@@ -235,6 +247,11 @@ async def valid_invitation(
             raise AuthenticationRequired("Приглашение недействительно") from exc
     if row.claimed_by_user_id and row.claimed_by_user_id != actor:
         raise AuthenticationRequired("Приглашение уже закреплено за другим сотрудником")
+    # Роли платформы и УК разделены: суперадмин не становится сотрудником УК,
+    # даже если открыл ссылку приглашения в браузере со своим входом.
+    user = await db.get(User, actor) if actor else None
+    if user is not None and user.platform_role:
+        raise PlatformAccountInvitation(PLATFORM_ACCOUNT_INVITATION)
     return row
 
 
