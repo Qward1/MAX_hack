@@ -13,6 +13,8 @@
 
     python -m domsignal.tools.daily_digest --enable-for <user id> --company <id УК> \\
         --operator <name> --reason <основание>
+
+Выключает так же — `--disable-for` вместо `--enable-for`.
 """
 
 from __future__ import annotations
@@ -31,7 +33,7 @@ from domsignal.settings import get_settings
 from domsignal.tools import print_json
 
 
-async def enable(user: UUID, company: UUID, operator: str, reason: str) -> int:
+async def enable(user: UUID, company: UUID, operator: str, reason: str, *, on: bool = True) -> int:
     container = build_container(get_settings())
     try:
         async with container.session_factory() as session, session.begin():
@@ -47,15 +49,15 @@ async def enable(user: UUID, company: UUID, operator: str, reason: str) -> int:
             if membership is None:
                 print_json({"error": "membership_not_found"})
                 return 2
-            membership.daily_digest_enabled = True
+            membership.daily_digest_enabled = on
             audit(
                 session,
-                "staff_digest.enabled_by_operator",
+                "staff_digest.enabled_by_operator" if on else "staff_digest.disabled_by_operator",
                 None,
                 membership.id,
                 f"{operator}: {reason}"[:500],
             )
-        print_json({"daily_digest_enabled": True})
+        print_json({"daily_digest_enabled": on})
         return 0
     finally:
         await container.aclose()
@@ -75,13 +77,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Queue today's staff digest now")
     parser.add_argument("--company", type=UUID, default=None)
     parser.add_argument("--enable-for", type=UUID, default=None)
+    parser.add_argument("--disable-for", type=UUID, default=None)
     parser.add_argument("--operator")
     parser.add_argument("--reason")
     args = parser.parse_args()
-    if args.enable_for is not None:
+    target = args.enable_for or args.disable_for
+    if args.enable_for is not None and args.disable_for is not None:
+        parser.error("use either --enable-for or --disable-for")
+    if target is not None:
         if not (args.company and args.operator and args.reason):
-            parser.error("--enable-for needs --company, --operator and --reason")
-        sys.exit(asyncio.run(enable(args.enable_for, args.company, args.operator, args.reason)))
+            parser.error("--enable-for/--disable-for need --company, --operator and --reason")
+        on = args.enable_for is not None
+        sys.exit(asyncio.run(enable(target, args.company, args.operator, args.reason, on=on)))
     sys.exit(asyncio.run(run(args.company)))
 
 

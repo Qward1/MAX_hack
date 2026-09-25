@@ -25,6 +25,9 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
   const [error, setError] = useState("");
   const [recovery, setRecovery] = useState(false);
   const [forbidden, setForbidden] = useState(false);
+  // Вход сотрудника УК на странице платформы (живая проверка D3): не тупик
+  // «доступ отозван», а переход в свой кабинет — по ролям с сервера.
+  const [companyCabinet, setCompanyCabinet] = useState(false);
   const [fixture, setFixture] = useState(false);
   const [revision, setRevision] = useState(0);
   const apply = (next: State) => {
@@ -61,6 +64,14 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
     if (channel) channel.onmessage = () => { setState(null); setRevision(v => v + 1); void restore(); };
     return () => { active = false; channel?.close(); window.removeEventListener("employee-access-lost", lost); };
   }, []);
+  useEffect(() => {
+    if (!forbidden || !platform) return;
+    let active = true;
+    client.request<components["schemas"]["EmployeeDestinations"]>("/api/v1/auth/employee/destinations")
+      .then(result => { if (active) setCompanyCabinet(!result.platform && result.companies.length > 0); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [forbidden, platform]);
   async function loadPreview() {
     try {
       if (joinCode) {
@@ -114,10 +125,14 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
         <button className="ticket-button secondary" disabled={busy} onClick={() => void logout()}>Выйти</button>
       </div>
       {error && <p role="alert">{error}</p>}
-      {forbidden ? <main className="auth-card"><h1>Доступ отозван или ограничен</h1>
+      {forbidden ? <main className="auth-card">{companyCabinet ? <>
+        <h1>Это вход для управления платформой</h1>
+        <p>Вы вошли как сотрудник управляющей компании — ваш кабинет отдельный.</p>
+        <a className="ticket-button" href="/admin/">Открыть кабинет управляющей компании</a>
+      </> : <><h1>Доступ отозван или ограничен</h1>
         <p>Рабочие данные скрыты. Уточните назначение у администратора УК.</p>
         <button className="ticket-button" onClick={() => window.location.reload()}>Проверить доступ</button>
-      </main> : children}
+      </>}</main> : children}
     </div>
   );
   return <main className="auth-layout"><section className="auth-card">

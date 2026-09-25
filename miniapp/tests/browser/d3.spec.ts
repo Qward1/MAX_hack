@@ -104,10 +104,10 @@ test.describe.serial("D3 community", () => {
       await send.click();
       await expect(page.getByText("Запланировано").first()).toBeVisible();
       fixture("send");
-      await page.getByRole("button", { name: "← К списку" }).click();
-      await page.getByRole("button", { name: TITLE }).click();
-      await expect(page.getByRole("table", { name: "Статистика отправки" })).toBeVisible();
+      // Живая проверка D3: карточка сама доходит до отправки, без возврата к списку.
+      await expect(page.getByRole("table", { name: "Статистика отправки" })).toBeVisible({ timeout: 10000 });
       await expect(page.getByText("Отправлено").first()).toBeVisible();
+      await expect(page.getByRole("button", { name: "Исправить текст" })).toBeVisible();
       await noOverflow(page);
       await axeCheck(page);
 

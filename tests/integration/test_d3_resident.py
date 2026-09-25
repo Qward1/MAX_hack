@@ -438,3 +438,22 @@ async def test_an_operator_enables_the_digest_for_staff_without_a_cabinet_login(
     )
     assert receipt is not None and receipt.payload["reason"].startswith("d3-test")
     assert await daily_digest.enable(d3.ids["admin1"], d3.ids["t2"], "d3-test", "чужая УК") == 2
+    # Выключает тот же путь, с отдельным событием аудита.
+    assert (
+        await daily_digest.enable(d3.ids["admin1"], d3.ids["t1"], "d3-test", "Хватит", on=False)
+        == 0
+    )
+    enabled = await d3.scalar(
+        select(OrganizationMembership.daily_digest_enabled).where(
+            OrganizationMembership.user_id == d3.ids["admin1"]
+        )
+    )
+    assert enabled is False
+    assert (
+        await d3.scalar(
+            select(InboxReceipt).where(
+                InboxReceipt.event_type == "administration.staff_digest.disabled_by_operator"
+            )
+        )
+        is not None
+    )

@@ -98,12 +98,18 @@ function initialDraft(platform: boolean, source?: Broadcast): Draft {
   };
 }
 
+// Поля формы для ошибок схемы (422): правила сервиса приходят готовым текстом.
+const MAILING_FIELDS: Record<string, string> = {
+  kind: "вид", topic: "тему объявления", title: "заголовок", body: "текст", audience: "кому",
+  channels: "каналы", poll: "вопрос, варианты (без повторов) и срок опроса",
+};
+
 function MailingEditor({ base, platform, source, onDone }: {
   base: string; platform: boolean; source?: Broadcast; onDone: (id?: string) => void;
 }) {
   const [draft, setDraft] = useState<Draft>(() => initialDraft(platform, source));
   const [key] = useState(() => crypto.randomUUID());
-  const action = useAction();
+  const action = useAction(undefined, MAILING_FIELDS);
   const houses = useRead<Schema["BroadcastHouseOption"][]>(platform ? "/api/v1/capabilities" : `${base}/broadcast-houses`);
   const companies = useRead<Schema["CompanyView"][]>(platform ? "/api/v1/platform/companies" : "/api/v1/capabilities");
   const regions = useRead<string[]>(platform ? "/api/v1/platform/broadcast-regions" : "/api/v1/capabilities");
@@ -213,14 +219,28 @@ function MailingDetail({ id, base, platform, close, refresh }: {
   const [edit, setEdit] = useState<{ title: string; body: string } | null>(null);
   const action = useAction(() => { r.refresh(); refresh(); setPreview(null); });
   const b = r.data;
+  // Отказ сервера (например, «уже отправлено») — показать актуальное состояние.
+  const act = async (path: string, payload: object) => {
+    const result = await action.run(path, payload);
+    if (result === undefined) { r.refresh(); refresh(); }
+    return result;
+  };
   useEffect(() => {
-    // Статистика отправки обновляется, пока доставки ещё идут.
-    if (!b || b.status !== "sent") return;
-    const pending = (b.stats ?? []).some(s => s.pending > 0 || s.deferred_quiet_hours > 0);
-    if (!pending) return;
-    const timer = window.setTimeout(() => r.refresh(), 5000);
+    if (!b) return;
+    // «Отправить сейчас» ставит сообщение в очередь: карточка ждёт отправки
+    // сама (живая проверка D3 — иначе висела «Запланировано»). Позже —
+    // проверка ко времени отправки. После отправки — пока идут доставки.
+    let delay: number | null = null;
+    if (b.status === "scheduled" && b.scheduled_at) {
+      const due = new Date(b.scheduled_at).getTime() - Date.now();
+      delay = due <= 0 ? 2000 : Math.min(due + 1000, 60000);
+    } else if (b.status === "sent" && (b.stats ?? []).some(s => s.pending > 0 || s.deferred_quiet_hours > 0)) {
+      delay = 5000;
+    }
+    if (delay === null) return;
+    const timer = window.setTimeout(() => { r.refresh(); if (b.status === "scheduled") refresh(); }, delay);
     return () => window.clearTimeout(timer);
-  }, [b, r.refresh]);
+  }, [b, r.refresh, refresh]);
   async function loadPreview() {
     setPreviewError("");
     try { setPreview(await adminClient.request<Schema["BroadcastPreview"]>(`/api/v1/broadcasts/${id}/preview`)); }
@@ -248,13 +268,13 @@ function MailingDetail({ id, base, platform, close, refresh }: {
           <button className="ticket-button secondary" onClick={() => setEditing(true)}>Изменить черновик</button>
           <button className="ticket-button secondary" onClick={() => void loadPreview()}>Предпросмотр получателей</button>
           <button className="ticket-button secondary" disabled={action.busy}
-            onClick={() => void action.run(`/api/v1/broadcasts/${id}/cancel`, { expected_version: b.version })}>Удалить черновик</button>
+            onClick={() => void act(`/api/v1/broadcasts/${id}/cancel`, { expected_version: b.version })}>Удалить черновик</button>
         </div>
         {previewError && <p role="alert" className="admin-feedback">{previewError}</p>}
         {preview && <PreviewTable preview={preview} />}
         <form className="ticket-form confirm-form" onSubmit={e => {
           e.preventDefault();
-          void action.run(`/api/v1/broadcasts/${id}/confirm`, {
+          void act(`/api/v1/broadcasts/${id}/confirm`, {
             expected_version: b.version, service_only: true,
             ...(later ? { send_at: new Date(sendAt).toISOString() } : {}),
           });
@@ -273,7 +293,7 @@ function MailingDetail({ id, base, platform, close, refresh }: {
       </>}
       {b.status === "scheduled" && <div className="button-row">
         <button className="ticket-button" disabled={action.busy}
-          onClick={() => void action.run(`/api/v1/broadcasts/${id}/cancel`, { expected_version: b.version })}>Отменить отправку</button>
+          onClick={() => void act(`/api/v1/broadcasts/${id}/cancel`, { expected_version: b.version })}>Отменить отправку</button>
       </div>}
       {b.status === "sent" && <>
         <StatsTable stats={b.stats ?? []} />
@@ -282,17 +302,17 @@ function MailingDetail({ id, base, platform, close, refresh }: {
             <button className="ticket-button secondary" onClick={() => setEdit({ title: b.title, body: b.body })}>Исправить текст</button>}
           {(b.allowed_actions ?? []).includes("close_poll") &&
             <button className="ticket-button secondary" disabled={action.busy}
-              onClick={() => void action.run(`/api/v1/broadcasts/${id}/close-poll`, { expected_version: b.version })}>Закрыть опрос</button>}
+              onClick={() => void act(`/api/v1/broadcasts/${id}/close-poll`, { expected_version: b.version })}>Закрыть опрос</button>}
           {!confirmRetract ? <button className="ticket-button secondary" onClick={() => setConfirmRetract(true)}>Удалить сообщение</button>
             : <div className="admin-feedback" role="group" aria-label="Подтверждение удаления">
               <p>Пост в домовом чате заменится на «Сообщение удалено автором», из ленты сообщение исчезнет. Уже доставленные личные сообщения останутся.</p>
               <button className="ticket-button" disabled={action.busy}
-                onClick={() => void action.run(`/api/v1/broadcasts/${id}/retract`, { expected_version: b.version })}>Подтвердить удаление</button>
+                onClick={() => void act(`/api/v1/broadcasts/${id}/retract`, { expected_version: b.version })}>Подтвердить удаление</button>
               <button className="ticket-button secondary" onClick={() => setConfirmRetract(false)}>Отмена</button></div>}
         </div>}
         {edit && <form className="ticket-form" onSubmit={async e => {
           e.preventDefault();
-          const result = await action.run(`/api/v1/broadcasts/${id}/edit`, { expected_version: b.version, ...edit });
+          const result = await act(`/api/v1/broadcasts/${id}/edit`, { expected_version: b.version, ...edit });
           if (result) setEdit(null);
         }}>
           <h3>Исправить отправленное</h3>

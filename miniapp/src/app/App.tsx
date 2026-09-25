@@ -16,7 +16,7 @@ import {
   retryable,
 } from "../shared/api/client";
 import { useResource } from "../shared/api/useResource";
-import { maxBridge } from "../shared/max/bridge";
+import { LAUNCH_REF, maxBridge } from "../shared/max/bridge";
 import {
   DemoBadge,
   InfoRow,
@@ -78,14 +78,6 @@ const VIEW_TITLES: Record<CommunityView, string> = {
   reception: "Запись на приём",
 };
 
-/**
- * Ссылки запуска, которые разрешает резолвер: `w_` — работа по заявке, `r_` —
- * карточка маршрута, `t_` — пост о заявке в чате, `p_` — пост объявления или
- * опроса в чате, `n_` — личное сообщение рассылки (D3). Ссылка `c_…` из
- * кнопки в чате уже учтена при входе (сервер проверил участие в этом чате),
- * остальные параметры ничего не значат.
- */
-const LAUNCH_REF = /^[wrtpn]_[A-Za-z0-9_-]{32}$/;
 type Target = FlowTarget & {
   house?: string;
   offset?: number;

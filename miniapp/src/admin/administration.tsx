@@ -13,15 +13,22 @@ export function useRead<T>(path: string, revision = 0) {
     return () => window.removeEventListener("administration-refresh", refresh); }, [resource.refresh]);
   return resource;
 }
-/** Текст ошибки для формы: при 422 — какие поля исправить (по словарю `fields`), иначе detail проблемы. */
+/**
+ * Текст ошибки для формы при 422: правило сервиса уже сказано по-русски
+ * («Опрос должен быть открыт хотя бы 10 минут») — показать его; техническая
+ * ошибка схемы — назвать поля по словарю `fields`; иначе detail проблемы.
+ */
 export function problemText(e: unknown, fields: Record<string, string> = {}, fallback = "Не удалось сохранить. Повторите попытку."): string {
   if (e instanceof ApiProblem && e.problem.code === "validation_error") {
-    const named = (e.problem.field_errors ?? []).map(f => fields[f.field.split(".")[1] ?? f.field]).filter(Boolean);
+    const errors = e.problem.field_errors ?? [];
+    const told = errors.map(f => f.message).filter(message => /[а-яё]/i.test(message ?? ""));
+    if (told.length) return [...new Set(told)].join(" ");
+    const named = errors.map(f => fields[f.field.split(".")[1] ?? f.field]).filter(Boolean);
     return named.length ? `Проверьте: ${[...new Set(named)].join("; ")}.` : "Проверьте заполнение полей формы.";
   }
   return e instanceof Error ? e.message : fallback;
 }
-export function useAction(refresh?: () => void) {
+export function useAction(refresh?: () => void, fields: Record<string, string> = {}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [code, setCode] = useState("");
@@ -34,7 +41,7 @@ export function useAction(refresh?: () => void) {
       refresh?.();
       return result;
     } catch (e) {
-      setError(problemText(e));
+      setError(problemText(e, fields));
       setCode(e instanceof ApiProblem ? e.problem.code : "");
     }
     finally { setBusy(false); }

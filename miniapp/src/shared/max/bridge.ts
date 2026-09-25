@@ -18,6 +18,15 @@ export interface MaxWebApp {
   }) => Promise<unknown> | void;
 }
 
+/**
+ * Ссылки запуска, которые разрешает резолвер: `w_` — работа по заявке, `r_` —
+ * карточка маршрута, `t_` — пост о заявке в чате, `p_` — пост объявления или
+ * опроса в чате, `n_` — личное сообщение рассылки (D3). Ссылка `c_…` из
+ * кнопки в чате уже учтена при входе (сервер проверил участие в этом чате),
+ * остальные параметры ничего не значат. Одно правило для моста и экрана.
+ */
+export const LAUNCH_REF = /^[wrtpn]_[A-Za-z0-9_-]{32}$/;
+
 export function safeUrl(value: string | null | undefined): string | null {
   if (!value) return null;
   try {
@@ -47,9 +56,8 @@ export function createMaxBridge(
     },
     get startParam() {
       // Selector only. The authenticated server resolver rechecks actor and current access.
-      // `w_` points at a ticket notification, `r_` at a route card; both are opaque here.
       const value = new URLSearchParams(read()?.initData ?? "").get("start_param");
-      return value && /^[wr]_[A-Za-z0-9_-]{32}$/.test(value) ? value : null;
+      return value && LAUNCH_REF.test(value) ? value : null;
     },
     get capabilities() {
       const app = read();

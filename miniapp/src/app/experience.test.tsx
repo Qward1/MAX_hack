@@ -366,3 +366,37 @@ describe("route card and appeal draft navigation", () => {
     expect(screen.queryByText("PRIVATE")).toBeNull();
   });
 });
+
+describe("launch refs from real MAX initData (D3 live finding)", () => {
+  // В живой проверке кнопки «Открыть» и «Голосовать» из чата открывали доску:
+  // мост MAX пропускал только `w_`/`r_`. Здесь ссылка идёт через настоящий
+  // `start_param` из initData, а не через тестовый параметр адреса.
+  it("a t_ chat post opens its problem", async () => {
+    const ref = `t_${"c".repeat(32)}`;
+    window.WebApp = { initData: `start_param=${ref}` };
+    const client = apiWith();
+    vi.mocked(client.notificationLaunch).mockResolvedValue({
+      kind: "ticket",
+      incident_id: incident.id,
+      house_id: house.id,
+      route_outcome_id: null,
+      work_attempt_id: null,
+      stale: false,
+    });
+    render(<App client={client} />);
+    await screen.findByText(incident.description);
+    expect(client.notificationLaunch).toHaveBeenCalledWith(ref, expect.any(AbortSignal));
+    expect(client.incident).toHaveBeenCalledWith(incident.id, expect.any(AbortSignal), house.id);
+    expect(client.incidents).not.toHaveBeenCalled();
+  });
+
+  it.each(["p", "n"])("a %s_ mailing link is resolved, not dropped", async (prefix) => {
+    const ref = `${prefix}_${"d".repeat(32)}`;
+    window.WebApp = { initData: `start_param=${ref}` };
+    const client = apiWith();
+    render(<App client={client} />);
+    await waitFor(() =>
+      expect(client.notificationLaunch).toHaveBeenCalledWith(ref, expect.any(AbortSignal)),
+    );
+  });
+});
