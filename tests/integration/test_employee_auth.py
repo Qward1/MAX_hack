@@ -332,9 +332,8 @@ async def test_p7b_ip_rate_limit_keeps_only_keyed_slot(auth):
         # Разные имена: ячейки имён не переполняются, срабатывает ячейка адреса
         # (порог имени × 5 = 50 попыток за окно).
         codes = [
-            (
-                await post(d, "/login", {"login_name": f"nobody.{n}", "password": "wrong"})
-            ).status_code
+            (await post(d, "/login", {"login_name": f"nobody.{n}", "password": "wrong"}))
+            .status_code
             for n in range(55)
         ]
     assert codes[0] == 401 and codes[-1] == 429

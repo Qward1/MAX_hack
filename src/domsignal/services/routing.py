@@ -164,7 +164,9 @@ class RoutingService:
                 territory_policy=policy,
             )
         except Exception as exc:  # noqa: BLE001 - контекст не должен ронять путь жителя
-            logger.error("routing_house_context_failed", extra={"error_type": type(exc).__name__})
+            logger.error(
+                "routing_house_context_failed", extra={"error_type": type(exc).__name__}
+            )
             return HouseRoutingContext()
 
     def route(

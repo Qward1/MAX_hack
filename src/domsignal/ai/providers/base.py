@@ -126,7 +126,9 @@ def build_request(
         mapping.line_by_msg[msg] = line.line_id
         mapping.msg_by_line[line.line_id] = msg
         if line.author_ref not in mapping.alias_by_author:
-            mapping.alias_by_author[line.author_ref] = author_alias(len(mapping.alias_by_author))
+            mapping.alias_by_author[line.author_ref] = author_alias(
+                len(mapping.alias_by_author)
+            )
         lines.append(
             ProviderLine(
                 id=msg,

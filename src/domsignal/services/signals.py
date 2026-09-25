@@ -577,7 +577,9 @@ class SignalEngine:
     ) -> tuple[str, str | None]:
         weak_today = 0
         if draft.strength == "weak":
-            weak_today = await PassiveRepository(session).weak_today(house_id, since=now - DAY)
+            weak_today = await PassiveRepository(session).weak_today(
+                house_id, since=now - DAY
+            )
         return place_signal(
             draft.strength,
             draft.disposition,
@@ -681,7 +683,9 @@ class SignalEngine:
         before = list((signal.emergency or {}).get("kinds", []))
         fresh: dict[str, Any] | None = None
         if stronger(signal.strength, draft.strength):
-            disposition, audit_reason = await self._placement(session, signal.house_id, draft, now)
+            disposition, audit_reason = await self._placement(
+                session, signal.house_id, draft, now
+            )
             signal.strength = draft.strength
             signal.strength_reason = draft.strength_reason
             signal.disposition = disposition
@@ -757,10 +761,14 @@ class SignalEngine:
         emergency["evidence"] = [*emergency.get("evidence", []), *fresh["evidence"]]
         emergency["evidence_unverified"] = fresh["evidence_unverified"]
         if decision.is_emergency:
-            emergency["kinds"] = list(dict.fromkeys([*emergency.get("kinds", []), *fresh["kinds"]]))
+            emergency["kinds"] = list(
+                dict.fromkeys([*emergency.get("kinds", []), *fresh["kinds"]])
+            )
             signal.strength_reason = draft.strength_reason
         elif decision.downgraded and downgrade is not None:
-            disposition, audit_reason = await self._placement(session, signal.house_id, draft, now)
+            disposition, audit_reason = await self._placement(
+                session, signal.house_id, draft, now
+            )
             signal.strength = draft.strength
             signal.strength_reason = draft.strength_reason
             signal.disposition = disposition

@@ -118,7 +118,8 @@ async def preview(session: AsyncSession, *, house_id: UUID, pool: Pool) -> list[
                     for quote in quotes
                 ],
                 "events": [
-                    {"kind": event.kind, "details": event.details} for event in events[-MAX_EVENTS:]
+                    {"kind": event.kind, "details": event.details}
+                    for event in events[-MAX_EVENTS:]
                 ],
             }
         )

@@ -34,10 +34,7 @@ Offset = Annotated[int, Query(ge=0, le=100000)]
 
 @router.get("/notification-launch/{ref}", response_model=NotificationLaunch)
 async def notification_launch(
-    ref: str,
-    current_user: CurrentUserDep,
-    session: DbDep,
-    container: ContainerDep,
+    ref: str, current_user: CurrentUserDep, session: DbDep, container: ContainerDep,
 ) -> NotificationLaunch:
     return await container.notifications.launch(session, actor_id=current_user.id, ref=ref)
 

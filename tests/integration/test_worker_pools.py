@@ -143,7 +143,9 @@ async def test_claim_job_without_a_pool_still_sees_every_kind(
     container = build_container(integration_settings)
     await _enqueue(container, ["ai.report.analyze"])
     async with container.session_factory() as session, session.begin():
-        job = await ReliabilityRepository(session).claim_job(now=datetime.now(UTC), lease_seconds=5)
+        job = await ReliabilityRepository(session).claim_job(
+            now=datetime.now(UTC), lease_seconds=5
+        )
         assert job is not None and job.kind == "ai.report.analyze"
     await container.engine.dispose()
 

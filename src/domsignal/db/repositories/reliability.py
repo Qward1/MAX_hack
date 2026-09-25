@@ -134,7 +134,11 @@ class ReliabilityRepository:
                     Job.status == "pending",
                     (Job.status == "leased") & (Job.lease_until < now),
                 ),
-                *(() if pool is None else (ai_kind if pool == "ai" else ~ai_kind,)),
+                *(
+                    ()
+                    if pool is None
+                    else (ai_kind if pool == "ai" else ~ai_kind,)
+                ),
             )
             .order_by(Job.priority, Job.created_at)
             .with_for_update(skip_locked=True)

@@ -116,7 +116,8 @@ def fuse_emergency(
         is_emergency
         and not downgraded
         and any(
-            hit.chat_memo_eligible and not hit.negated and not hit.displaced for hit in rule_hits
+            hit.chat_memo_eligible and not hit.negated and not hit.displaced
+            for hit in rule_hits
         )
     )
     return (

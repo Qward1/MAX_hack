@@ -137,7 +137,8 @@ def reading_notice_text(company_name: str | None) -> str:
             "Сообщить о проблеме и следить за ходом работ — кнопка «Открыть "
             "ДомСигнал» ниже или личные сообщения боту.",
             "Сообщение в этом чате не является официальным обращением.",
-            f"Отключить чтение может {subject}. Администратор чата может удалить бота из чата.",
+            f"Отключить чтение может {subject}. "
+            "Администратор чата может удалить бота из чата.",
         )
     )
 
@@ -211,7 +212,9 @@ def chat_message(intent: ChatMessageIntent, ref: str | None = None) -> PersonalM
     подсказывает, какой чат проверить, и доступа сама не даёт.
     """
     if intent.app_button and ref:
-        return PersonalMessage(intent.text, ((MessageButton("open_app", OPEN_APP_LABEL, ref),),))
+        return PersonalMessage(
+            intent.text, ((MessageButton("open_app", OPEN_APP_LABEL, ref),),)
+        )
     return PersonalMessage(intent.text, ())
 
 

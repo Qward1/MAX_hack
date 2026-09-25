@@ -315,7 +315,9 @@ async def house_detail(
     return found
 
 
-@router.post("/companies/{company_id}/houses/{house_id}/open-access", response_model=OpenAccessView)
+@router.post(
+    "/companies/{company_id}/houses/{house_id}/open-access", response_model=OpenAccessView
+)
 async def set_open_access(
     company_id: UUID,
     house_id: UUID,

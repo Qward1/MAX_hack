@@ -360,7 +360,9 @@ class PassiveWindowAnalysis:
             if row.one_or_none() is None:
                 raise _LostClaim()
             await PassiveRepository(session).consume(claimed.id, datetime.now(UTC))
-        logger.info("passive_window_skipped", extra={"window_id": str(claimed.id), "state": state})
+        logger.info(
+            "passive_window_skipped", extra={"window_id": str(claimed.id), "state": state}
+        )
 
     async def _write(
         self,

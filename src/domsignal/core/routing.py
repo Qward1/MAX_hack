@@ -315,7 +315,9 @@ def resolve_route(
     effective = directory.effective(house.region_code, house.municipality_code)
     subtype = query.subtype if query.subtype in known_subtypes else UNSPECIFIED_SUBTYPE
     scope = query.location_scope
-    matched = [rule for rule in effective.rules if rule.matches(subtype, scope, query.danger_kinds)]
+    matched = [
+        rule for rule in effective.rules if rule.matches(subtype, scope, query.danger_kinds)
+    ]
 
     # Экстренный маршрут не уступает внутренней заявке: запах газа остаётся
     # вызовом службы, даже когда он на территории общего имущества дома. Какие

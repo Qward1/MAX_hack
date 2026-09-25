@@ -41,7 +41,9 @@ async def test_seed_creates_routing_profiles_idempotently(
     factory = create_session_factory(engine)
     try:
         async with factory() as session:
-            assert await session.scalar(select(func.count()).select_from(HouseRoutingProfile)) == 3
+            assert (
+                await session.scalar(select(func.count()).select_from(HouseRoutingProfile)) == 3
+            )
             moscow = await session.get(HouseRoutingProfile, MOSCOW_HOUSE_ID)
             assert moscow is not None
             assert (moscow.region_code, moscow.municipality_code, moscow.territory_policy) == (
@@ -277,14 +279,11 @@ async def test_production_profile_is_confined_to_the_audited_live_house(
                     **change,
                 )
             # Отказ ничего не записал.
-            assert (
-                await session.scalar(
-                    select(func.count())
-                    .select_from(InboxReceipt)
-                    .where(InboxReceipt.event_type == house_routing_profile.PROFILE_AUDIT_TYPE)
-                )
-                == 0
-            )
+            assert await session.scalar(
+                select(func.count())
+                .select_from(InboxReceipt)
+                .where(InboxReceipt.event_type == house_routing_profile.PROFILE_AUDIT_TYPE)
+            ) == 0
         async with factory() as session, session.begin():
             result = await house_routing_profile.operate(
                 session,
@@ -406,7 +405,9 @@ async def test_routing_profile_migration_is_additive_and_guards_downgrade(
                     text(f"SELECT {without_added_columns('houses')} FROM houses t")
                 )
             ).all() == before
-            assert await connection.scalar(text("SELECT count(*) FROM house_routing_profiles")) == 0
+            assert (
+                await connection.scalar(text("SELECT count(*) FROM house_routing_profiles")) == 0
+            )
         await engine.dispose()
         await migrate(url, "downgrade", "e107a3cff433")  # пустая таблица откатывается
         await engine.dispose()
@@ -424,7 +425,9 @@ async def test_routing_profile_migration_is_additive_and_guards_downgrade(
         with pytest.raises(AssertionError, match="House routing profiles retained"):
             await migrate(url, "downgrade", "e107a3cff433")
         async with engine.connect() as connection:
-            assert await connection.scalar(text("SELECT count(*) FROM house_routing_profiles")) == 1
+            assert (
+                await connection.scalar(text("SELECT count(*) FROM house_routing_profiles")) == 1
+            )
     finally:
         await engine.dispose()
         async with admin.connect() as connection:

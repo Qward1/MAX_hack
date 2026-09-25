@@ -13,7 +13,9 @@ import re
 
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+", re.IGNORECASE)
 _URL = re.compile(r"(?:https?://|www\.)\S+", re.IGNORECASE)
-_PHONE = re.compile(r"(?<!\d)(?:\+?7|8)[\s(-]*\d{3}[\s)-]*\d{3}[\s-]*\d{2}[\s-]*\d{2}(?!\d)")
+_PHONE = re.compile(
+    r"(?<!\d)(?:\+?7|8)[\s(-]*\d{3}[\s)-]*\d{3}[\s-]*\d{2}[\s-]*\d{2}(?!\d)"
+)
 _CARD = re.compile(r"(?<!\d)(?:\d{4}[\s-]?){3}\d{4}(?!\d)")
 _APARTMENT = re.compile(r"(?<![а-яa-z])(кв|квартир[а-я]*)\.?\s*№?\s*\d{1,4}", re.IGNORECASE)
 _PLATE = re.compile(

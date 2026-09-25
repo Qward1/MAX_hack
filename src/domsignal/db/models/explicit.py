@@ -114,7 +114,9 @@ class ExplicitIntake(Base):
     chat_binding_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("chat_bindings.id"))
     binding_version: Mapped[int | None] = mapped_column(Integer)
     #: Дом сообщения из лички: выбирается после приёма (один дом — сразу).
-    house_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("houses.id", ondelete="CASCADE"))
+    house_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("houses.id", ondelete="CASCADE")
+    )
     #: Автор сообщения из лички.
     user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     #: До какого момента текст ждёт выбора жителя; потом стирается.

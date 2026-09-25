@@ -183,9 +183,8 @@ async def test_filtered_signal_goes_to_the_audit_pool() -> None:
         [
             model_signal(
                 subtype="elevator.stopped",
-                facets=facets(
-                    current="no", local="yes", observed="yes", quote="лифт опять встал", msg="m1"
-                ),
+                facets=facets(current="no", local="yes", observed="yes",
+                              quote="лифт опять встал", msg="m1"),
             )
         ],
         roles={"m1": "discussion"},

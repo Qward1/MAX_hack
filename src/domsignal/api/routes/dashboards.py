@@ -57,7 +57,9 @@ async def company_dashboard_csv(
     company_id: UUID, user: CurrentUserDep, db: DbDep, container: ContainerDep, days: Days = 7
 ) -> Response:
     async with db.begin():
-        dashboard = await service(container).company(db, user.id, company_id, period_days(days))
+        dashboard = await service(container).company(
+            db, user.id, company_id, period_days(days)
+        )
     return Response(
         content=company_csv(dashboard).encode("utf-8"),
         media_type="text/csv; charset=utf-8",

@@ -271,7 +271,9 @@ _RESOLVED = StemSet(
     )
 )
 _THANKS = StemSet(("спасибо", "благодар"))
-_RESPONDERS = StemSet(("пожарн", "мчс", "газовик", "газовщик", "аварийк", "аварийн", "спасател"))
+_RESPONDERS = StemSet(
+    ("пожарн", "мчс", "газовик", "газовщик", "аварийк", "аварийн", "спасател")
+)
 _STILL_WORDS = frozenset({"но", "опять", "снова"})
 _STILL_PHRASES = StemSet(("до сих пор", "по прежнему", "все еще", "продолжа"))
 _MARKER_RADIUS = 4
@@ -464,7 +466,9 @@ def _negated(tokens: Sequence[Token], matches: Sequence[StemMatch], text: str = 
 
 def _close(left: Sequence[StemMatch], right: Sequence[StemMatch], radius: int) -> bool:
     return any(
-        abs(first.first_token - second.first_token) <= radius for first in left for second in right
+        abs(first.first_token - second.first_token) <= radius
+        for first in left
+        for second in right
     )
 
 
@@ -648,6 +652,7 @@ def _hits(normalized: NormalizedText, tokens: Sequence[Token], line_id: str) -> 
     return hits
 
 
+
 def screen_message_for_danger(text: str, *, line_id: str = "") -> list[DangerHit]:
     """Признаки опасности в одной реплике, включая отменённые отрицанием.
 
@@ -684,4 +689,8 @@ def chat_memo_hits(hits: Sequence[DangerHit]) -> list[DangerHit]:
     Оповещение оператора от этого не зависит — оно идёт на любое срабатывание
     без отрицания.
     """
-    return [hit for hit in hits if hit.chat_memo_eligible and not hit.negated and not hit.displaced]
+    return [
+        hit
+        for hit in hits
+        if hit.chat_memo_eligible and not hit.negated and not hit.displaced
+    ]

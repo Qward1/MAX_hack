@@ -144,12 +144,9 @@ def test_the_model_timeout_comes_from_the_profile_unless_set(
     assert ai.provider.open_danger_extra_body == open_danger
     assert ai.provider.max_tokens == 1600
     assert ai.provider.prompt_version == "window.v3"
-    assert (
-        lease_seconds_for(
-            "ai", ai_lease_seconds=worker.ai_worker_lease_seconds, model_timeout_seconds=30.0
-        )
-        == 80
-    )
+    assert lease_seconds_for(
+        "ai", ai_lease_seconds=worker.ai_worker_lease_seconds, model_timeout_seconds=30.0
+    ) == 80
     explicit = settings_of(
         "ai-worker", {**SYNTHETIC_VPS, **MODEL, "LLM_TIMEOUT_SECONDS": "45"}, monkeypatch
     )

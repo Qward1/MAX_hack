@@ -22,10 +22,8 @@ from domsignal.settings import Settings
 def _guard(
     container_factory: object, *, daily: int, share: float = 0.2, day: date | None = None
 ) -> PostgresBudgetGuard:
-    moment = (
-        datetime(2026, 9, 20, 12, 0, tzinfo=UTC)
-        if day is None
-        else datetime(day.year, day.month, day.day, 12, 0, tzinfo=UTC)
+    moment = datetime(2026, 9, 20, 12, 0, tzinfo=UTC) if day is None else datetime(
+        day.year, day.month, day.day, 12, 0, tzinfo=UTC
     )
     return PostgresBudgetGuard(
         container_factory,  # type: ignore[arg-type]
@@ -45,7 +43,10 @@ async def test_daily_limit_is_enforced_atomically(integration_settings: Settings
             allowed.append(reservation.allowed)
     assert allowed == [True, True, True, False]
     async with container.session_factory() as session:
-        rows = {row.scope_key: row.calls for row in await session.scalars(select(AiCallBudget))}
+        rows = {
+            row.scope_key: row.calls
+            for row in await session.scalars(select(AiCallBudget))
+        }
     assert rows[GLOBAL_BUDGET_SCOPE] == 3
     assert rows["chat-1"] == 3
     await container.engine.dispose()
@@ -82,7 +83,10 @@ async def test_refused_scope_does_not_consume_the_daily_unit(
     async with guard.reserve("chat-1") as second:
         assert not second.allowed
     async with container.session_factory() as session:
-        rows = {row.scope_key: row.calls for row in await session.scalars(select(AiCallBudget))}
+        rows = {
+            row.scope_key: row.calls
+            for row in await session.scalars(select(AiCallBudget))
+        }
     # Отказ доли откатывается целиком: общий счёт остался равен одному вызову.
     assert rows[GLOBAL_BUDGET_SCOPE] == 1
     assert rows["chat-1"] == 1
@@ -150,7 +154,9 @@ async def test_counters_are_per_day(integration_settings: Settings) -> None:
     async with tomorrow.reserve("chat-1") as reservation:
         assert reservation.allowed
     async with container.session_factory() as session:
-        days = sorted({row.day for row in await session.scalars(select(AiCallBudget))})
+        days = sorted(
+            {row.day for row in await session.scalars(select(AiCallBudget))}
+        )
     assert days == [date(2026, 9, 20), date(2026, 9, 21)]
     await container.engine.dispose()
 
@@ -178,6 +184,9 @@ async def test_unscoped_reservation_charges_only_the_daily_counter(
     async with guard.reserve(None) as reservation:
         assert reservation.allowed
     async with container.session_factory() as session:
-        rows = {row.scope_key: row.calls for row in await session.scalars(select(AiCallBudget))}
+        rows = {
+            row.scope_key: row.calls
+            for row in await session.scalars(select(AiCallBudget))
+        }
     assert rows == {GLOBAL_BUDGET_SCOPE: 1}
     await container.engine.dispose()

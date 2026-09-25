@@ -60,28 +60,11 @@ _ORDINAL = re.compile(
 )
 
 _MONTHS = (
-    "январ",
-    "феврал",
-    "март",
-    "апрел",
-    "мая",
-    "май",
-    "июн",
-    "июл",
-    "август",
-    "сентябр",
-    "октябр",
-    "ноябр",
-    "декабр",
+    "январ", "феврал", "март", "апрел", "мая", "май", "июн", "июл", "август",
+    "сентябр", "октябр", "ноябр", "декабр",
 )
 _WEEKDAYS = (
-    "понедельник",
-    "вторник",
-    "среду",
-    "среда",
-    "четверг",
-    "пятниц",
-    "суббот",
+    "понедельник", "вторник", "среду", "среда", "четверг", "пятниц", "суббот",
     "воскресень",
 )
 _TIME = re.compile(r"\b\d{1,2}[:.]\d{2}\b")
@@ -103,19 +86,8 @@ _OBLIGATION = (
     "предписан",
     "штраф",
 )
-_ORGANIZATION = (
-    "ооо",
-    "оао",
-    "зао",
-    "ао",
-    "гуп",
-    "муп",
-    "администраци",
-    "управа",
-    "ук",
-    "жилинспекц",
-    "прокуратур",
-)
+_ORGANIZATION = ("ооо", "оао", "зао", "ао", "гуп", "муп", "администраци", "управа", "ук",
+                 "жилинспекц", "прокуратур")
 _ORGANIZATION_RE = tuple(
     (phrase, re.compile(rf"(?<![а-яa-z]){re.escape(phrase)}(?![а-яa-z])"))
     for phrase in _ORGANIZATION
@@ -205,7 +177,9 @@ def check_no_new_facts(candidate: str, sources: Sequence[str]) -> NoNewFactsResu
             continue
         neighbours = " ".join(tokens[max(0, index - 1) : index + 3])
         kind: ViolationKind = (
-            "entrance_or_floor" if any(hint in neighbours for hint in _PLACE_HINTS) else "number"
+            "entrance_or_floor"
+            if any(hint in neighbours for hint in _PLACE_HINTS)
+            else "number"
         )
         add(kind, token)
 

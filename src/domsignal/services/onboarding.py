@@ -156,7 +156,9 @@ APPLICATION_NOTICES = {
 }
 
 
-async def notify_application(db: AsyncSession, row: CompanyOnboardingRequest, target: str) -> None:
+async def notify_application(
+    db: AsyncSession, row: CompanyOnboardingRequest, target: str
+) -> None:
     """Сообщение в личку тому, кто подписался на заявку через бота."""
     text = APPLICATION_NOTICES.get(target)
     if row.notify_user_id is None or text is None:

@@ -136,7 +136,8 @@ class ConversationWindow(Base):
             name="state",
         ),
         CheckConstraint(
-            "close_reason IS NULL OR close_reason IN ('silence', 'max_lines', 'max_age', 'danger')",
+            "close_reason IS NULL OR close_reason IN "
+            "('silence', 'max_lines', 'max_age', 'danger')",
             name="close_reason",
         ),
         CheckConstraint("(state = 'open') = (closed_at IS NULL)", name="closed_at"),
@@ -350,7 +351,9 @@ class SignalEvent(Base):
     # Версии таксономии, правил, схемы, промпта и модели того разбора.
     versions: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     # Автор решения оператора. У событий ядра и продукта автора нет.
-    actor_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

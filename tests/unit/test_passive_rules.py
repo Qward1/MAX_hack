@@ -159,7 +159,9 @@ def test_window_policy_values_come_from_settings_with_core_defaults() -> None:
         defaults.policy.max_age_seconds,
     ) == (core.silence_seconds, core.max_lines, core.max_age_seconds)
     assert (defaults.weak_daily_limit, defaults.dedupe_days, defaults.buffer_hours) == (10, 7, 72)
-    demo = PassiveConfig.from_settings(Settings(_env_file=None, passive_window_silence_seconds=20))
+    demo = PassiveConfig.from_settings(
+        Settings(_env_file=None, passive_window_silence_seconds=20)
+    )
     assert demo.policy.silence_seconds == 20
 
 
