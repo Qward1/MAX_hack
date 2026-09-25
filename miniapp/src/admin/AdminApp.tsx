@@ -2,32 +2,43 @@ import { useCallback, useEffect, useState } from "react";
 import { type Me } from "../shared/api/client";
 import { TicketClient, ticketClient, type Ticket } from "../shared/api/tickets";
 import { useResource } from "../shared/api/useResource";
-import { categoryLabel, formatDate } from "../features/incidents/presentation";
-import {
-  Pagination,
-  TicketState,
-  TicketStatusBadge,
-} from "../features/tickets/components";
+import { categoryLabel } from "../features/incidents/presentation";
+import { placeText } from "../features/incidents/IncidentCard";
+import { Pagination, TicketState, TicketStatusBadge } from "../features/tickets/components";
 import { actionLabels, ticketActions } from "../features/tickets/presentation";
+import { countLabel, formatStaffWhen } from "../shared/ui/format";
 import { TicketDetail } from "./TicketDetail";
 
 export function adminUrl(values: Record<string, string | undefined> = {}) {
   const query = new URLSearchParams();
   const company = new URLSearchParams(window.location.search).get("company");
   if (company) query.set("company", company);
-  const testActor = new URLSearchParams(window.location.search).get(
-    "test_actor",
-  );
+  const testActor = new URLSearchParams(window.location.search).get("test_actor");
   if (testActor) query.set("test_actor", testActor);
-  for (const [key, value] of Object.entries(values))
-    if (value) query.set(key, value);
+  for (const [key, value] of Object.entries(values)) if (value) query.set(key, value);
   return `/admin/${query.size ? `?${query}` : ""}`;
 }
+
+/** Широкий экран: список и деталь стоят рядом, очередь не теряется. */
+export function useWide(query = "(min-width: 1200px)") {
+  const read = () => typeof window.matchMedia === "function" && window.matchMedia(query).matches;
+  const [wide, setWide] = useState(read);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia(query);
+    const change = () => setWide(media.matches);
+    media.addEventListener?.("change", change);
+    return () => media.removeEventListener?.("change", change);
+  }, [query]);
+  return wide;
+}
+
+const TICKETS = ["заявка", "заявки", "заявок"] as const;
 const filters = [
   ["new", "Новые"],
   ["mine", "Мои"],
   ["in_progress", "В работе"],
-  ["verification_pending", "На проверке"],
+  ["verification_pending", "Ждут проверки жителями"],
   ["closed", "Закрытые"],
   ["all", "Все"],
 ];
@@ -36,13 +47,12 @@ export function AdminApp({ client = ticketClient, embedded = false, companyId }:
   const route = new URL(location);
   const ticket = route.searchParams.get("ticket");
   const house = route.searchParams.get("house") ?? "all";
-  const filter = filters.some(([id]) => id === route.searchParams.get("filter"))
-    ? route.searchParams.get("filter")!
-    : "all";
-  const navigate = useCallback((href: string) => {
+  const filter = filters.some(([id]) => id === route.searchParams.get("filter")) ? route.searchParams.get("filter")! : "all";
+  const wide = useWide();
+  const navigate = useCallback((href: string, keepScroll = false) => {
     window.history.pushState(null, "", href);
     setLocation(window.location.href);
-    window.scrollTo(0, 0);
+    if (!keepScroll) window.scrollTo(0, 0);
   }, []);
   useEffect(() => {
     const back = () => setLocation(window.location.href);
@@ -55,8 +65,8 @@ export function AdminApp({ client = ticketClient, embedded = false, companyId }:
       await client.authenticate(capabilities, signal);
       const me = await client.me(signal);
       if (companyId) {
-        const scoped = await client.request<{house_id: string}[]>(`/api/v1/companies/${companyId}/houses`, {signal});
-        me.houses = me.houses.filter(h => scoped.some(s => s.house_id === h.id));
+        const scoped = await client.request<{ house_id: string }[]>(`/api/v1/companies/${companyId}/houses`, { signal });
+        me.houses = me.houses.filter((h) => scoped.some((s) => s.house_id === h.id));
       }
       return { capabilities, me };
     },
@@ -69,7 +79,10 @@ export function AdminApp({ client = ticketClient, embedded = false, companyId }:
     setRevision((v) => v + 1);
   };
   useEffect(() => {
-    const refresh = () => { session.refresh(); setRevision(v => v + 1); };
+    const refresh = () => {
+      session.refresh();
+      setRevision((v) => v + 1);
+    };
     window.addEventListener("administration-refresh", refresh);
     return () => window.removeEventListener("administration-refresh", refresh);
   }, [session.refresh]);
@@ -79,64 +92,138 @@ export function AdminApp({ client = ticketClient, embedded = false, companyId }:
   const me = session.data?.me;
   // Only navigation choices: every list/detail/command is authorized independently by the API.
   const houses = me?.houses.filter((h) => h.role !== "resident") ?? [];
+  // Возврат из детали сохраняет фильтры очереди: они в адресе.
+  const queueHref = adminUrl({ house: house === "all" ? undefined : house, filter: filter === "all" ? undefined : filter });
+  const queue = me && (
+    <>
+      {!(ticket && wide) && (
+        <header className="page-header">
+          <h1 id="page-title" tabIndex={-1}>
+            Заявки
+          </h1>
+          <p className="ds-subtle">Заявки жителей по вашим домам: кто исполнитель и на каком этапе работа.</p>
+        </header>
+      )}
+      {ticket && wide && <h2 className="ds-visually-hidden">Очередь заявок</h2>}
+      <div className="queue-toolbar">
+        <label className="house-select">
+          Дом
+          <select value={house} onChange={(e) => navigate(adminUrl({ house: e.target.value, filter, ticket: ticket ?? undefined }), true)}>
+            <option value="all">Все доступные дома</option>
+            {houses.map((h) => (
+              <option key={h.id} value={h.id}>
+                {h.address}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <nav className="queue-filters" aria-label="Фильтры заявок">
+        {filters.map(([id, label]) => (
+          <a
+            key={id}
+            aria-current={filter === id ? "page" : undefined}
+            href={adminUrl({ house, filter: id })}
+            onClick={(e) => {
+              e.preventDefault();
+              navigate(adminUrl({ house, filter: id, ticket: ticket ?? undefined }), true);
+            }}
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
+      {houses.length === 0 && (
+        <section className="ds-state">
+          <h2>Нет доступной рабочей очереди</h2>
+          <p>Назначения на дома нет или доступ отозван. Доступ выдаёт администратор управляющей компании.</p>
+        </section>
+      )}
+      {house !== "all" && !houses.some((h) => h.id === house) && (
+        <section className="ds-state">
+          <p role="alert">Нет доступа к этому дому.</p>
+        </section>
+      )}
+      {houses
+        .filter((h) => house === "all" || h.id === house)
+        .map((h) => (
+          <HouseQueue
+            key={`${me.id}:${h.id}:${filter}`}
+            house={h}
+            me={me.id}
+            client={client}
+            filter={filter}
+            revision={revision}
+            current={ticket}
+            compact={Boolean(ticket && wide)}
+            open={(id) => navigate(adminUrl({ house: house === "all" ? undefined : house, filter: filter === "all" ? undefined : filter, ticket: id }), wide)}
+          />
+        ))}
+    </>
+  );
+  const detail = me && ticket && (
+    <TicketDetail
+      key={`${me.id}:${ticket}`}
+      id={ticket}
+      me={me}
+      client={client}
+      revision={revision}
+      navigate={navigate}
+      backHref={queueHref}
+      inPanel={wide}
+    />
+  );
   return (
     <div className={embedded ? "ticket-workspace" : "admin-shell"}>
-      {!embedded && <aside className="admin-sidebar">
-        <a
-          className="admin-brand"
-          href={adminUrl()}
-          onClick={(e) => {
-            e.preventDefault();
-            navigate(adminUrl());
-          }}
-        >
-          ДомСигнал<span>Кабинет сотрудника</span>
-        </a>
-        <nav aria-label="Разделы кабинета">
+      {!embedded && (
+        <aside className="admin-sidebar">
           <a
-            className="admin-nav-link"
-            aria-current="page"
+            className="admin-brand"
             href={adminUrl()}
             onClick={(e) => {
               e.preventDefault();
               navigate(adminUrl());
             }}
           >
-            Заявки
+            ДомСигнал<span>Кабинет сотрудника</span>
           </a>
-        </nav>
-        <p className="admin-sidebar-note">
-          Работа с проблемами дома
-          <br />и проверка результата
-        </p>
-      </aside>}
+          <nav aria-label="Разделы кабинета">
+            <a
+              className="admin-nav-link"
+              aria-current="page"
+              href={adminUrl()}
+              onClick={(e) => {
+                e.preventDefault();
+                navigate(adminUrl());
+              }}
+            >
+              Заявки
+            </a>
+          </nav>
+          <p className="admin-sidebar-note">Работа с проблемами дома и проверка результата</p>
+        </aside>
+      )}
       <div className={embedded ? "ticket-workspace-main" : "app-shell admin-main"}>
-        {!embedded && <div className="toolbar ticket-line">
-          <span>{me?.display_name ?? "Кабинет сотрудника"}</span>
-          <button
-            className="ticket-button secondary"
-            disabled={session.loading}
-            onClick={refresh}
-          >
-            Обновить
-          </button>
-        </div>}
+        {!embedded && (
+          <div className="admin-toolbar">
+            <span>{me?.display_name ?? "Кабинет сотрудника"}</span>
+            <button className="ds-btn ds-btn-secondary" disabled={session.loading} onClick={refresh}>
+              Обновить
+            </button>
+          </div>
+        )}
         {session.data?.capabilities.environment !== "production" &&
           route.searchParams.has("test_actor") &&
           session.data?.capabilities.features.test_auth && (
             <div className="demo-session">
-              <span className="demo-badge">
-                Демонстрационные данные · локальная тестовая сессия
-              </span>
+              <span className="demo-badge">Демонстрационные данные · локальная тестовая сессия</span>
               <label>
                 Участник проверки
                 <select
                   aria-label="Участник проверки"
                   value={route.searchParams.get("test_actor") ?? "a16-admin"}
                   onChange={(e) => {
-                    window.location.assign(
-                      `/admin/?test_actor=${encodeURIComponent(e.target.value)}`,
-                    );
+                    window.location.assign(`/admin/?test_actor=${encodeURIComponent(e.target.value)}`);
                   }}
                 >
                   {[
@@ -161,90 +248,23 @@ export function AdminApp({ client = ticketClient, embedded = false, companyId }:
                 Заявки
               </h1>
             </header>
-            <TicketState
-              loading={session.loading}
-              error={session.error}
-              retry={session.refresh}
-            />
+            <TicketState loading={session.loading} error={session.error} retry={session.refresh} />
           </>
         ) : session.error ? (
           <TicketState error={session.error} retry={refresh} />
+        ) : ticket && wide ? (
+          <div className="split">
+            <section className="split-list" aria-label="Очередь заявок">
+              {queue}
+            </section>
+            <section className="split-detail" aria-label="Заявка">
+              {detail}
+            </section>
+          </div>
         ) : ticket ? (
-          <TicketDetail
-            key={`${me.id}:${ticket}`}
-            id={ticket}
-            me={me}
-            client={client}
-            revision={revision}
-            navigate={navigate}
-          />
+          detail
         ) : (
-          <>
-            <header className="page-header">
-              <span className="eyebrow">Рабочая очередь</span>
-              <h1 id="page-title" tabIndex={-1}>
-                Заявки
-              </h1>
-              <p className="muted">
-                От первого сигнала до проверки результата жителями.
-              </p>
-            </header>
-            <label className="house-select">
-              Дом
-              <select
-                value={house}
-                onChange={(e) =>
-                  navigate(adminUrl({ house: e.target.value, filter }))
-                }
-              >
-                <option value="all">Все доступные дома</option>
-                {houses.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.address}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <nav className="queue-filters" aria-label="Фильтры заявок">
-              {filters.map(([id, label]) => (
-                <a
-                  key={id}
-                  aria-current={filter === id ? "page" : undefined}
-                  href={adminUrl({ house, filter: id })}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate(adminUrl({ house, filter: id }));
-                  }}
-                >
-                  {label}
-                </a>
-              ))}
-            </nav>
-            {houses.length === 0 && (
-              <section className="state-panel">
-                <h2>Нет доступной рабочей очереди</h2>
-                <p>Назначение отсутствует или доступ отозван.</p>
-              </section>
-            )}
-            {house !== "all" && !houses.some((h) => h.id === house) && (
-              <section className="state-panel">
-                <p role="alert">Нет доступа к этому дому.</p>
-              </section>
-            )}
-            {houses
-              .filter((h) => house === "all" || h.id === house)
-              .map((h) => (
-                <HouseQueue
-                  key={`${me.id}:${h.id}:${filter}`}
-                  house={h}
-                  me={me.id}
-                  client={client}
-                  filter={filter}
-                  revision={revision}
-                  navigate={navigate}
-                />
-              ))}
-          </>
+          queue
         )}
       </div>
     </div>
@@ -256,85 +276,79 @@ function HouseQueue({
   me,
   filter,
   revision,
-  navigate,
+  current,
+  compact,
+  open,
 }: {
   client: TicketClient;
   house: Me["houses"][number];
   me: string;
   filter: string;
   revision: number;
-  navigate: (url: string) => void;
+  current: string | null;
+  compact: boolean;
+  open: (id: string) => void;
 }) {
   const [offset, setOffset] = useState(0);
   const load = useCallback(
     async (signal: AbortSignal) => {
-      const tickets = await client.tickets(
-        house.id,
-        filter,
-        me,
-        offset,
-        signal,
-      );
-      const incidents = await Promise.all(
-        tickets.items.map((t) =>
-          client.incident(t.incident_id, signal, house.id),
-        ),
-      );
+      const tickets = await client.tickets(house.id, filter, me, offset, signal);
+      const incidents = await Promise.all(tickets.items.map((t) => client.incident(t.incident_id, signal, house.id)));
       return { tickets, incidents };
     },
     [client, house.id, filter, me, offset],
   );
-  const resource = useResource(
-    `${house.id}:${filter}:${offset}:${revision}`,
-    load,
-  );
+  const resource = useResource(`${house.id}:${filter}:${offset}:${revision}`, load);
   const data = resource.data;
   return (
     <section className="house-queue" aria-label={house.address}>
-      <div className="section-heading ticket-line">
+      <div className="ticket-line">
         <h2>{house.address}</h2>
-        {data && (
-          <span className="muted">{data.tickets.page.total} заявок</span>
-        )}
+        {data && <span className="ds-meta">{countLabel(data.tickets.page.total, TICKETS)}</span>}
       </div>
       {!data ? (
-        <TicketState
-          loading={resource.loading}
-          error={resource.error}
-          retry={resource.refresh}
-        />
+        <TicketState loading={resource.loading} error={resource.error} retry={resource.refresh} />
       ) : (
         <>
-          {Boolean(resource.error) && (
-            <TicketState error={resource.error} retry={resource.refresh} />
-          )}
+          {Boolean(resource.error) && <TicketState error={resource.error} retry={resource.refresh} />}
           {resource.stale && (
-            <p className="refresh-notice">
-              Данные могли измениться.{" "}
-              <button
-                className="ticket-button secondary"
-                onClick={resource.refresh}
-              >
+            <div className="refresh-notice" role="status">
+              <span>Данные могли измениться.</span>
+              <button className="ds-btn ds-btn-secondary ds-btn-small" onClick={resource.refresh}>
                 Обновить очередь
               </button>
-            </p>
+            </div>
           )}
           {data.tickets.items.length === 0 ? (
-            <section className="state-panel">
-              <h3>Заявок в этом списке пока нет</h3>
-              <p>Выберите другой фильтр или обновите очередь.</p>
-            </section>
+            <p className="ds-subtle">Заявок в этом списке нет. Выберите другой фильтр или обновите очередь.</p>
           ) : (
-            <ul className="ticket-queue" aria-label="Заявки дома">
-              {data.tickets.items.map((t, i) => (
-                <TicketRow
-                  key={t.id}
-                  ticket={t}
-                  incident={data.incidents[i]}
-                  navigate={navigate}
-                />
-              ))}
-            </ul>
+            <table className="queue-table" aria-label={`Заявки: ${house.address}`}>
+              <thead>
+                <tr>
+                  <th scope="col">Заявка</th>
+                  <th scope="col">Проблема</th>
+                  <th scope="col">Статус</th>
+                  <th scope="col" className="col-wide">
+                    Исполнитель
+                  </th>
+                  <th scope="col" className="col-wide">
+                    Создана
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.tickets.items.map((t, i) => (
+                  <TicketRow
+                    key={t.id}
+                    ticket={t}
+                    incident={data.incidents[i]}
+                    current={t.id === current}
+                    compact={compact}
+                    open={open}
+                  />
+                ))}
+              </tbody>
+            </table>
           )}
           <Pagination
             page={data.tickets.page}
@@ -351,73 +365,61 @@ function HouseQueue({
 function TicketRow({
   ticket,
   incident,
-  navigate,
+  current,
+  compact,
+  open,
 }: {
   ticket: Ticket;
   incident: Awaited<ReturnType<TicketClient["incident"]>>;
-  navigate: (url: string) => void;
+  current: boolean;
+  compact: boolean;
+  open: (id: string) => void;
 }) {
   const next = ticketActions(ticket.allowed_actions).find(
-    (a) =>
-      a.enabled &&
-      ["accept", "start", "work-attempts", "resume"].includes(a.code),
+    (a) => a.enabled && ["accept", "start", "work-attempts", "resume"].includes(a.code),
   );
+  const place = placeText(incident.location);
+  const href = adminUrl({ ticket: ticket.id });
+  const nextUpdate = ticket.deadlines.find((d) => d.kind === "next_update" && d.due_at);
   return (
-    <li>
-      <article className="ticket-row">
-        <div className="ticket-row-title">
-          <span className="ticket-number">{ticket.internal_number}</span>
-          <h3>{incident.title || categoryLabel(incident.category)}</h3>
-          <p className="muted">{categoryLabel(incident.category)}</p>
-          {incident.location && (
-            <p>
-              {[
-                incident.location.entrance &&
-                  `Подъезд ${incident.location.entrance}`,
-                incident.location.floor && `Этаж ${incident.location.floor}`,
-                incident.location.label,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          )}
-          <p className="muted">
-            Сообщений: {incident.report_count} · Участников:{" "}
-            {incident.participant_count ?? "нет данных"}
-          </p>
-        </div>
-        <div className="ticket-row-state">
-          <TicketStatusBadge status={ticket.status} />
-          <p>
-            {ticket.assignee_name ??
-              (ticket.assignee_id ? "Исполнитель назначен" : "Не назначена")}
-          </p>
-          <p className="muted">Создана: {formatDate(ticket.created_at)}</p>
-          {next && (
-            <p className="next-step">
-              {next.code === "accept" && !ticket.assignee_id
-                ? "Взять в работу"
-                : actionLabels[next.code]}
-            </p>
-          )}
-          {ticket.deadlines
-            .filter((d) => d.kind === "next_update" && d.due_at)
-            .map((d) => (
-              <p key={d.id}>Следующее обновление: {formatDate(d.due_at)}</p>
-            ))}
-        </div>
+    <tr aria-current={current || undefined}>
+      <td className="cell-id" data-label="Заявка">
+        {ticket.internal_number}
+      </td>
+      <td className="cell-main">
         <a
-          className="ticket-open"
-          href={adminUrl({ ticket: ticket.id })}
-          aria-label={`Открыть заявку ${ticket.internal_number}`}
+          href={href}
+          aria-label={`Открыть заявку ${ticket.internal_number}: ${incident.title || categoryLabel(incident.category)}`}
           onClick={(e) => {
+            if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
             e.preventDefault();
-            navigate(adminUrl({ ticket: ticket.id }));
+            open(ticket.id);
           }}
         >
-          Открыть <span aria-hidden="true">↗</span>
+          {incident.title || categoryLabel(incident.category)}
         </a>
-      </article>
-    </li>
+        <p className="ds-meta">
+          {[categoryLabel(incident.category), place, countLabel(incident.report_count, ["сообщение", "сообщения", "сообщений"])]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      </td>
+      <td data-label="Статус">
+        <TicketStatusBadge status={ticket.status} />
+        {next && !compact && (
+          <p className="ds-meta">
+            Дальше: {next.code === "accept" && !ticket.assignee_id ? "взять в работу" : actionLabels[next.code].toLowerCase()}
+          </p>
+        )}
+      </td>
+      <td className="col-wide" data-label="Исполнитель">
+        {ticket.assignee_name ?? (ticket.assignee_id ? "Назначен" : <span className="ds-subtle">Не назначен</span>)}
+        {ticket.requires_reassignment && <p className="ds-meta">Нужно переназначить</p>}
+      </td>
+      <td className="col-wide cell-when" data-label="Создана">
+        {formatStaffWhen(ticket.created_at)}
+        {nextUpdate && <p>Обновление: {formatStaffWhen(nextUpdate.due_at)}</p>}
+      </td>
+    </tr>
   );
 }

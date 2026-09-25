@@ -1,3 +1,4 @@
+import { formatStaffTime } from "../shared/ui/format";
 import { useEffect, useState } from "react";
 import { adminClient, Feedback, Title, useAction, useRead, type Schema } from "./administration";
 
@@ -27,7 +28,7 @@ const reasonLabels: Record<string, string> = {
   CHAT_SETTING_OFF: "выключено в настройках чата", RETRACTED: "удалено до отправки",
   ACCESS_REVOKED: "нет доступа к дому", CHAT_BINDING_INACTIVE: "чат отключён", MAX_IDENTITY_CHANGED: "сменился аккаунт MAX",
 };
-const when = (value?: string | null) => (value ? new Date(value).toLocaleString("ru-RU") : "");
+const when = (value?: string | null) => formatStaffTime(value) ?? "";
 
 function localInput(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");

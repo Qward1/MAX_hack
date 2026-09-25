@@ -1,3 +1,4 @@
+import { formatStaffTime } from "../shared/ui/format";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ApiProblem } from "../shared/api/client";
 import { ticketClient } from "../shared/api/tickets";
@@ -119,7 +120,7 @@ export function History({ rows }: { rows: Schema["AuditView"][] }) {
     "open_registration.joined": "Сотрудник по ссылке получил доступ",
   };
   return <ol className="admin-history">{rows.map((r, i) => <li key={i}>
-    <time>{new Date(r.occurred_at).toLocaleString("ru-RU")}</time> · {labels[r.event.replace(/^administration\./, "")] ?? "Административное действие"}
+    <time>{formatStaffTime(r.occurred_at)}</time> · {labels[r.event.replace(/^administration\./, "")] ?? "Административное действие"}
     {r.reason && <p>{r.reason}</p>}</li>)}</ol>;
 }
 export const formValue = (data: FormData, key: string) => String(data.get(key) ?? "").trim();

@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type FormEvent } from "react";
+import { ApiProblem } from "../shared/api/client";
 import { ticketClient as client } from "../shared/api/tickets";
 import type { components } from "../shared/api/schema";
 
@@ -6,6 +7,26 @@ type State = components["schemas"]["EmployeeSession"];
 type Enrollment = components["schemas"]["EmployeeEnrollment"];
 
 type Preview = { title: string; detail: string };
+
+/**
+ * Что случилось при входе и что делать — словами для человека. Неверный
+ * логин и пароль не различаем (это не подсказка взломщику), код — отдельно.
+ */
+export function loginError(error: unknown, step: string | undefined, recovery: boolean): string {
+  if (!(error instanceof ApiProblem)) return "Не удалось связаться с сервером. Проверьте интернет и повторите.";
+  const { status, detail } = error.problem;
+  if (status === 429) return "Слишком много попыток. Подождите несколько минут и повторите вход.";
+  if (status === 401 && step === "login")
+    return "Логин или пароль не подошли. Проверьте раскладку клавиатуры и Caps Lock.";
+  if (status === 401 && (step === "mfa_challenge" || step === "mfa_enroll"))
+    return recovery
+      ? "Код восстановления не подошёл. Каждый код действует один раз."
+      : "Код не подошёл. Введите текущий код из приложения — он меняется каждые 30 секунд.";
+  if (status === 422) return "Проверьте заполнение полей.";
+  // Правило сервиса уже сказано по-русски («Пароль: минимум 12 символов…») — показать его.
+  if (/[а-яё]/i.test(detail ?? "")) return detail;
+  return "Не удалось выполнить вход. Обновите страницу и повторите.";
+}
 
 /**
  * Вход сотрудника (пароль + TOTP, A-10). Режимы D2: единый вход `/login`,
@@ -25,6 +46,7 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
   const [error, setError] = useState("");
   const [recovery, setRecovery] = useState(false);
   const [forbidden, setForbidden] = useState(false);
+  const errorRef = useRef<HTMLParagraphElement>(null);
   // Вход сотрудника УК на странице платформы (живая проверка D3): не тупик
   // «доступ отозван», а переход в свой кабинет — по ролям с сервера.
   const [companyCabinet, setCompanyCabinet] = useState(false);
@@ -51,7 +73,7 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
         }
         const next = await client.employeeSession();
         if (active) apply(next);
-      } catch { if (active) setError("Не удалось проверить вход. Обновите страницу."); }
+      } catch { if (active) setError("Не удалось проверить вход. Проверьте интернет и обновите страницу."); }
     };
     void restore();
     const lost = (event: Event) => {
@@ -96,7 +118,7 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
       setState(null); setForbidden(false); setEnrollment(null); setRevision(v => v + 1);
       const channel = new BroadcastChannel("employee-auth"); channel.postMessage("logout"); channel.close();
       apply(await client.employeeSession());
-    } catch { setError("Не удалось завершить сессию. Повторите выход."); }
+    } catch { setError("Не удалось выйти. Проверьте интернет и повторите."); }
     finally { setBusy(false); }
   };
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -115,29 +137,33 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
         step === "password_change" ? { password: data.get("password") } : { code: data.get("code") };
       const next = await client.employeeStep(path, payload);
       form.reset(); apply(next);
-    } catch (e) { setError(e instanceof Error ? e.message : "Не удалось выполнить вход"); }
+    } catch (e) {
+      setError(loginError(e, state?.stage, recovery));
+      // Ошибка названа текстом у формы; фокус — на неё, введённое не стирается.
+      window.setTimeout(() => errorRef.current?.focus(), 0);
+    }
     finally { setBusy(false); }
   };
   if (fixture) return children;
   if (state?.stage === "authenticated" && !state.recovery_codes?.length) return (
     <div key={revision}>
-      <div className="employee-session-bar"><span>Кабинет сотрудника</span>
-        <button className="ticket-button secondary" disabled={busy} onClick={() => void logout()}>Выйти</button>
+      <div className="employee-session-bar"><span>ДомСигнал · кабинет сотрудника</span>
+        <button className="ds-btn ds-btn-secondary" disabled={busy} onClick={() => void logout()}>Выйти</button>
       </div>
-      {error && <p role="alert">{error}</p>}
-      {forbidden ? <main className="auth-card">{companyCabinet ? <>
+      {error && <p role="alert" className="ds-notice ds-tone-danger">{error}</p>}
+      {forbidden ? <main className="auth-layout"><section className="auth-card">{companyCabinet ? <>
         <h1>Это вход для управления платформой</h1>
         <p>Вы вошли как сотрудник управляющей компании — ваш кабинет отдельный.</p>
         <a className="ticket-button" href="/admin/">Открыть кабинет управляющей компании</a>
       </> : <><h1>Доступ отозван или ограничен</h1>
-        <p>Рабочие данные скрыты. Уточните назначение у администратора УК.</p>
-        <button className="ticket-button" onClick={() => window.location.reload()}>Проверить доступ</button>
-      </>}</main> : children}
+        <p>Рабочие данные скрыты. Доступ к домам выдаёт администратор вашей управляющей компании — уточните назначение у него.</p>
+        <button className="ds-btn ds-btn-primary" onClick={() => window.location.reload()}>Проверить доступ</button>
+      </>}</section></main> : children}
     </div>
   );
   return <main className="auth-layout"><section className="auth-card">
     <a className="admin-brand" href="/admin/">ДомСигнал<span>Кабинет сотрудника</span></a>
-    {!state ? <><h1>Проверяем вход…</h1>{error && <p role="alert">{error}</p>}</> :
+    {!state ? <><h1>Проверяем вход…</h1>{error && <p role="alert" className="ds-notice ds-tone-danger">{error}</p>}</> :
       state.recovery_codes?.length ? <>
         <h1>Сохраните коды восстановления</h1>
         <p>Они показываются один раз. Каждый код заменяет второй фактор при входе с паролем.
@@ -148,33 +174,40 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
         <h1>{state.stage === "login" ? (linkMode ? (preview?.title ?? (linkError ? "Ссылка недействительна" : "Проверяем ссылку…"))
           : signup && invitationToken ? "Принять приглашение" : platform ? "Вход в управление платформой" : unified ? "Вход в кабинет" : "Вход сотрудника") : state.stage === "password_change" ? "Создайте свой пароль" :
           state.stage === "mfa_enroll" ? "Подключите аутентификатор" : "Подтвердите вход"}</h1>
-        {state.stage === "login" && unified && <p>Для сотрудников управляющих компаний и платформы: пароль и код из приложения-аутентификатора.</p>}
+        {state.stage === "login" && unified && <p className="ds-subtle">Для сотрудников управляющих компаний и платформы. После пароля понадобится код из приложения-аутентификатора.</p>}
         {state.stage === "login" && linkMode && preview && <p>{preview.detail}</p>}
         {state.stage === "login" && linkMode && linkError && <><p role="alert">{linkError}</p>
           <p>{linkMode === "join" ? "Попросите ссылку у платформы или администратора УК." : "Попросите администратора УК выдать новую ссылку."}</p>
           <a className="ticket-button secondary" href="/login">Перейти ко входу</a></>}
         {state.stage === "login" && invitationToken && <><p>Новый сотрудник принимает приглашение после настройки пароля и MFA.</p><button type="button" className="ticket-button secondary" onClick={() => setSignup(!signup)}>{signup ? "У меня уже есть аккаунт" : "Создать аккаунт сотрудника"}</button>{signup && <label>Ваше имя<input name="display_name" required minLength={2} maxLength={200} /></label>}</>}
         {state.stage === "login" && linkMode === "join" && preview && <label>Ваше имя<input name="display_name" required minLength={2} maxLength={200} autoComplete="name" /></label>}
-        {state.stage === "login" && linkMode !== "reset" && (!linkMode || preview) && <label>Логин<input name="login" autoComplete="username" autoCapitalize="none" required minLength={linkMode ? 3 : 1} maxLength={100} /></label>}
+        {state.stage === "login" && linkMode !== "reset" && (!linkMode || preview) && <label>Логин<input name="login" autoComplete="username" autoCapitalize="none" spellCheck={false} required minLength={linkMode ? 3 : 1} maxLength={100}
+          aria-invalid={Boolean(error) || undefined} aria-describedby={error ? "login-error" : undefined} /></label>}
         {(["login", "password_change"].includes(state.stage) && (!linkMode || preview || state.stage !== "login")) && <label>{state.stage === "login" && !linkMode ? "Пароль" : "Новый пароль"}
           <input name="password" type="password" autoComplete={state.stage === "login" && !signup && !linkMode ? "current-password" : "new-password"}
-            minLength={state.stage === "password_change" || signup || linkMode ? 12 : 1} maxLength={1024} required /></label>}
-        {(state.stage === "password_change" || (state.stage === "login" && linkMode && preview)) && <p>Минимум 12 символов. Используйте длинный уникальный пароль.</p>}
+            minLength={state.stage === "password_change" || signup || linkMode ? 12 : 1} maxLength={1024} required
+            aria-invalid={Boolean(error) || undefined}
+            aria-describedby={[state.stage !== "login" || linkMode ? "password-hint" : "", error ? "login-error" : ""].filter(Boolean).join(" ") || undefined} /></label>}
+        {(state.stage === "password_change" || (state.stage === "login" && linkMode && preview)) && <p id="password-hint" className="ds-hint">Минимум 12 символов. Удобно взять фразу из нескольких слов.</p>}
         {state.stage === "mfa_enroll" && <>
-          <p>Добавьте аккаунт в Google Authenticator, Microsoft Authenticator или другое приложение TOTP.</p>
+          <p>Откройте приложение-аутентификатор (Google Authenticator, Яндекс Ключ, Microsoft Authenticator или другое) и добавьте аккаунт по QR-коду.</p>
           {!enrollment ? <button type="button" className="ticket-button secondary" disabled={busy} onClick={async () => {
             setBusy(true); setError("");
             try { setEnrollment(await client.employeeEnroll()); } catch { setError("Не удалось подготовить MFA"); }
             finally { setBusy(false); }
           }}>Показать QR-код</button> : <>
             <img className="auth-qr" alt="QR-код для подключения аутентификатора" src={`data:image/svg+xml,${encodeURIComponent(enrollment.qr_svg)}`} />
-            <p>Ручной ключ: <code className="manual-secret">{enrollment.secret}</code></p>
+            <p>Если камера недоступна, введите ключ вручную: <code className="manual-secret">{enrollment.secret}</code></p>
           </>}
         </>}
         {["mfa_enroll", "mfa_challenge"].includes(state.stage) && <label>{recovery ? "Код восстановления" : "Код из приложения"}
           <input name="code" autoComplete="one-time-code" inputMode={recovery ? "text" : "numeric"}
-            pattern={recovery ? undefined : "[0-9]{6}"} maxLength={recovery ? 64 : 6} required /></label>}
-        {error && <p role="alert">{error}</p>}
+            pattern={recovery ? undefined : "[0-9]{6}"} maxLength={recovery ? 64 : 6} required
+            aria-invalid={Boolean(error) || undefined} aria-describedby={error ? "code-hint login-error" : "code-hint"} /></label>}
+        {["mfa_enroll", "mfa_challenge"].includes(state.stage) && <p id="code-hint" className="ds-hint">{recovery
+          ? "Один из кодов, которые вы сохранили при подключении аутентификатора."
+          : "6 цифр из приложения-аутентификатора."}</p>}
+        {error && <p id="login-error" ref={errorRef} tabIndex={-1} role="alert" className="ds-error">{error}</p>}
         {!(state.stage === "login" && linkMode && !preview) && <button className="ticket-button" type="submit" disabled={busy || (state.stage === "mfa_enroll" && !enrollment)}>
           {busy ? "Проверяем…" : state.stage === "login" ? (linkMode === "join" ? "Зарегистрироваться и настроить MFA" : linkMode === "reset" ? "Сохранить пароль"
             : signup && invitationToken ? "Создать аккаунт и настроить MFA" : "Войти") : "Продолжить"}</button>}

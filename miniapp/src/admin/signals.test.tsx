@@ -179,7 +179,7 @@ function setup(initial: SignalView = view()) {
 }
 
 describe("P5 signal detail", () => {
-  it("puts danger and safety first, then what/where, quotes, strength, route, actions, history", async () => {
+  it("puts danger and safety first, then the decision, what/where, quotes, strength, route, history", async () => {
     setup();
     await screen.findByRole("heading", { name: "Опасность: запах газа" });
     const headings = screen
@@ -187,11 +187,12 @@ describe("P5 signal detail", () => {
       .map((heading) => heading.textContent ?? "");
     expect(headings).toEqual([
       "Опасность: запах газа",
+      // Решение видно без прокрутки: сразу после опасности.
+      "Действия по сигналу",
       "Что, где и когда",
       "Слова жителей",
       "Почему критический",
       "Похоже на ситуацию для экстренных служб",
-      "Действия по сигналу",
       "История решения",
     ]);
     expect(
@@ -394,8 +395,10 @@ describe("P5 signal presentation", () => {
     expect(plural(1, "реплика", "реплики", "реплик")).toBe("реплика");
     expect(plural(3, "реплика", "реплики", "реплик")).toBe("реплики");
     expect(plural(11, "реплика", "реплики", "реплик")).toBe("реплик");
+    expect(plural(21, "реплика", "реплики", "реплик")).toBe("реплика");
+    expect(plural(104, "реплика", "реплики", "реплик")).toBe("реплики");
     expect(countsLine(7, 5, "2026-09-23T10:00:00Z")).toMatch(
-      /^7 реплик · 5 жителей · последняя в /,
+      /^7 реплик · 5 жителей · последняя .+ МСК$/,
     );
   });
 });
