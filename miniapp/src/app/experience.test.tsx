@@ -291,7 +291,8 @@ describe("route card and appeal draft navigation", () => {
       expect.any(AbortSignal),
     );
     expect(client.incident).not.toHaveBeenCalled();
-    expect(window.location.search).toContain(`card=${outcome.id}`);
+    // Адрес меняет эффект после отрисовки карточки — ждать, а не читать сразу.
+    await waitFor(() => expect(window.location.search).toContain(`card=${outcome.id}`));
   });
 
   it("the card screen opens the appeal draft and returns to the card", async () => {
@@ -306,7 +307,7 @@ describe("route card and appeal draft navigation", () => {
       house_id: house.id,
       route_outcome_id: outcome.id,
     });
-    expect(window.location.search).toContain(`draft=${draft.id}`);
+    await waitFor(() => expect(window.location.search).toContain(`draft=${draft.id}`));
     fireEvent.click(screen.getByRole("button", { name: /К карточке маршрута/ }));
     await screen.findByText(actionCard.title);
   });
