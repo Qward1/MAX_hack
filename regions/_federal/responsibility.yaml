@@ -8,8 +8,8 @@ schema_version: 1
 layer_id: _federal
 layer: federal
 region: null
-version: "2"
-updated_at: "2026-09-23"
+version: "3"
+updated_at: "2026-09-26"
 
 organizations: []
 
@@ -97,22 +97,29 @@ channels:
       source_title: Исходный план ДомСигнала, §6.4 — значение помечено как иллюстрация
       source_url: null
 
+  # D4: официальный чат-бот «Госуслуги Дом» в MAX — альтернатива заявке в УК
+  # через ДомСигнал. Ссылка на бота — со страницы справки ГИС ЖКХ
+  # (dom.gosuslugi.ru), назначение — из сообщения Минстроя России на Госвеб;
+  # обе страницы прочитаны 26.09.2026 (с сервера в РФ и без входа).
   - id: gosuslugi_dom
     organization_id: null
-    channel_type: official_web
+    channel_type: max_bot
     label: Госуслуги Дом
-    url: null
+    url: https://max.ru/gosuslugi_dom_bot
     phone: null
-    entry_hint: null
+    entry_hint: MAX → чат-бот «Госуслуги Дом» → мини-приложение, вход через Госуслуги
     routes_to_competent_authority: false
-    facts: []
+    facts:
+      - text: "«Министерство строительства и жилищно-коммунального хозяйства Российской Федерации информирует: жители многоквартирных домов могут передавать показания счетчиков и направлять обращения в управляющую организацию через официальный чат-бот «Госуслуги Дом», который отмечен специальным значком в интерфейсе в мессенджере MAX»."
+        source_title: "«В домовых чатах доступен официальный чат-бот «Госуслуги Дом» с базовыми функциями ЖКХ» — новости органов исполнительной власти, gorodnovgorod.gosuslugi.ru, 20.04.2026. Проверено 26.09.2026"
+        source_url: https://gorodnovgorod.gosuslugi.ru/dlya-zhiteley/novosti-organov-ispolnitelnoy-vlasti-i-drugih-organizatsiy/novosti_3580.html
     unavailable_regions: []
     verification:
-      status: needs_verification
-      verified_at: null
-      verified_by: null
-      source_title: Исходный план ДомСигнала, §0 — сценарий подачи вручную не проверен
-      source_url: null
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (справка ГИС ЖКХ с адресом бота; сообщение Минстроя на Госвеб)
+      source_title: "Справка по работе с ГИС ЖКХ — «Как запустить чат-бот «Госуслуги Дом» при помощи ссылки», dom.gosuslugi.ru: ссылка https://max.ru/gosuslugi_dom_bot. Проверено 26.09.2026"
+      source_url: https://cdn.dom.gosuslugi.ru/webhelp/topics/mobapp/basic_info/miniapp/t_start_bot_3-miniapp.html
 
   - id: gis_zkh_max_bot
     organization_id: null
@@ -362,6 +369,10 @@ uk_default:
   # при территории «квартира». Типовое распределение, как и весь uk_default.
   apartment_subtypes:
     - heating.cold_radiators
+  # Заявку в УК житель может направить и сам — через официальный чат-бот
+  # «Госуслуги Дом» (D4); в карточке УК это альтернатива, не замена.
+  channel_ids:
+    - gosuslugi_dom
   basis:
     text: Общее имущество многоквартирного дома, типовое распределение; первая линия — управляющая компания дома.
     source_title: Справочник ДомСигнала — типовое распределение по общему имуществу МКД

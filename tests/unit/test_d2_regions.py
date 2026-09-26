@@ -46,7 +46,11 @@ EXPECTED: dict[str, tuple[Cell, Cell]] = {
         ("regional_operator", None, "federal.waste_removal.regional_operator"),
         ("regional_operator", "ru_mow_nash_gorod", "ru_mow.waste_removal.nash_gorod"),
     ),
-    "elevator.stopped": (("uk_internal", None, None), ("uk_internal", None, None)),
+    # D4: заявку в УК житель может направить и сам — через «Госуслуги Дом».
+    "elevator.stopped": (
+        ("uk_internal", "gosuslugi_dom", None),
+        ("uk_internal", "gosuslugi_dom", None),
+    ),
     "water.hot_outage": (
         ("resource_supplier", None, "federal.external_network.resource_supplier"),
         ("resource_supplier", None, "federal.external_network.resource_supplier"),

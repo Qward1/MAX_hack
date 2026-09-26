@@ -211,6 +211,12 @@
           "items": {"type": "string", "minLength": 1},
           "uniqueItems": true
         },
+        "channel_ids": {
+          "type": "array",
+          "description": "Проверенные каналы, через которые житель сам направляет заявку в УК (D4: «Госуслуги Дом»). Показываются в карточке УК как альтернатива.",
+          "items": {"type": "string", "pattern": "^[a-z0-9_.-]+$"},
+          "uniqueItems": true
+        },
         "basis": {"$ref": "#/$defs/basis"},
         "verification": {"$ref": "#/$defs/verification"}
       }

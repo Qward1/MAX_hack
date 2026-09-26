@@ -228,11 +228,17 @@ def _uk_route(
         alternatives.append(
             RouteAlternative(route_type="resource_supplier", reason=_SUPPLIER_ALTERNATIVE_REASON)
         )
+    # Официальный канал заявки в УК (D4: «Госуслуги Дом») — только проверенный.
+    channels, hidden = _channels(
+        default.channel_ids if default is not None else (), directory, house, today
+    )
     return _route(
         route_type="uk_internal",
         directory=directory,
         match="default",
         basis=basis,
+        channels=channels,
+        hidden=hidden,
         can_create_ticket=house.has_active_connected_uk,
         alternatives=alternatives,
         today=today,

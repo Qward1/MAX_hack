@@ -344,6 +344,8 @@ class UkDefault:
     verification: Verification
     #: Подтипы, которые житель видит в квартире, но система общедомовая.
     apartment_subtypes: tuple[str, ...] = ()
+    #: Каналы заявки в УК, которые житель использует сам (D4: «Госуслуги Дом»).
+    channel_ids: tuple[str, ...] = ()
 
     @classmethod
     def parse(cls, raw: Any, where: str) -> UkDefault:
@@ -359,6 +361,7 @@ class UkDefault:
             basis=Basis.parse(entry.get("basis"), f"{where}.basis"),
             verification=Verification.parse(entry.get("verification"), f"{where}.verification"),
             apartment_subtypes=_codes(entry, "apartment_subtypes", where),
+            channel_ids=_codes(entry, "channel_ids", where),
         )
 
 

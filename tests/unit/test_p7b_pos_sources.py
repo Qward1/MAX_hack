@@ -156,5 +156,5 @@ def test_the_validator_rejects_facts_and_verified_records_without_a_link(tmp_pat
 
 def test_the_directory_still_loads_for_kazan() -> None:
     effective = load_directory(REGIONS).effective("RU-TA", "kazan")
-    assert effective.version.startswith("_federal@2")
+    assert effective.version.startswith("_federal@3")  # D4: «Госуслуги Дом»
     assert "pos_gosuslugi" in effective.channels

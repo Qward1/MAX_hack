@@ -75,7 +75,9 @@ def test_uk_internal_resident_and_operator_actions(packaged: Any) -> None:
     assert types(resident) == ["create_ticket", "join_existing", "open_official_channel"]
     assert resident.actions[0].enabled is True
     official = resident.actions[-1]
-    assert official.enabled is False and official.reason
+    # D4: «Госуслуги Дом» проверен (справка ГИС ЖКХ) — переход в бот активен.
+    assert official.enabled is True and official.reason is None
+    assert official.url == "https://max.ru/gosuslugi_dom_bot"
     assert resident.existing_ticket_ref == "ticket-1"
     operator = card(route, audience="operator")
     assert types(operator) == ["create_ticket", "not_a_problem"]

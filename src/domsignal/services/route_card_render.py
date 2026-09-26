@@ -125,7 +125,9 @@ def build_route_card_intent(
         basis_source_title=basis.source_title if basis else None,
         basis_source_url=basis.source_url if basis else None,
         organization_name=card.route.organization_name,
-        facts=list(card.facts[:MAX_FACTS]),
+        # Канал-альтернатива заявке в УК (D4: «Госуслуги Дом») — кнопкой на экране
+        # карточки; личное сообщение о заявке остаётся прежним, без его фактов.
+        facts=list(card.facts[:MAX_FACTS]) if card.route.route_type != "uk_internal" else [],
         safety=card.safety,
         disclaimer=card.disclaimer,
         demo_notice=card.demo_notice,

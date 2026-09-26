@@ -119,6 +119,10 @@ def check_references(document: dict[str, Any], path: Path, known: dict[str, set[
             if code not in codes:
                 report(path, "uk_default.subtypes", f"unknown subtype {code}")
                 failed = True
+        for channel_id in default.get("channel_ids") or []:
+            if channel_id not in known["channels"]:
+                report(path, "uk_default.channel_ids", f"unknown channel {channel_id}")
+                failed = True
         for code in default.get("resource_supplier_alternatives") or []:
             if code not in (default.get("subtypes") or []):
                 report(
