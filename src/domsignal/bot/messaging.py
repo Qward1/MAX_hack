@@ -12,7 +12,8 @@ from domsignal.bot.http_client import MaxHttpClient
 
 @dataclass(frozen=True)
 class MessageButton:
-    kind: Literal["open_app", "callback"]
+    #: `message` (D4) — MAX отправляет текст кнопки в чат от имени нажавшего.
+    kind: Literal["open_app", "callback", "message"]
     text: str
     payload: str
 
@@ -107,7 +108,10 @@ class HttpMaxMessagingProvider:
         for row in message.buttons:
             buttons.append(
                 [
-                    {
+                    # У кнопки `message` в MAX только тип и текст: её текст и есть сообщение.
+                    {"type": b.kind, "text": b.text}
+                    if b.kind == "message"
+                    else {
                         "type": b.kind,
                         "text": b.text,
                         "payload": b.payload,

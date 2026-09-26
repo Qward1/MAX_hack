@@ -75,6 +75,33 @@ async def test_documented_send_edit_answer_shapes():
     assert seen[2][3] == {"message": seen[1][3]}
 
 
+async def test_a_message_button_carries_only_its_type_and_text():
+    """D4: кнопка-пример `message` — MAX отправляет её текст от имени нажавшего.
+
+    По официальному клиенту MAX (`schemes.MessageButton` — только `Button`) у неё
+    нет `payload`: лишнее поле не отправляется.
+    """
+    seen = []
+
+    def handler(request):
+        seen.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "message": {
+                    "body": {"mid": "mid.example"},
+                    "recipient": {"user_id": 123, "chat_id": 456, "chat_type": "dialog"},
+                }
+            },
+        )
+
+    example = "Попробовать: лифт во 2 подъезде стоит"
+    message = PersonalMessage("Привет", ((MessageButton("message", example, example),),))
+    await provider(handler).send_personal_message("123", message)
+    buttons = seen[0]["attachments"][0]["payload"]["buttons"]
+    assert buttons == [[{"type": "message", "text": example}]]
+
+
 @pytest.mark.parametrize("operation", ["edit_message", "answer_callback"])
 @pytest.mark.parametrize("body", [{"success": False}, {"success": "true"}, {}, {"success": 1}])
 async def test_nd21_boolean_success_is_strict(operation, body):
