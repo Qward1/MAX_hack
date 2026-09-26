@@ -61,6 +61,29 @@ channels:
 
 rules: []
 
+# Где посмотреть тарифы и капремонт (D4): только официальные страницы, без цифр.
+reference_links:
+  - id: ru_pri.tariffs
+    kind: tariffs
+    label: "Тарифы — Агентство по тарифам Приморского края"
+    url: https://www.primorsky.ru/authorities/executive-agencies/departments/tariffs/
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (официальная страница, прочитана 26.09.2026)
+      source_title: "«Агентство по тарифам Приморского края» — страница на официальном сайте Правительства Приморского края primorsky.ru. Проверено 26.09.2026 с сервера в РФ"
+      source_url: https://www.primorsky.ru/authorities/executive-agencies/departments/tariffs/
+  - id: ru_pri.capital_repair
+    kind: capital_repair
+    label: "Программа капитального ремонта — Фонд капитального ремонта МКД Приморского края"
+    url: https://fkr25.ru/
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (официальная страница, прочитана 26.09.2026)
+      source_title: "«Фонд капитального ремонта многоквартирных домов Приморского края», fkr25.ru: краевая программа капитального ремонта общего имущества (постановление Администрации Приморского края от 31.12.2013 № 513-па). Проверено 26.09.2026"
+      source_url: https://fkr25.ru/
+
 municipalities:
   - code: vladivostok
     name: Владивосток

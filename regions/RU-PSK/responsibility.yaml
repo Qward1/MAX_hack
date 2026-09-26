@@ -54,6 +54,19 @@ channels:
 
 rules: []
 
+# Где посмотреть тарифы и капремонт (D4): только официальные страницы, без цифр.
+reference_links:
+  - id: ru_psk.capital_repair
+    kind: capital_repair
+    label: "Капитальный ремонт — Фонд капитального ремонта МКД Псковской области"
+    url: https://fkr60.ru/
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (официальная страница, прочитана 26.09.2026)
+      source_title: "«ФКР | Региональный оператор - Фонд капитального ремонта многоквартирных домов Псковской области», fkr60.ru. Проверено 26.09.2026 с сервера в РФ"
+      source_url: https://fkr60.ru/
+
 municipalities:
   - code: pskov
     name: Псков
