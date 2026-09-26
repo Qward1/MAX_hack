@@ -5108,6 +5108,66 @@
         "title": "DeliveryTotals",
         "type": "object"
       },
+      "DirectoryPackReadiness": {
+        "additionalProperties": false,
+        "description": "Готовность пакета справочника (D5, аудит Р-3).",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "needs_verification": {
+            "title": "Needs Verification",
+            "type": "integer"
+          },
+          "pack": {
+            "title": "Pack",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "integer"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "unavailable_channels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unavailable Channels",
+            "type": "array"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pack",
+          "name",
+          "version",
+          "timezone",
+          "verified",
+          "needs_verification",
+          "stale",
+          "unavailable_channels"
+        ],
+        "title": "DirectoryPackReadiness",
+        "type": "object"
+      },
       "DuplicateCandidate": {
         "additionalProperties": false,
         "description": "Уже открытая проблема того же дома, о которой, возможно, идёт речь.\n\nПравило детерминированное, модель в нём не участвует. Решение принимает\nжитель: автоматического слияния обращений в продукте нет.",
@@ -5603,6 +5663,273 @@
         "title": "HouseApproval",
         "type": "object"
       },
+      "HouseBatchApproval": {
+        "additionalProperties": false,
+        "description": "Одобрить выбранные заявки на дома одним действием с одним регионом (D5).\n\nДом выбирается как при одиночном одобрении, но без вопросов: найденный по\nадресу при подаче или существующий с тем же адресом — иначе новый.",
+        "properties": {
+          "confirm_backdate": {
+            "default": false,
+            "title": "Confirm Backdate",
+            "type": "boolean"
+          },
+          "municipality_code": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Municipality Code"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "region_code": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Code"
+          },
+          "request_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Request Ids",
+            "type": "array"
+          },
+          "territory_policy": {
+            "default": "mixed",
+            "enum": [
+              "uk",
+              "municipal",
+              "mixed",
+              "unknown"
+            ],
+            "title": "Territory Policy",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date-time",
+            "title": "Valid From",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "request_ids",
+          "valid_from"
+        ],
+        "title": "HouseBatchApproval",
+        "type": "object"
+      },
+      "HouseBatchApproved": {
+        "additionalProperties": false,
+        "properties": {
+          "already_approved": {
+            "title": "Already Approved",
+            "type": "integer"
+          },
+          "approved": {
+            "title": "Approved",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HouseBatchDecision"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "approved",
+          "already_approved",
+          "failed",
+          "items"
+        ],
+        "title": "HouseBatchApproved",
+        "type": "object"
+      },
+      "HouseBatchCreate": {
+        "additionalProperties": false,
+        "description": "Список адресов от администратора УК (D5, аудит Р-1): каждый — заявка на дом.\n\nКвота остаётся на чатах: заявка на дом слот не расходует.",
+        "properties": {
+          "addresses": {
+            "items": {
+              "maxLength": 500,
+              "minLength": 5,
+              "type": "string"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Addresses",
+            "type": "array"
+          },
+          "basis_text": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Basis Text",
+            "type": "string"
+          },
+          "requested_valid_from": {
+            "format": "date-time",
+            "title": "Requested Valid From",
+            "type": "string"
+          }
+        },
+        "required": [
+          "addresses",
+          "requested_valid_from",
+          "basis_text"
+        ],
+        "title": "HouseBatchCreate",
+        "type": "object"
+      },
+      "HouseBatchDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "house_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Id"
+          },
+          "management_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Management Id"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "outcome": {
+            "enum": [
+              "approved",
+              "already_approved",
+              "conflict",
+              "not_found",
+              "failed"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "outcome"
+        ],
+        "title": "HouseBatchDecision",
+        "type": "object"
+      },
+      "HouseBatchSubmitItem": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "created",
+              "duplicate",
+              "already_open",
+              "already_managed"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "address",
+          "outcome"
+        ],
+        "title": "HouseBatchSubmitItem",
+        "type": "object"
+      },
+      "HouseBatchSubmitted": {
+        "additionalProperties": false,
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HouseBatchSubmitItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "created",
+          "skipped",
+          "items"
+        ],
+        "title": "HouseBatchSubmitted",
+        "type": "object"
+      },
       "HouseFactsUpdate": {
         "additionalProperties": false,
         "properties": {
@@ -5960,6 +6287,18 @@
               }
             ],
             "title": "Reviewed At"
+          },
+          "source_application_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Application Id"
           },
           "status": {
             "enum": [
@@ -6775,6 +7114,38 @@
           "status"
         ],
         "title": "MembershipView",
+        "type": "object"
+      },
+      "ModelBudgetToday": {
+        "additionalProperties": false,
+        "description": "Дневной бюджет вызовов модели (сутки UTC, счётчик PostgreSQL).",
+        "properties": {
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share"
+          },
+          "used": {
+            "title": "Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "used",
+          "limit",
+          "share"
+        ],
+        "title": "ModelBudgetToday",
         "type": "object"
       },
       "ModelCompany": {
@@ -8104,6 +8475,13 @@
           "delivery": {
             "$ref": "#/components/schemas/DeliveryTotals"
           },
+          "directory": {
+            "items": {
+              "$ref": "#/components/schemas/DirectoryPackReadiness"
+            },
+            "title": "Directory",
+            "type": "array"
+          },
           "funnel": {
             "$ref": "#/components/schemas/Funnel"
           },
@@ -8123,6 +8501,16 @@
             ],
             "title": "Period Days",
             "type": "integer"
+          },
+          "queue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueueHealth"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "timezone": {
             "title": "Timezone",
@@ -8895,6 +9283,88 @@
           "origin"
         ],
         "title": "Provenance",
+        "type": "object"
+      },
+      "QueueHealth": {
+        "additionalProperties": false,
+        "description": "Здоровье очереди задач (D5): только агрегаты.",
+        "properties": {
+          "deliveries_due": {
+            "title": "Deliveries Due",
+            "type": "integer"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "model_budget_today": {
+            "$ref": "#/components/schemas/ModelBudgetToday"
+          },
+          "pools": {
+            "items": {
+              "$ref": "#/components/schemas/QueuePoolHealth"
+            },
+            "title": "Pools",
+            "type": "array"
+          },
+          "windows_24h": {
+            "$ref": "#/components/schemas/WindowFallbacks"
+          }
+        },
+        "required": [
+          "generated_at",
+          "pools",
+          "deliveries_due",
+          "windows_24h",
+          "model_budget_today"
+        ],
+        "title": "QueueHealth",
+        "type": "object"
+      },
+      "QueuePoolHealth": {
+        "additionalProperties": false,
+        "properties": {
+          "due": {
+            "title": "Due",
+            "type": "integer"
+          },
+          "leased": {
+            "title": "Leased",
+            "type": "integer"
+          },
+          "oldest_due_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Due Seconds"
+          },
+          "pool": {
+            "enum": [
+              "operational",
+              "ai"
+            ],
+            "title": "Pool",
+            "type": "string"
+          },
+          "scheduled": {
+            "title": "Scheduled",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pool",
+          "due",
+          "scheduled",
+          "leased",
+          "oldest_due_seconds"
+        ],
+        "title": "QueuePoolHealth",
         "type": "object"
       },
       "ReasonCommand": {
@@ -12143,6 +12613,58 @@
           "title"
         ],
         "title": "VerifiedSource",
+        "type": "object"
+      },
+      "WindowFallbacks": {
+        "additionalProperties": false,
+        "description": "Окна чатов, разобранные за 24 часа.",
+        "properties": {
+          "budget": {
+            "title": "Budget",
+            "type": "integer"
+          },
+          "by_model": {
+            "title": "By Model",
+            "type": "integer"
+          },
+          "by_rules_overload_or_budget": {
+            "title": "By Rules Overload Or Budget",
+            "type": "integer"
+          },
+          "provider_overload": {
+            "title": "Provider Overload",
+            "type": "integer"
+          },
+          "share_rules_overload_or_budget": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Rules Overload Or Budget"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "watchdog": {
+            "title": "Watchdog",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "by_model",
+          "by_rules_overload_or_budget",
+          "watchdog",
+          "budget",
+          "provider_overload",
+          "share_rules_overload_or_budget"
+        ],
+        "title": "WindowFallbacks",
         "type": "object"
       },
       "WorkAttemptCreate": {
@@ -23522,6 +24044,236 @@
           }
         ],
         "summary": "Request House",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/house-management-requests/batch": {
+      "post": {
+        "description": "Список до 200 адресов → заявки на дома (D5); результат по каждому адресу.",
+        "operationId": "request_houses_batch_api_v1_companies__company_id__house_management_requests_batch_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 8,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HouseBatchCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseBatchSubmitted"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Houses Batch",
         "tags": [
           "administration"
         ]
@@ -39389,6 +40141,208 @@
           }
         },
         "summary": "Platform Requests",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/platform/house-management-requests/approve-batch": {
+      "post": {
+        "description": "Одобрить выбранные заявки на дома одним действием с одним регионом (D5).",
+        "operationId": "approve_houses_batch_api_v1_platform_house_management_requests_approve_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HouseBatchApproval"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseBatchApproved"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Approve Houses Batch",
         "tags": [
           "administration"
         ]

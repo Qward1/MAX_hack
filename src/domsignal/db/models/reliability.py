@@ -4,7 +4,17 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -44,6 +54,21 @@ class Job(Base):
     __tablename__ = "jobs"
     __table_args__ = (
         Index("ix_jobs_claim", "status", "next_attempt_at", "priority", "created_at"),
+        # D5: выборка задачи пула без просмотра выполненных (ReliabilityRepository.claim_job).
+        Index(
+            "ix_jobs_claim_pool",
+            text("starts_with(kind, 'ai.')"),
+            "priority",
+            "created_at",
+            postgresql_where=text("status IN ('pending', 'leased')"),
+        ),
+        # D5: периодическая очистка выполненных и упавших задач.
+        Index(
+            "ix_jobs_done_completed",
+            "status",
+            "completed_at",
+            postgresql_where=text("status IN ('succeeded', 'failed')"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)

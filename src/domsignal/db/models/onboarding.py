@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -117,7 +117,17 @@ class EmployeeInvitation(Timestamps, Base):
 
 class HouseManagementRequest(ReviewFields, Base):
     __tablename__ = "house_management_requests"
-    __table_args__ = (CheckConstraint(f"status IN ({REVIEW_STATUSES})", name="status"),)
+    __table_args__ = (
+        CheckConstraint(f"status IN ({REVIEW_STATUSES})", name="status"),
+        # D5: адрес из заявки УК переносится в заявку на дом один раз.
+        Index(
+            "uq_house_requests_application_address",
+            "source_application_id",
+            "normalized_address",
+            unique=True,
+            postgresql_where=text("source_application_id IS NOT NULL"),
+        ),
+    )
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("management_companies.id"), index=True)
     requested_address: Mapped[str] = mapped_column(String(500))
@@ -128,6 +138,10 @@ class HouseManagementRequest(ReviewFields, Base):
     submitted_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     management_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("house_managements.id"), unique=True
+    )
+    # D5: заявка создана из адресов одобренной заявки УК (дома пачкой).
+    source_application_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("company_onboarding_requests.id")
     )
 
 

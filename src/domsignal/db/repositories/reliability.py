@@ -12,6 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from domsignal.db.models import IdempotencyRecord, InboxReceipt, Job, OutboxMessage
 from domsignal.worker.pools import AI_KIND_PREFIX, WorkerPool
 
+#: Условия выборки задачи — дословно как у частичного индекса
+#: `ix_jobs_claim_pool` (D5). Константы в тексте запроса, а не параметры:
+#: иначе обобщённый план подготовленного запроса не докажет условие индекса.
+CLAIMABLE = text("jobs.status IN ('pending', 'leased')")
+AI_POOL = text(f"starts_with(jobs.kind, '{AI_KIND_PREFIX}')")
+OPERATIONAL_POOL = text(f"NOT starts_with(jobs.kind, '{AI_KIND_PREFIX}')")
+
 
 def stable_hash(payload: dict[str, Any]) -> str:
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -125,20 +132,16 @@ class ReliabilityRepository:
         задача незнакомого вида не досталась бы ни одному пулу и осталась бы в
         очереди навсегда вместо честного отказа.
         """
-        ai_kind = Job.kind.startswith(AI_KIND_PREFIX, autoescape=True)
         job = await self.session.scalar(
             select(Job)
             .where(
+                CLAIMABLE,
                 Job.next_attempt_at <= now,
                 or_(
                     Job.status == "pending",
                     (Job.status == "leased") & (Job.lease_until < now),
                 ),
-                *(
-                    ()
-                    if pool is None
-                    else (ai_kind if pool == "ai" else ~ai_kind,)
-                ),
+                *(() if pool is None else (AI_POOL if pool == "ai" else OPERATIONAL_POOL,)),
             )
             .order_by(Job.priority, Job.created_at)
             .with_for_update(skip_locked=True)

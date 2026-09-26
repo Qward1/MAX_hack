@@ -311,6 +311,68 @@ class HouseRequestView(ContractModel):
     created_at: datetime
     management_id: UUID | None
     history: list[AuditView] = Field(default_factory=list)
+    #: D5: заявка создана из адресов одобренной заявки УК.
+    source_application_id: UUID | None = None
+
+
+#: D5: сколько адресов принимает одна пачка (вставка списка, одобрение).
+HOUSE_BATCH_LIMIT = 200
+
+
+class HouseBatchCreate(PlainInput):
+    """Список адресов от администратора УК (D5, аудит Р-1): каждый — заявка на дом.
+
+    Квота остаётся на чатах: заявка на дом слот не расходует.
+    """
+
+    addresses: list[Annotated[str, Field(min_length=5, max_length=500)]] = Field(
+        min_length=1, max_length=HOUSE_BATCH_LIMIT
+    )
+    requested_valid_from: AwareDatetime
+    basis_text: Plain
+
+    @field_validator("addresses", mode="before")
+    @classmethod
+    def plain_addresses(cls, value: object) -> object:
+        if isinstance(value, list):
+            cleaned = [plain_line(item) if isinstance(item, str) else item for item in value]
+            return [item for item in cleaned if item != ""]
+        return value
+
+
+HouseBatchSubmitOutcome = Literal["created", "duplicate", "already_open", "already_managed"]
+
+
+class HouseBatchSubmitItem(ContractModel):
+    address: str
+    outcome: HouseBatchSubmitOutcome
+    request_id: UUID | None = None
+
+
+class HouseBatchSubmitted(ContractModel):
+    created: int
+    skipped: int
+    items: list[HouseBatchSubmitItem]
+
+
+HouseBatchApproveOutcome = Literal[
+    "approved", "already_approved", "conflict", "not_found", "failed"
+]
+
+
+class HouseBatchDecision(ContractModel):
+    request_id: UUID
+    outcome: HouseBatchApproveOutcome
+    message: str | None = None
+    house_id: UUID | None = None
+    management_id: UUID | None = None
+
+
+class HouseBatchApproved(ContractModel):
+    approved: int
+    already_approved: int
+    failed: int
+    items: list[HouseBatchDecision]
 
 
 class HouseRegionChoice(ContractModel):
@@ -336,6 +398,18 @@ class HouseApproval(ReviewDecision, HouseRegionChoice):
         if (self.resolution == "existing") != (self.house_id is not None):
             raise ValueError("Choose an explicit existing house or create a new house")
         return self
+
+
+class HouseBatchApproval(ReviewDecision, HouseRegionChoice):
+    """Одобрить выбранные заявки на дома одним действием с одним регионом (D5).
+
+    Дом выбирается как при одиночном одобрении, но без вопросов: найденный по
+    адресу при подаче или существующий с тем же адресом — иначе новый.
+    """
+
+    request_ids: list[UUID] = Field(min_length=1, max_length=HOUSE_BATCH_LIMIT)
+    valid_from: AwareDatetime
+    confirm_backdate: bool = False
 
 
 class ChatSummary(ContractModel):

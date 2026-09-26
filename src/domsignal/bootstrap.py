@@ -38,6 +38,8 @@ from domsignal.services.followups import TICK_JOB as FOLLOWUP_TICK_JOB
 from domsignal.services.followups import FollowupService
 from domsignal.services.group_messages import MaxWebhookService
 from domsignal.services.house_zone import HouseZones
+from domsignal.services.job_cleanup import TICK_JOB as JOB_CLEANUP_TICK_JOB
+from domsignal.services.job_cleanup import JobCleanup
 from domsignal.services.membership import MembershipService
 from domsignal.services.my_activity import MyActivityService
 from domsignal.services.navigator import NavigatorService
@@ -242,7 +244,11 @@ def build_ai(
 
 
 def build_container(settings: Settings) -> Container:
-    engine = create_engine(settings.database_url)
+    engine = create_engine(
+        settings.database_url,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+    )
     session_factory = create_session_factory(engine)
     transport: MaxTransport
     if settings.max_transport is MaxTransportMode.RECORDING:
@@ -401,6 +407,8 @@ def build_container(settings: Settings) -> Container:
             FOLLOWUP_TICK_JOB: followups.tick,
             DIGEST_TICK_JOB: digest.tick,
             RECEPTION_TICK_JOB: reception.tick,
+            # D5: очистка выполненных и упавших задач очереди.
+            JOB_CLEANUP_TICK_JOB: JobCleanup(session_factory).tick,
         },
     )
     return Container(

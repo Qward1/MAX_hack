@@ -2013,3 +2013,55 @@ production — она же (SITE-ENTRY); `/login` — единый вход;
 `python -m domsignal.tools.platform_ops rename-house | rename-company |
 open-access | dismiss-signal | cancel-ticket` — с `--operator` и `--reason`,
 квитанция `operator.platform_ops` с прежним и новым значением.
+
+## Масштаб по нагрузке и регионам — срез D5
+
+Аддитивно; решения — [QUEUE-SCALE](decisions.md#queue-scale-2026-09-27),
+[BULK-HOUSES](decisions.md#bulk-houses-2026-09-27),
+[REGION-PACK-NEW](decisions.md#region-pack-new-2026-09-27). Миграция
+`20260929_0015`.
+
+### Дома пачкой
+
+| Метод | Путь | Кто | Что |
+|---|---|---|---|
+| POST | `/api/v1/companies/{c}/house-management-requests/batch` | администратор УК, `Idempotency-Key` | `HouseBatchCreate` (`addresses[]` до 200, `requested_valid_from`, `basis_text`) → 201 `HouseBatchSubmitted`: `created`, `skipped`, `items[]` с `outcome` = `created` \| `duplicate` \| `already_open` \| `already_managed` |
+| POST | `/api/v1/platform/house-management-requests/approve-batch` | платформа | `HouseBatchApproval` (`request_ids[]` до 200, регион, муниципалитет, территория, `valid_from`, `confirm_backdate`, `reason`) → `HouseBatchApproved`: `approved`, `already_approved`, `failed`, `items[]` с `outcome` = `approved` \| `already_approved` \| `conflict` \| `not_found` \| `failed`, `house_id`, `management_id`, `message` |
+
+Одобрение пачкой — то же `decide_house`, что у одиночного одобрения, в точке
+сохранения на каждую заявку: регион не из справочника — 422 на всю пачку;
+прошлая дата без подтверждения — 409; пересечение периода управления и иное
+решение по заявке — `conflict` у этой заявки, остальные одобряются. Дом —
+найденный по адресу при подаче, иначе существующий с тем же адресом, иначе
+новый. Повтор с тем же регионом — `already_approved`.
+
+При одобрении заявки УК адреса из неё (`house_addresses`) становятся заявками
+на дома: `HouseRequestView.source_application_id` — id заявки УК; пара
+«заявка УК + адрес» уникальна. Квота остаётся на чатах.
+
+### Обзор платформы
+
+`PlatformDashboard.queue: QueueHealth | null` — `pools[]` (`operational` / `ai`:
+`due`, `scheduled`, `leased`, `oldest_due_seconds`), `deliveries_due`,
+`windows_24h` (`total`, `by_model`, `by_rules_overload_or_budget`, `watchdog`,
+`budget`, `provider_overload`, `share_rules_overload_or_budget`),
+`model_budget_today` (`used`, `limit`, `share`).
+`PlatformDashboard.directory: DirectoryPackReadiness[]` — по пакету: `pack`,
+`name`, `version`, `timezone`, `verified`, `needs_verification`, `stale`
+(проверено больше 180 дней назад), `unavailable_channels`.
+
+### Воркер и окружение
+
+`AI_WORKER_CONCURRENCY` (1; не больше `LLM_MAX_CONCURRENCY` при модели),
+`OPERATIONAL_WORKER_CONCURRENCY` (1), `DB_POOL_SIZE` (5), `DB_MAX_OVERFLOW`
+(10). Циклов не больше, чем соединений пула минус одно, — иначе ошибка старта.
+Периодическая задача `jobs.cleanup` (раз в час): выполненные задачи старше
+14 дней, упавшие — старше 30, пачками по 2 000.
+
+### Инструменты
+
+`python -m domsignal.tools.region_pack new RU-XX --name … --timezone …
+--municipality код:Название` — каркас `regions/RU-XX/responsibility.yaml`.
+`scripts/load_ingest.py`, `scripts/load_worker.py`, `scripts/scenario_run.py`,
+`deploy/load/compose.load.yaml` — нагрузочные прогоны и сквозные сценарии на
+своей БД.

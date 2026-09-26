@@ -103,6 +103,66 @@ class PlatformTotals(ContractModel):
     houses_without_region: int = 0
 
 
+class QueuePoolHealth(ContractModel):
+    pool: Literal["operational", "ai"]
+    #: Ожидают и уже пора выполнять.
+    due: int
+    #: Отложены на будущее (периодические задачи, тихие часы, повторы).
+    scheduled: int
+    #: Взяты воркером в работу.
+    leased: int
+    #: Сколько секунд ждёт самая старая задача из тех, что пора выполнять.
+    oldest_due_seconds: float | None
+
+
+class WindowFallbacks(ContractModel):
+    """Окна чатов, разобранные за 24 часа."""
+
+    total: int
+    by_model: int
+    #: Правилами из-за перегрузки или бюджета: сторож (модель не успела),
+    #: исчерпанный бюджет, переполненный семафор или открытый предохранитель.
+    by_rules_overload_or_budget: int
+    watchdog: int
+    budget: int
+    provider_overload: int
+    share_rules_overload_or_budget: float | None
+
+
+class ModelBudgetToday(ContractModel):
+    """Дневной бюджет вызовов модели (сутки UTC, счётчик PostgreSQL)."""
+
+    used: int
+    limit: int
+    share: float | None
+
+
+class QueueHealth(ContractModel):
+    """Здоровье очереди задач (D5): только агрегаты."""
+
+    generated_at: datetime
+    pools: list[QueuePoolHealth]
+    #: Доставки в MAX, которые пора отправить или поправить.
+    deliveries_due: int
+    windows_24h: WindowFallbacks
+    model_budget_today: ModelBudgetToday
+
+
+class DirectoryPackReadiness(ContractModel):
+    """Готовность пакета справочника (D5, аудит Р-3)."""
+
+    pack: str
+    name: str
+    version: str
+    timezone: str | None
+    verified: int
+    needs_verification: int
+    #: Проверенные записи старше порога актуальности (180 дней).
+    stale: int
+    #: Каналы, недоступные в этом регионе (`unavailable_regions`).
+    unavailable_channels: list[str]
+
+
 class PlatformDashboard(ContractModel):
     period_days: PeriodDays
     generated_at: datetime
@@ -113,6 +173,10 @@ class PlatformDashboard(ContractModel):
     activity: list[DayActivity]
     model: ModelUsage
     delivery: DeliveryTotals
+    #: D5: очередь задач и доля окон, ушедших правилам.
+    queue: QueueHealth | None = None
+    #: D5: готовность справочника по пакетам.
+    directory: list[DirectoryPackReadiness] = Field(default_factory=list)
 
 
 class CategoryCount(ContractModel):

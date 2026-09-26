@@ -4,6 +4,7 @@ import { Feedback, History, OneTimeLink, Status, Title, dateInput, formValue, su
 import { QuotaMeter } from "./charts";
 import { PlatformOverview } from "./Dashboards";
 import { Mailings } from "./CommunityPages";
+import { BatchApprove } from "./HouseBatch";
 
 const navigation: Record<string, string> = { overview: "Обзор", applications: "Заявки УК", "quota-requests": "Запросы квоты", companies: "Организации",
   "house-management-requests": "Заявки на дома", houses: "Дома", "binding-disputes": "Спорные MAX-привязки", health: "Состояние системы", audit: "Аудит",
@@ -99,8 +100,12 @@ function HouseReview() {
   const [offset, setOffset] = useState(0);
   const r = useRead<Schema["HouseRequestView"][]>(`/api/v1/platform/house-management-requests?offset=${offset}`);
   const [selected, select] = useState<string | null>(null);
+  const packs = useRead<Schema["RegionPackView"][]>("/api/v1/platform/region-packs");
   return <><Title description="Выберите физический дом явно. Пересекающиеся периоды управления недопустимы.">Заявки на дома</Title>
-    <Feedback loading={r.loading} error={r.error} /><ul className="admin-records">{r.data?.map(a => <li key={a.id}>
+    <Feedback loading={r.loading} error={r.error} />
+    {r.data && <BatchApprove requests={r.data} packs={packs.data} refresh={r.refresh}
+      regionFields={(region, onRegion) => <RegionFields packs={packs.data} region={region} onRegion={onRegion} />} />}
+    <ul className="admin-records">{r.data?.map(a => <li key={a.id}>
       <button className="record-link" onClick={() => select(a.id)}>{a.requested_address}</button><Status value={a.status} />
       <span>С {formatDay(a.requested_valid_from)}</span></li>)}</ul>
     <Pages offset={offset} set={setOffset} count={r.data?.length ?? 0} />

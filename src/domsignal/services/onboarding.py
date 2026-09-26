@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from domsignal.contracts.onboarding import (
+    HOUSE_BATCH_LIMIT,
     AdminBootstrap,
     ApplicationMessageView,
     ApplicationView,
@@ -30,6 +31,12 @@ from domsignal.contracts.onboarding import (
     CompanyOverview,
     CompanyView,
     HouseApproval,
+    HouseBatchApproval,
+    HouseBatchApproved,
+    HouseBatchCreate,
+    HouseBatchDecision,
+    HouseBatchSubmitItem,
+    HouseBatchSubmitted,
     HouseRegionChange,
     HouseRequestCreate,
     HouseRequestView,
@@ -76,6 +83,7 @@ from domsignal.services.employee_auth import EmployeeAuthService
 from domsignal.services.errors import (
     AccessDenied,
     AuthenticationRequired,
+    FieldValidationError,
     IdempotencyConflict,
     ResourceNotFound,
     ServiceError,
@@ -199,6 +207,19 @@ def current_management() -> tuple[ColumnElement[bool], ...]:
         HouseManagement.valid_from <= now,
         or_(HouseManagement.valid_to.is_(None), HouseManagement.valid_to > now),
     )
+
+
+def normalize_address(address: str) -> str:
+    """Адрес для сравнения: регистр и пробелы не различаются."""
+    return " ".join(address.casefold().split())
+
+
+async def candidate_house(db: AsyncSession, normalized: str) -> UUID | None:
+    """Существующий дом с тем же адресом — подсказка платформе, не решение."""
+    house: UUID | None = await db.scalar(
+        select(House.id).where(func.lower(House.address) == normalized)
+    )
+    return house
 
 
 async def require_company(
@@ -486,6 +507,8 @@ class AdministrationService:
                 # первого администратора по-прежнему передаёт платформа.
                 invitation = await self.issue_invitation(db, company.id, "company_admin", None)
             audit(db, "company.created", actor, company.id)
+            # D5 (аудит Р-1): адреса из заявки становятся заявками на дома.
+            await self.import_application_addresses(db, row, actor)
         await db.flush()
         application = await self.application(db, obj)
         return (
@@ -794,8 +817,8 @@ class AdministrationService:
             if old.request_hash != fingerprint:
                 raise IdempotencyConflict("Ключ уже использован")
             return await self.house_request(db, UUID(old.response_body["id"]))
-        normalized = " ".join(payload.requested_address.casefold().split())
-        candidate = await db.scalar(select(House.id).where(func.lower(House.address) == normalized))
+        normalized = normalize_address(payload.requested_address)
+        candidate = await candidate_house(db, normalized)
         row = HouseManagementRequest(
             **payload.model_dump(),
             normalized_address=normalized,
@@ -815,6 +838,194 @@ class AdministrationService:
             response_body={"id": str(row.id)},
         )
         return await self.house_request(db, row.id)
+
+    async def import_application_addresses(
+        self, db: AsyncSession, row: CompanyOnboardingRequest, actor: UUID
+    ) -> int:
+        """Адреса одобренной заявки УК → заявки на дома (D5). Повтор ничего не дублирует."""
+        if row.company_id is None:
+            return 0
+        known = set(
+            await db.scalars(
+                select(HouseManagementRequest.normalized_address).where(
+                    HouseManagementRequest.source_application_id == row.id
+                )
+            )
+        )
+        now = datetime.now(UTC)
+        created = 0
+        for address in list(row.house_addresses or [])[:HOUSE_BATCH_LIMIT]:
+            normalized = normalize_address(address)
+            if len(normalized) < 5 or normalized in known:
+                continue
+            known.add(normalized)
+            request = HouseManagementRequest(
+                company_id=row.company_id,
+                requested_address=address.strip(),
+                normalized_address=normalized,
+                requested_valid_from=now,
+                basis_text=f"Адрес из заявки УК «{row.short_name}»",
+                submitted_by_user_id=actor,
+                candidate_house_id=await candidate_house(db, normalized),
+                source_application_id=row.id,
+            )
+            db.add(request)
+            await db.flush()
+            audit(db, "house_request.submitted", actor, request.id, "Адрес из заявки УК")
+            created += 1
+        return created
+
+    async def submit_houses_batch(
+        self, db: AsyncSession, actor: UUID, company: UUID, payload: HouseBatchCreate, key: str
+    ) -> HouseBatchSubmitted:
+        """Список адресов администратора УК → заявки на дома, результат по каждому."""
+        await authority_lock(db, exclusive=True)
+        await require_company(db, actor, company)
+        repo = ReliabilityRepository(db)
+        action, fingerprint = (
+            f"house.batch:{company}",
+            stable_hash(payload.model_dump(mode="json")),
+        )
+        old = await repo.idempotency_record(actor_id=actor, action=action, key=key)
+        if old:
+            if old.request_hash != fingerprint:
+                raise IdempotencyConflict("Ключ уже использован")
+            return HouseBatchSubmitted.model_validate(old.response_body)
+        open_requests = set(
+            await db.scalars(
+                select(HouseManagementRequest.normalized_address).where(
+                    HouseManagementRequest.company_id == company,
+                    HouseManagementRequest.status.in_(("submitted", "under_review", "needs_info")),
+                )
+            )
+        )
+        managed = {
+            normalize_address(address)
+            for address in await db.scalars(
+                select(House.address)
+                .join(HouseManagement, HouseManagement.house_id == House.id)
+                .where(HouseManagement.tenant_id == company, *current_management())
+            )
+        }
+        seen: set[str] = set()
+        items: list[HouseBatchSubmitItem] = []
+        for address in payload.addresses:
+            normalized = normalize_address(address)
+            if normalized in seen:
+                items.append(HouseBatchSubmitItem(address=address, outcome="duplicate"))
+                continue
+            seen.add(normalized)
+            if normalized in managed:
+                items.append(HouseBatchSubmitItem(address=address, outcome="already_managed"))
+                continue
+            if normalized in open_requests:
+                items.append(HouseBatchSubmitItem(address=address, outcome="already_open"))
+                continue
+            row = HouseManagementRequest(
+                company_id=company,
+                requested_address=address,
+                normalized_address=normalized,
+                requested_valid_from=payload.requested_valid_from,
+                basis_text=payload.basis_text,
+                submitted_by_user_id=actor,
+                candidate_house_id=await candidate_house(db, normalized),
+            )
+            db.add(row)
+            await db.flush()
+            audit(db, "house_request.submitted", actor, row.id, "Список адресов")
+            items.append(
+                HouseBatchSubmitItem(address=address, outcome="created", request_id=row.id)
+            )
+        created = sum(1 for item in items if item.outcome == "created")
+        result = HouseBatchSubmitted(created=created, skipped=len(items) - created, items=items)
+        repo.add_idempotency(
+            actor_id=actor,
+            action=action,
+            key=key,
+            request_hash=fingerprint,
+            response_status=201,
+            response_body=result.model_dump(mode="json"),
+        )
+        return result
+
+    async def approve_houses_batch(
+        self,
+        db: AsyncSession,
+        actor: UUID,
+        payload: HouseBatchApproval,
+        regions: ResponsibilityDirectory | None,
+    ) -> HouseBatchApproved:
+        """Одобрить выбранные заявки одним действием: результат по каждому дому.
+
+        Каждая заявка — своя точка сохранения: отказ одной (пересечение периода
+        управления, иное решение) не отменяет остальные. Повтор с тем же
+        регионом идемпотентен — «уже одобрена».
+        """
+        await authority_lock(db, exclusive=True)
+        await require_platform(db, actor)
+        check_choice(regions, payload.region_code, payload.municipality_code)
+        if (
+            payload.valid_from < datetime.now(UTC) - timedelta(days=1)
+            and not payload.confirm_backdate
+        ):
+            raise AdministrationConflict("Для прошлой даты нужно явное подтверждение и основание")
+        items: list[HouseBatchDecision] = []
+        for request_id in dict.fromkeys(payload.request_ids):
+            row = await db.get(HouseManagementRequest, request_id)
+            if row is None:
+                items.append(
+                    HouseBatchDecision(
+                        request_id=request_id, outcome="not_found", message="Заявка не найдена"
+                    )
+                )
+                continue
+            before = row.status
+            house = row.candidate_house_id or await db.scalar(
+                select(House.id).where(House.address == row.requested_address)
+            )
+            approval = HouseApproval(
+                reason=payload.reason,
+                region_code=payload.region_code,
+                municipality_code=payload.municipality_code,
+                territory_policy=payload.territory_policy,
+                resolution="existing" if house else "new",
+                house_id=house,
+                valid_from=payload.valid_from,
+                confirm_backdate=payload.confirm_backdate,
+            )
+            try:
+                async with db.begin_nested():
+                    view = await self.decide_house(
+                        db, request_id, actor, "approved", payload.reason, approval, regions
+                    )
+            except (AdministrationConflict, FieldValidationError) as exc:
+                items.append(
+                    HouseBatchDecision(request_id=request_id, outcome="conflict", message=str(exc))
+                )
+                continue
+            except ServiceError as exc:
+                items.append(
+                    HouseBatchDecision(request_id=request_id, outcome="failed", message=str(exc))
+                )
+                continue
+            management = (
+                await db.get(HouseManagement, view.management_id) if view.management_id else None
+            )
+            items.append(
+                HouseBatchDecision(
+                    request_id=request_id,
+                    outcome="already_approved" if before == "approved" else "approved",
+                    house_id=management.house_id if management else None,
+                    management_id=view.management_id,
+                )
+            )
+        audit(db, "house_request.batch_approved", actor, actor, payload.reason)
+        return HouseBatchApproved(
+            approved=sum(1 for item in items if item.outcome == "approved"),
+            already_approved=sum(1 for item in items if item.outcome == "already_approved"),
+            failed=sum(1 for item in items if item.outcome in {"conflict", "not_found", "failed"}),
+            items=items,
+        )
 
     async def house_request(self, db: AsyncSession, obj: UUID) -> HouseRequestView:
         row = await db.get(HouseManagementRequest, obj)

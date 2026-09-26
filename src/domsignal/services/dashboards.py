@@ -39,6 +39,7 @@ from domsignal.contracts.dashboards import (
     PlatformDashboard,
     PlatformTotals,
 )
+from domsignal.core.responsibility import ResponsibilityDirectory
 from domsignal.db.models import (
     Broadcast,
     ChatBinding,
@@ -55,6 +56,7 @@ from domsignal.services.broadcasts import poll_closed, tally
 from domsignal.services.chat_quota import quota_state
 from domsignal.services.house_zone import HouseZones
 from domsignal.services.onboarding import OPEN, current_management, require_company
+from domsignal.services.queue_health import directory_readiness, queue_health
 
 TIMEZONE = "Europe/Moscow"
 CATEGORY_LABELS = {
@@ -96,9 +98,15 @@ def _count_map(rows: Any) -> dict[Any, int]:
 
 
 class DashboardService:
-    def __init__(self, daily_call_budget: int, zones: HouseZones | None = None) -> None:
+    def __init__(
+        self,
+        daily_call_budget: int,
+        zones: HouseZones | None = None,
+        directory: ResponsibilityDirectory | None = None,
+    ) -> None:
         self.daily_call_budget = daily_call_budget
         self.zones = zones or HouseZones(None)
+        self.directory = directory
 
     # --- платформа ----------------------------------------------------------------
 
@@ -115,6 +123,8 @@ class DashboardService:
             activity=await self._activity(db, day_list, params),
             model=await self._model(db, day_list, params),
             delivery=await self._delivery(db, params),
+            queue=await queue_health(db, daily_call_budget=self.daily_call_budget),
+            directory=directory_readiness(self.directory),
         )
 
     async def _totals(self, db: AsyncSession) -> PlatformTotals:

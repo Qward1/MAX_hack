@@ -1,0 +1,49 @@
+# Изолированный нагрузочный стек (D5, прогон Д): своя БД, свои тома, портов
+# наружу нет. Модель — фейк с задержкой P6, MAX — записывающий двойник:
+# внешние сервисы не вызываются. Production-стек (domsignal-prod) не трогается.
+#
+# Лимиты оставляют живому сервису на 4 vCPU / 8 ГБ не меньше 1 vCPU и 2 ГБ:
+# стек берёт не больше 3 vCPU и 4 ГБ.
+#
+#   LOAD_ARGS="--chats 1000 ..." docker compose -p domsignal-load \
+#     -f deploy/load/compose.load.yaml up --abort-on-container-exit runner
+#   docker compose -p domsignal-load -f deploy/load/compose.load.yaml down -v
+name: domsignal-load
+
+services:
+  db:
+    image: postgres:16.10-bookworm
+    environment:
+      POSTGRES_DB: domsignal_load
+      POSTGRES_USER: domsignal
+      POSTGRES_PASSWORD: domsignal-load-only
+    cpus: 1.0
+    mem_limit: 1536m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U domsignal -d domsignal_load"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - load-db:/var/lib/postgresql/data
+
+  runner:
+    image: domsignal-load:d5
+    working_dir: /work
+    command: ["sh", "-c", "/app/.venv/bin/python scripts/load_ingest.py $$LOAD_ARGS --out /out/result.json --i-own-this-database > /out/stdout.json 2> /out/stderr.log"]
+    environment:
+      APP_ENV: test
+      DATABASE_URL: postgresql+asyncpg://domsignal:domsignal-load-only@db:5432/domsignal_load
+      PYTHONIOENCODING: utf-8
+      LOAD_ARGS: ${LOAD_ARGS:?set LOAD_ARGS}
+    cpus: 2.0
+    mem_limit: 2560m
+    volumes:
+      - ../..:/work:ro
+      - ${LOAD_OUT:-./out}:/out
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  load-db:

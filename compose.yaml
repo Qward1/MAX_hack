@@ -38,6 +38,9 @@ services:
       PASSIVE_CHAT_MEMO_PAUSE_MINUTES: ${PASSIVE_CHAT_MEMO_PAUSE_MINUTES:-30}
       PASSIVE_ANALYSIS_FALLBACK_SECONDS: ${PASSIVE_ANALYSIS_FALLBACK_SECONDS:-90}
       DISPLAY_TIMEZONE: ${DISPLAY_TIMEZONE:-Europe/Moscow}
+      # D5: пул соединений на процесс; процессы × (размер + запас) ≤ max_connections.
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-10}
       PUBLIC_BASE_URL: http://localhost:${API_PORT:-8000}
       CORS_ORIGINS: http://localhost:5173,http://localhost:${API_PORT:-8000}
     depends_on:
@@ -78,6 +81,8 @@ services:
       <<: *backend-environment
       # `/version` личного бота отвечает из операционного пула (D1).
       BUILD_COMMIT: ${BUILD_COMMIT:-dev}
+      # D5: параллельные циклы операционного пула в процессе.
+      OPERATIONAL_WORKER_CONCURRENCY: ${OPERATIONAL_WORKER_CONCURRENCY:-1}
     depends_on:
       db:
         condition: service_healthy
@@ -88,13 +93,19 @@ services:
       disable: true
 
   # Нагрузка модели изолирована: её отказ не задерживает доставку уведомлений и
-  # жизненный цикл заявки, которые остаются в операционном пуле. Одна реплика:
-  # предохранитель и семафор провайдера живут в процессе.
+  # жизненный цикл заявки, которые остаются в операционном пуле. Предохранитель
+  # и семафор провайдера живут в процессе; параллельный разбор — циклы внутри
+  # процесса (AI_WORKER_CONCURRENCY ≤ LLM_MAX_CONCURRENCY) или ещё процессы
+  # (`--scale ai-worker=N`), бюджет общий в PostgreSQL. Остановка ждёт конца
+  # начатого вызова модели.
   ai-worker:
     image: domsignal-backend:local
     pull_policy: never
     command: ["python", "-m", "domsignal.worker.main", "--pool", "ai"]
-    environment: *backend-environment
+    stop_grace_period: 45s
+    environment:
+      <<: *backend-environment
+      AI_WORKER_CONCURRENCY: ${AI_WORKER_CONCURRENCY:-1}
     depends_on:
       db:
         condition: service_healthy
