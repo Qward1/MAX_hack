@@ -29,6 +29,7 @@ from domsignal.services.broadcasts import BroadcastService
 from domsignal.services.chat_connections import ChatConnectionService
 from domsignal.services.chat_settings import ChatSettingsService
 from domsignal.services.company_signup import notify_digest
+from domsignal.services.council import CouncilService
 from domsignal.services.digest import TICK_JOB as DIGEST_TICK_JOB
 from domsignal.services.digest import DigestService
 from domsignal.services.explicit_reports import ExplicitReportService
@@ -108,6 +109,8 @@ class Container:
     ai_timeout_seconds: float | None = None
     #: Пояс дома и УК из пакета региона (D4).
     zones: HouseZones | None = None
+    #: Совет дома и предложения жителей (D4).
+    council: CouncilService | None = None
 
     @property
     def ai_analysis_enabled(self) -> bool:
@@ -445,4 +448,5 @@ def build_container(settings: Settings) -> Container:
         ai_provider=ai.provider,
         ai_timeout_seconds=ai.timeout_seconds,
         zones=zones,
+        council=CouncilService(broadcasts),
     )

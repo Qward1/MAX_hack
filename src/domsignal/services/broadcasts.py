@@ -72,6 +72,7 @@ from domsignal.db.models import (
     BroadcastHouse,
     ChatBinding,
     House,
+    HouseCouncilMember,
     HouseManagement,
     HouseRoutingProfile,
     ManagementCompany,
@@ -135,6 +136,8 @@ MIN_POLL_OPEN = timedelta(minutes=10)
 SEND_PERMISSION = "broadcast.send"
 COMPANY_CHANNELS = frozenset({"chat", "dm", "feed"})
 PLATFORM_CHANNELS = frozenset({"chat", "staff"})
+#: Совет дома (D4) пишет только в чат своего дома и в ленту «Объявления».
+COUNCIL_CHANNELS = frozenset({"chat", "feed"})
 
 # Причины пропуска доставки (статистика и предпросмотр).
 SKIP_CHAT_SETTING = "CHAT_SETTING_OFF"
@@ -220,12 +223,41 @@ class BroadcastService:
             admin=membership.role == "company_admin",
         )
 
+    async def council_scope(
+        self, session: AsyncSession, *, actor_id: UUID, house_id: UUID
+    ) -> Scope:
+        """Совет дома (D4): действующий член совета и житель этого дома, дом под УК."""
+        member = await session.scalar(
+            select(HouseCouncilMember.id).where(
+                HouseCouncilMember.house_id == house_id,
+                HouseCouncilMember.user_id == actor_id,
+                HouseCouncilMember.status == "active",
+            )
+        )
+        if member is None:
+            raise AccessDenied("Писать от совета дома может только член совета")
+        context = await self.memberships.require_house(
+            session, user_id=actor_id, house_id=house_id
+        )
+        self.memberships.require_permission(context, "report.create")
+        tenant = context.tenant_id.value
+        rows = await self._managed_houses(session, [tenant]) if tenant else []
+        if not any(house.id == house_id for house, _, _ in rows):
+            raise AccessDenied("Дом не под управлением действующей УК")
+        return Scope(origin="council", company_id=tenant, house_ids=frozenset({house_id}))
+
     async def _scope_for(
         self, session: AsyncSession, broadcast: Broadcast, actor_id: UUID
     ) -> Scope:
         if broadcast.origin == "platform":
             await require_platform(session, actor_id)
             return Scope(origin="platform", company_id=None)
+        if broadcast.origin == "council":
+            houses = BroadcastAudience.model_validate(broadcast.audience).house_ids
+            try:
+                return await self.council_scope(session, actor_id=actor_id, house_id=houses[0])
+            except (AccessDenied, IndexError):
+                raise ResourceNotFound("Ресурс не найден") from None
         assert broadcast.tenant_id is not None
         try:
             return await self.company_scope(
@@ -385,7 +417,7 @@ class BroadcastService:
         audience = BroadcastAudience.model_validate(broadcast.audience)
         channels = set(broadcast.channels)
         plan = Plan()
-        if broadcast.origin == "company":
+        if broadcast.origin in {"company", "council"}:
             assert broadcast.tenant_id is not None
             candidates = await self._managed_houses(session, [broadcast.tenant_id])
             if not scope.admin:
@@ -702,14 +734,18 @@ class BroadcastService:
     # ============================================================ кабинет: команды
 
     def _validate(self, payload: BroadcastCreate, origin: str) -> None:
-        allowed = COMPANY_CHANNELS if origin == "company" else PLATFORM_CHANNELS
+        allowed = {
+            "company": COMPANY_CHANNELS,
+            "council": COUNCIL_CHANNELS,
+        }.get(origin, PLATFORM_CHANNELS)
         if any(channel not in allowed for channel in payload.channels):
             raise FieldValidationError("Этот канал недоступен для сообщения", field="channels")
         if origin == "platform" and payload.kind == "poll":
             raise FieldValidationError("Опросы проводят управляющие компании", field="kind")
-        modes = (
-            {"all", "houses", "filter"} if origin == "company" else {"all", "companies", "region"}
-        )
+        modes = {
+            "company": {"all", "houses", "filter"},
+            "council": {"houses"},
+        }.get(origin, {"all", "companies", "region"})
         if payload.audience.mode not in modes:
             raise FieldValidationError("Такой выбор аудитории недоступен", field="audience")
         if payload.poll is not None and payload.poll.closes_at <= datetime.now(UTC) + MIN_POLL_OPEN:
@@ -723,17 +759,25 @@ class BroadcastService:
         company_id: UUID | None,
         payload: BroadcastCreate,
         idempotency_key: str,
+        council_house_id: UUID | None = None,
     ) -> BroadcastView:
-        """Черновик. `company_id` пуст — сообщение платформы. Транзакция — у вызывающего."""
+        """Черновик. `company_id` пуст — сообщение платформы; `council_house_id` —
+        совета дома (D4). Транзакция — у вызывающего."""
         origin = "company" if company_id is not None else "platform"
-        if company_id is not None:
+        if council_house_id is not None:
+            origin = "council"
+            scope = await self.council_scope(
+                session, actor_id=actor_id, house_id=council_house_id
+            )
+            company_id = scope.company_id
+        elif company_id is not None:
             scope = await self.company_scope(session, actor_id=actor_id, company_id=company_id)
         else:
             await require_platform(session, actor_id)
             scope = Scope(origin="platform", company_id=None)
         self._validate(payload, origin)
         reliability = ReliabilityRepository(session)
-        action = f"broadcast.create:{company_id or 'platform'}"
+        action = f"broadcast.create:{council_house_id or company_id or 'platform'}"
         digest = stable_hash(payload.model_dump(mode="json"))
         await reliability.lock_idempotency(actor_id=actor_id, action=action, key=idempotency_key)
         receipt = await reliability.idempotency_record(
