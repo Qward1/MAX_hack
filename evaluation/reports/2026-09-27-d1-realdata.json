@@ -1,0 +1,512 @@
+{
+  "generated": "2026-09-26",
+  "dedupe": {
+    "exports_read": 4,
+    "same_chat_reexports_skipped": 2,
+    "chats": 2
+  },
+  "labels": {
+    "observed": "наблюдение",
+    "rules": "оценка правилами, без разметки людьми"
+  },
+  "chats": [
+    {
+      "chat": 1,
+      "format": "telegram",
+      "label": "наблюдение",
+      "messages": 25488,
+      "authors": 432,
+      "calendar_days": 2043,
+      "active_days": 1560,
+      "reply_share": 0.3257,
+      "messages_per_day": {
+        "calendar": {
+          "p50": 4.0,
+          "p90": 33.0,
+          "p99": 117.0
+        },
+        "calendar_mean": 12.48,
+        "active_day": {
+          "p50": 7.0,
+          "p90": 40.0,
+          "p99": 128.0
+        },
+        "max": 268
+      },
+      "windows": {
+        "policy": {
+          "silence_seconds": 30,
+          "max_lines": 6,
+          "max_age_seconds": 300,
+          "close_on_danger": true
+        },
+        "total": 19700,
+        "per_day_calendar": {
+          "p50": 4.0,
+          "p90": 26.0,
+          "p99": 78.0
+        },
+        "per_day_calendar_mean": 9.64,
+        "per_day_active": {
+          "p50": 6.0,
+          "p90": 32.0,
+          "p99": 84.0
+        },
+        "per_day_max": 149,
+        "lines_per_window_mean": 1.29,
+        "lines_per_window_share": {
+          "1": 0.8299,
+          "2": 0.109,
+          "3": 0.0296,
+          "4": 0.0124,
+          "5": 0.0069,
+          "6": 0.0122
+        }
+      },
+      "hours": {
+        "timezone": "Europe/Moscow",
+        "share_by_hour": [
+          0.0261,
+          0.0063,
+          0.0034,
+          0.0026,
+          0.0024,
+          0.0011,
+          0.0028,
+          0.009,
+          0.0187,
+          0.0299,
+          0.0481,
+          0.0567,
+          0.0598,
+          0.076,
+          0.0686,
+          0.0614,
+          0.0515,
+          0.0485,
+          0.0677,
+          0.0671,
+          0.0682,
+          0.0825,
+          0.0861,
+          0.0551
+        ],
+        "peak_hour": 22,
+        "peak_hour_share_of_all": 0.0861,
+        "busiest_hour_share_of_day": {
+          "p50": 0.5,
+          "p90": 1.0
+        },
+        "busiest_hour_share_of_day_20plus": {
+          "p50": 0.382,
+          "p90": 0.657
+        },
+        "days_20plus_messages": 370
+      },
+      "intervals_s": {
+        "all": {
+          "p10": 12.0,
+          "p25": 33.0,
+          "p50": 123.0,
+          "p75": 1151.0,
+          "p90": 10252.0,
+          "p99": 137027.0
+        },
+        "within_window": {
+          "p10": 3.0,
+          "p25": 8.0,
+          "p50": 14.0,
+          "p75": 22.0,
+          "p90": 27.0
+        },
+        "share_within_30s": 0.2371
+      },
+      "bursts": {
+        "per_minute_active": {
+          "p50": 1.0,
+          "p90": 2.0,
+          "p99": 4.0
+        },
+        "per_minute_max": 10,
+        "per_10min_active": {
+          "p50": 1.0,
+          "p90": 5.0,
+          "p99": 15.0
+        },
+        "per_10min_max": 48
+      },
+      "rules": {
+        "label": "оценка правилами, без разметки людьми",
+        "danger_per_1000": {
+          "active": 16.01,
+          "displaced_only": 0.08,
+          "negated_only": 2.75
+        },
+        "memo_eligible_messages": 48,
+        "memos_with_30min_pause": 36,
+        "memos_per_month": 0.54,
+        "operator_alerts_per_month": 6.08
+      },
+      "model": {
+        "label": "оценка правилами, без разметки людьми",
+        "note": "в production каждое закрытое окно — один вызов модели, фильтра до модели нет",
+        "windows_per_month": 293.5,
+        "rub_per_month": {
+          "p6_window_v2": 16.1,
+          "p6c_window_v3": 23.8
+        },
+        "recall_gate_windows_share": 0.1758,
+        "rub_per_month_if_gate": {
+          "p6_window_v2": 2.8,
+          "p6c_window_v3": 4.2
+        }
+      },
+      "routes": {
+        "label": "оценка правилами, без разметки людьми",
+        "windows_with_rule_signal": 1202,
+        "windows_with_rule_signal_share": 0.061,
+        "signals": 1269,
+        "subtypes_top": {
+          "other.unspecified": 548,
+          "water.leak": 160,
+          "heating.cold_radiators": 90,
+          "water.hot_outage": 88,
+          "water.supply_outage": 84,
+          "lighting.stairwell": 72,
+          "elevator.stopped": 39,
+          "waste.container_site": 24,
+          "entrance_door.broken": 24,
+          "cleaning.stairwell": 23,
+          "waste.chute": 20,
+          "external_network.outage": 15,
+          "roof.leak": 14,
+          "power.grid_outage": 11,
+          "water.quality": 10
+        },
+        "route_types": {
+          "uk_internal": 652,
+          "emergency_service": 343,
+          "unknown": 257,
+          "resource_supplier": 17
+        },
+        "outside_uk_share_of_routed": 0.3557,
+        "unknown_share": 0.2025,
+        "house_profile": "RU-TA / kazan / mixed, УК подключена"
+      }
+    },
+    {
+      "chat": 2,
+      "format": "whatsapp",
+      "label": "наблюдение",
+      "messages": 9096,
+      "authors": 177,
+      "calendar_days": 2929,
+      "active_days": 581,
+      "reply_share": 0.0,
+      "messages_per_day": {
+        "calendar": {
+          "p50": 0.0,
+          "p90": 7.0,
+          "p99": 63.0
+        },
+        "calendar_mean": 3.11,
+        "active_day": {
+          "p50": 7.0,
+          "p90": 37.0,
+          "p99": 122.0
+        },
+        "max": 216
+      },
+      "windows": {
+        "policy": {
+          "silence_seconds": 30,
+          "max_lines": 6,
+          "max_age_seconds": 300,
+          "close_on_danger": true
+        },
+        "total": 6628,
+        "per_day_calendar": {
+          "p50": 0.0,
+          "p90": 6.0,
+          "p99": 42.0
+        },
+        "per_day_calendar_mean": 2.26,
+        "per_day_active": {
+          "p50": 6.0,
+          "p90": 26.0,
+          "p99": 84.0
+        },
+        "per_day_max": 129,
+        "lines_per_window_mean": 1.37,
+        "lines_per_window_share": {
+          "1": 0.7912,
+          "2": 0.1251,
+          "3": 0.0421,
+          "4": 0.0177,
+          "5": 0.0098,
+          "6": 0.0142
+        }
+      },
+      "hours": {
+        "timezone": "местное время телефона",
+        "share_by_hour": [
+          0.0121,
+          0.0027,
+          0.0002,
+          0.0003,
+          0.0012,
+          0.003,
+          0.0047,
+          0.0152,
+          0.0331,
+          0.0628,
+          0.0629,
+          0.082,
+          0.077,
+          0.0618,
+          0.0585,
+          0.0508,
+          0.0569,
+          0.0678,
+          0.0878,
+          0.0595,
+          0.0754,
+          0.0563,
+          0.0476,
+          0.0203
+        ],
+        "peak_hour": 18,
+        "peak_hour_share_of_all": 0.0878,
+        "busiest_hour_share_of_day": {
+          "p50": 0.567,
+          "p90": 1.0
+        },
+        "busiest_hour_share_of_day_20plus": {
+          "p50": 0.413,
+          "p90": 0.75
+        },
+        "days_20plus_messages": 130
+      },
+      "intervals_s": {
+        "all": {
+          "p10": 7.0,
+          "p25": 25.0,
+          "p50": 96.0,
+          "p75": 938.0,
+          "p90": 10381.0,
+          "p99": 157791.0
+        },
+        "within_window": {
+          "p10": 1.0,
+          "p25": 4.0,
+          "p50": 12.0,
+          "p75": 20.0,
+          "p90": 26.0
+        },
+        "share_within_30s": 0.2822
+      },
+      "bursts": {
+        "per_minute_active": {
+          "p50": 1.0,
+          "p90": 2.0,
+          "p99": 5.0
+        },
+        "per_minute_max": 13,
+        "per_10min_active": {
+          "p50": 1.0,
+          "p90": 5.0,
+          "p99": 16.0
+        },
+        "per_10min_max": 33
+      },
+      "rules": {
+        "label": "оценка правилами, без разметки людьми",
+        "danger_per_1000": {
+          "active": 13.74,
+          "displaced_only": 0.11,
+          "negated_only": 2.09
+        },
+        "memo_eligible_messages": 16,
+        "memos_with_30min_pause": 11,
+        "memos_per_month": 0.11,
+        "operator_alerts_per_month": 1.3
+      },
+      "model": {
+        "label": "оценка правилами, без разметки людьми",
+        "note": "в production каждое закрытое окно — один вызов модели, фильтра до модели нет",
+        "windows_per_month": 68.9,
+        "rub_per_month": {
+          "p6_window_v2": 3.8,
+          "p6c_window_v3": 5.6
+        },
+        "recall_gate_windows_share": 0.2901,
+        "rub_per_month_if_gate": {
+          "p6_window_v2": 1.1,
+          "p6c_window_v3": 1.6
+        }
+      },
+      "routes": {
+        "label": "оценка правилами, без разметки людьми",
+        "windows_with_rule_signal": 544,
+        "windows_with_rule_signal_share": 0.0821,
+        "signals": 570,
+        "subtypes_top": {
+          "other.unspecified": 220,
+          "water.leak": 105,
+          "lighting.stairwell": 41,
+          "heating.cold_radiators": 39,
+          "water.hot_outage": 38,
+          "water.supply_outage": 29,
+          "waste.chute": 17,
+          "entrance_door.broken": 15,
+          "cleaning.stairwell": 14,
+          "waste.container_site": 9,
+          "water.pressure": 7,
+          "power.grid_outage": 6,
+          "elevator.stopped": 6,
+          "external_network.outage": 6,
+          "water.quality": 5
+        },
+        "route_types": {
+          "uk_internal": 330,
+          "unknown": 143,
+          "emergency_service": 95,
+          "resource_supplier": 2
+        },
+        "outside_uk_share_of_routed": 0.2272,
+        "unknown_share": 0.2509,
+        "house_profile": "RU-TA / kazan / mixed, УК подключена"
+      }
+    }
+  ],
+  "labeling": {
+    "label": "разметка ИИ-агентом по маскированным текстам, не людьми",
+    "sample": {
+      "chats": 2,
+      "random_windows": 200,
+      "danger_stratum_windows": 60,
+      "policy": "тишина 30 с, до 6 реплик, 300 с, опасность закрывает окно",
+      "seed": 20260927
+    },
+    "problem_share_of_windows": {
+      "k": 25,
+      "n": 200,
+      "share": 0.125,
+      "ci95": [
+        0.0861,
+        0.178
+      ]
+    },
+    "problem_lines_per_window": {
+      "mean": 1.28,
+      "multi_line_share": {
+        "k": 3,
+        "n": 25,
+        "share": 0.12,
+        "ci95": [
+          0.0417,
+          0.2996
+        ]
+      }
+    },
+    "problem_authors_per_window": {
+      "mean": 1.12,
+      "multi_author_share": {
+        "k": 2,
+        "n": 25,
+        "share": 0.08,
+        "ci95": [
+          0.0222,
+          0.2497
+        ]
+      }
+    },
+    "incidents_in_sample": {
+      "incidents": 45,
+      "windows_per_incident_max": 7,
+      "incidents_with_2plus_windows": 7
+    },
+    "outside_uk_share": {
+      "k": 4,
+      "n": 23,
+      "share": 0.1739,
+      "ci95": [
+        0.0698,
+        0.3714
+      ]
+    },
+    "addressee_counts": {
+      "uk": 19,
+      "unclear": 2,
+      "rso": 3,
+      "emergency": 1
+    },
+    "official_appeal_share": {
+      "k": 3,
+      "n": 25,
+      "share": 0.12,
+      "ci95": [
+        0.0417,
+        0.2996
+      ]
+    },
+    "status_question_share": {
+      "k": 2,
+      "n": 25,
+      "share": 0.08,
+      "ci95": [
+        0.0222,
+        0.2497
+      ]
+    },
+    "rules_quality": {
+      "label": "правила продукта без модели против разметки агента",
+      "problem_precision": {
+        "k": 9,
+        "n": 12,
+        "share": 0.75,
+        "ci95": [
+          0.4677,
+          0.9111
+        ]
+      },
+      "problem_recall": {
+        "k": 9,
+        "n": 25,
+        "share": 0.36,
+        "ci95": [
+          0.2025,
+          0.5548
+        ]
+      },
+      "subtype_match": {
+        "k": 17,
+        "n": 24,
+        "share": 0.7083,
+        "ci95": [
+          0.5083,
+          0.8509
+        ]
+      },
+      "danger_alert_false_share": {
+        "k": 41,
+        "n": 63,
+        "share": 0.6508,
+        "ci95": [
+          0.5275,
+          0.7567
+        ]
+      },
+      "memo_false_share": {
+        "k": 27,
+        "n": 46,
+        "share": 0.587,
+        "ci95": [
+          0.4434,
+          0.7171
+        ]
+      }
+    }
+  },
+  "source": "evaluation/d5_realdata.py и evaluation/d5_labeling.py, локально; тексты не выводятся"
+}

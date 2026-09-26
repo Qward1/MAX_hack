@@ -1,0 +1,21 @@
+{
+  "calls": 142,
+  "max_calls": 200,
+  "max_rub": 13.5,
+  "rub": 7.737812,
+  "runs": {
+    "d5-provider-c1": {
+      "calls": 22,
+      "rub": 1.10403
+    },
+    "d5-provider-c4": {
+      "calls": 60,
+      "rub": 3.013623
+    },
+    "d5-provider-c8": {
+      "calls": 60,
+      "rub": 3.620159
+    }
+  },
+  "unknown_cost_calls": 0
+}
