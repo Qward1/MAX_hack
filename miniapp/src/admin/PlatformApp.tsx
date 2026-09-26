@@ -1,4 +1,4 @@
-import { formatStaffTime, formatDay } from "../shared/ui/format";
+import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
 import { useState } from "react";
 import { Feedback, History, OneTimeLink, Status, Title, dateInput, formValue, submitted, useAction, useRead, useRoute, type Schema } from "./administration";
 import { QuotaMeter } from "./charts";
@@ -145,7 +145,7 @@ function PlatformCompanies() {
   const [selected, select] = useState<string | null>(null);
   return <><Title>Организации</Title><Feedback loading={r.loading} error={r.error} /><ul className="admin-records">{r.data?.map(c => <li key={c.id}>
     <button className="record-link" onClick={() => select(c.id)}>{c.name}</button><Status value={c.status} />
-    <span>{c.house_count} домов · {c.employee_count} сотрудников · {c.binding_problems} проблем MAX</span></li>)}</ul>
+    <span>{countLabel(c.house_count, ["дом", "дома", "домов"])} · {countLabel(c.employee_count, ["сотрудник", "сотрудника", "сотрудников"])} · {countLabel(c.binding_problems, ["проблема с MAX", "проблемы с MAX", "проблем с MAX"])}</span></li>)}</ul>
     <Pages offset={offset} set={setOffset} count={r.data?.length ?? 0} />
     {selected && <PlatformCompany key={selected} id={selected} refresh={r.refresh} />}</>;
 }

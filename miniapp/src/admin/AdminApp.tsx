@@ -252,19 +252,27 @@ export function AdminApp({ client = ticketClient, embedded = false, companyId }:
           </>
         ) : session.error ? (
           <TicketState error={session.error} retry={refresh} />
-        ) : ticket && wide ? (
-          <div className="split">
-            <section className="split-list" aria-label="Очередь заявок">
-              {queue}
-            </section>
-            <section className="split-detail" aria-label="Заявка">
-              {detail}
-            </section>
-          </div>
-        ) : ticket ? (
-          detail
         ) : (
-          queue
+          // Одна структура при любой ширине: смена «широкий/узкий» не пересоздаёт
+          // деталь заявки и не закрывает открытый диалог действия.
+          <div className={ticket && wide ? "split" : undefined}>
+            {(!ticket || wide) && (
+              <section
+                className={ticket && wide ? "split-list" : undefined}
+                aria-label={ticket && wide ? "Очередь заявок" : undefined}
+              >
+                {queue}
+              </section>
+            )}
+            {ticket && (
+              <section
+                className={wide ? "split-detail" : undefined}
+                aria-label={wide ? "Заявка" : undefined}
+              >
+                {detail}
+              </section>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -307,10 +315,10 @@ function HouseQueue({
         {data && <span className="ds-meta">{countLabel(data.tickets.page.total, TICKETS)}</span>}
       </div>
       {!data ? (
-        <TicketState loading={resource.loading} error={resource.error} retry={resource.refresh} />
+        <TicketState loading={resource.loading} error={resource.error} retry={resource.refresh} missing="Очередь этого дома больше недоступна: управление домом или ваше назначение изменились." />
       ) : (
         <>
-          {Boolean(resource.error) && <TicketState error={resource.error} retry={resource.refresh} />}
+          {Boolean(resource.error) && <TicketState error={resource.error} retry={resource.refresh} missing="Очередь этого дома больше недоступна: управление домом или ваше назначение изменились." />}
           {resource.stale && (
             <div className="refresh-notice" role="status">
               <span>Данные могли измениться.</span>

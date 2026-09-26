@@ -1,4 +1,4 @@
-import { formatStaffTime, formatDay } from "../shared/ui/format";
+import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
 import { useState } from "react";
 import { Feedback, History, OneTimeLink, Status, Title, connectionErrors, dateInput, formValue, submitted, useAction, useRead, type Schema } from "./administration";
 import { QuotaMeter } from "./charts";
@@ -104,7 +104,7 @@ export function MyHouses({ base }: { base: string }) {
 export function HouseList({ houses, manage }: { houses: House[]; manage?: { base: string; refresh: () => void } }) {
   return houses.length ? <div className="house-cards">{houses.map(h => <section className="admin-detail" key={h.management_id}>
     <h2>{h.address}</h2><p>Управление с {formatDay(h.valid_from)}{h.valid_to && ` до ${formatDay(h.valid_to)}`}</p>
-    <p>{h.open_ticket_count} открытых заявок · {h.operator_count} операторов · {h.responsible_count} ответственных</p>
+    <p>{countLabel(h.open_ticket_count, ["открытая заявка", "открытые заявки", "открытых заявок"])} · {countLabel(h.operator_count, ["оператор", "оператора", "операторов"])} · {countLabel(h.responsible_count, ["ответственный", "ответственных", "ответственных"])}</p>
     {h.warning && <p className="admin-feedback">{h.warning}</p>}
     <h3>Подключение MAX</h3>{!h.bindings.length && <p className="muted">Чат пока не подключён</p>}
     {h.bindings.map(b => <p key={b.id}>{b.title ?? "MAX-чат"} · <Status value={b.status} />{b.suspension_reason && ` · ${b.suspension_reason}`}
@@ -150,7 +150,7 @@ export function CompanyHouses({ base }: { base: string }) {
   const [key, setKey] = useState(() => crypto.randomUUID());
   const action = useAction(requests.refresh);
   return <><Title description="Действующее управление и заявки на подключение домов">Дома</Title>
-    <button className="ticket-button" onClick={() => setShow(!show)}>Запросить управление домом</button>
+    <div className="button-row"><button className="ticket-button" aria-expanded={show} onClick={() => setShow(!show)}>Запросить управление домом</button></div>
     {show && <form className="ticket-form admin-detail" onSubmit={async e => {
       const data = submitted(e);
       const result = await action.run(`${base}/house-management-requests`, { requested_address: formValue(data, "address"),

@@ -62,8 +62,15 @@ describe("состояния экрана", () => {
 describe("проверка ответов", () => {
   it("«Изменить» стоит у пункта и называет, что меняет", () => {
     const change = vi.fn();
-    render(<CheckAnswers items={[{ label: "Категория", value: "Лифт", change }, { label: "Место", value: "Подъезд 2" }]} />);
-    fireEvent.click(screen.getByRole("button", { name: "Изменить: категория" }));
+    render(
+      <CheckAnswers
+        items={[
+          { label: "Категория", value: "Лифт", change, changeLabel: "категорию" },
+          { label: "Место", value: "Подъезд 2" },
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Изменить категорию" }));
     expect(change).toHaveBeenCalledOnce();
     expect(screen.getAllByRole("button")).toHaveLength(1);
   });

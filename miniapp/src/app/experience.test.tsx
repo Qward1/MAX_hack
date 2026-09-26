@@ -75,8 +75,7 @@ describe("board/detail experience", () => {
       render(<App client={client} />);
       await screen.findByText(house.address);
       vi.mocked(client.incidents).mockRejectedValueOnce(error(status));
-      fireEvent(document, new Event("visibilitychange"));
-      fireEvent.click(await screen.findByRole("button", { name: "Обновить" }));
+      fireEvent.click(screen.getByRole("button", { name: "Обновить" }));
       await waitFor(() => expect(screen.queryByText(house.address)).toBeNull());
       expect(screen.queryByText("PRIVATE")).toBeNull();
       expect(screen.queryByRole("button", { name: "Повторить" })).toBeNull();
@@ -95,8 +94,7 @@ describe("board/detail experience", () => {
     render(<App client={client} />);
     await screen.findByText(house.address);
     vi.mocked(client.incidents).mockRejectedValueOnce(error(503));
-    fireEvent(document, new Event("visibilitychange"));
-      fireEvent.click(await screen.findByRole("button", { name: "Обновить" }));
+    fireEvent.click(screen.getByRole("button", { name: "Обновить" }));
     expect(await screen.findByText(/Показаны данные, загруженные раньше/)).toBeTruthy();
     expect(screen.getByRole("link", { name: new RegExp(incident.title) })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Повторить" }));
@@ -370,7 +368,7 @@ describe("route card and appeal draft navigation", () => {
     const client = apiWith();
     vi.mocked(client.routeOutcome).mockRejectedValue(error(404));
     render(<App client={client} />);
-    await screen.findByText("Не нашли эту страницу");
+    await screen.findByText("Карточка «Куда обратиться» не найдена");
     expect(screen.queryByText(actionCard.title)).toBeNull();
     expect(screen.queryByText("PRIVATE")).toBeNull();
   });

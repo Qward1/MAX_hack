@@ -110,7 +110,7 @@ describe("report flow", () => {
   it("changing the category returns to the manual choice and sends it with the report", async () => {
     const { client } = show();
     await describeProblem();
-    fireEvent.click(screen.getByRole("button", { name: /Изменить: категория/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Изменить категорию/ }));
     const select = await screen.findByRole("combobox", { name: /Категория/ });
     expect((select.closest("details") as HTMLDetailsElement).open).toBe(true);
     // Текст не пропал: повторно вводить не нужно.
@@ -133,7 +133,9 @@ describe("report flow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Всё верно, отправить" }));
     await screen.findByRole("heading", { name: "Сообщение сохранено" });
     fireEvent.click(screen.getByRole("button", { name: "Подготовить текст обращения" }));
-    await waitFor(() => expect(onOpen).toHaveBeenCalledWith({ draft: expect.any(String) }));
+    await waitFor(() =>
+      expect(onOpen).toHaveBeenCalledWith({ draft: expect.any(String), card: expect.any(String) }),
+    );
     expect(client.createAppealDraft).toHaveBeenCalledWith({
       house_id: house.id,
       route_outcome_id: expect.any(String),

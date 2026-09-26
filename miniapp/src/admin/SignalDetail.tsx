@@ -61,10 +61,13 @@ export function SignalDetail({
   inPanel = false,
   navigate,
   openTicket,
+  onDecided,
 }: {
   client: SignalClient;
   id: string;
   backHref: string;
+  /** Решение сохранено — очередь рядом перечитывается. */
+  onDecided?: () => void;
   /** Следующий сигнал очереди — после решения к нему можно перейти сразу. */
   nextHref?: string | null;
   inPanel?: boolean;
@@ -110,6 +113,7 @@ export function SignalDetail({
       success: (_result, current) => {
         setForm(null);
         setDecided(true);
+        onDecided?.();
         return SUCCESS[code](current);
       },
       conflict: (error) =>

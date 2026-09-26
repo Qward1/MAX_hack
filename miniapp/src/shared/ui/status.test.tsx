@@ -49,7 +49,8 @@ describe("словарь статусов", () => {
     const { container } = render(<StatusTag entry={residentTicketStatus.verification_pending} />);
     const tag = screen.getByText("Ждёт проверки жителями");
     expect(tag.className).toContain("ds-tone-warning");
-    expect(container.textContent).toContain(TONE_MARK.warning);
+    expect(tag.getAttribute("data-mark")).toBe(TONE_MARK.warning);
+    expect(container.textContent).toBe("Ждёт проверки жителями");
     expect(container.querySelector("button, a, [role=button], [tabindex]")).toBeNull();
   });
 

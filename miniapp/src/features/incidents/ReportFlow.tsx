@@ -256,7 +256,7 @@ export function ReportFlow({
                     house_id: houseId,
                     route_outcome_id: result.route_outcome_id,
                   });
-                  onOpen({ draft: created.id });
+                  onOpen({ draft: created.id, card: result.route_outcome_id });
                 }),
               report_to_uk_anyway: () =>
                 void guard("сообщить в управляющую компанию", async () => {
@@ -336,8 +336,8 @@ export function ReportFlow({
     };
     const items = [
       ...(houseAddress ? [{ label: "Дом", value: houseAddress }] : []),
-      { label: "Описание", value: <span className="ds-prose">{text}</span>, change: change(false) },
-      { label: "Категория", value: categoryLabel(analysis.category), change: change(true) },
+      { label: "Описание", value: <span className="ds-prose">{text}</span>, change: change(false), changeLabel: "описание" },
+      { label: "Категория", value: categoryLabel(analysis.category), change: change(true), changeLabel: "категорию" },
       { label: "Место", value: locationScopeLabel(analysis.location_scope) },
       ...(analysis.entrance ? [{ label: "Подъезд", value: analysis.entrance }] : []),
       ...(analysis.floor ? [{ label: "Этаж", value: analysis.floor }] : []),

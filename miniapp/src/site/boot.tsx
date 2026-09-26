@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Landing } from "./Landing";
+import "../shared/styles/tokens.css";
 import "./site.css";
 
 /** Публичная страница продукта: `/site` и корень сайта в обычном браузере. */

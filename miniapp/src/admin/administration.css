@@ -19,7 +19,7 @@
 .assignment-row { display: flex; justify-content: space-between; gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--ds-line); align-items: center; }
 .assignment-row select { min-width: 180px; }.admin-history { padding-left: 22px; color: var(--ds-ink-2); }.admin-history li { padding: 8px; }
 .admin-history p { color: var(--ds-ink); white-space: pre-wrap; }.connection-row { padding: 20px 0; border-bottom: 1px solid var(--ds-line); }
-.connection-row button { margin: 4px; }.checkbox-label { display: flex !important; align-items: center; gap: 10px; }.checkbox-label input { width: auto; }
+.connection-row button { margin: 4px; }.checkbox-label { display: flex !important; align-items: center; gap: 10px; }.checkbox-label input { width: 20px; flex: none; }
 .ticket-workspace .page-header { margin-top: 20px; }.ticket-workspace-main { width: 100%; }
 .company-apply { display: grid; grid-template-columns: minmax(280px, 5fr) minmax(350px, 6fr); gap: 60px; max-width: 1120px; margin: 0 auto; padding: 60px 32px; }
 .company-apply > aside { padding-top: 20px; }.company-apply h1 { font-size: clamp(32px, 4vw, 48px); line-height: 1.12; font-weight: 650; letter-spacing: -.035em; }
@@ -42,7 +42,7 @@
 .status-steps li { position: relative; padding-left: 22px; color: var(--ds-ink-2); }
 .status-steps li::before { content: ""; position: absolute; left: 0; top: .4em; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ds-field); }
 .status-steps li.is-done { color: var(--ds-ink); font-weight: 600; }
-.status-steps li.is-done::before { background: var(--ds-action); border-color: var(--ds-action); }
+.status-steps li.is-done::before { background: var(--ds-action); border-color: var(--ds-accent); }
 .status-figure { font-size: 32px; font-weight: 650; letter-spacing: -.02em; }
 .message-list { list-style: none; padding: 0; display: grid; gap: 12px; }
 .message-list li { padding: 14px 16px; border-radius: 12px; background: var(--ds-surface-2); display: grid; gap: 4px; }
@@ -77,7 +77,7 @@
 .stat-tile dt { color: var(--ds-ink-2); font-size: 14px; }
 .stat-tile dd { margin: 6px 0 0; font-size: 30px; font-weight: 650; line-height: 1.1; }
 .stat-tile p, .stat-tile dd.stat-note { margin: 6px 0 0; font-size: 13px; font-weight: 400; line-height: 1.4; }
-.stat-link { font: inherit; color: var(--ds-action); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+.stat-link { font: inherit; color: var(--ds-accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
 .chart { margin: 0; background: var(--ds-surface); border: 1px solid var(--ds-line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 8px; min-width: 0; }
 .chart figcaption h3 { margin: 0; }
 .chart figcaption p { margin: 2px 0 0; font-size: 14px; }
@@ -98,7 +98,7 @@
 .chart-tooltip i { width: 12px; height: 2px; border-radius: 1px; display: inline-block; }
 .chart-tooltip b { color: var(--ds-ink); font-variant-numeric: tabular-nums; }
 .chart-empty { position: absolute; inset: 30% 0 auto; text-align: center; color: var(--ds-ink-2); font-size: 14px; margin: 0; }
-.chart-table summary { cursor: pointer; font-size: 14px; color: var(--ds-action); }
+.chart-table summary { cursor: pointer; font-size: 14px; color: var(--ds-accent); }
 .chart-table table, .data-table { border-collapse: collapse; width: 100%; font-size: 14px; }
 .chart-table :where(th, td), .data-table :where(th, td) { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--ds-line); vertical-align: top; }
 .chart-table td, .data-table td { font-variant-numeric: tabular-nums; }

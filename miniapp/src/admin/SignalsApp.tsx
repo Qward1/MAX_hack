@@ -48,6 +48,8 @@ export function SignalsApp({
   const wide = useWide();
   // Порядок очереди — чтобы после решения предложить следующий сигнал.
   const [order, setOrder] = useState<string[]>([]);
+  // Решение по сигналу сразу перечитывает очередь рядом, не дожидаясь опроса.
+  const [revision, setRevision] = useState(0);
   const navigate = useCallback((href: string, keepScroll = false) => {
     window.history.pushState(null, "", href);
     setLocation(window.location.href);
@@ -101,9 +103,9 @@ export function SignalsApp({
       inPanel={wide}
       navigate={(href) => navigate(href, false)}
       openTicket={openTicket}
+      onDecided={() => setRevision((value) => value + 1)}
     />
   );
-  if (signalId && !wide) return detail;
   const statuses = statusFilters.find(([id]) => id === status)?.[2] ?? [];
   const change = (values: Record<string, string>) => {
     const next = { house, status, strength, ...values };
@@ -118,7 +120,7 @@ export function SignalsApp({
   const queue = (
     <>
       {signalId ? (
-        <h2 className="ds-visually-hidden">Очередь сигналов</h2>
+        wide && <h2 className="ds-visually-hidden">Очередь сигналов</h2>
       ) : (
         <header className="page-header">
           <h1 id="page-title" tabIndex={-1}>
@@ -189,24 +191,30 @@ export function SignalsApp({
               current={signalId}
               open={openSignal}
               onOrder={setOrder}
+              revision={revision}
             />
           )}
         </>
       )}
     </>
   );
-  if (signalId)
-    return (
-      <div className="split">
-        <section className="split-list" aria-label="Очередь сигналов">
+  // Одна и та же структура при любой ширине: смена «широкий/узкий» (поворот,
+  // масштаб, снимок экрана) не пересоздаёт деталь и не теряет начатое решение.
+  const split = Boolean(signalId) && wide;
+  return (
+    <div className={split ? "split" : undefined}>
+      {(!signalId || wide) && (
+        <section className={split ? "split-list" : undefined} aria-label={split ? "Очередь сигналов" : undefined}>
           {queue}
         </section>
-        <section className="split-detail" aria-label="Сигнал">
+      )}
+      {signalId && (
+        <section className={split ? "split-detail" : undefined} aria-label={split ? "Сигнал" : undefined}>
           {detail}
         </section>
-      </div>
-    );
-  return queue;
+      )}
+    </div>
+  );
 }
 
 function SignalQueue({
@@ -219,6 +227,7 @@ function SignalQueue({
   current,
   open,
   onOrder,
+  revision,
 }: {
   client: SignalClient;
   house?: string;
@@ -229,6 +238,7 @@ function SignalQueue({
   current: string | null;
   open: (id: string) => void;
   onOrder: (ids: string[]) => void;
+  revision: number;
 }) {
   const [offset, setOffset] = useState(0);
   // Фильтры — строками: загрузчик стабилен, пока фильтры те же.
@@ -241,6 +251,10 @@ function SignalQueue({
   );
   const resource = useResource(`${house}:${offset}`, load);
   usePolling(resource.refresh);
+  // Перечитать, не стирая список: без мигания «Загружаем…».
+  useEffect(() => {
+    if (revision) resource.refresh();
+  }, [revision, resource.refresh]);
   const data = resource.data;
   const ids = data?.items.map((item) => item.id).join(",") ?? "";
   useEffect(() => {

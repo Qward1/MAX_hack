@@ -142,15 +142,20 @@ export function TicketState({
   error,
   retry,
   resident = false,
+  missing,
 }: {
   loading?: boolean;
   error?: unknown;
   retry?: () => void;
   resident?: boolean;
+  /** Что сказать при 403/404, если речь не об одной заявке (например, очередь дома). */
+  missing?: string;
 }) {
+  const status = problemStatus(error);
+  const text = missing && (status === 403 || status === 404) ? missing : safeError(error, false, resident);
   return (
     <div className={`ds-state ${loading ? "ds-state-loading" : "ds-state-error"}`} aria-busy={loading}>
-      <p role={loading ? "status" : "alert"}>{loading ? "Загружаем актуальные данные…" : safeError(error, false, resident)}</p>
+      <p role={loading ? "status" : "alert"}>{loading ? "Загружаем актуальные данные…" : text}</p>
       {loading && (
         <div className="ds-skeleton" aria-hidden="true">
           <span />

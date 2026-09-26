@@ -47,6 +47,10 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
   const [recovery, setRecovery] = useState(false);
   const [forbidden, setForbidden] = useState(false);
   const errorRef = useRef<HTMLParagraphElement>(null);
+  // Ошибка входа названа текстом у формы; фокус — на неё, введённое не стирается.
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
   // Вход сотрудника УК на странице платформы (живая проверка D3): не тупик
   // «доступ отозван», а переход в свой кабинет — по ролям с сервера.
   const [companyCabinet, setCompanyCabinet] = useState(false);
@@ -139,8 +143,6 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
       form.reset(); apply(next);
     } catch (e) {
       setError(loginError(e, state?.stage, recovery));
-      // Ошибка названа текстом у формы; фокус — на неё, введённое не стирается.
-      window.setTimeout(() => errorRef.current?.focus(), 0);
     }
     finally { setBusy(false); }
   };

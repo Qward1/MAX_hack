@@ -325,12 +325,26 @@ export function App({
     navigate,
   };
 
-  const topbar = (showBack: boolean, house?: string) => (
+  const topbar = (showBack: boolean, house?: string, refreshable = true) => (
     <div className="ds-topbar">
       <div className="ds-topbar-start">
         {showBack ? <BackLink onBack={back} /> : <span className="ds-brand">ДомСигнал</span>}
       </div>
-      {house && view !== "home" && <EmergencyLink href={routeUrl({ house, view: "home" })} navigate={navigate} />}
+      <div className="ds-topbar-end">
+        {refreshable && (
+          <button
+            type="button"
+            className="ds-icon-button"
+            aria-label="Обновить"
+            title="Обновить"
+            disabled={resource.loading}
+            onClick={resource.refresh}
+          >
+            <span aria-hidden="true">↻</span>
+          </button>
+        )}
+        {house && view !== "home" && <EmergencyLink href={routeUrl({ house, view: "home" })} navigate={navigate} />}
+      </div>
     </div>
   );
 
@@ -365,6 +379,17 @@ export function App({
           <ErrorPanel
             error={resource.error}
             subject={subject}
+            missing={
+              view
+                ? "Раздел не найден"
+                : cardId
+                  ? "Карточка «Куда обратиться» не найдена"
+                  : draftId
+                    ? "Черновик не найден"
+                    : incidentId
+                      ? "Проблема не найдена"
+                      : "Дом не найден"
+            }
             onRetry={resource.refresh}
             back={
               detail || problemStatus(resource.error) === 403 ? (
@@ -465,7 +490,7 @@ export function App({
     const house = data.house;
     return (
       <main className="app-shell">
-        {topbar(true, house.id)}
+        {topbar(true, house.id, false)}
         <ReportFlow
           key={house.id}
           houseId={house.id}
@@ -473,9 +498,20 @@ export function App({
           client={client}
           draft={reportDrafts.current.get(house.id)}
           onDraft={onDraft}
-          onOpen={(target) => navigate(routeUrl({ house: house.id, ...target }))}
+          // Форма — промежуточный шаг: переход из неё заменяет запись истории,
+          // и «Назад» из проблемы ведёт к списку, а не к пустой форме.
+          onOpen={(target) => {
+            // Черновик открывается поверх своей карточки «Куда обратиться»:
+            // «Назад» из черновика ведёт к ней, а не к пустой форме.
+            if (target.draft && target.card) {
+              navigate(routeUrl({ house: house.id, card: target.card }), { replace: true });
+              navigate(routeUrl({ house: house.id, draft: target.draft }));
+            } else navigate(routeUrl({ house: house.id, ...target }), { replace: true });
+          }}
           onCreated={() => undefined}
-          onBoard={() => navigate(routeUrl({ house: house.id }))}
+          onBoard={() =>
+            depth() > 0 ? window.history.back() : navigate(routeUrl({ house: house.id }), { replace: true })
+          }
         />
       </main>
     );
@@ -743,7 +779,7 @@ function SectionTabs({
             onClick={(event) => {
               if (event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
               event.preventDefault();
-              if (current !== target) navigate(href, { replace: true });
+              if (current !== target) navigate(href);
             }}
           >
             {label}
@@ -793,11 +829,14 @@ function RefreshNotice({
 function ErrorPanel({
   error,
   subject,
+  missing,
   onRetry,
   back,
 }: {
   error: unknown;
   subject: string;
+  /** Заголовок для 404: что именно не нашлось. */
+  missing: string;
   onRetry: () => void;
   back?: ReactNode;
 }) {
@@ -810,7 +849,7 @@ function ErrorPanel({
   const titles: Record<number, string> = {
     401: "Сессия MAX истекла",
     403: "Нет доступа к этому дому",
-    404: "Не нашли эту страницу",
+    404: missing,
     409: "Данные изменились",
     429: "Слишком много запросов",
   };

@@ -14,10 +14,8 @@ import { residentIncidentStatus, type StatusEntry, statusOf, TONE_MARK, type Ton
 /** Тег статуса: текст, знак и тон. Не кликабелен — это состояние, а не действие. */
 export function StatusTag({ entry }: { entry: StatusEntry }) {
   return (
-    <span className={`ds-tag ds-tone-${entry.tone}`}>
-      <span aria-hidden="true" className="ds-tag-mark">
-        {TONE_MARK[entry.tone]}
-      </span>
+    // Знак — из CSS (::before): он виден, но не входит ни в текст, ни в имя для экранного диктора.
+    <span className={`ds-tag ds-tone-${entry.tone}`} data-mark={TONE_MARK[entry.tone]}>
       {entry.label}
     </span>
   );
@@ -211,7 +209,8 @@ export function CheckAnswers({
           {item.change && (
             <dd className="ds-kv-change">
               <button type="button" className="ds-link-button" onClick={item.change}>
-                Изменить<span className="ds-visually-hidden">: {item.changeLabel ?? item.label.toLowerCase()}</span>
+                Изменить{" "}
+                <span className="ds-visually-hidden">{item.changeLabel ?? item.label.toLowerCase()}</span>
               </button>
             </dd>
           )}

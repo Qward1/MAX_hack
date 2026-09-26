@@ -412,12 +412,14 @@ html {
   font-weight: 400 !important;
 }
 .signal-choice input {
-  width: auto;
-  margin-top: 4px;
+  flex: none;
+  width: 20px;
+  margin-top: 2px;
 }
 .passive-switch {
   display: grid;
   gap: var(--ds-space-2);
+  justify-items: start;
   margin-top: var(--ds-space-2);
 }
 .signal-evidence {
@@ -554,6 +556,10 @@ html {
   .queue-table td {
     padding: 4px 12px;
     border: 0;
+  }
+  .queue-table .cell-when,
+  .queue-table .cell-id {
+    white-space: normal;
   }
   .queue-table td[data-label]::before {
     content: attr(data-label) ": ";

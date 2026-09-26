@@ -313,6 +313,13 @@ h1:focus-visible {
   font-weight: 400;
   cursor: pointer;
 }
+/* Флажок и переключатель — не меньше 20 px; целью служит вся подпись. */
+input[type="checkbox"],
+input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--ds-action);
+}
 .ds-choice input {
   width: 20px;
   height: 20px;
@@ -349,7 +356,9 @@ legend {
   color: var(--ds-ink);
   white-space: normal;
 }
-.ds-tag-mark {
+.ds-tag[data-mark]::before {
+  content: attr(data-mark);
+  content: attr(data-mark) / "";
   font-size: 0.85em;
   line-height: 1;
 }
@@ -415,16 +424,13 @@ legend {
   color: var(--ds-ink);
   overflow-wrap: anywhere;
 }
-.ds-notice.ds-tone-danger,
-.admin-feedback {
+.ds-notice.ds-tone-danger {
   border-inline-start-color: var(--ds-danger);
   background: var(--ds-danger-soft);
 }
+/* Подтверждения и отказы кабинета — тон предупреждения. */
+.ds-notice.ds-tone-warning,
 .admin-feedback {
-  border-inline-start-color: var(--ds-warning-line);
-  background: var(--ds-warning-soft);
-}
-.ds-notice.ds-tone-warning {
   border-inline-start-color: var(--ds-warning-line);
   background: var(--ds-warning-soft);
 }
@@ -821,6 +827,33 @@ details > summary {
   align-items: center;
   min-width: 0;
 }
+.ds-topbar-end {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  margin-inline-start: auto;
+}
+/* Кнопка-значок — только с доступным именем (aria-label) и целью 44 px. */
+.ds-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ds-target);
+  height: var(--ds-target);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-m);
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+.ds-icon-button:hover:not(:disabled) {
+  background: var(--ds-surface-2);
+}
+.ds-icon-button:disabled {
+  color: var(--ds-disabled-ink);
+  cursor: progress;
+}
 .ds-brand {
   font-weight: 650;
 }
@@ -830,7 +863,6 @@ details > summary {
   gap: 6px;
   min-height: var(--ds-target);
   padding: 0 var(--ds-space-3);
-  margin-inline-start: auto;
   border: 1px solid var(--ds-danger);
   border-radius: var(--ds-radius-m);
   color: var(--ds-danger);
@@ -845,7 +877,11 @@ details > summary {
 .ds-page-header h1 {
   max-width: 30ch;
 }
+.ds-page-header > * {
+  min-width: 0;
+}
 .ds-house-switch {
+  min-width: 0;
   display: grid;
   gap: var(--ds-space-1);
   font-size: var(--ds-text-small);
@@ -859,7 +895,10 @@ details > summary {
   background: var(--ds-surface);
   color: var(--ds-ink);
   font-size: var(--ds-text-body);
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
+  text-overflow: ellipsis;
 }
 /* Разделы верхнего уровня: текущий виден подчёркиванием и жирностью. */
 .ds-tabs {
