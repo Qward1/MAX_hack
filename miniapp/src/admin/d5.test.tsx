@@ -5,8 +5,9 @@ import { AddressListForm, BatchApprove, parseAddresses } from "./HouseBatch";
 
 afterEach(() => vi.restoreAllMocks());
 
-const posts = (request: ReturnType<typeof vi.spyOn>) =>
-  request.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === "POST") as [string, RequestInit][];
+function posts(request: { mock: { calls: unknown[][] } }): [string, RequestInit][] {
+  return request.mock.calls.filter(call => (call[1] as RequestInit | undefined)?.method === "POST") as [string, RequestInit][];
+}
 
 describe("D5: дома пачкой", () => {
   it("список адресов — по одному на строку, пустые строки пропускаются", () => {
