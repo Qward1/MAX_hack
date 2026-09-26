@@ -3,6 +3,7 @@ import { AdminApp } from "./AdminApp";
 import { SignalsApp } from "./SignalsApp";
 import { adminClient, Feedback, Title, useRoute, type Schema } from "./administration";
 import { useResource } from "../shared/api/useResource";
+import type { SignalList } from "../shared/api/signals";
 import { ChatConnections, CompanyHouses, MyHouses, Organization, Staff } from "./CompanyPages";
 import { CompanyOverview } from "./Dashboards";
 import { Mailings, Notices, ReceptionAdmin } from "./CommunityPages";
@@ -16,6 +17,69 @@ const paths: Record<string, string> = { overview: "", tickets: "tickets", signal
   mailings: "mailings", notices: "notices", reception: "reception" };
 // Очередь сигналов живёт в query-навигации, как заявки: ?section=signals&signal=<id>.
 const isSignalsRoute = (url: URL) => url.searchParams.get("section") === "signals" || url.searchParams.has("signal");
+const COUNTS_MS = 60000;
+
+type Counts = { signals?: number; critical?: number; tickets?: number };
+
+/**
+ * Счётчики задач в меню: новые сигналы (из них критические) и новые заявки.
+ * Это `page.total` настоящих запросов очереди, а не расчёт во frontend.
+ * Сбой счётчика не мешает работе — счётчик просто не показывается.
+ */
+function useQueueCounts(company: Context | undefined): Counts {
+  const [counts, setCounts] = useState<Counts>({});
+  const surfaces = company?.surfaces.join(",") ?? "";
+  useEffect(() => {
+    if (!company) return;
+    let active = true;
+    const controller = new AbortController();
+    const read = async () => {
+      const next: Counts = {};
+      try {
+        if (surfaces.includes("signals")) {
+          const list = await adminClient.request<SignalList>(
+            "/api/v1/signals?limit=1&offset=0&status=new&status=in_review&strength=critical&strength=strong&strength=medium",
+            { signal: controller.signal, silentAccess: true });
+          next.signals = list.page.total;
+          next.critical = list.attention.count;
+        }
+        if (surfaces.includes("tickets")) {
+          // Только дома, где у сотрудника есть рабочая роль: чужой дом — 403, а он сбросил бы сессию кабинета.
+          const [scoped, me] = await Promise.all([
+            adminClient.request<{ house_id: string }[]>(`/api/v1/companies/${company.company_id}/houses`,
+              { signal: controller.signal, silentAccess: true }),
+            adminClient.request<{ houses: { id: string; role: string }[] }>("/api/v1/me", { signal: controller.signal, silentAccess: true }),
+          ]);
+          const houses = scoped.filter(s => me.houses.some(h => h.id === s.house_id && h.role !== "resident"));
+          // Много домов — много запросов: счётчик только там, где это дёшево.
+          if (houses.length <= 12) {
+            const pages = await Promise.all(houses.map(h => adminClient.request<{ page: { total: number } }>(
+              `/api/v1/tickets?house_id=${encodeURIComponent(h.house_id)}&status=new&limit=1&offset=0`,
+              { signal: controller.signal, silentAccess: true })));
+            next.tickets = pages.reduce((sum, page) => sum + page.page.total, 0);
+          }
+        }
+      } catch {
+        /* Счётчик необязателен. */
+      }
+      if (active) setCounts(next);
+    };
+    void read();
+    const timer = window.setInterval(() => { if (document.visibilityState === "visible") void read(); }, COUNTS_MS);
+    const refresh = () => void read();
+    window.addEventListener("administration-refresh", refresh);
+    return () => { active = false; controller.abort(); window.clearInterval(timer); window.removeEventListener("administration-refresh", refresh); };
+  }, [company?.company_id, surfaces]);
+  return counts;
+}
+
+function NavCount({ id, value, danger, label }: { id: string; value?: number; danger?: number; label: string }) {
+  if (!value) return null;
+  return <>
+    <span className={`nav-count${danger ? " is-danger" : ""}`} aria-hidden="true">{value}</span>
+    <span id={id} className="ds-visually-hidden">{label}: {value}{danger ? `, критических: ${danger}` : ""}</span>
+  </>;
+}
 
 export function CompanyPortal() {
   const { url, navigate: go } = useRoute();
@@ -37,6 +101,7 @@ export function CompanyPortal() {
   const companies = bootstrap.error ? [] : bootstrap.data?.companies ?? [];
   const selector = url.searchParams.get("company");
   const selected = selector ? companies.find(c => c.company_id === selector) : companies.length === 1 ? companies[0] : undefined;
+  const counts = useQueueCounts(selected);
   const href = (surface: string, company = selected?.company_id) => {
     const query = new URLSearchParams(); if (company) query.set("company", company);
     const actor = url.searchParams.get("test_actor"); if (actor) query.set("test_actor", actor);
@@ -54,16 +119,24 @@ export function CompanyPortal() {
     : isSignalsRoute(url) ? "signals"
     : url.searchParams.has("ticket") || url.searchParams.has("house") || url.searchParams.has("filter") ? "tickets"
     : selected?.surfaces[0] ?? "tickets";
-  if (!selected) return <main className="admin-main"><Title>{companies.length ? "Выберите управляющую компанию" : "Нет доступной рабочей очереди"}</Title>
+  if (!selected) return <main className="admin-main auth-layout"><section className="auth-card">
+    <Title description={companies.length > 1 ? "Вы сотрудник нескольких управляющих компаний. Сменить компанию можно в меню кабинета." : undefined}>
+      {companies.length ? "Выберите управляющую компанию" : "Нет доступной рабочей очереди"}</Title>
     <Feedback loading={bootstrap.loading} error={bootstrap.error} />
-    {selector && !bootstrap.loading && <p role="alert">Выбранная организация недоступна.</p>}
-    {companies.length === 0 && !bootstrap.loading && <p>Активных назначений нет. Обратитесь к администратору вашей УК.</p>}
-    {companies.map(c => <button className="ticket-button" key={c.company_id} onClick={() => navigate(isSignalsRoute(url) && c.surfaces.includes("signals")
-      ? signalHref(c.company_id) : href(c.surfaces[0], c.company_id))}>{c.name}</button>)}
-    <button className="ticket-button secondary" onClick={bootstrap.refresh}>Проверить доступ</button>
-  </main>;
+    {selector && !bootstrap.loading && <p role="alert" className="ds-error">Выбранная организация недоступна.</p>}
+    {companies.length === 0 && !bootstrap.loading && <p>Активных назначений нет. Доступ к домам выдаёт администратор вашей управляющей компании.</p>}
+    <div className="ds-stack">
+      {companies.map(c => <button className="ds-btn ds-btn-secondary ds-btn-stretched" key={c.company_id} onClick={() => navigate(isSignalsRoute(url) && c.surfaces.includes("signals")
+        ? signalHref(c.company_id) : href(c.surfaces[0], c.company_id))}>{c.name}</button>)}
+      <button className="ds-btn ds-btn-quiet" onClick={bootstrap.refresh}>Проверить доступ</button>
+    </div>
+  </section></main>;
   const isOrganization = selected.surfaces.includes("staff");
   const shared = { company: selected, surface, href, navigate, visit };
+  const countFor = (s: string) => s === "signals"
+    ? <NavCount id={`count-${s}`} value={counts.signals} danger={counts.critical} label="новых сигналов" />
+    : s === "tickets" ? <NavCount id={`count-${s}`} value={counts.tickets} label="новых заявок" /> : null;
+  const described = (s: string) => (s === "signals" && counts.signals) || (s === "tickets" && counts.tickets) ? `count-${s}` : undefined;
   return <div className={`admin-shell ${isOrganization ? "company-workspace" : "operator-workspace"}`}>
     <aside className="admin-sidebar"><a className="admin-brand" href={href(selected.surfaces[0])}>ДомСигнал
       <span>{isOrganization ? "Управление компанией" : "Рабочее место оператора"}</span></a>
@@ -71,10 +144,11 @@ export function CompanyPortal() {
         onChange={e => { const company = companies.find(c => c.company_id === e.target.value); if (company) navigate(href(company.surfaces[0], company.company_id)); }}>
         {companies.map(c => <option key={c.company_id} value={c.company_id}>{c.name}</option>)}</select></label>}
       <nav aria-label="Разделы кабинета">{selected.surfaces.map(s => <a key={s} className="admin-nav-link"
-        aria-current={s === surface ? "page" : undefined} href={href(s)} onClick={e => { e.preventDefault(); navigate(href(s)); }}>{names[s]}</a>)}</nav>
+        aria-current={s === surface ? "page" : undefined} aria-describedby={described(s)} href={href(s)}
+        onClick={e => { e.preventDefault(); navigate(href(s)); }}><span>{names[s]}</span>{countFor(s)}</a>)}</nav>
       <p className="admin-sidebar-note">{selected.name}</p>
-    </aside><main className="app-shell admin-main"><div className="toolbar ticket-line"><span>{bootstrap.data?.display_name}</span>
-      <button className="ticket-button secondary" onClick={() => { bootstrap.refresh(); window.dispatchEvent(new Event("administration-refresh")); }}>Обновить</button></div>
+    </aside><main className="app-shell admin-main"><div className="admin-toolbar"><span>{bootstrap.data?.display_name}</span>
+      <button className="ds-btn ds-btn-secondary" onClick={() => { bootstrap.refresh(); window.dispatchEvent(new Event("administration-refresh")); }}>Обновить</button></div>
       {isOrganization ? <CompanyWorkspace key={selected.company_id} {...shared} /> : <OperatorWorkspace key={selected.company_id} {...shared} />}
     </main>
   </div>;
@@ -120,5 +194,6 @@ function DeniedRoute({ base, surface }: { base: string; surface: string }) {
   // A typed URL is still checked by the endpoint; navigation isn't the access boundary.
   const load = useCallback((signal: AbortSignal) => adminClient.request(`${base}/${surface === "staff" ? "staff" : "organization"}`, { signal }), [base, surface]);
   const result = useResource(`${base}:${surface}`, load);
-  return <><Title>Раздел недоступен</Title><Feedback loading={result.loading} error={result.error} /></>;
+  return <><Title description="Раздел доступен другой роли. Доступ выдаёт администратор управляющей компании.">Раздел недоступен</Title>
+    <Feedback loading={result.loading} error={result.error} /></>;
 }

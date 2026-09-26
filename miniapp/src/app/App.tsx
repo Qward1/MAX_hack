@@ -1,5 +1,4 @@
-import { Button, Flex, Panel, Typography } from "@maxhub/max-ui";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   ApiProblem,
   apiClient,
@@ -17,18 +16,22 @@ import {
 } from "../shared/api/client";
 import { useResource } from "../shared/api/useResource";
 import { LAUNCH_REF, maxBridge } from "../shared/max/bridge";
+import { Button } from "../shared/ui/Button";
+import { countLabel, formatWhen } from "../shared/ui/format";
 import {
+  BackLink,
   DemoBadge,
   InfoRow,
   NextAction,
+  Notice,
   PageHeader,
   SourceChip,
   StatePanel,
   StatusBadge,
   Timeline,
 } from "../shared/ui/semantic";
-import { IncidentCard } from "../features/incidents/IncidentCard";
-import { type FlowTarget, ReportFlow } from "../features/incidents/ReportFlow";
+import { IncidentRow, placeText } from "../features/incidents/IncidentCard";
+import { type FlowTarget, type ReportDraft, ReportFlow } from "../features/incidents/ReportFlow";
 import { AppealDraftScreen } from "../features/appeals/AppealDraftScreen";
 import { RouteCard } from "../features/routing/RouteCard";
 import { ResidentWorkProgress } from "../features/tickets/ResidentWorkProgress";
@@ -41,25 +44,23 @@ import {
   MyHouseScreen,
   PollScreen,
   ReceptionScreen,
+  RecentActivity,
   WorksScreen,
 } from "../features/community/CommunityScreens";
 import { type CommunityApi, communityApi } from "../shared/api/community";
-import {
-  categoryLabel,
-  formatDate,
-  knownActions,
-  statusLabels,
-} from "../features/incidents/presentation";
+import { categoryLabel } from "../features/incidents/presentation";
 
+type House = Me["houses"][number];
 type Loaded = {
   notificationLaunch?: NotificationLaunch;
   capabilities: Capabilities;
   me: Me;
-  house?: Me["houses"][number];
+  house?: House;
   incidents?: IncidentList;
   incident?: IncidentDetail;
   card?: RouteOutcomeView;
   draft?: AppealDraftView;
+  report?: boolean;
   unavailable?: boolean;
   /** Дома с открытым доступом — для жителя, у которого домов ещё нет. */
   openHouses?: OpenHouse[];
@@ -69,14 +70,23 @@ type Loaded = {
 };
 
 const VIEWS: CommunityView[] = ["home", "news", "poll", "works", "mine", "reception"];
+/** Разделы верхнего уровня — вкладки; остальное — вложенные экраны с «Назад». */
+type Section = "board" | "mine" | "news" | "home";
+const SECTIONS: [Section, string][] = [
+  ["board", "Проблемы"],
+  ["mine", "Мои обращения"],
+  ["news", "Объявления"],
+  ["home", "Мой дом"],
+];
 const VIEW_TITLES: Record<CommunityView, string> = {
   home: "Мой дом",
   news: "Объявления",
   poll: "Опрос",
-  works: "Выполненные работы",
+  works: "Что сделано в доме",
   mine: "Мои обращения",
   reception: "Запись на приём",
 };
+const PROBLEMS = ["проблема", "проблемы", "проблем"] as const;
 
 type Target = FlowTarget & {
   house?: string;
@@ -89,8 +99,7 @@ function routeUrl(target: Target = {}) {
   // Never propagate MAX launch/auth parameters into DOM links or copied navigation URLs.
   const url = new URL(window.location.pathname, window.location.origin);
   const testActor = new URLSearchParams(window.location.search).get("test_actor");
-  if (testActor && /^[a-z0-9-]{1,40}$/.test(testActor))
-    url.searchParams.set("test_actor", testActor);
+  if (testActor && /^[a-z0-9-]{1,40}$/.test(testActor)) url.searchParams.set("test_actor", testActor);
   if (target.house) url.searchParams.set("house", target.house);
   if (target.incident) url.searchParams.set("incident", target.incident);
   if (target.card) url.searchParams.set("card", target.card);
@@ -100,6 +109,24 @@ function routeUrl(target: Target = {}) {
   if (target.poll) url.searchParams.set("poll", target.poll);
   if (target.report) url.searchParams.set("report", "1");
   return url.pathname + url.search;
+}
+
+/** Глубина истории внутри мини-приложения: «Назад» возвращает, а не уводит на доску. */
+function depth(): number {
+  const value = (window.history.state as { dsDepth?: unknown } | null)?.dsDepth;
+  return typeof value === "number" ? value : 0;
+}
+
+function denied(): never {
+  throw new ApiProblem({
+    status: 403,
+    type: "about:blank",
+    code: "house_access_denied",
+    title: "",
+    detail: "",
+    trace_id: "",
+    retryable: false,
+  });
 }
 
 export function App({
@@ -113,17 +140,14 @@ export function App({
   const [communityClient] = useState<CommunityApi>(
     () =>
       community ??
-      communityApi(
-        "request" in client
-          ? (client as unknown as Parameters<typeof communityApi>[0])
-          : apiClient,
-      ),
+      communityApi("request" in client ? (client as unknown as Parameters<typeof communityApi>[0]) : apiClient),
   );
   const [location, setLocation] = useState(() => window.location.href);
-  const [reportOpen, setReportOpen] = useState(false);
   const [launchPending, setLaunchPending] = useState(true);
   const [launchNotice, setLaunchNotice] = useState(false);
   const [launchAttempt, setLaunchAttempt] = useState<string | null>(null);
+  // Текст формы живёт в памяти, пока приложение открыто (не в хранилище браузера).
+  const reportDrafts = useRef(new Map<string, ReportDraft>());
   const route = new URL(location);
   const houseId = route.searchParams.get("house");
   const incidentId = route.searchParams.get("incident");
@@ -133,39 +157,34 @@ export function App({
   const view = VIEWS.find((item) => item === rawView);
   const pollId = route.searchParams.get("poll");
   const reportParam = route.searchParams.get("report") === "1";
-  const detail = Boolean(incidentId || cardId || draftId || view);
-  const offset = Math.max(
-    0,
-    Math.min(
-      1000000,
-      Number.parseInt(route.searchParams.get("offset") ?? "0") || 0,
-    ),
-  );
-  const key = JSON.stringify([houseId, incidentId, cardId, draftId, offset, launchPending, view, pollId]);
-  const navigate = useCallback((href: string) => {
-    window.history.pushState(null, "", href);
+  const detail = Boolean(incidentId || cardId || draftId || view || reportParam);
+  const offset = Math.max(0, Math.min(1000000, Number.parseInt(route.searchParams.get("offset") ?? "0") || 0));
+  const key = JSON.stringify([houseId, incidentId, cardId, draftId, offset, launchPending, view, pollId, reportParam]);
+
+  const navigate = useCallback((href: string, options: { replace?: boolean } = {}) => {
+    if (options.replace) window.history.replaceState({ dsDepth: depth() }, "", href);
+    else window.history.pushState({ dsDepth: depth() + 1 }, "", href);
     setLocation(window.location.href);
-    setReportOpen(false);
     setLaunchPending(false);
     setLaunchNotice(false);
     setLaunchAttempt(null);
     window.scrollTo?.(0, 0);
   }, []);
   useEffect(() => {
-    const onBack = () => {
-      setLocation(window.location.href);
-      setReportOpen(false);
-    };
+    const onBack = () => setLocation(window.location.href);
     window.addEventListener("popstate", onBack);
     return () => window.removeEventListener("popstate", onBack);
   }, []);
+
   const load = useCallback(
     async (signal: AbortSignal): Promise<Loaded> => {
       const capabilities = await client.capabilities(signal);
       await client.authenticate(capabilities, signal);
       const me = await client.me(signal);
-      const testRef = capabilities.environment !== "production" && capabilities.features.test_auth
-        ? new URLSearchParams(window.location.search).get("test_start_param") : null;
+      const testRef =
+        capabilities.environment !== "production" && capabilities.features.test_auth
+          ? new URLSearchParams(window.location.search).get("test_start_param")
+          : null;
       const startRef = launchPending ? (maxBridge.startParam ?? testRef) : null;
       const launchRef = startRef && LAUNCH_REF.test(startRef) ? startRef : null;
       if (launchRef && capabilities.features.miniapp) {
@@ -180,10 +199,9 @@ export function App({
             house: home,
             view: target.kind === "poll" ? "poll" : "news",
           };
-        // Карточка маршрута ведёт на свой экран: у внешнего маршрута заявки нет.
+        // Карточка «куда обратиться» ведёт на свой экран: у внешнего адресата заявки нет.
         if (target.kind === "route_card" && target.route_outcome_id) {
-          if (!capabilities.features.routes)
-            return { capabilities, me, notificationLaunch: target, unavailable: true };
+          if (!capabilities.features.routes) return { capabilities, me, notificationLaunch: target, unavailable: true };
           const card = await client.routeOutcome(target.route_outcome_id, signal);
           return { capabilities, me, card, notificationLaunch: target, house: home };
         }
@@ -193,83 +211,41 @@ export function App({
         }
         return { capabilities, me, notificationLaunch: target, unavailable: true };
       }
+      // Дом из адреса или, если его нет, первый доступный: при нескольких домах
+      // переключатель стоит в шапке, а адрес виден перед отправкой сообщения.
+      const chosen = houseId !== null ? me.houses.find((item) => item.id === houseId) : me.houses[0];
+      if (houseId !== null && !chosen && !incidentId && !cardId && !draftId) denied();
       if (view && capabilities.features.miniapp) {
-        const house = houseId !== null
-          ? me.houses.find((item) => item.id === houseId)
-          : me.houses.length === 1
-            ? me.houses[0]
-            : undefined;
-        // Чужой дом в адресе — тот же отказ, что у доски.
-        if (houseId !== null && !house)
-          throw new ApiProblem({
-            status: 403,
-            type: "about:blank",
-            code: "house_access_denied",
-            title: "",
-            detail: "",
-            trace_id: "",
-            retryable: false,
-          });
         // «Мои обращения» и опрос не требуют выбранного дома; остальные разделы — дома.
-        if (!house && !["mine", "poll"].includes(view)) return { capabilities, me };
-        return { capabilities, me, house, view };
+        if (!chosen && !["mine", "poll"].includes(view)) return { capabilities, me };
+        return { capabilities, me, house: chosen, view };
+      }
+      if (reportParam && capabilities.features.miniapp) {
+        if (!chosen) return { capabilities, me };
+        if (!capabilities.features.report_create) return { capabilities, me, unavailable: true };
+        return { capabilities, me, house: chosen, report: true };
       }
       if (
         !capabilities.features.miniapp ||
         (cardId && !capabilities.features.routes) ||
         (draftId && !capabilities.features.appeals) ||
-        !(detail
-          ? capabilities.features.incident_detail || cardId || draftId
-          : capabilities.features.incident_board)
+        !(detail ? capabilities.features.incident_detail || cardId || draftId : capabilities.features.incident_board)
       ) {
         return { capabilities, me, unavailable: true };
       }
       if (cardId) {
         const card = await client.routeOutcome(cardId, signal);
-        return {
-          capabilities,
-          me,
-          card,
-          house: me.houses.find((house) => house.id === card.house_id),
-        };
+        return { capabilities, me, card, house: me.houses.find((house) => house.id === card.house_id) };
       }
       if (draftId) {
         const draft = await client.appealDraft(draftId, signal);
-        return {
-          capabilities,
-          me,
-          draft,
-          house: me.houses.find((house) => house.id === draft.house_id),
-        };
+        return { capabilities, me, draft, house: me.houses.find((house) => house.id === draft.house_id) };
       }
       if (incidentId) {
-        const incident = await client.incident(
-          incidentId, signal, houseId ?? undefined,
-        );
-        return {
-          capabilities,
-          me,
-          incident,
-          house: me.houses.find((house) => house.id === incident.house_id),
-        };
+        const incident = await client.incident(incidentId, signal, houseId ?? undefined);
+        return { capabilities, me, incident, house: me.houses.find((house) => house.id === incident.house_id) };
       }
-      const house = houseId !== null
-        ? me.houses.find((item) => item.id === houseId)
-        : me.houses.length === 1
-          ? me.houses[0]
-          : undefined;
-      if (houseId !== null && !house)
-        throw new ApiProblem({
-          status: 403,
-          type: "about:blank",
-          code: "house_access_denied",
-          title: "",
-          detail: "",
-          trace_id: "",
-          retryable: false,
-        });
-      if (!house) {
-        if (me.houses.length) return { capabilities, me };
+      if (!chosen) {
         // Домов нет — показать, как в дом попасть, и открытые дома, если они есть.
         try {
           return { capabilities, me, openHouses: await client.openHouses(signal) };
@@ -278,10 +254,10 @@ export function App({
           return { capabilities, me, openHouses: [], openHousesFailed: true };
         }
       }
-      const incidents = await client.incidents(house.id, signal, offset);
-      return { capabilities, me, house, incidents };
+      const incidents = await client.incidents(chosen.id, signal, offset);
+      return { capabilities, me, house: chosen, incidents };
     },
-    [client, houseId, incidentId, cardId, draftId, detail, offset, launchPending, view],
+    [client, houseId, incidentId, cardId, draftId, detail, offset, launchPending, view, reportParam],
   );
   const resource = useResource(key, load);
   const data = resource.data;
@@ -292,7 +268,7 @@ export function App({
     setLaunchNotice(target.stale);
     setLaunchAttempt(target.work_attempt_id);
     window.history.replaceState(
-      null,
+      { dsDepth: 0 },
       "",
       routeUrl(
         target.kind === "route_card"
@@ -306,47 +282,39 @@ export function App({
     );
     setLocation(window.location.href);
   }, [data?.notificationLaunch, launchPending]);
-  const back = useCallback(() => {
-    // Из опроса — к объявлениям, из черновика — к его карточке, из остального — на доску.
-    if (view === "poll" && houseId) {
-      navigate(routeUrl({ house: houseId, view: "news" }));
-      return;
-    }
-    if (view === "reception" && houseId) {
-      navigate(routeUrl({ house: houseId, view: "home" }));
-      return;
-    }
-    if (data?.draft) {
-      navigate(routeUrl({ house: data.draft.house_id, card: data.draft.route_outcome_id }));
-      return;
-    }
-    navigate(
-      routeUrl({
-        house: data?.incident?.house_id ?? data?.card?.house_id ?? houseId ?? undefined,
-      }),
-    );
-  }, [navigate, data?.incident?.house_id, data?.card?.house_id, data?.draft, houseId, view]);
-  useEffect(
-    () => (detail ? maxBridge.subscribeBack(back) : undefined),
-    [detail, back],
-  );
-  useEffect(() => {
-    if (data || resource.error)
-      document.getElementById("page-title")?.focus({ preventScroll: true });
-  }, [key, Boolean(data), Boolean(resource.error)]);
 
-  const backLink = (
-    <Button variant="secondary" onClick={() => navigate(routeUrl())}>
-      К выбору дома
-    </Button>
-  );
+  const currentHouse = data?.house?.id ?? data?.incident?.house_id ?? data?.card?.house_id ?? data?.draft?.house_id ?? houseId ?? undefined;
+  /** Родитель экрана — куда ведёт «Назад», если внутри приложения истории нет (вход по ссылке). */
+  const parent = useCallback((): string => {
+    if (view === "poll") return routeUrl({ house: currentHouse, view: "news" });
+    if (view === "reception" || view === "works") return routeUrl({ house: currentHouse, view: "home" });
+    if (data?.draft) return routeUrl({ house: data.draft.house_id, card: data.draft.route_outcome_id });
+    return routeUrl({ house: currentHouse });
+  }, [view, currentHouse, data?.draft]);
+  const back = useCallback(() => {
+    if (depth() > 0) window.history.back();
+    else navigate(parent(), { replace: true });
+  }, [navigate, parent]);
+  // Системная «Назад» MAX: видна везде, кроме главного экрана, и ведёт туда же.
+  const isHome = !detail;
+  useEffect(() => (isHome ? undefined : maxBridge.subscribeBack(back)), [isHome, back]);
   useEffect(() => {
-    // «Сообщить о проблеме» из пустых разделов открывает форму на доске.
-    if (!reportParam || !data?.incidents) return;
-    setReportOpen(true);
-    window.history.replaceState(null, "", routeUrl({ house: houseId ?? undefined }));
-    setLocation(window.location.href);
-  }, [reportParam, data?.incidents, houseId]);
+    if (!(data || resource.error)) return;
+    // Первый шаг формы сам ставит фокус в поле; остальные экраны — на заголовок.
+    if (document.querySelector("[data-autofocus]")) return;
+    document.getElementById("page-title")?.focus({ preventScroll: true });
+  }, [key, Boolean(data), Boolean(resource.error)]);
+  const rememberDraft = useCallback(
+    (house: string) => (draft: ReportDraft | null) => {
+      if (draft && (draft.text || draft.category)) reportDrafts.current.set(house, draft);
+      else reportDrafts.current.delete(house);
+    },
+    [],
+  );
+  const onDraft = useCallback((draft: ReportDraft | null) => {
+    if (currentHouse) rememberDraft(currentHouse)(draft);
+  }, [currentHouse, rememberDraft]);
+
   const links: CommunityLinks = {
     board: (house) => routeUrl({ house }),
     view: (target, extra) => routeUrl({ view: target, house: extra?.house, poll: extra?.poll }),
@@ -356,94 +324,139 @@ export function App({
     report: (house) => routeUrl({ house, report: true }),
     navigate,
   };
+
+  const topbar = (showBack: boolean, house?: string, refreshable = true) => (
+    <div className="ds-topbar">
+      <div className="ds-topbar-start">
+        {showBack ? <BackLink onBack={back} /> : <span className="ds-brand">ДомСигнал</span>}
+      </div>
+      <div className="ds-topbar-end">
+        {refreshable && (
+          <button
+            type="button"
+            className="ds-icon-button"
+            aria-label="Обновить"
+            title="Обновить"
+            disabled={resource.loading}
+            onClick={resource.refresh}
+          >
+            <span aria-hidden="true">↻</span>
+          </button>
+        )}
+        {house && view !== "home" && <EmergencyLink href={routeUrl({ house, view: "home" })} navigate={navigate} />}
+      </div>
+    </div>
+  );
+
+  // Что грузим — одними словами для заголовка, загрузки и ошибки.
+  const subject = view
+    ? `раздел «${VIEW_TITLES[view]}»`
+    : cardId
+      ? "сведения, куда обратиться"
+      : draftId
+        ? "черновик обращения"
+        : incidentId
+          ? "проблему"
+          : reportParam
+            ? "форму сообщения"
+            : "проблемы дома";
   const headerTitle = view
     ? VIEW_TITLES[view]
     : cardId
-    ? "Следующий шаг"
-    : draftId
-      ? "Черновик обращения"
-      : incidentId
-        ? "Проблема дома"
-        : "Мой дом";
-  const loadingTitle = view
-    ? `Загрузка раздела «${VIEW_TITLES[view]}»`
-    : cardId
-    ? "Загрузка карточки маршрута"
-    : draftId
-      ? "Загрузка черновика"
-      : incidentId
-        ? "Загрузка проблемы"
-        : "Загрузка доски дома";
+      ? "Куда обратиться"
+      : draftId
+        ? "Черновик обращения"
+        : incidentId
+          ? "Проблема дома"
+          : reportParam
+            ? "Что случилось?"
+            : "Проблемы дома";
   if (!data)
     return (
-      <main className="app-shell detail-shell">
-        <PageHeader title={headerTitle} />
+      <main className="app-shell">
+        {topbar(detail, houseId ?? undefined)}
         {resource.error ? (
           <ErrorPanel
             error={resource.error}
+            subject={subject}
+            missing={
+              view
+                ? "Раздел не найден"
+                : cardId
+                  ? "Карточка «Куда обратиться» не найдена"
+                  : draftId
+                    ? "Черновик не найден"
+                    : incidentId
+                      ? "Проблема не найдена"
+                      : "Дом не найден"
+            }
             onRetry={resource.refresh}
-            back={backLink}
+            back={
+              detail || problemStatus(resource.error) === 403 ? (
+                <Button onClick={() => navigate(routeUrl(), { replace: true })}>К выбору дома</Button>
+              ) : undefined
+            }
           />
         ) : (
-          <StatePanel
-            title={loadingTitle}
-            detail="Получаем актуальные данные"
-            loading
-          />
+          <>
+            <PageHeader title={headerTitle} />
+            <StatePanel title={`Загружаем ${subject}`} detail="Это займёт несколько секунд." loading />
+          </>
         )}
       </main>
     );
   if (data.unavailable)
     return (
       <main className="app-shell">
+        {topbar(detail, currentHouse)}
         <PageHeader title="Раздел пока недоступен" />
         <StatePanel
-          title="Этот раздел сейчас отключён"
-          detail="Попробуйте обновить данные позже."
+          title="Этот раздел сейчас выключен"
+          detail="Его включает команда ДомСигнала. Попробуйте обновить позже."
           action="Обновить"
           onAction={resource.refresh}
-          back={detail ? backLink : undefined}
+          back={detail ? <Button onClick={() => navigate(routeUrl())}>К проблемам дома</Button> : undefined}
         />
       </main>
     );
+
+  const houses = data.me.houses;
+  const switcher = (house: House) =>
+    houses.length > 1 ? (
+      <label className="ds-house-switch">
+        Дом
+        <select
+          value={house.id}
+          onChange={(event) => navigate(routeUrl({ house: event.target.value, view: view && view !== "poll" ? view : undefined }))}
+        >
+          {houses.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.address}
+            </option>
+          ))}
+        </select>
+      </label>
+    ) : (
+      house.address
+    );
+  const refresh = <RefreshNotice resource={resource} />;
+
+  // --------------------------------------------------------------- сообщество
   if (data.view && (data.house || ["mine", "poll"].includes(data.view))) {
     const home = data.house;
+    const topLevel = ["mine", "news", "home"].includes(data.view);
     return (
-      <main className="app-shell detail-shell">
-        <Flex justify="space-between" align="center" wrap="wrap" gap={12} className="toolbar">
-          <Button variant="ghost" onClick={back}>
-            {data.view === "poll" && home
-              ? "← К объявлениям"
-              : data.view === "reception" && home
-                ? "← К разделу «Мой дом»"
-                : "← К доске дома"}
-          </Button>
-        </Flex>
-        <PageHeader
-          title={VIEW_TITLES[data.view]}
-          subtitle={home?.address}
-          eyebrow={home ? "Дом" : "ДомСигнал"}
-        >
+      <main className="app-shell">
+        {topbar(!topLevel, home?.id)}
+        <PageHeader title={VIEW_TITLES[data.view]} subtitle={home && data.view !== "mine" ? switcher(home) : undefined}>
           {home?.is_demo && <DemoBadge />}
         </PageHeader>
-        {home && data.view !== "poll" && (
-          <SectionNav house={home.id} current={data.view} links={links} />
-        )}
-        {data.view === "home" && home && (
-          <MyHouseScreen api={communityClient} houseId={home.id} links={links} />
-        )}
-        {data.view === "news" && home && (
-          <AnnouncementsScreen api={communityClient} houseId={home.id} links={links} />
-        )}
-        {data.view === "works" && home && (
-          <WorksScreen api={communityClient} houseId={home.id} links={links} />
-        )}
-        {data.view === "reception" && home && (
-          <ReceptionScreen api={communityClient} houseId={home.id} links={links} />
-        )}
-        {data.view === "mine" && (
-          <MyActivityScreen api={communityClient} houseId={home?.id} links={links} />
-        )}
+        {topLevel && <SectionTabs house={home?.id} current={data.view as Section} navigate={navigate} />}
+        {data.view === "home" && home && <MyHouseScreen api={communityClient} houseId={home.id} links={links} />}
+        {data.view === "news" && home && <AnnouncementsScreen api={communityClient} houseId={home.id} links={links} />}
+        {data.view === "works" && home && <WorksScreen api={communityClient} houseId={home.id} links={links} />}
+        {data.view === "reception" && home && <ReceptionScreen api={communityClient} houseId={home.id} links={links} />}
+        {data.view === "mine" && <MyActivityScreen api={communityClient} houseId={home?.id} links={links} />}
         {data.view === "poll" && pollId && (
           <PollScreen api={communityClient} pollId={pollId} houseId={home?.id} links={links} />
         )}
@@ -454,156 +467,110 @@ export function App({
       </main>
     );
   }
+
+  // --------------------------------------------------------------- нет дома
   if (!data.house && !data.incident && !data.card && !data.draft)
     return (
       <main className="app-shell">
-        <PageHeader title="Мой дом" />
-        {data.me.houses.length > 1 ? (
-          <Panel>
-            <h2>Выберите дом</h2>
-            {data.me.houses.map((house) => (
-              <Button key={house.id} onClick={() => navigate(routeUrl({ house: house.id }))}>
-                {house.address}
-              </Button>
-            ))}
-          </Panel>
-        ) : (
-          <NoHouse
-            client={client}
-            houses={data.openHouses ?? []}
-            loadError={Boolean(data.openHousesFailed)}
-            busy={resource.loading}
-            onRefresh={resource.refresh}
-            onJoined={(id) => navigate(routeUrl({ house: id }))}
-          />
-        )}
-        {resource.loading && (
-          <p role="status" className="refresh-notice">
-            Обновляем данные…
-          </p>
-        )}
+        {topbar(false)}
+        <PageHeader title="Как открыть свой дом" subtitle="ДомСигнал показывает проблемы вашего дома и помогает сообщить о новой." />
+        <NoHouse
+          client={client}
+          houses={data.openHouses ?? []}
+          loadError={Boolean(data.openHousesFailed)}
+          busy={resource.loading}
+          onRefresh={resource.refresh}
+          onJoined={(id) => navigate(routeUrl({ house: id }))}
+        />
       </main>
     );
 
-  const notice = (
-    <>
-      {resource.loading && (
-        <p role="status" className="refresh-notice">
-          Обновляем данные…
-        </p>
-      )}
-      {resource.error && (
-        <div className="refresh-notice" role="alert">
-          <strong>
-            Не удалось обновить. Показаны ранее загруженные данные.
-          </strong>
-          {retryable(resource.error) && (
-            <Button size="small" variant="secondary" onClick={resource.refresh}>
-              Повторить
-            </Button>
-          )}
-        </div>
-      )}
-      {resource.stale && !resource.loading && !resource.error && (
-        <div className="refresh-notice" role="status">
-          Данные могли измениться.
-          <Button size="small" variant="secondary" onClick={resource.refresh}>
-            Обновить
-          </Button>
-        </div>
-      )}
-    </>
-  );
-  const toolbar = (
-    <Flex
-      justify="space-between"
-      align="center"
-      wrap="wrap"
-      gap={12}
-      className="toolbar"
-    >
-      {detail ? (
-        <Button variant="ghost" onClick={back}>
-          {draftId ? "← К карточке маршрута" : "← К доске дома"}
-        </Button>
-      ) : (
-        <Typography.Text variant="label-strong">ДомСигнал</Typography.Text>
-      )}
-      <Button
-        size="small"
-        variant="ghost"
-        disabled={resource.loading}
-        onClick={resource.refresh}
-      >
-        Обновить
-      </Button>
-    </Flex>
-  );
-  if (data.card) {
-    const view = data.card;
+  // --------------------------------------------------------- сообщить о проблеме
+  if (data.report && data.house) {
+    const house = data.house;
     return (
-      <main className="app-shell detail-shell">
-        {toolbar}
-        <PageHeader title="Следующий шаг" subtitle={data.house?.address} eyebrow="Карточка маршрута">
+      <main className="app-shell">
+        {topbar(true, house.id, false)}
+        <ReportFlow
+          key={house.id}
+          houseId={house.id}
+          houseAddress={house.address}
+          client={client}
+          draft={reportDrafts.current.get(house.id)}
+          onDraft={onDraft}
+          // Форма — промежуточный шаг: переход из неё заменяет запись истории,
+          // и «Назад» из проблемы ведёт к списку, а не к пустой форме.
+          onOpen={(target) => {
+            // Черновик открывается поверх своей карточки «Куда обратиться»:
+            // «Назад» из черновика ведёт к ней, а не к пустой форме.
+            if (target.draft && target.card) {
+              navigate(routeUrl({ house: house.id, card: target.card }), { replace: true });
+              navigate(routeUrl({ house: house.id, draft: target.draft }));
+            } else navigate(routeUrl({ house: house.id, ...target }), { replace: true });
+          }}
+          onCreated={() => undefined}
+          onBoard={() =>
+            depth() > 0 ? window.history.back() : navigate(routeUrl({ house: house.id }), { replace: true })
+          }
+        />
+      </main>
+    );
+  }
+
+  const busy = resource.loading || Boolean(resource.error) || resource.stale;
+
+  // ------------------------------------------------------ куда обратиться
+  if (data.card) {
+    const outcome = data.card;
+    return (
+      <main className="app-shell">
+        {topbar(true, outcome.house_id)}
+        <PageHeader title="Куда обратиться" subtitle={data.house?.address}>
           {data.house?.is_demo && <DemoBadge />}
         </PageHeader>
-        {notice}
-        {view.directory_changed && (
-          <p role="status" className="refresh-notice">
-            Маршрут уточнён — показываем актуальный.
-          </p>
+        {refresh}
+        {outcome.directory_changed && (
+          <Notice role="status">
+            <p>Сведения обновились — показываем актуальные.</p>
+          </Notice>
         )}
         <RouteCard
-          card={view.action_card}
-          busy={resource.loading || Boolean(resource.error) || resource.stale}
+          card={outcome.action_card}
+          busy={busy}
           demo={Boolean(data.house?.is_demo)}
           handlers={{
             prepare_appeal: () =>
               void (async () => {
-                const draft = view.appeal_draft_id
-                  ? { id: view.appeal_draft_id }
-                  : await client.createAppealDraft({
-                      house_id: view.house_id,
-                      route_outcome_id: view.id,
-                    });
-                navigate(routeUrl({ house: view.house_id, draft: draft.id }));
+                const created = outcome.appeal_draft_id
+                  ? { id: outcome.appeal_draft_id }
+                  : await client.createAppealDraft({ house_id: outcome.house_id, route_outcome_id: outcome.id });
+                navigate(routeUrl({ house: outcome.house_id, draft: created.id }));
               })(),
           }}
           extra={
-            view.incident_id ? (
-              <div>
-                <Button
-                  stretched
-                  onClick={() =>
-                    navigate(routeUrl({ house: view.house_id, incident: view.incident_id! }))
-                  }
-                >
-                  Открыть проблему дома
-                </Button>
-              </div>
+            outcome.incident_id ? (
+              <Button stretched onClick={() => navigate(routeUrl({ house: outcome.house_id, incident: outcome.incident_id! }))}>
+                Открыть проблему дома
+              </Button>
             ) : undefined
           }
         />
-        <footer className="page-footer">
-          Карточка собрана по текущему справочнику ответственности.
-        </footer>
+        <p className="ds-meta">Карточка составлена по текущему справочнику ДомСигнала.</p>
         {import.meta.env.DEV && <Diagnostics />}
       </main>
     );
   }
+
+  // --------------------------------------------------------- черновик обращения
   if (data.draft) {
     const draft = data.draft;
     return (
-      <main className="app-shell detail-shell">
-        {toolbar}
-        <PageHeader
-          title="Черновик обращения"
-          subtitle={data.house?.address}
-          eyebrow="Вы отправляете обращение сами"
-        >
+      <main className="app-shell">
+        {topbar(true, draft.house_id)}
+        <PageHeader title="Черновик обращения" subtitle={data.house?.address}>
           {data.house?.is_demo && <DemoBadge />}
         </PageHeader>
-        {notice}
+        {refresh}
         <AppealDraftScreen
           key={draft.id}
           draft={draft}
@@ -613,289 +580,197 @@ export function App({
           busy={resource.loading}
           onLoaded={() => resource.refresh()}
         />
-        <footer className="page-footer">
-          Отметка о подаче остаётся вашим утверждением.
-        </footer>
         {import.meta.env.DEV && <Diagnostics />}
       </main>
     );
   }
+
+  // ------------------------------------------------------------ проблема дома
   if (data.incident) {
     const incident = data.incident;
+    const place = placeText(incident.location);
+    const due = formatWhen(incident.due_at);
     return (
-      <main className="app-shell detail-shell">
-        {toolbar}
+      <main className="app-shell">
+        {topbar(true, incident.house_id)}
         <PageHeader
           title={incident.title || "Проблема дома"}
-          subtitle={data.house?.address}
-          eyebrow={categoryLabel(incident.category)}
+          subtitle={[categoryLabel(incident.category), data.house?.address].filter(Boolean).join(" · ")}
         >
-          <Flex gap={12} wrap="wrap">
+          <div className="ds-status-line">
             <StatusBadge status={incident.status} />
             {data.house?.is_demo && <DemoBadge />}
-          </Flex>
+          </div>
         </PageHeader>
-        {notice}
-        {launchNotice && <p role="status" className="refresh-notice">
-          Работа обновилась. Показываем актуальный результат.
-        </p>}
-        <ResidentWorkProgress key={incident.id} client={client} incidentId={incident.id}
-          launchAttempt={launchAttempt}
-          revision={resource.updatedAt} parentBusy={resource.loading || Boolean(resource.error) || resource.stale} />
+        {refresh}
+        {launchNotice && (
+          <Notice role="status">
+            <p>Работа обновилась. Показываем актуальный результат.</p>
+          </Notice>
+        )}
         {incident.status === "reported" && (
-          <Panel className="honesty-note">
-            Житель отметил отправку. Регистрация во внешней системе ДомСигналом
-            не подтверждена.
-          </Panel>
+          <Notice tone="neutral" role="note">
+            <p>Житель отметил отправку. Регистрация во внешней системе ДомСигналом не подтверждена.</p>
+          </Notice>
         )}
-        <NextAction
-          actions={incident.allowed_actions}
-          handlers={{ retry: resource.refresh }}
-          busy={resource.loading || Boolean(resource.error) || resource.stale}
+        <ResidentWorkProgress
+          key={incident.id}
+          client={client}
+          incidentId={incident.id}
+          launchAttempt={launchAttempt}
+          revision={resource.updatedAt}
+          parentBusy={busy}
         />
-        <Panel className="detail-section">
-          <Typography.Title asChild>
-            <h2>О проблеме</h2>
-          </Typography.Title>
-          <p className="full-text">
-            {incident.description || "Описание пока не добавлено."}
-          </p>
-          <SourceChip source={incident.provenance} />
-          <dl>
-            <InfoRow label="Сообщений по проблеме">
-              {incident.report_count ?? "Нет данных"}
+        <NextAction actions={incident.allowed_actions} handlers={{ retry: resource.refresh }} busy={busy} />
+        <section className="ds-section" aria-labelledby="incident-known">
+          <h2 id="incident-known">Что известно</h2>
+          {incident.description && <p className="ds-prose">{incident.description}</p>}
+          <dl className="ds-kv">
+            {place && <InfoRow label="Место">{place}</InfoRow>}
+            <InfoRow label="Сообщили">
+              {incident.participant_count !== null
+                ? countLabel(incident.participant_count, ["житель", "жителя", "жителей"])
+                : "Нет данных"}
+              {`, ${countLabel(incident.report_count, ["сообщение", "сообщения", "сообщений"])}`}
             </InfoRow>
-            <InfoRow label="Участников">
-              {incident.participant_count ?? "Нет данных"}
-            </InfoRow>
-            <InfoRow label="Место">
-              {incident.location
-                ? [
-                    incident.location.entrance && `Подъезд ${incident.location.entrance}`,
-                    incident.location.floor && `Этаж ${incident.location.floor}`,
-                    incident.location.label,
-                  ].filter(Boolean).join(", ") || "Не указано"
-                : "Не указано"}
-            </InfoRow>
-            <InfoRow label="Обновлена">
-              {formatDate(incident.updated_at) ?? "Нет данных"}
-            </InfoRow>
-            <InfoRow label="Создана">
-              {formatDate(incident.created_at) ?? "Дата не указана"}
-            </InfoRow>
-            <InfoRow label="Срок">
-              {formatDate(incident.due_at) ?? "Не определён"}
-            </InfoRow>
+            <InfoRow label="Впервые">{formatWhen(incident.created_at) ?? "Дата не указана"}</InfoRow>
+            {incident.updated_at && <InfoRow label="Обновлена">{formatWhen(incident.updated_at)}</InfoRow>}
+            {due && <InfoRow label="Срок">{due}</InfoRow>}
           </dl>
-        </Panel>
-        {incident.rule && (
-          <Panel className="detail-section">
-            <Typography.Title asChild>
-              <h2>Источник и основание</h2>
-            </Typography.Title>
-            <SourceChip source={incident.rule} />
-          </Panel>
-        )}
+          <SourceChip source={incident.provenance} label="Источник сведений" />
+          {incident.rule && <SourceChip source={incident.rule} label="Основание" />}
+        </section>
         {incident.reports?.length > 0 && (
-          <Panel className="detail-section">
-            <Typography.Title asChild>
-              <h2>Сообщения по проблеме</h2>
-            </Typography.Title>
+          <section className="ds-section" aria-labelledby="incident-history">
+            <h2 id="incident-history">Сообщения жителей</h2>
             <Timeline
+              label="сообщения"
               events={incident.reports.map((report) => ({
                 id: report.id,
-                title: "Сообщение",
+                title: "Сообщение жителя",
                 detail: report.description,
                 occurred_at: report.created_at,
               }))}
             />
-          </Panel>
+          </section>
         )}
-        <footer className="page-footer">
-          Информация обновляется по сообщениям жителей.
-        </footer>
         {import.meta.env.DEV && <Diagnostics />}
       </main>
     );
   }
+
+  // ------------------------------------------------------------ главный экран
   const house = data.house!;
   const list = data.incidents!;
   const openCount = list.items.filter((item) =>
-    ["detected", "open", "reported", "overdue", "escalated"].includes(
-      item.status,
-    ),
+    ["detected", "open", "reported", "overdue", "escalated"].includes(item.status),
   ).length;
-  const unknownCount = list.items.filter(
-    (item) => !Object.hasOwn(statusLabels, item.status),
-  ).length;
-  const actionCount = list.items.filter((item) =>
-    knownActions(item.allowed_actions).some(
-      (action) => action.enabled && action.code !== "retry",
-    ),
-  ).length;
+  const canReport = data.capabilities.features.report_create;
   return (
-    <main className="app-shell">
-      {toolbar}
-      <PageHeader
-        title={house.address}
-        subtitle={house.name !== house.address ? house.name : undefined}
-        eyebrow="Дом"
-      >
+    <main className={`app-shell${canReport ? " has-bottom-bar" : ""}`}>
+      {topbar(false, house.id)}
+      <PageHeader title="Проблемы дома" subtitle={switcher(house)}>
         {house.is_demo && <DemoBadge />}
       </PageHeader>
-      {data.me.houses.length > 1 && (
-        <label className="house-select">
-          Выбрать дом
-          <select
-            value={house.id}
-            onChange={(event) => navigate(routeUrl({ house: event.target.value }))}
-          >
-            {data.me.houses.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.address}
-              </option>
+      <SectionTabs house={house.id} current="board" navigate={navigate} />
+      {refresh}
+      <section className="ds-group" aria-labelledby="board-title">
+        <div className="ds-group-head">
+          <h2 id="board-title">
+            {openCount
+              ? `Сейчас открыто: ${countLabel(openCount, PROBLEMS)}`
+              : list.items.length
+                ? "Открытых проблем нет"
+                : "О проблемах пока не сообщали"}
+          </h2>
+          {list.page.total > 0 && (
+            <span className="ds-meta">
+              {list.page.total > list.items.length ? `на странице ${list.items.length} из ${list.page.total}` : `всего ${list.page.total}`}
+            </span>
+          )}
+        </div>
+        {list.items.length ? (
+          <ul className="ds-list" aria-label="Проблемы дома">
+            {list.items.map((incident) => (
+              <li key={incident.id}>
+                <IncidentRow
+                  incident={incident}
+                  detailAvailable={data.capabilities.features.incident_detail}
+                  href={routeUrl({ house: house.id, incident: incident.id })}
+                  onNavigate={navigate}
+                />
+              </li>
             ))}
-          </select>
-        </label>
-      )}
-      {notice}
-      <SectionNav house={house.id} current="board" links={links} />
-      <Panel className="board-summary">
-        <Flex gap={24} wrap="wrap" align="center">
-          <Typography.Text variant="header" className="summary-value">
-            {openCount}
-          </Typography.Text>
-          <div>
-            <Typography.Text variant="body-strong">
-              Открытых проблем
-            </Typography.Text>
-            <p className="muted">
-              {list.page.total > list.items.length
-                ? "На этой странице"
-                : "В вашем доме"}
-            </p>
-          </div>
-        </Flex>
-        {unknownCount > 0 && (
-          <p className="muted">
-            Статус неизвестен ещё у {unknownCount} проблем.
+          </ul>
+        ) : (
+          <p className="ds-subtle">
+            Здесь появятся проблемы, о которых сообщили соседи.{canReport ? " Если что-то сломалось — сообщите первым." : ""}
           </p>
         )}
-        <p className="muted">
-          {actionCount > 0
-            ? `Требуют действия: ${actionCount}`
-            : "Следующие действия пока не определены."}
-        </p>
-      </Panel>
-      <Flex
-        className="section-heading"
-        justify="space-between"
-        align="center"
-        wrap="wrap"
-        gap={16}
-      >
-        <Typography.Title asChild>
-          <h2>
-            Проблемы дома <span className="muted">· {list.page.total}</span>
-          </h2>
-        </Typography.Title>
-        {data.capabilities.features.report_create && (
-          <Button
-            variant="secondary"
-            onClick={() => setReportOpen((value) => !value)}
-            aria-expanded={reportOpen}
-          >
-            {reportOpen ? "Закрыть форму" : "Сообщить"}
-          </Button>
+        {(list.page.total > list.page.limit || offset > 0) && (
+          <nav className="pagination" aria-label="Страницы списка проблем">
+            <Button
+              disabled={offset === 0}
+              onClick={() => navigate(routeUrl({ house: house.id, offset: Math.max(0, offset - list.page.limit) }))}
+            >
+              Предыдущие
+            </Button>
+            <span className="ds-meta">
+              {offset + 1}–{offset + list.items.length} из {list.page.total}
+            </span>
+            <Button
+              disabled={offset + list.items.length >= list.page.total}
+              onClick={() => navigate(routeUrl({ house: house.id, offset: offset + list.page.limit }))}
+            >
+              Следующие
+            </Button>
+          </nav>
         )}
-      </Flex>
-      {reportOpen && (
-        <ReportFlow
-          key={house.id}
-          houseId={house.id}
-          client={client}
-          onOpen={(target) => navigate(routeUrl({ house: house.id, ...target }))}
-          onCreated={() => resource.refresh()}
-        />
-      )}
-      {list.items.length ? (
-        <ul className="incident-grid" aria-label="Инциденты дома">
-          {list.items.map((incident) => (
-            <li key={incident.id}>
-              <IncidentCard
-                incident={incident}
-                detailAvailable={data.capabilities.features.incident_detail}
-                href={routeUrl({ house: house.id, incident: incident.id })}
-                onNavigate={navigate}
-              />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <StatePanel
-          title="На доске пока пусто"
-          detail="Новый сигнал появится здесь после сохранения."
-        />
-      )}
-      {(list.page.total > list.page.limit || offset > 0) && (
-        <nav className="pagination" aria-label="Страницы инцидентов">
-          <Button
-            variant="secondary"
-            disabled={offset === 0}
-            onClick={() =>
-              navigate(
-                routeUrl({
-                  house: house.id,
-                  offset: Math.max(0, offset - list.page.limit),
-                }),
-              )
-            }
-          >
-            Предыдущие
+      </section>
+      <RecentActivity api={communityClient} houseId={house.id} links={links} />
+      {canReport && (
+        <div className="ds-bottom-bar">
+          <Button variant="primary" stretched onClick={() => navigate(routeUrl({ house: house.id, report: true }))}>
+            Сообщить о проблеме
           </Button>
-          <span>
-            {offset + 1}–{offset + list.items.length} из {list.page.total}
-          </span>
-          <Button
-            variant="secondary"
-            disabled={offset + list.items.length >= list.page.total}
-            onClick={() =>
-              navigate(routeUrl({ house: house.id, offset: offset + list.page.limit }))
-            }
-          >
-            Следующие
-          </Button>
-        </nav>
+        </div>
       )}
-      <footer className="page-footer">
-        Общая картина начинается с вашего сигнала.
-      </footer>
       {import.meta.env.DEV && <Diagnostics />}
     </main>
   );
 }
 
-/** Разделы дома: доска и разделы D3. Ссылки, а не вкладки: у каждого раздела свой адрес. */
-function SectionNav({
+/** «Если авария» — всегда в одном месте шапки и одного вида. */
+function EmergencyLink({ href, navigate }: { href: string; navigate: (href: string) => void }) {
+  return (
+    <a
+      className="ds-emergency-link"
+      href={href}
+      onClick={(event) => {
+        if (event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
+        event.preventDefault();
+        navigate(href);
+      }}
+    >
+      <span aria-hidden="true">!</span> Если авария
+    </a>
+  );
+}
+
+/** Разделы верхнего уровня. Ссылки, а не вкладки-кнопки: у каждого раздела свой адрес. */
+function SectionTabs({
   house,
   current,
-  links,
+  navigate,
 }: {
-  house: string;
-  current: CommunityView | "board";
-  links: CommunityLinks;
+  house?: string;
+  current: Section;
+  navigate: (href: string, options?: { replace?: boolean }) => void;
 }) {
-  const items: [CommunityView | "board", string][] = [
-    ["board", "Проблемы дома"],
-    ["home", "Мой дом"],
-    ["news", "Объявления"],
-    ["works", "Выполненные работы"],
-    ["mine", "Мои обращения"],
-  ];
   return (
-    <nav className="section-nav" aria-label="Разделы дома">
-      {items.map(([target, label]) => {
-        const href = target === "board" ? links.board(house) : links.view(target, { house });
+    <nav className="ds-tabs" aria-label="Разделы">
+      {SECTIONS.filter(([target]) => house || target === "mine").map(([target, label]) => {
+        const href = target === "board" ? routeUrl({ house }) : routeUrl({ view: target, house });
         return (
           <a
             key={target}
@@ -904,7 +779,7 @@ function SectionNav({
             onClick={(event) => {
               if (event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
               event.preventDefault();
-              links.navigate(href);
+              if (current !== target) navigate(href);
             }}
           >
             {label}
@@ -915,66 +790,100 @@ function SectionNav({
   );
 }
 
+function RefreshNotice({
+  resource,
+}: {
+  resource: { loading: boolean; error?: unknown; stale: boolean; refresh: () => void };
+}) {
+  if (resource.loading)
+    return (
+      <p role="status" className="ds-meta">
+        Обновляем данные…
+      </p>
+    );
+  if (resource.error)
+    return (
+      <Notice tone="warning" role="alert">
+        <p>Не удалось обновить. Показаны данные, загруженные раньше.</p>
+        {retryable(resource.error) && (
+          <div>
+            <Button small onClick={resource.refresh}>
+              Повторить
+            </Button>
+          </div>
+        )}
+      </Notice>
+    );
+  if (resource.stale)
+    return (
+      <div className="refresh-notice" role="status">
+        <span>Данные могли измениться.</span>
+        <Button small onClick={resource.refresh}>
+          Обновить
+        </Button>
+      </div>
+    );
+  return null;
+}
+
 function ErrorPanel({
   error,
+  subject,
+  missing,
   onRetry,
   back,
 }: {
   error: unknown;
+  subject: string;
+  /** Заголовок для 404: что именно не нашлось. */
+  missing: string;
   onRetry: () => void;
-  back: ReactNode;
+  back?: ReactNode;
 }) {
   const status = problemStatus(error);
   const trace = error instanceof ApiProblem ? error.problem.trace_id : null;
   const safeTrace =
-    typeof trace === "string" &&
-    /^[a-zA-Z0-9._:-]{1,80}$/.test(trace) &&
-    ![401, 403].includes(status ?? 0)
+    typeof trace === "string" && /^[a-zA-Z0-9._:-]{1,80}$/.test(trace) && ![401, 403].includes(status ?? 0)
       ? trace
       : null;
   const titles: Record<number, string> = {
-    401: "Войдите через MAX",
+    401: "Сессия MAX истекла",
     403: "Нет доступа к этому дому",
-    404: "Проблема не найдена",
+    404: missing,
     409: "Данные изменились",
     429: "Слишком много запросов",
   };
   const details: Record<number, string> = {
-    401: "Сессия недействительна или истекла. Закройте мини-приложение и откройте его заново в MAX.",
+    401: "Закройте мини-приложение и откройте его снова в MAX.",
     403: "Доступ закрыт или ещё не подтверждён. Откройте ДомСигнал кнопкой из вашего домового чата или выберите другой дом.",
-    404: "Вернитесь к доске и обновите список проблем.",
-    409: "Обновите данные перед следующим действием.",
-    429: "Подождите минуту и попробуйте снова.",
+    404: "Возможно, ссылка устарела. Вернитесь к проблемам дома.",
+    409: "Обновите страницу перед следующим действием.",
+    429: "Подождите минуту и попробуйте ещё раз.",
   };
   return (
     <>
+      <PageHeader title={titles[status ?? 0] ?? `Не удалось загрузить ${subject}`} />
       <StatePanel
-        title={titles[status ?? 0] ?? "Доска временно недоступна"}
-        detail={
-          details[status ?? 0] ?? "Проверьте соединение и попробуйте ещё раз."
-        }
-        action={retryable(error) ? "Попробовать снова" : undefined}
+        kind="error"
+        title={titles[status ?? 0] ? "Что сделать" : "Проверьте интернет и попробуйте ещё раз"}
+        detail={details[status ?? 0] ?? "Если не получится, закройте мини-приложение и откройте его снова."}
+        action={retryable(error) ? "Повторить" : undefined}
         onAction={onRetry}
         back={status === 401 ? undefined : back}
       />
-      {safeTrace && (
-        <p className="page-footer">Код для поддержки: {safeTrace}</p>
-      )}
+      {safeTrace && <p className="ds-meta">Код для поддержки: {safeTrace}</p>}
     </>
   );
 }
+
 function Diagnostics() {
   return (
     <details className="diagnostics">
       <summary>Диагностика MAX · только разработка</summary>
       <dl>
         <InfoRow label="Platform">{maxBridge.platform}</InfoRow>
-        <InfoRow label="Client version">
-          {maxBridge.clientVersion ?? "неизвестна"}
-        </InfoRow>
-        <InfoRow label="initData present">
-          {String(Boolean(maxBridge.initData))}
-        </InfoRow>
+        <InfoRow label="Client version">{maxBridge.clientVersion ?? "неизвестна"}</InfoRow>
+        <InfoRow label="initData present">{String(Boolean(maxBridge.initData))}</InfoRow>
         {Object.entries(maxBridge.capabilities).map(([label, value]) => (
           <InfoRow key={label} label={label}>
             {String(value)}

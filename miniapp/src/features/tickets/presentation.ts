@@ -1,33 +1,14 @@
 import { warnUnknown } from "../incidents/presentation";
+import { residentTicketStatus, staffTicketStatus, statusOf } from "../../shared/ui/status";
 
-const employeeStatuses: Record<string, string> = {
-  new: "Новая",
-  accepted: "Принята исполнителем",
-  in_progress: "В работе",
-  verification_pending: "На проверке жителей",
-  closed: "Результат подтверждён жителем",
-  needs_clarification: "Нужно уточнение",
-  waiting_external: "Ожидаются сведения внешней стороны",
-  cancelled: "Отменена с причиной",
-};
-const residentStatuses: Record<string, string> = {
-  ...employeeStatuses,
-  new: "Передано в обработку",
-  accepted: "Принято",
-  verification_pending: "Проверьте результат",
-  closed: "Завершено",
-  cancelled: "Работа по заявке отменена",
-};
+/** Подпись статуса заявки — из общего словаря (shared/ui/status.ts). */
 export function ticketStatus(status: string | null, resident = false) {
-  const labels = resident ? residentStatuses : employeeStatuses;
-  if (status && Object.hasOwn(labels, status)) return labels[status];
-  if (status) warnUnknown("ticket status");
-  return "Состояние обновилось";
+  return statusOf(resident ? residentTicketStatus : staffTicketStatus, status).label;
 }
 export const actionLabels: Record<string, string> = {
   accept: "Принять заявку",
   start: "Начать работу",
-  assign: "Назначить",
+  assign: "Назначить исполнителя",
   "work-attempts": "Сообщить о выполнении",
   clarify: "Запросить уточнение",
   "wait-external": "Ожидать другую службу",

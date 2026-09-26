@@ -38,19 +38,19 @@ async function axeCheck(page: Page) {
 
 async function open(page: Page, actor: string) {
   await page.goto(`/?test_actor=${actor}`);
-  await expect(page.getByRole("button", { name: "Сообщить", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Сообщить", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Сообщить о проблеме", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Сообщить о проблеме", exact: true }).click();
 }
 
 async function describeProblem(page: Page, text: string) {
-  await page.getByRole("textbox", { name: "Описание" }).fill(text);
-  await page.getByRole("button", { name: "Дальше" }).click();
+  await page.getByRole("textbox", { name: "Опишите проблему" }).fill(text);
+  await page.getByRole("button", { name: "Проверить описание" }).click();
   await expect(page.getByText("Проверьте, что мы поняли")).toBeVisible();
 }
 
 /** Отправить новую проблему, какой бы шаг ни предложила карточка. */
 async function sendAsNew(page: Page) {
-  for (const name of ["Нет, это другое", "Сообщить в УК", "Всё верно, отправить"]) {
+  for (const name of ["Нет, это другое", "Сообщить в управляющую компанию", "Сообщить в УК", "Всё верно, отправить"]) {
     const button = page.getByRole("button", { name, exact: true });
     if (await button.count()) {
       await button.first().click();
@@ -74,14 +74,16 @@ test("UK route: form → review → ticket → route card", async ({ page }) => 
   await page.screenshot({ path: "test-results/p3c-uk-review-390.png", fullPage: true });
 
   await sendAsNew(page);
-  await expect(page.getByRole("heading", { name: "Что дальше" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Сообщение сохранено" })).toBeVisible();
+  // Подтверждение на месте: номер заявки и где смотреть статус.
+  await expect(page.getByText(/Заявка в управляющую компанию T-\d+/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Открыть проблему" })).toBeVisible();
   await noOverflow(page);
   await axeCheck(page);
 
-  await page.getByRole("button", { name: "Открыть карточку маршрута" }).click();
+  await page.getByRole("button", { name: "Кто отвечает и почему" }).click();
   await expect(page).toHaveURL(/card=/);
-  await expect(page.getByRole("heading", { name: "Следующий шаг" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Куда обратиться" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Основание" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Открыть проблему дома" })).toBeVisible();
   await page.screenshot({ path: "test-results/p3c-uk-card-390.png", fullPage: true });
@@ -102,7 +104,7 @@ test("external route: form → review → card → draft → copy → I sent it"
   await expect(page.getByText("Проблема, вероятно, относится не к вашей УК")).toBeVisible();
 
   await sendAsNew(page);
-  await expect(page.getByRole("heading", { name: "Что дальше" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Сообщение сохранено" })).toBeVisible();
   // Адрес входа ПОС подтверждён владельцем (P7b): переход — настоящая ссылка
   // на официальный сервис; по ней не переходим, проверяем только адрес.
   const transition = page.getByRole("link", { name: /^Перейти: Госуслуги\. Решаем вместе/ });
@@ -121,14 +123,14 @@ test("external route: form → review → card → draft → copy → I sent it"
   await expect(draft).toContainText("на улице у остановки не горят фонари");
   // P7b: факты канала с источниками — на экране рядом, в текст обращения не входят.
   await expect(draft).not.toContainText("Источник");
-  await expect(page.getByRole("heading", { name: "Что известно о канале" })).toBeVisible();
+  await expect(page.getByText("Что известно об официальном сервисе")).toBeVisible();
   await expect(
     page.getByText("ДомСигнал не отправляет обращения за вас — вы отправляете его сами."),
   ).toBeVisible();
 
   // Порядок действий на экране черновика закреплён продуктом.
   const labels = await page
-    .locator(".draft-actions button, .draft-actions a")
+    .locator(".draft-actions .ds-btn")
     .evaluateAll((nodes) => nodes.map((node) => node.textContent?.trim()));
   expect(labels).toEqual([
     "Скопировать текст",
@@ -155,15 +157,17 @@ test("external route: form → review → card → draft → copy → I sent it"
   ).toBeVisible();
   expect(problems).toEqual([]);
 
-  await page.getByLabel(/Номер обращения/).fill("OBR-DEMO-1");
+  // Отметка необратима — сначала подтверждение, номер вводится в нём.
   await page.getByRole("button", { name: "Я отправил(а) обращение" }).click();
+  await page.getByLabel(/Номер обращения/).fill("OBR-DEMO-1");
+  await page.getByRole("button", { name: "Да, я отправил(а)" }).click();
   await expect(
     page.getByText(
       "Вы отметили, что отправили обращение. ДомСигнал не подтверждает регистрацию во внешней системе.",
       { exact: false },
     ),
   ).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Обращение" })).toBeDisabled();
+  await expect(page.getByRole("textbox", { name: "Обращение" })).toHaveAttribute("readonly", "");
   await page.screenshot({ path: "test-results/p3c-draft-filed-390.png", fullPage: true });
 
   await page.setViewportSize(SIZES[1]);
@@ -172,10 +176,10 @@ test("external route: form → review → card → draft → copy → I sent it"
   await page.screenshot({ path: "test-results/p3c-draft-1280.png", fullPage: true });
   await noOverflow(page);
 
-  // Возврат ведёт на карточку того же исхода.
-  await page.getByRole("button", { name: /К карточке маршрута/ }).click();
+  // После перезагрузки истории нет: «Назад» ведёт на карточку того же исхода.
+  await page.getByRole("button", { name: /Назад/ }).click();
   await expect(page).toHaveURL(/card=/);
-  await expect(page.getByRole("heading", { name: "Следующий шаг" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Куда обратиться" })).toBeVisible();
   await page.screenshot({ path: "test-results/p3c-external-card-1280.png", fullPage: true });
 });
 
@@ -186,33 +190,33 @@ test("duplicate: the second resident joins, the third creates a new problem", as
   await open(page, "demo");
   await describeProblem(page, text);
   await sendAsNew(page);
-  await expect(page.getByRole("heading", { name: "Что дальше" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Сообщение сохранено" })).toBeVisible();
 
   await open(page, "demo-neighbour");
   await describeProblem(page, text);
   await expect(page.getByText("Похоже, об этом уже сообщали")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Это та же проблема" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Это та же проблема/ }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Нет, это другое" })).toBeVisible();
   await page.screenshot({ path: "test-results/p3c-duplicates-1280.png", fullPage: true });
   await noOverflow(page);
   await axeCheck(page);
 
-  await page.getByRole("button", { name: "Это та же проблема" }).first().click();
+  await page.getByRole("button", { name: /^Это та же проблема/ }).first().click();
   await expect(
-    page.getByRole("heading", { name: "Вы присоединились к существующей проблеме" }),
+    page.getByRole("heading", { name: "Вы присоединились к проблеме" }),
   ).toBeVisible();
-  await expect(page.getByText(/участников: [2-9]/)).toBeVisible();
+  await expect(page.getByText(/теперь [2-9] соседа|теперь \d+ соседей/)).toBeVisible();
   await page.screenshot({ path: "test-results/p3c-joined-1280.png", fullPage: true });
 
   await open(page, "demo-third");
   await describeProblem(page, text);
   await expect(page.getByText("Похоже, об этом уже сообщали")).toBeVisible();
   await page.getByRole("button", { name: "Нет, это другое" }).click();
-  await expect(page.getByRole("heading", { name: "Что дальше" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Сообщение сохранено" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Открыть проблему" })).toBeVisible();
   await page.getByRole("button", { name: "Открыть проблему" }).click();
   await expect(page).toHaveURL(/incident=/);
-  await expect(page.getByRole("heading", { name: "Что делать сейчас" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Что известно" })).toBeVisible();
   await page.screenshot({ path: "test-results/p3c-new-problem-1280.png", fullPage: true });
 });
 
@@ -233,11 +237,11 @@ test("a route-card launch link opens the card for its recipient only", async ({
   const outcome = (await submitted.json()).route_outcome_id;
 
   await page.goto(`/?test_actor=demo&card=${outcome}`);
-  await expect(page.getByRole("heading", { name: "Следующий шаг" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Что известно о канале" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Куда обратиться" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Что известно об официальном сервисе" })).toBeVisible();
 
   // Чужому исход неотличим от несуществующего.
   await page.goto(`/?test_actor=demo-third&card=${outcome}`);
-  await expect(page.getByText("Проблема не найдена", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Что известно о канале" })).toHaveCount(0);
+  await expect(page.getByText("Карточка «Куда обратиться» не найдена", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Что известно об официальном сервисе" })).toHaveCount(0);
 });

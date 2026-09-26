@@ -32,10 +32,10 @@ function show(client: DomSignalApi = apiWith()) {
 }
 
 async function describeProblem(text = "у остановки не горят фонари") {
-  fireEvent.change(screen.getByRole("textbox", { name: "Описание" }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "Опишите проблему" }), {
     target: { value: text },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Дальше" }));
+  fireEvent.click(screen.getByRole("button", { name: "Проверить описание" }));
   await screen.findByText("Проверьте, что мы поняли");
 }
 
@@ -72,7 +72,7 @@ describe("report flow", () => {
   it("says out loud when the rules are not sure", async () => {
     show(withPreview({ confident: false }));
     await describeProblem();
-    expect(screen.getByText("Мы не уверены, что поняли всё правильно.")).toBeTruthy();
+    expect(screen.getByText(/Мы не уверены, что поняли всё правильно./)).toBeTruthy();
   });
 
   it("a found duplicate requires an explicit choice and sends nothing by itself", async () => {
@@ -84,7 +84,7 @@ describe("report flow", () => {
     // Пока житель не выбрал — ни присоединения, ни новой проблемы.
     expect(client.joinIncident).not.toHaveBeenCalled();
     expect(client.submitReport).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Это та же проблема" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Это та же проблема/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Нет, это другое" })).toBeTruthy();
   });
 
@@ -92,8 +92,8 @@ describe("report flow", () => {
     const client = withPreview({ category: "elevator" }, [candidate] as never);
     show(client);
     await describeProblem("опять лифт стоит");
-    fireEvent.click(screen.getByRole("button", { name: "Это та же проблема" }));
-    await screen.findByText("Вы присоединились к существующей проблеме");
+    fireEvent.click(screen.getByRole("button", { name: /^Это та же проблема/ }));
+    await screen.findByText("Вы присоединились к проблеме");
     expect(client.joinIncident).toHaveBeenCalledWith(candidate.incident_id, expect.any(String));
     expect(client.submitReport).not.toHaveBeenCalled();
   });
@@ -107,14 +107,18 @@ describe("report flow", () => {
     expect(client.joinIncident).not.toHaveBeenCalled();
   });
 
-  it("'это не так' returns to the manual category and sends it with the report", async () => {
+  it("changing the category returns to the manual choice and sends it with the report", async () => {
     const { client } = show();
     await describeProblem();
-    fireEvent.click(screen.getByRole("button", { name: "Это не так" }));
+    fireEvent.click(screen.getByRole("button", { name: /Изменить категорию/ }));
     const select = await screen.findByRole("combobox", { name: /Категория/ });
     expect((select.closest("details") as HTMLDetailsElement).open).toBe(true);
+    // Текст не пропал: повторно вводить не нужно.
+    expect((screen.getByRole("textbox", { name: "Опишите проблему" }) as HTMLTextAreaElement).value).toBe(
+      "у остановки не горят фонари",
+    );
     fireEvent.change(select, { target: { value: "waste" } });
-    fireEvent.click(screen.getByRole("button", { name: "Дальше" }));
+    fireEvent.click(screen.getByRole("button", { name: "Проверить описание" }));
     fireEvent.click(await screen.findByRole("button", { name: "Всё верно, отправить" }));
     await waitFor(() => expect(client.submitReport).toHaveBeenCalled());
     expect(vi.mocked(client.submitReport).mock.calls[0][1]).toEqual({
@@ -127,9 +131,11 @@ describe("report flow", () => {
     const { client, onOpen } = show();
     await describeProblem();
     fireEvent.click(screen.getByRole("button", { name: "Всё верно, отправить" }));
-    await screen.findByText("Что дальше");
+    await screen.findByRole("heading", { name: "Сообщение сохранено" });
     fireEvent.click(screen.getByRole("button", { name: "Подготовить текст обращения" }));
-    await waitFor(() => expect(onOpen).toHaveBeenCalledWith({ draft: expect.any(String) }));
+    await waitFor(() =>
+      expect(onOpen).toHaveBeenCalledWith({ draft: expect.any(String), card: expect.any(String) }),
+    );
     expect(client.createAppealDraft).toHaveBeenCalledWith({
       house_id: house.id,
       route_outcome_id: expect.any(String),
@@ -140,9 +146,9 @@ describe("report flow", () => {
     const { client } = show();
     await describeProblem();
     fireEvent.click(screen.getByRole("button", { name: "Всё верно, отправить" }));
-    await screen.findByText("Что дальше");
+    await screen.findByRole("heading", { name: "Сообщение сохранено" });
     fireEvent.click(screen.getByRole("button", { name: "Всё равно сообщить в УК" }));
-    await screen.findByText(/Это не отменяет внешний маршрут/);
+    await screen.findByText(/Это не отменяет официальное обращение/);
     expect(vi.mocked(client.createReport).mock.calls[0][0].description).toBe(
       "у остановки не горят фонари",
     );
@@ -165,5 +171,62 @@ describe("report flow", () => {
         "Ответственный пока не определён — разберёт диспетчер управляющей компании.",
       ),
     ).toBeTruthy();
+  });
+
+  it("keeps the text when the check fails and says what to do", async () => {
+    const client = apiWith();
+    vi.mocked(client.previewReport).mockRejectedValueOnce(new Error("offline"));
+    show(client);
+    fireEvent.change(screen.getByRole("textbox", { name: "Опишите проблему" }), {
+      target: { value: "в подвале течёт труба" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Проверить описание" }));
+    expect(await screen.findByText(/Проверьте интернет и попробуйте ещё раз\. Текст сохранён\./)).toBeTruthy();
+    expect((screen.getByRole("textbox", { name: "Опишите проблему" }) as HTMLTextAreaElement).value).toBe(
+      "в подвале течёт труба",
+    );
+  });
+
+  it("names a too short description at the field and sends nothing", () => {
+    const { client } = show();
+    const field = screen.getByRole("textbox", { name: "Опишите проблему" });
+    fireEvent.change(field, { target: { value: "лифт" } });
+    fireEvent.click(screen.getByRole("button", { name: "Проверить описание" }));
+    const message = screen.getByText(/от 5 символов/);
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    expect(field.getAttribute("aria-describedby")).toContain(message.id);
+    expect(client.previewReport).not.toHaveBeenCalled();
+  });
+
+  it("restores a draft kept by the app and reports every change back", () => {
+    const onDraft = vi.fn();
+    render(
+      <ReportFlow
+        houseId={house.id}
+        client={apiWith()}
+        draft={{ text: "с утра нет горячей воды", category: "water" }}
+        onDraft={onDraft}
+        onOpen={vi.fn()}
+        onCreated={vi.fn()}
+      />,
+    );
+    expect((screen.getByRole("textbox", { name: "Опишите проблему" }) as HTMLTextAreaElement).value).toBe(
+      "с утра нет горячей воды",
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: "Опишите проблему" }), {
+      target: { value: "с утра нет горячей воды во всём стояке" },
+    });
+    expect(onDraft).toHaveBeenLastCalledWith({ text: "с утра нет горячей воды во всём стояке", category: "water" });
+  });
+
+  it("offers the same and another problem as equal choices with nothing preselected", async () => {
+    const client = withPreview({ category: "elevator" }, [candidate] as never);
+    show(client);
+    await describeProblem("опять лифт стоит");
+    const same = screen.getByRole("button", { name: /^Это та же проблема/ });
+    const other = screen.getByRole("button", { name: "Нет, это другое" });
+    expect(same.className).toBe(other.className);
+    expect(client.submitReport).not.toHaveBeenCalled();
+    expect(client.joinIncident).not.toHaveBeenCalled();
   });
 });

@@ -1,9 +1,23 @@
-import { Button, Flex, Panel, Typography } from "@maxhub/max-ui";
 import type { IncidentSummary } from "../../shared/api/client";
-import { SourceChip, StatusBadge } from "../../shared/ui/semantic";
+import { countLabel, formatWhen } from "../../shared/ui/format";
+import { StatusBadge } from "../../shared/ui/semantic";
 import { categoryLabel } from "./presentation";
 
-export function IncidentCard({
+export function placeText(location: IncidentSummary["location"]): string | null {
+  if (!location) return null;
+  return (
+    [location.entrance && `подъезд ${location.entrance}`, location.floor && `этаж ${location.floor}`, location.label]
+      .filter(Boolean)
+      .join(", ") || null
+  );
+}
+
+/**
+ * Строка проблемы в списке: поля всегда на одних местах — название и статус,
+ * описание в две строки, место, сколько соседей и когда обновлено.
+ * Вся строка — ссылка на проблему.
+ */
+export function IncidentRow({
   incident,
   href,
   onNavigate,
@@ -14,57 +28,39 @@ export function IncidentCard({
   onNavigate: (href: string) => void;
   detailAvailable?: boolean;
 }) {
-  return (
-    <Panel className="incident-card">
-      <Flex gap={12} wrap="wrap" justify="space-between">
-        <Typography.Text variant="label" color="secondary">
-          {categoryLabel(incident.category)}
-        </Typography.Text>
+  const updated = formatWhen(incident.updated_at ?? incident.created_at);
+  const meta = [
+    categoryLabel(incident.category),
+    placeText(incident.location),
+    incident.participant_count !== null ? countLabel(incident.participant_count, ["сосед", "соседа", "соседей"]) : null,
+    updated && `обновлено ${updated}`,
+  ].filter(Boolean);
+  const body = (
+    <>
+      <span className="ds-row-head">
+        <span className="ds-row-title">{incident.title || "Проблема дома"}</span>
         <StatusBadge status={incident.status} />
-      </Flex>
-      <Typography.Title asChild>
-        <h3>{incident.title || "Проблема дома"}</h3>
-      </Typography.Title>
-      <p className="card-description muted">
-        {incident.description || "Описание пока не добавлено"}
-      </p>
+      </span>
+      {incident.description && <span className="ds-row-text">{incident.description}</span>}
+      <span className="ds-meta">{meta.join(" · ")}</span>
       {incident.status === "reported" && (
-        <p className="muted">Внешняя регистрация не подтверждена.</p>
+        <span className="ds-meta">Регистрацию во внешней системе ДомСигнал не подтверждает.</span>
       )}
-      <SourceChip source={incident.provenance} />
-      <p className="muted">Участников: {incident.participant_count ?? "нет данных"}</p>
-      <Flex
-        className="card-footer"
-        align="center"
-        justify="space-between"
-        gap={12}
-        wrap="wrap"
-      >
-        <Typography.Text variant="detail">
-          Сообщений: {incident.report_count ?? "нет данных"}
-        </Typography.Text>
-        {detailAvailable && (
-          <Button asChild size="small" variant="secondary">
-            <a
-              href={href}
-              aria-label={`Открыть: ${incident.title}`}
-              onClick={(event) => {
-                if (
-                  !event.ctrlKey &&
-                  !event.metaKey &&
-                  !event.shiftKey &&
-                  event.button === 0
-                ) {
-                  event.preventDefault();
-                  onNavigate(href);
-                }
-              }}
-            >
-              Открыть ↗
-            </a>
-          </Button>
-        )}
-      </Flex>
-    </Panel>
+    </>
+  );
+  if (!detailAvailable) return <div className="ds-row">{body}</div>;
+  return (
+    <a
+      className="ds-row"
+      href={href}
+      onClick={(event) => {
+        if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) {
+          event.preventDefault();
+          onNavigate(href);
+        }
+      }}
+    >
+      {body}
+    </a>
   );
 }

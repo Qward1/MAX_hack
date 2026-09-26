@@ -1,3 +1,4 @@
+import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
 import { useState } from "react";
 import { Feedback, History, OneTimeLink, Status, Title, dateInput, formValue, submitted, useAction, useRead, useRoute, type Schema } from "./administration";
 import { QuotaMeter } from "./charts";
@@ -46,7 +47,7 @@ function ApplicationReview() {
     <ul className="admin-records">{r.data?.map(a => <li key={a.id}><button className="record-link" onClick={() => select(a.id)}>{a.legal_name}</button>
       <span>ИНН {a.inn}</span>{a.requested_chat_count != null && <span>Чатов: {a.requested_chat_count}</span>}<Status value={a.status} />
       {a.inn_conflict && <span className="admin-status status-needs_info">{a.inn_conflict === "company_exists" ? "УК с этим ИНН уже есть" : "Есть другая заявка с этим ИНН"}</span>}
-      <time>{new Date(a.submitted_at).toLocaleString("ru-RU")}</time></li>)}</ul>
+      <time>{formatStaffTime(a.submitted_at)}</time></li>)}</ul>
     <Pages offset={offset} set={setOffset} count={r.data?.length ?? 0} />
     {selected && <ApplicationDetail key={selected} id={selected} refresh={r.refresh} />}</>;
 }
@@ -69,7 +70,7 @@ function ApplicationDetail({ id, refresh }: { id: string; refresh: () => void })
       <dt>Комментарий</dt><dd>{a.comment ?? "Нет комментария"}</dd>
       {a.status === "approved" && <><dt>Выданная квота чатов</dt><dd>{a.granted_chat_quota ?? "Без ограничения"}</dd></>}</dl>
     {a.messages && a.messages.length > 0 && <><h3>Вопросы и ответы</h3><ol className="message-list">{a.messages.map((m, i) => <li key={i} className={`message-${m.author}`}>
-      <strong>{m.author === "platform" ? "Платформа" : "Заявитель"}</strong><time>{new Date(m.created_at).toLocaleString("ru-RU")}</time><p>{m.text}</p></li>)}</ol></>}
+      <strong>{m.author === "platform" ? "Платформа" : "Заявитель"}</strong><time>{formatStaffTime(m.created_at)}</time><p>{m.text}</p></li>)}</ol></>}
     {["submitted", "under_review", "needs_info"].includes(a.status) && <form className="ticket-form" onSubmit={async e => {
       const data = submitted(e); const verb = (e.nativeEvent as SubmitEvent).submitter?.getAttribute("value");
       if (!verb) return;
@@ -101,7 +102,7 @@ function HouseReview() {
   return <><Title description="Выберите физический дом явно. Пересекающиеся периоды управления недопустимы.">Заявки на дома</Title>
     <Feedback loading={r.loading} error={r.error} /><ul className="admin-records">{r.data?.map(a => <li key={a.id}>
       <button className="record-link" onClick={() => select(a.id)}>{a.requested_address}</button><Status value={a.status} />
-      <span>С {new Date(a.requested_valid_from).toLocaleDateString("ru-RU")}</span></li>)}</ul>
+      <span>С {formatDay(a.requested_valid_from)}</span></li>)}</ul>
     <Pages offset={offset} set={setOffset} count={r.data?.length ?? 0} />
     {selected && <HouseRequestDetail key={selected} id={selected} refresh={r.refresh} />}</>;
 }
@@ -144,7 +145,7 @@ function PlatformCompanies() {
   const [selected, select] = useState<string | null>(null);
   return <><Title>Организации</Title><Feedback loading={r.loading} error={r.error} /><ul className="admin-records">{r.data?.map(c => <li key={c.id}>
     <button className="record-link" onClick={() => select(c.id)}>{c.name}</button><Status value={c.status} />
-    <span>{c.house_count} домов · {c.employee_count} сотрудников · {c.binding_problems} проблем MAX</span></li>)}</ul>
+    <span>{countLabel(c.house_count, ["дом", "дома", "домов"])} · {countLabel(c.employee_count, ["сотрудник", "сотрудника", "сотрудников"])} · {countLabel(c.binding_problems, ["проблема с MAX", "проблемы с MAX", "проблем с MAX"])}</span></li>)}</ul>
     <Pages offset={offset} set={setOffset} count={r.data?.length ?? 0} />
     {selected && <PlatformCompany key={selected} id={selected} refresh={r.refresh} />}</>;
 }
@@ -186,7 +187,7 @@ function OpenHouses() {
     <Feedback loading={r.loading} error={r.error ?? (action.error || undefined)} />
     {r.data?.length === 0 && <p>Домов с открытым доступом нет.</p>}
     <ul className="admin-records">{r.data?.map(h => <li key={h.house_id}><span>{h.address}</span><span>{h.company_name}</span>
-      {h.open_access_changed_at && <time>С {new Date(h.open_access_changed_at).toLocaleString("ru-RU")}</time>}
+      {h.open_access_changed_at && <time>С {formatStaffTime(h.open_access_changed_at)}</time>}
       {closing !== h.house_id ? <button className="ticket-button secondary" onClick={() => setClosing(h.house_id)}>Закрыть доступ</button>
         : <form className="inline-form" onSubmit={async e => {
           const data = submitted(e);
@@ -242,7 +243,7 @@ function CompanyQuota({ id, refresh }: { id: string; refresh: () => void }) {
       <p className="muted">Снижение не отключает подключённые чаты: УК будет отмечена как превысившая квоту, новые подключения заблокируются.</p>
       <details><summary>История выдач</summary><ul className="admin-records">{r.data.grants.map((g, i) => <li key={i}>
         <span>{g.limit_after === null || g.limit_after === undefined ? "Без ограничения" : `Квота ${g.limit_after}`}</span>
-        <span>{g.reason}</span><time>{new Date(g.created_at).toLocaleString("ru-RU")}</time></li>)}</ul></details></>}
+        <span>{g.reason}</span><time>{formatStaffTime(g.created_at)}</time></li>)}</ul></details></>}
   </section>;
 }
 
@@ -256,7 +257,7 @@ function OpenRegistration({ id, active }: { id: string; active: boolean }) {
     <Feedback loading={r.loading} error={r.error ?? (action.error || undefined)} />
     {r.data && <>
       <p>Регистрация по ссылке: <strong>{enabled ? "открыта" : "закрыта"}</strong>
-        {r.data.changed_at && <> с {new Date(r.data.changed_at).toLocaleString("ru-RU")}</>}</p>
+        {r.data.changed_at && <> с {formatStaffTime(r.data.changed_at)}</>}</p>
       <p className="muted">По ссылке человек сам создаёт логин, пароль и второй фактор и становится оператором этой УК на всех её текущих домах.</p>
       <form className="inline-form" onSubmit={async e => {
         const data = submitted(e); const verb = (e.nativeEvent as SubmitEvent).submitter?.getAttribute("value");
@@ -271,7 +272,7 @@ function OpenRegistration({ id, active }: { id: string; active: boolean }) {
       <h4>Зарегистрировались по ссылке</h4>
       {(r.data.employees ?? []).length === 0 ? <p className="muted">Пока никого.</p> :
         <ul className="admin-records">{(r.data.employees ?? []).map(e => <li key={e.user_id}><span>{e.display_name}</span><span>{e.login_name}</span>
-          <Status value={e.status} />{e.registered_at && <time>{new Date(e.registered_at).toLocaleString("ru-RU")}</time>}</li>)}</ul>}
+          <Status value={e.status} />{e.registered_at && <time>{formatStaffTime(e.registered_at)}</time>}</li>)}</ul>}
     </>}
   </section>;
 }
@@ -290,7 +291,7 @@ function QuotaRequest({ request, refresh }: { request: Schema["ChatQuotaRequestV
   const action = useAction(refresh);
   return <section className="admin-detail"><h2>{request.company_name ?? "УК"}: +{request.requested_delta}</h2><Status value={request.status} />
     {request.quota && <QuotaMeter quota={request.quota} />}
-    <p>{request.reason}</p><time>{new Date(request.created_at).toLocaleString("ru-RU")}</time>
+    <p>{request.reason}</p><time>{formatStaffTime(request.created_at)}</time>
     {request.decision_reason && <p className="muted">Решение: {request.decision_reason}{request.granted_delta ? ` (выдано +${request.granted_delta})` : ""}</p>}
     <Feedback error={action.error || undefined} />
     {request.status === "pending" && <form className="ticket-form" onSubmit={async e => {

@@ -1,5 +1,25 @@
 # DEV-B — current handoff
 
+## UX-1 — единая визуальная система, мини-приложение и кабинеты — 26.09.2026
+
+**IMPLEMENTED IN BRANCH** `agent/ux-overhaul` (от `840a03d`), не запушено, не
+MERGED, не DEPLOYED. Только frontend и документы: API, OpenAPI, схема БД,
+права и смысл статусов не менялись. Система и правила текстов —
+[UX.md](../UX.md#визуальная-система-ux-1--26092026), разбор, таблицы до/после,
+зависимости от backend — [UX_REVIEW](../UX_REVIEW.md), решение —
+[UX-SYSTEM-2026-09-26](../decisions.md#ux-system-2026-09-26).
+
+**Проверки** (локально, Node 22.22, своя PostgreSQL 16.10): `check.py --scope
+frontend` — PASS (vitest 292 passed, было 183), `--scope contracts` — PASS,
+`pytest tests/contract` — 146 passed, `test:browser` — 67 passed, 0 failed,
+12 skipped по флагам окружения (снимки UX-1, ND, B09); axe WCAG 2.2 AA — 0
+нарушений на экранах инвентаря. Стенду браузерных тестов теперь нужен ещё
+`MAX_BOT_USERNAME` (ссылка «Открыть бота в MAX» в D2).
+
+**Следующий шаг:** review и живая проверка в MAX (тема, `BackButton`,
+тактильный отклик, предупреждение о закрытии); backend-зависимости Z-1…Z-7
+из UX_REVIEW — отдельными задачами.
+
 ## D3 — жилищный навигатор, домовое сообщество, рассылки, сопровождение — 25.09.2026
 
 Единый статус проекта. D1 и D2 уже были в `main` (`aadd5a4`), D3 сделан поверх

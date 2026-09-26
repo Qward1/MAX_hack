@@ -1,20 +1,15 @@
-import { Button, Panel, Typography } from "@maxhub/max-ui";
 import { useState } from "react";
-import {
-  type DomSignalApi,
-  type OpenHouse,
-  problemStatus,
-} from "../../shared/api/client";
-import { StatePanel } from "../../shared/ui/semantic";
+import { type DomSignalApi, type OpenHouse, problemStatus } from "../../shared/api/client";
+import { Button } from "../../shared/ui/Button";
+import { Notice, StatePanel } from "../../shared/ui/semantic";
 
 /** Человеческая причина, почему не удалось выбрать дом. */
 export function joinError(error: unknown): string {
   const status = problemStatus(error);
   if (status === 404) return "Этот дом больше нельзя выбрать. Обновите список.";
-  if (status === 401)
-    return "Сессия истекла. Закройте мини-приложение и откройте его снова в MAX.";
+  if (status === 401) return "Сессия истекла. Закройте мини-приложение и откройте его снова в MAX.";
   if (status === 429) return "Слишком много попыток. Подождите минуту и повторите.";
-  return "Не удалось выбрать дом. Проверьте соединение и попробуйте ещё раз.";
+  return "Не удалось выбрать дом. Проверьте интернет и попробуйте ещё раз.";
 }
 
 /**
@@ -55,63 +50,59 @@ export function NoHouse({
   }
   return (
     <>
-      <Panel className="detail-section no-house">
-        <Typography.Title asChild>
-          <h2>Пока нет доступных домов</h2>
-        </Typography.Title>
+      <section className="ds-section no-house" aria-labelledby="no-house-chat">
+        <h2 id="no-house-chat">Откройте ДомСигнал кнопкой из вашего домового чата.</h2>
         <p>
-          <strong>Откройте ДомСигнал кнопкой из вашего домового чата.</strong>
+          В домовом чате есть сообщение бота с кнопкой «Открыть ДомСигнал». Мы проверим, что вы участник чата, и
+          дом появится здесь.
         </p>
-        <p className="muted">
-          Кнопка «Открыть ДомСигнал» есть в сообщении бота в чате дома. Мы проверим, что
-          вы участник чата, и дом появится здесь.
-        </p>
-        <Button variant="secondary" disabled={busy} onClick={onRefresh}>
-          Обновить
-        </Button>
-      </Panel>
+        <div className="ds-actions">
+          <Button disabled={busy} loading={busy} loadingLabel="Проверяем…" onClick={onRefresh}>
+            Проверить снова
+          </Button>
+        </div>
+      </section>
       {loadError ? (
         <StatePanel
+          kind="error"
           title="Не удалось загрузить список домов"
-          detail="Проверьте соединение и попробуйте ещё раз."
+          detail="Проверьте интернет и попробуйте ещё раз."
           action="Повторить"
           onAction={onRefresh}
         />
       ) : (
         houses.length > 0 && (
-          <Panel className="detail-section open-houses">
-            <Typography.Title asChild>
-              <h2>Выберите дом</h2>
-            </Typography.Title>
-            <p className="muted">
-              Эти дома открыты для всех жителей: выберите свой, чтобы сообщать о
-              проблемах и видеть доску дома.
+          <section className="ds-group open-houses" aria-labelledby="open-houses-title">
+            <h2 id="open-houses-title">Дома с открытым доступом</h2>
+            <p className="ds-subtle">
+              Их управляющая компания разрешила выбрать дом без домового чата. Выберите свой, чтобы сообщать о
+              проблемах и видеть проблемы дома.
             </p>
-            <ul className="open-house-list" aria-label="Дома, которые можно выбрать">
+            <ul className="ds-list" aria-label="Дома, которые можно выбрать">
               {houses.map((house) => (
-                <li key={house.id}>
-                  <span>{house.address}</span>
-                  <Button
-                    disabled={joining !== null || busy}
-                    aria-label={`Присоединиться: ${house.address}`}
-                    onClick={() => void join(house)}
-                  >
-                    {joining === house.id ? "Присоединяем…" : "Присоединиться"}
-                  </Button>
+                <li key={house.id} className="ds-row">
+                  <span className="ds-row-head">
+                    <span className="ds-row-title">{house.address}</span>
+                    <Button
+                      small
+                      disabled={joining !== null || busy}
+                      loading={joining === house.id}
+                      loadingLabel="Выбираем…"
+                      aria-label={`Выбрать дом: ${house.address}`}
+                      onClick={() => void join(house)}
+                    >
+                      Выбрать дом
+                    </Button>
+                  </span>
                 </li>
               ))}
             </ul>
-            {joining && (
-              <p role="status" className="refresh-notice">
-                Подключаем дом…
-              </p>
-            )}
             {error && (
-              <p role="alert" className="refresh-notice">
-                {error}
-              </p>
+              <Notice tone="danger" role="alert">
+                <p>{error}</p>
+              </Notice>
             )}
-          </Panel>
+          </section>
         )
       )}
     </>

@@ -102,12 +102,12 @@ test("real API → PostgreSQL → board → detail → reload; web keyboard and 
 }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("button", { name: "Сообщить", exact: true }),
+    page.getByRole("button", { name: "Сообщить о проблеме", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Сообщить", exact: true }).click();
+  await page.getByRole("button", { name: "Сообщить о проблеме", exact: true }).click();
   const description = `B-02 browser acceptance ${Date.now()}: лифт не работает`;
-  await page.getByRole("textbox", { name: "Описание" }).fill(description);
-  await page.getByRole("button", { name: "Дальше" }).click();
+  await page.getByRole("textbox", { name: "Опишите проблему" }).fill(description);
+  await page.getByRole("button", { name: "Проверить описание" }).click();
   await expect(page.getByText("Проверьте, что мы поняли")).toBeVisible();
   const created = page.waitForResponse(
     (response) =>
@@ -115,7 +115,7 @@ test("real API → PostgreSQL → board → detail → reload; web keyboard and 
       response.request().method() === "POST",
   );
   // Дубль того же лифта мог остаться от предыдущего прогона: житель решает сам.
-  for (const name of ["Нет, это другое", "Сообщить в УК", "Всё верно, отправить"]) {
+  for (const name of ["Нет, это другое", "Сообщить в управляющую компанию", "Сообщить в УК", "Всё верно, отправить"]) {
     const button = page.getByRole("button", { name, exact: true });
     if (await button.count()) {
       await button.first().click();
@@ -125,7 +125,7 @@ test("real API → PostgreSQL → board → detail → reload; web keyboard and 
   const response = await created;
   expect(response.status()).toBe(201);
   const id = (await response.json()).report.incident.id;
-  await expect(page.getByRole("heading", { name: "Что дальше" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Сообщение сохранено" })).toBeVisible();
   await page.getByRole("button", { name: "Открыть проблему" }).click();
   await expect(page).toHaveURL(new RegExp(`incident=${id}`));
   await page.goBack();
@@ -137,51 +137,52 @@ test("real API → PostgreSQL → board → detail → reload; web keyboard and 
   await link.first().focus();
   await page.keyboard.press("Enter");
   await expect(
-    page.getByRole("heading", { name: "Что делать сейчас" }),
+    page.getByRole("heading", { name: "Что известно" }),
   ).toBeVisible();
   await expect(
     page
-      .locator(".detail-section")
+      .locator("section")
       .filter({
-        has: page.getByRole("heading", { name: "О проблеме", exact: true }),
+        has: page.getByRole("heading", { name: "Что известно", exact: true }),
       }),
   ).toContainText(description);
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "Что делать сейчас" }),
+    page.getByRole("heading", { name: "Что известно" }),
   ).toBeVisible();
   await page.screenshot({
     path: "test-results/real-detail.png",
     fullPage: true,
   });
-  await expect(page.locator(".source-chip summary").last()).toContainText(
+  await expect(page.locator(".ds-source summary").last()).toContainText(
     "Демонстрационные данные",
   );
   await expect(
     page.getByRole("button", { name: "Подготовить обращение" }),
   ).toHaveCount(0);
-  const summary = page.locator(".source-chip summary").last();
+  const summary = page.locator(".ds-source summary").last();
   await summary.focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator(".source-chip").last()).toHaveAttribute("open", "");
+  await expect(page.locator(".ds-source").last()).toHaveAttribute("open", "");
   await page.keyboard.press("Space");
-  await expect(page.locator(".source-chip").last()).not.toHaveAttribute("open", "");
-  await page.getByRole("button", { name: /К доске дома/ }).focus();
+  await expect(page.locator(".ds-source").last()).not.toHaveAttribute("open", "");
+  // «Назад» возвращает туда, откуда пришли (история), а не открывает доску заново.
+  await page.getByRole("button", { name: /Назад/ }).focus();
   await page.keyboard.press("Space");
   await expect(
     page.getByRole("heading", { name: /Проблемы дома/ }),
   ).toBeVisible();
-  await page.goBack();
+  await page.goForward();
   await expect(
-    page.getByRole("heading", { name: "Что делать сейчас" }),
+    page.getByRole("heading", { name: "Что известно" }),
   ).toBeVisible();
   await page.route(`**/api/v1/incidents/${id}*`, (route) => route.abort(), {
     times: 1,
   });
   await page.getByRole("button", { name: "Обновить", exact: true }).click();
-  await expect(page.getByText(/Показаны ранее загруженные/)).toBeVisible();
+  await expect(page.getByText(/Показаны данные, загруженные раньше/)).toBeVisible();
   await page.getByRole("button", { name: "Повторить", exact: true }).click();
-  await expect(page.getByText(/Показаны ранее загруженные/)).toHaveCount(0);
+  await expect(page.getByText(/Показаны данные, загруженные раньше/)).toHaveCount(0);
   await noOverflow(page);
   await axeCheck(page);
   expect(
@@ -216,20 +217,16 @@ for (const width of [320, 430, 1280])
       await page.emulateMedia({ colorScheme: theme });
       await tortureRoutes(page);
       await page.goto("/");
-      await expect(page.getByRole("link", { name: /Открыть:/ })).toHaveCount(
-        100,
-      );
+      await expect(
+        page.getByRole("list", { name: "Проблемы дома" }).getByRole("link"),
+      ).toHaveCount(100);
       await noOverflow(page);
-      await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-        longAddress,
-      );
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Проблемы дома");
+      await expect(page.getByText(longAddress, { exact: true })).toBeVisible();
       await page.screenshot({
         path: `test-results/board-${width}-${theme}.png`,
       });
-      const link = page.getByRole("link", {
-        name: "Открыть: Не работает лифт",
-        exact: true,
-      });
+      const link = page.locator(`a[href*="incident=${incidentId}"]`);
       await link.focus();
       await page.keyboard.press("Shift+Tab");
       await page.keyboard.press("Tab");
@@ -241,19 +238,18 @@ for (const width of [320, 430, 1280])
       ).not.toBe("none");
       await page.keyboard.press("Enter");
       await expect(
-        page.getByRole("heading", { name: "Что делать сейчас" }),
+        page.getByRole("heading", { name: "Что известно" }),
       ).toBeVisible();
       await expect(page.getByText(longText, { exact: true })).toBeVisible();
-      await expect(
-        page.getByText("Не определён", { exact: true }),
-      ).toBeVisible();
-      await expect(page.locator(".status-badge")).toContainText(
+      // Срок неизвестен — строки «Срок» нет, он не выдумывается.
+      await expect(page.getByText("Срок", { exact: true })).toHaveCount(0);
+      await expect(page.locator(".ds-tag").first()).toContainText(
         "Состояние обновилось",
       );
       await expect(
         page.getByRole("button", { name: /future-action/ }),
       ).toHaveCount(0);
-      await page.locator(".source-chip summary").last().focus();
+      await page.locator(".ds-source summary").last().focus();
       await page.keyboard.press("Enter");
       await expect(page.getByText(longSource, { exact: true })).toBeVisible();
       await noOverflow(page);
@@ -282,24 +278,24 @@ test("missing source, empty list, loading, initial errors and retry", async ({
   });
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Загрузка доски дома" }),
+    page.getByRole("heading", { name: "Загружаем проблемы дома" }),
   ).toBeVisible();
   ready();
-  await expect(page.getByText("На доске пока пусто")).toBeVisible();
+  await expect(page.getByText("О проблемах пока не сообщали")).toBeVisible();
   await page.route("**/api/v1/incidents/*", (route) =>
     route.fulfill({
       json: { ...fixture, rule: null, reports: [], allowed_actions: [] },
     }),
   );
   await page.goto(`/?incident=${incidentId}`);
-  await expect(page.getByText("Что делать сейчас")).toBeVisible();
-  await expect(page.locator(".source-chip").last()).toHaveCount(0);
+  await expect(page.getByText("Что известно")).toBeVisible();
+  await expect(page.locator(".ds-source")).toHaveCount(0);
   for (const [status, title] of [
-    [401, "Войдите через MAX"],
+    [401, "Сессия MAX истекла"],
     [403, "Нет доступа к этому дому"],
     [404, "Проблема не найдена"],
     [409, "Данные изменились"],
-    [503, "Доска временно недоступна"],
+    [503, "Не удалось загрузить проблему"],
   ] as const) {
     await page.route(
       "**/api/v1/incidents/*",
@@ -315,8 +311,8 @@ test("missing source, empty list, loading, initial errors and retry", async ({
     await expect(page.getByText(title, { exact: true })).toBeVisible();
     await expect(page.getByText("private unsafe details")).toHaveCount(0);
     if (status >= 500 || status === 409) {
-      await page.getByRole("button", { name: "Попробовать снова" }).click();
-      await expect(page.getByText("Что делать сейчас")).toBeVisible();
+      await page.getByRole("button", { name: "Повторить" }).click();
+      await expect(page.getByText("Что известно")).toBeVisible();
     }
   }
 });

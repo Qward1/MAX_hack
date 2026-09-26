@@ -16,6 +16,11 @@ export interface MaxWebApp {
     text?: string;
     link?: string;
   }) => Promise<unknown> | void;
+  HapticFeedback?: {
+    notificationOccurred?: (type: "error" | "success" | "warning", disableVibrationFallback?: boolean) => void;
+  };
+  enableClosingConfirmation?: () => void;
+  disableClosingConfirmation?: () => void;
 }
 
 /**
@@ -123,6 +128,29 @@ export function createMaxBridge(
     },
     openMaxLink(value: string): boolean {
       return this.openLink(value, true);
+    },
+    /**
+     * Тактильный отклик — только на значимые события: отправлено, ошибка.
+     * Вне MAX (браузер, тесты) — ничего.
+     */
+    haptic(type: "error" | "success" | "warning"): void {
+      const app = read();
+      if (!["ios", "android"].includes(app?.platform ?? "")) return;
+      try {
+        app?.HapticFeedback?.notificationOccurred?.(type);
+      } catch {
+        /* Отклик необязателен. */
+      }
+    },
+    /** Предупреждение о потере несохранённого текста при закрытии мини-приложения. */
+    closingConfirmation(enabled: boolean): void {
+      const app = read();
+      try {
+        if (enabled) app?.enableClosingConfirmation?.();
+        else app?.disableClosingConfirmation?.();
+      } catch {
+        /* Закрытие без предупреждения не ломает сценарий. */
+      }
     },
   };
 }

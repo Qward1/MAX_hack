@@ -14,7 +14,10 @@ import {
   type TicketCommand,
 } from "../shared/api/tickets";
 import { useResource } from "../shared/api/useResource";
-import { categoryLabel, formatDate } from "../features/incidents/presentation";
+import { categoryLabel } from "../features/incidents/presentation";
+import { placeText } from "../features/incidents/IncidentCard";
+import { countLabel, formatStaffTime } from "../shared/ui/format";
+import { staffTicketStatus, statusOf } from "../shared/ui/status";
 import {
   Pagination,
   TicketDeadlines,
@@ -56,12 +59,18 @@ export function TicketDetail({
   me,
   revision,
   navigate,
+  backHref = adminUrl(),
+  inPanel = false,
 }: {
   client: TicketClient;
   id: string;
   me: Me;
   revision: number;
   navigate: (url: string) => void;
+  /** Очередь с теми же фильтрами, откуда открыли заявку. */
+  backHref?: string;
+  /** Заявка открыта рядом со списком. */
+  inPanel?: boolean;
 }) {
   const load = useCallback(
     async (signal: AbortSignal) => {
@@ -85,19 +94,19 @@ export function TicketDetail({
   }, [Boolean(data)]);
   const back = (
     <a
-      href={adminUrl()}
+      href={backHref}
       onClick={(e) => {
         e.preventDefault();
-        navigate(adminUrl());
+        navigate(backHref);
       }}
     >
-      ← К заявкам
+      {inPanel ? "← К заявкам (закрыть)" : "← К заявкам"}
     </a>
   );
   if (!data)
     return (
       <>
-        {back}
+        <div className="detail-back">{back}</div>
         <TicketState
           loading={resource.loading}
           error={resource.error}
@@ -143,25 +152,32 @@ export function TicketDetail({
     });
   }
   const house = me.houses.find((h) => h.id === ticket.house_id);
+  const entry = statusOf(staffTicketStatus, ticket.status);
+  const place = placeText(incident.location);
   return (
     <>
       <div className="detail-back">{back}</div>
       <header className="page-header">
-        <span className="ticket-number">Заявка {ticket.internal_number}</span>
+        <p className="ds-meta">
+          Заявка {ticket.internal_number} · {house?.address ?? "адрес не указан"}
+        </p>
         <h1 id="page-title" tabIndex={-1}>
           {incident.title || categoryLabel(incident.category)}
         </h1>
-        <TicketStatusBadge status={ticket.status} />
+        <div className="ds-status-line">
+          <TicketStatusBadge status={ticket.status} />
+          {entry.next && <span className="ds-subtle">{entry.next}</span>}
+        </div>
       </header>
       {resource.loading && <p role="status">Обновляем заявку…</p>}
       {Boolean(resource.error) && (
         <TicketState error={resource.error} retry={resource.refresh} />
       )}
       {resource.stale && (
-        <div className="refresh-notice">
-          Данные могли измениться.{" "}
+        <div className="refresh-notice" role="status">
+          <span>Данные могли измениться. Обновите заявку перед действием.</span>
           <button
-            className="ticket-button secondary"
+            className="ds-btn ds-btn-secondary ds-btn-small"
             onClick={resource.refresh}
             disabled={mutation.saving}
           >
@@ -170,17 +186,16 @@ export function TicketDetail({
         </div>
       )}
       <section
-        className="ticket-panel next-action"
+        className="ticket-panel decision-panel"
         aria-labelledby="ticket-actions-title"
         aria-busy={mutation.saving}
       >
-        <span className="eyebrow">Следующий шаг</span>
         <h2 id="ticket-actions-title">Действия по заявке</h2>
         <div className="ticket-buttons">
           {actions.map((a) => (
             <div key={a.code}>
               <button
-                className={`ticket-button ${["assign", "clarify", "wait-external", "cancel"].includes(a.code) ? "secondary" : ""}`}
+                className={`ds-btn ${a.code === "cancel" ? "ds-btn-danger" : ["assign", "clarify", "wait-external"].includes(a.code) ? "ds-btn-secondary" : "ds-btn-primary"}`}
                 disabled={blocked || !a.enabled}
                 aria-describedby={a.reason ? `reason-${a.code}` : undefined}
                 onClick={() => {
@@ -197,7 +212,11 @@ export function TicketDetail({
                   ? "Взять в работу"
                   : actionLabels[a.code]}
               </button>
-              {a.reason && <p id={`reason-${a.code}`}>{a.reason}</p>}
+              {a.reason && (
+                <p id={`reason-${a.code}`} className="ds-reason">
+                  {a.reason}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -217,7 +236,7 @@ export function TicketDetail({
             <p>{safeError(mutation.error, true)}</p>
             {mutation.canRetry && (
               <button
-                className="ticket-button secondary"
+                className="ds-btn ds-btn-secondary"
                 onClick={mutation.retry}
               >
                 Повторить сохранение
@@ -230,7 +249,8 @@ export function TicketDetail({
         <div>
           <section className="ticket-panel">
             <h2>О заявке</h2>
-            <dl>
+            <p className="ds-prose">{incident.description}</p>
+            <dl className="ds-kv">
               <Info label="Исполнитель">
                 {ticket.assignee_name ??
                   (ticket.assignee_id ? "Исполнитель назначен" : "Не назначен")}
@@ -240,36 +260,24 @@ export function TicketDetail({
                   Требуется назначить доступного исполнителя
                 </Info>
               )}
-              <Info label="Дом">{house?.address ?? "Адрес не указан"}</Info>
               <Info label="Категория">{categoryLabel(incident.category)}</Info>
-              {incident.location && (
-                <Info label="Место">
-                  {[
-                    incident.location.entrance &&
-                      `Подъезд ${incident.location.entrance}`,
-                    incident.location.floor &&
-                      `Этаж ${incident.location.floor}`,
-                    incident.location.label,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </Info>
-              )}
-              <Info label="Сообщений">{incident.report_count}</Info>
-              <Info label="Участников">
-                {incident.participant_count ?? "Нет данных"}
+              {place && <Info label="Место">{place}</Info>}
+              <Info label="Сообщили">
+                {incident.participant_count !== null
+                  ? countLabel(incident.participant_count, ["житель", "жителя", "жителей"])
+                  : "Нет данных"}
+                {`, ${countLabel(incident.report_count, ["сообщение", "сообщения", "сообщений"])}`}
               </Info>
-              <Info label="Создана">{formatDate(ticket.created_at)}</Info>
-              <Info label="Обновлена">{formatDate(ticket.updated_at)}</Info>
+              <Info label="Создана">{formatStaffTime(ticket.created_at)}</Info>
+              <Info label="Обновлена">{formatStaffTime(ticket.updated_at)}</Info>
             </dl>
-            <p className="full-text">{incident.description}</p>
             {incident.is_demo && (
               <span className="demo-badge">Демонстрационные данные</span>
             )}
           </section>
           <TicketDeadlines deadlines={ticket.deadlines} />
           {ticket.observation_conflict && (
-            <p className="refresh-notice">
+            <p className="ds-notice ds-tone-warning">
               Наблюдения расходятся. Результат требует повторной проверки;
               большинство не определяет решение.
             </p>
@@ -583,7 +591,7 @@ function ActionDialog({
         {busy && <p role="status">Сохраняем и обновляем данные…</p>}
         <div className="ticket-buttons">
           <button
-            className="ticket-button"
+            className="ds-btn ds-btn-primary"
             type="submit"
             disabled={
               blocked ||
@@ -595,7 +603,7 @@ function ActionDialog({
           </button>
           {retry && (
             <button
-              className="ticket-button"
+              className="ds-btn ds-btn-primary"
               type="button"
               disabled={busy}
               onClick={retry}
@@ -604,7 +612,7 @@ function ActionDialog({
             </button>
           )}
           <button
-            className="ticket-button secondary"
+            className="ds-btn ds-btn-secondary"
             type="button"
             disabled={busy}
             onClick={close}

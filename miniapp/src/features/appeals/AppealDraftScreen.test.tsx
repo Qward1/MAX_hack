@@ -59,7 +59,7 @@ describe("appeal draft", () => {
 
   it("shows channel facts with sources and the self-filing note beside the text", () => {
     show();
-    expect(screen.getByRole("heading", { name: "Что известно о канале" })).toBeTruthy();
+    expect(screen.getByText("Что известно об официальном сервисе")).toBeTruthy();
     const fact = draft.channel?.facts?.[0];
     expect(fact).toBeTruthy();
     expect(screen.getByText(fact?.text ?? "")).toBeTruthy();
@@ -157,7 +157,7 @@ describe("appeal draft", () => {
       ),
     ).toBeTruthy();
     expect(
-      (screen.getByRole("textbox", { name: "Обращение" }) as HTMLTextAreaElement).disabled,
+      (screen.getByRole("textbox", { name: "Обращение" }) as HTMLTextAreaElement).readOnly,
     ).toBe(true);
     expect(screen.queryByRole("button", { name: "Сохранить правку" })).toBeNull();
     expect(
@@ -166,12 +166,23 @@ describe("appeal draft", () => {
     ).toBe(true);
   });
 
+  it("asks before the mark and sends nothing until confirmed", () => {
+    const { client } = show();
+    fireEvent.click(screen.getByRole("button", { name: "Я отправил(а) обращение" }));
+    expect(screen.getByText("Отметить обращение как отправленное?")).toBeTruthy();
+    expect(screen.getByText(/ДомСигнал не проверяет, зарегистрировано/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
+    expect(screen.queryByText("Отметить обращение как отправленное?")).toBeNull();
+    expect(client.markAppealFiled).not.toHaveBeenCalled();
+  });
+
   it("sends the optional reference the resident typed", async () => {
     const { client } = show();
+    fireEvent.click(screen.getByRole("button", { name: "Я отправил(а) обращение" }));
     fireEvent.change(screen.getByLabelText(/Номер обращения/), {
       target: { value: " OBR-42 " },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Я отправил(а) обращение" }));
+    fireEvent.click(screen.getByRole("button", { name: "Да, я отправил(а)" }));
     await waitFor(() =>
       expect(client.markAppealFiled).toHaveBeenCalledWith(draft.id, "OBR-42"),
     );

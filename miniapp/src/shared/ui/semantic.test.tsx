@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { describe, expect, it, vi } from "vitest";
-import { IncidentCard } from "../../features/incidents/IncidentCard";
+import { IncidentRow } from "../../features/incidents/IncidentCard";
 import {
   categoryLabel,
   knownActions,
@@ -49,7 +49,7 @@ describe("semantic presentation", () => {
       expect(document.querySelector("details")?.open).toBe(true);
       expect(
         screen
-          .getByRole("link", { name: "Открыть источник ↗" })
+          .getByRole("link", { name: /^Открыть источник/ })
           .getAttribute("href"),
       ).toBe("https://example.org/rule");
     },
@@ -62,34 +62,47 @@ describe("semantic presentation", () => {
         source={{ origin: "official", source_url: "javascript:alert(1)" }}
       />,
     );
-    expect(screen.getByText("Происхождение не подтверждено")).toBeTruthy();
+    expect(screen.getByText(/Происхождение не подтверждено/)).toBeTruthy();
     expect(screen.queryByRole("link", { hidden: true })).toBeNull();
   });
   it("verification does not determine origin", () => {
     render(<SourceChip source={{ ...incident.rule, origin: null, verified_at: "2026-01-01T12:00:00Z" }} />);
-    expect(screen.queryByText("Официальный источник")).toBeNull();
-    expect(screen.getByText("Происхождение не подтверждено")).toBeTruthy();
+    expect(screen.queryByText(/Официальный источник/)).toBeNull();
+    expect(screen.getByText(/Происхождение не подтверждено/)).toBeTruthy();
   });
   it("unknown category uses a generic name", () => {
     expect(categoryLabel("future")).toBe("Другая проблема дома");
   });
-  it.each([0, 1, 9999])(
-    "renders message count %i without claiming unique residents",
-    (count) => {
-      render(
-        <IncidentCard
-          incident={{ ...incident, report_count: count }}
-          href="/?incident=id"
-          onNavigate={vi.fn()}
-        />,
-      );
-      expect(screen.getByText(`Сообщений: ${count}`)).toBeTruthy();
-    },
-  );
+  it.each([
+    [1, "1 сосед"],
+    [3, "3 соседа"],
+    [5, "5 соседей"],
+    [11, "11 соседей"],
+    [21, "21 сосед"],
+  ])("counts %i neighbours with the right Russian form", (count, text) => {
+    render(
+      <IncidentRow
+        incident={{ ...incident, participant_count: count, report_count: 99 }}
+        href="/?incident=id"
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(new RegExp(text))).toBeTruthy();
+  });
+  it("does not claim unique residents when the count is unknown", () => {
+    render(
+      <IncidentRow
+        incident={{ ...incident, participant_count: null, report_count: 7 }}
+        href="/?incident=id"
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/сосед/)).toBeNull();
+  });
   it("keeps long description and safe defaults", () => {
     const description = "Большойтекст".repeat(100);
     render(
-      <IncidentCard
+      <IncidentRow
         incident={{ ...incident, title: "Адрес".repeat(50), description }}
         href="/"
         onNavigate={vi.fn()}
@@ -99,7 +112,7 @@ describe("semantic presentation", () => {
   });
   it("opens a returned resource even with no domain actions", () => {
     render(
-      <IncidentCard
+      <IncidentRow
         incident={{ ...incident, allowed_actions: [] }}
         href="/"
         onNavigate={vi.fn()}
@@ -156,7 +169,7 @@ describe("semantic presentation", () => {
         <main>
           <h1>Дом</h1>
           <NextAction actions={[]} />
-          <IncidentCard incident={incident} href="/" onNavigate={vi.fn()} />
+          <IncidentRow incident={incident} href="/" onNavigate={vi.fn()} />
         </main>
       </MaxUI>,
     );

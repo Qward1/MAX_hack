@@ -14,13 +14,13 @@ import type {
   SignalView,
 } from "../shared/api/signals";
 import { useResource } from "../shared/api/useResource";
-import { formatDate } from "../features/incidents/presentation";
+import { formatStaffTime } from "../shared/ui/format";
+import { StatusTag } from "../shared/ui/semantic";
+import { signalStatus, signalStrength, statusOf } from "../shared/ui/status";
 import { useTicketMutation } from "../features/tickets/useTicketMutation";
 import {
   SignalState,
-  placeLine,
   signalError,
-  strengthTone,
   usePolling,
 } from "./SignalCommon";
 import {
@@ -57,22 +57,28 @@ export function SignalDetail({
   client,
   id,
   backHref,
+  nextHref = null,
+  inPanel = false,
   navigate,
   openTicket,
+  onDecided,
 }: {
   client: SignalClient;
   id: string;
   backHref: string;
+  /** Решение сохранено — очередь рядом перечитывается. */
+  onDecided?: () => void;
+  /** Следующий сигнал очереди — после решения к нему можно перейти сразу. */
+  nextHref?: string | null;
+  inPanel?: boolean;
   navigate: (href: string) => void;
   openTicket: (ticketId: string) => void;
 }) {
-  const load = useCallback(
-    (signal: AbortSignal) => client.signalDetail(id, signal),
-    [client, id],
-  );
+  const load = useCallback((signal: AbortSignal) => client.signalDetail(id, signal), [client, id]);
   const resource = useResource(id, load);
   const mutation = useTicketMutation<SignalMutation, SignalView>();
   const [form, setForm] = useState<SignalActionCode | null>(null);
+  const [decided, setDecided] = useState(false);
   // Пока открыта форма решения, карточка не перечитывается сама.
   usePolling(resource.refresh, form === null && !mutation.saving);
   const data = resource.data;
@@ -87,26 +93,18 @@ export function SignalDetail({
         navigate(backHref);
       }}
     >
-      ← К сигналам
+      {inPanel ? "← К сигналам (закрыть)" : "← К сигналам"}
     </a>
   );
   if (!data)
     return (
       <>
         <div className="detail-back">{back}</div>
-        <SignalState
-          loading={resource.loading}
-          error={resource.error}
-          retry={resource.refresh}
-        />
+        <SignalState loading={resource.loading} error={resource.error} retry={resource.refresh} />
       </>
     );
   const actions = knownSignalActions(data.allowed_actions);
-  const blocked =
-    resource.loading ||
-    Boolean(resource.error) ||
-    mutation.saving ||
-    mutation.uncertain;
+  const blocked = resource.loading || Boolean(resource.error) || mutation.saving || mutation.uncertain;
   function submit(code: SignalActionCode, payload: SignalCommand) {
     if (blocked || !actions.some((a) => a.code === code && a.enabled)) return;
     mutation.run({
@@ -114,6 +112,8 @@ export function SignalDetail({
       read: () => resource.reload(),
       success: (_result, current) => {
         setForm(null);
+        setDecided(true);
+        onDecided?.();
         return SUCCESS[code](current);
       },
       conflict: (error) =>
@@ -124,67 +124,57 @@ export function SignalDetail({
   }
   const danger = data.danger;
   const safety = data.action_card.safety;
+  const place = [
+    data.place.entrance && `подъезд ${data.place.entrance.value}`,
+    data.place.floor && `этаж ${data.place.floor.value}`,
+  ]
+    .filter(Boolean)
+    .join(", ");
   return (
     <>
       <div className="detail-back">{back}</div>
       <header className="page-header">
         <div className="signal-badges">
-          <span className={`status-badge ${strengthTone(data.strength)}`}>
-            {label(strengthLabels, data.strength, "strength")}
-          </span>
-          <span className="status-badge tone-neutral">
-            {label(statusLabels, data.status, "signal_status")}
-          </span>
+          <StatusTag entry={statusOf(signalStrength, data.strength)} />
+          <StatusTag entry={statusOf(signalStatus, data.status)} />
         </div>
         <h1 id="page-title" tabIndex={-1}>
           {data.subtype_label}
         </h1>
-        <p className="muted">{data.house_address}</p>
+        <p className="ds-subtle">
+          {data.house_address}
+          {place && ` · ${place}`}
+          {" · "}
+          {countsLine(data.report_count, data.author_count, data.last_seen_at)}
+        </p>
       </header>
-      {resource.loading && <p role="status">Обновляем сигнал…</p>}
-      {Boolean(resource.error) && (
-        <SignalState error={resource.error} retry={resource.refresh} />
+      {resource.loading && (
+        <p role="status" className="ds-meta">
+          Обновляем сигнал…
+        </p>
       )}
+      {Boolean(resource.error) && <SignalState error={resource.error} retry={resource.refresh} />}
 
       {(danger || safety) && (
-        <section
-          className="safety-panel signal-danger"
-          aria-labelledby="signal-danger-title"
-        >
-          <h2 id="signal-danger-title">
-            {danger
-              ? `Опасность: ${danger.labels.join(", ")}`
-              : "Памятка безопасности"}
-          </h2>
+        <section className="ds-safety signal-danger" aria-labelledby="signal-danger-title">
+          <h2 id="signal-danger-title">{danger ? `Опасность: ${danger.labels.join(", ")}` : "Памятка безопасности"}</h2>
           {danger && (
             <>
               <p>
-                {danger.sources.includes("rules") &&
-                  "Признак найден правилами ДомСигнала. "}
-                {danger.sources.includes("semantic") &&
-                  "Признак найден разбором переписки. "}
-                {danger.preliminary &&
-                  "Переписку ещё разбирают — сигнал предварительный."}
-                {danger.displaced &&
-                  " Жители пишут, что это не у нас или не сейчас: памятки в чат не было."}
-                {danger.downgraded &&
-                  " Опасность понижена: переписка её опровергла."}
+                {danger.sources.includes("rules") && "Признак найден правилами ДомСигнала. "}
+                {danger.sources.includes("semantic") && "Признак найден разбором переписки. "}
+                {danger.preliminary && "Переписку ещё разбирают — сигнал предварительный."}
+                {danger.displaced && " Жители пишут, что это не у нас или не сейчас: памятки в чат не было."}
+                {danger.downgraded && " Опасность понижена: переписка её опровергла."}
               </p>
-              {danger.evidence_unverified && (
-                <p>
-                  Цитаты разбора не прошли проверку — ниже сами сообщения
-                  жителей.
-                </p>
-              )}
+              {danger.evidence_unverified && <p>Цитаты разбора не прошли проверку — ниже сами сообщения жителей.</p>}
               {(danger.evidence ?? []).length > 0 && (
-                <ul className="safety-steps">
+                <ul className="ds-bullets">
                   {(danger.evidence ?? []).map((item, index) => (
                     <li key={index}>
                       <span>«{item.text}»</span>
-                      <span className="muted">
-                        {[item.label, item.author, shortTime(item.sent_at)]
-                          .filter(Boolean)
-                          .join(" · ")}
+                      <span className="ds-meta">
+                        {[item.label, item.author, shortTime(item.sent_at)].filter(Boolean).join(" · ")}
                       </span>
                     </li>
                   ))}
@@ -193,21 +183,20 @@ export function SignalDetail({
             </>
           )}
           {safety && (
-            <div className="signal-safety">
+            <div className="signal-safety ds-stack">
               <h3>{safety.title}</h3>
               {(safety.lines ?? []).map((line) => (
                 <p key={line}>{line}</p>
               ))}
               {safety.phone && (
-                <p className="safety-phone">
-                  <a href={`tel:${safety.phone}`}>Позвонить {safety.phone}</a>
-                </p>
+                <a className="ds-call" href={`tel:${safety.phone}`}>
+                  Позвонить {safety.phone}
+                </a>
               )}
               {safety.source_title && (
-                <p className="muted">
+                <p className="ds-meta">
                   Источник: {safety.source_title}
-                  {safety.verified_at &&
-                    `, проверено ${formatDay(safety.verified_at)}`}
+                  {safety.verified_at && `, проверено ${formatDay(safety.verified_at)}`}
                 </p>
               )}
             </div>
@@ -215,82 +204,17 @@ export function SignalDetail({
         </section>
       )}
 
-      <section className="ticket-panel" aria-labelledby="signal-what-title">
-        <h2 id="signal-what-title">Что, где и когда</h2>
-        <dl>
-          <Info label="Что">
-            {data.subtype_label}
-            {data.object_label &&
-              data.object_label.toLowerCase() !==
-                data.subtype_label.toLowerCase() &&
-              ` — ${data.object_label}`}
-          </Info>
-          <Info label="Территория">
-            {data.territory.label}
-            {data.territory.quote && <Quoted text={data.territory.quote} />}
-          </Info>
-          {data.place.entrance && (
-            <Info label="Подъезд">
-              {data.place.entrance.value}
-              <Quoted text={data.place.entrance.quote} />
-            </Info>
-          )}
-          {data.place.floor && (
-            <Info label="Этаж">
-              {data.place.floor.value}
-              <Quoted text={data.place.floor.quote} />
-            </Info>
-          )}
-          {data.place.since && (
-            <Info label="С какого времени">
-              {data.place.since.value}
-              <Quoted text={data.place.since.quote} />
-            </Info>
-          )}
-          <Info label="Сколько">
-            {countsLine(
-              data.report_count,
-              data.author_count,
-              data.last_seen_at,
-            )}
-          </Info>
-          <Info label="Первое сообщение">{formatDate(data.first_seen_at)}</Info>
-        </dl>
-      </section>
-
-      <section className="ticket-panel" aria-labelledby="signal-quotes-title">
-        <h2 id="signal-quotes-title">Слова жителей</h2>
-        {(data.quotes ?? []).length === 0 ? (
-          <p className="muted">Цитат нет.</p>
-        ) : (
-          (data.quotes ?? []).map((quote, index) => (
-            <blockquote className="signal-quote" key={index}>
-              «{quote.text}»
-              <footer className="muted">
-                {quote.author}, {shortTime(quote.sent_at)}
-              </footer>
-            </blockquote>
-          ))
-        )}
-      </section>
-
-      <section className="ticket-panel" aria-labelledby="signal-strength-title">
-        <h2 id="signal-strength-title">
-          Почему{" "}
-          {label(strengthLabels, data.strength, "strength").toLowerCase()}
-        </h2>
-        <p>{data.strength_reason}</p>
-      </section>
-
-      <RouteBlock data={data} />
-
       <section
-        className="ticket-panel next-action"
+        className="ticket-panel decision-panel"
         aria-labelledby="signal-actions-title"
         aria-busy={mutation.saving}
       >
-        <span className="eyebrow">Решение оператора</span>
         <h2 id="signal-actions-title">Действия по сигналу</h2>
+        <p className="ds-subtle">
+          Маршрут: <strong>{label(routeBadgeLabels, data.action_card.route.route_type, "route_type")}</strong>
+          {data.action_card.route.organization_name && ` — ${data.action_card.route.organization_name}`}. Основание —
+          ниже.
+        </p>
         {actions.length > 0 ? (
           <div className="ticket-buttons">
             {actions.map((action) => (
@@ -315,37 +239,107 @@ export function SignalDetail({
             key={form}
             code={form}
             data={data}
-            blocked={
-              blocked || !actions.some((a) => a.code === form && a.enabled)
-            }
+            blocked={blocked || !actions.some((a) => a.code === form && a.enabled)}
             busy={mutation.saving}
             error={mutation.error}
             close={() => setForm(null)}
             submit={(payload) => submit(form, payload)}
           />
         )}
-        {mutation.saving && (
-          <p role="status">Сохраняем решение и проверяем актуальные данные…</p>
-        )}
+        {mutation.saving && <p role="status">Сохраняем решение и проверяем актуальные данные…</p>}
         {mutation.message && (
-          <p role="status" className="refresh-notice">
-            {mutation.message}
-          </p>
+          <div className="decision-done">
+            <p role="status" className="ds-notice ds-tone-success">
+              {mutation.message}
+            </p>
+            {decided && nextHref && (
+              <div>
+                <a
+                  className="ds-btn ds-btn-primary"
+                  href={nextHref}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate(nextHref);
+                  }}
+                >
+                  Открыть следующий сигнал
+                </a>
+              </div>
+            )}
+          </div>
         )}
         {Boolean(mutation.error) && !form && (
-          <div role="alert">
+          <div role="alert" className="ds-notice ds-tone-danger">
             <p>{signalError(mutation.error)}</p>
             {mutation.canRetry && (
-              <button
-                className="ticket-button secondary"
-                onClick={mutation.retry}
-              >
-                Повторить сохранение
-              </button>
+              <div>
+                <button className="ds-btn ds-btn-secondary" onClick={mutation.retry}>
+                  Повторить сохранение
+                </button>
+              </div>
             )}
           </div>
         )}
       </section>
+
+      <section className="ticket-panel" aria-labelledby="signal-what-title">
+        <h2 id="signal-what-title">Что, где и когда</h2>
+        <dl className="ds-kv">
+          <Info label="Что">
+            {data.subtype_label}
+            {data.object_label &&
+              data.object_label.toLowerCase() !== data.subtype_label.toLowerCase() &&
+              ` — ${data.object_label}`}
+          </Info>
+          <Info label="Территория">
+            {data.territory.label}
+            {data.territory.quote && <Quoted text={data.territory.quote} />}
+          </Info>
+          {data.place.entrance && (
+            <Info label="Подъезд">
+              {data.place.entrance.value}
+              <Quoted text={data.place.entrance.quote} />
+            </Info>
+          )}
+          {data.place.floor && (
+            <Info label="Этаж">
+              {data.place.floor.value}
+              <Quoted text={data.place.floor.quote} />
+            </Info>
+          )}
+          {data.place.since && (
+            <Info label="С какого времени">
+              {data.place.since.value}
+              <Quoted text={data.place.since.quote} />
+            </Info>
+          )}
+          <Info label="Сколько">{countsLine(data.report_count, data.author_count, data.last_seen_at)}</Info>
+          <Info label="Первое сообщение">{formatStaffTime(data.first_seen_at)}</Info>
+        </dl>
+      </section>
+
+      <section className="ticket-panel" aria-labelledby="signal-quotes-title">
+        <h2 id="signal-quotes-title">Слова жителей</h2>
+        {(data.quotes ?? []).length === 0 ? (
+          <p className="ds-subtle">Цитат нет.</p>
+        ) : (
+          (data.quotes ?? []).map((quote, index) => (
+            <blockquote className="signal-quote" key={index}>
+              «{quote.text}»
+              <footer>
+                {quote.author}, {shortTime(quote.sent_at)}
+              </footer>
+            </blockquote>
+          ))
+        )}
+      </section>
+
+      <section className="ticket-panel" aria-labelledby="signal-strength-title">
+        <h2 id="signal-strength-title">Почему {label(strengthLabels, data.strength, "strength").toLowerCase()}</h2>
+        <p>{data.strength_reason}</p>
+      </section>
+
+      <RouteBlock data={data} />
 
       <DecisionHistory data={data} openTicket={openTicket} />
     </>
@@ -376,9 +370,9 @@ function RouteBlock({ data }: { data: SignalView }) {
       className="ticket-panel route-card"
       aria-labelledby="signal-route-title"
     >
-      <span className="eyebrow">
+      <p className="ds-meta">
         Маршрут: {label(routeBadgeLabels, route.route_type, "route_type")}
-      </span>
+      </p>
       <h2 id="signal-route-title">{card.title}</h2>
       <p>{card.explanation}</p>
       {data.route_source === "operator" && data.route_chosen_by && (
@@ -413,7 +407,7 @@ function RouteBlock({ data }: { data: SignalView }) {
           </p>
         )}
         {unverified && (
-          <p className="refresh-notice">Сведения требуют сверки.</p>
+          <p className="ds-notice ds-tone-warning">Сведения требуют сверки.</p>
         )}
         {route.hidden_unverified_channels > 0 && (
           <p className="muted">
@@ -445,7 +439,7 @@ function ActionButton({
   return (
     <div>
       <button
-        className={`ticket-button ${primary ? "" : "secondary"}`}
+        className={`ds-btn ${primary ? "ds-btn-primary" : action.code === "dismiss" ? "ds-btn-danger" : "ds-btn-secondary"}`}
         disabled={blocked || !action.enabled}
         aria-describedby={
           !action.enabled && action.reason ? reasonId : undefined
@@ -482,7 +476,7 @@ function ContactActions({ data }: { data: SignalView }) {
         action.type === "call_phone" && action.phone ? (
           <a
             key={index}
-            className="ticket-button secondary"
+            className="ds-btn ds-btn-secondary"
             href={`tel:${action.phone}`}
           >
             {action.label}
@@ -490,7 +484,7 @@ function ContactActions({ data }: { data: SignalView }) {
         ) : action.enabled && action.url ? (
           <a
             key={index}
-            className="ticket-button secondary"
+            className="ds-btn ds-btn-secondary"
             href={action.url}
             rel="noreferrer"
           >
@@ -499,7 +493,7 @@ function ContactActions({ data }: { data: SignalView }) {
         ) : (
           <div key={index}>
             <button
-              className="ticket-button secondary"
+              className="ds-btn ds-btn-secondary"
               disabled
               aria-describedby={
                 action.reason ? `contact-reason-${index}` : undefined
@@ -626,7 +620,7 @@ function DecisionForm({
               <span className="muted">
                 {" "}
                 · сообщений {item.report_count}, участников{" "}
-                {item.participant_count}, с {formatDate(item.created_at)}
+                {item.participant_count}, с {formatStaffTime(item.created_at)}
               </span>
             </span>
           </label>
@@ -746,14 +740,14 @@ function DecisionForm({
       {Boolean(error) && <p role="alert">{signalError(error)}</p>}
       <div className="ticket-buttons">
         <button
-          className="ticket-button"
+          className="ds-btn ds-btn-primary"
           type="submit"
           disabled={blocked || !valid}
         >
           {code === "dismiss" ? "Закрыть сигнал" : signalActionLabels[code]}
         </button>
         <button
-          className="ticket-button secondary"
+          className="ds-btn ds-btn-secondary"
           type="button"
           disabled={busy}
           onClick={close}
@@ -786,7 +780,7 @@ function DecisionHistory({
             <Info label="Кто">{decision.decided_by}</Info>
           )}
           {decision.decided_at && (
-            <Info label="Когда">{formatDate(decision.decided_at)}</Info>
+            <Info label="Когда">{formatStaffTime(decision.decided_at)}</Info>
           )}
           {decision.reason_label && (
             <Info label="Причина">{decision.reason_label}</Info>

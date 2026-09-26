@@ -1,62 +1,33 @@
-/* Публичная страница продукта. Токены — те же, что у кабинета (admin.css):
-   чернила #18273b, вторичный #536379, действие #235dcc, поверхность #f7f9fc.
-   Тёмная тема — отдельные ступени тех же тонов, а не инверсия. */
+/* Публичная страница продукта: одна система с мини-приложением и кабинетом. */
+/* Общие токены — shared/styles/tokens.css (подключены в boot.tsx до этого файла).
+   Здесь только имена страницы и её собственные цвета примера переписки. */
 :root {
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --text-primary: #18273b;
-  --text-secondary: #536379;
-  --text-themed: #235dcc;
-  --background-page: #f7f9fc;
-  --background-card: #fff;
-  --background-secondary: #f3f6fa;
-  --background-tertiary: #eaf0f7;
-  --ds-line: #d5dfe9;
-  --ds-action: #235dcc;
-  --ds-action-text: #fff;
-  --ds-positive: #2c785d;
-  --site-chat: #edf2f8;
+  --font: var(--ds-font);
+  --text-primary: var(--ds-ink);
+  --text-secondary: var(--ds-ink-2);
+  --text-themed: var(--ds-accent);
+  --background-page: var(--ds-bg);
+  --background-card: var(--ds-surface);
+  --background-secondary: var(--ds-surface-2);
+  --background-tertiary: var(--ds-surface-2);
+  --ds-action-text: var(--ds-on-action);
+  --ds-positive: var(--ds-success);
+  --site-chat: var(--ds-surface-2);
   --site-signal: #182f50;
   --site-signal-text: #eef4fc;
   --site-signal-muted: #b9c8dc;
-  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --text-primary: #e8eef6;
-    --text-secondary: #a8b6c8;
-    --text-themed: #8fb2ff;
-    --background-page: #0f1826;
-    --background-card: #16233a;
-    --background-secondary: #1b2a42;
-    --background-tertiary: #22334f;
-    --ds-line: #2d3f5b;
-    --ds-action: #9dbcff;
-    --ds-action-text: #0f1826;
-    --ds-positive: #6fc9a2;
-    --site-chat: #1b2a42;
     --site-signal: #e8eef6;
     --site-signal-text: #18273b;
-    --site-signal-muted: #536379;
-    color-scheme: dark;
+    --site-signal-muted: #4d5664;
   }
 }
 :root[data-theme="dark"] {
-  --text-primary: #e8eef6;
-  --text-secondary: #a8b6c8;
-  --text-themed: #8fb2ff;
-  --background-page: #0f1826;
-  --background-card: #16233a;
-  --background-secondary: #1b2a42;
-  --background-tertiary: #22334f;
-  --ds-line: #2d3f5b;
-  --ds-action: #9dbcff;
-  --ds-action-text: #0f1826;
-  --ds-positive: #6fc9a2;
-  --site-chat: #1b2a42;
   --site-signal: #e8eef6;
   --site-signal-text: #18273b;
-  --site-signal-muted: #536379;
-  color-scheme: dark;
+  --site-signal-muted: #4d5664;
 }
 
 * { box-sizing: border-box; }

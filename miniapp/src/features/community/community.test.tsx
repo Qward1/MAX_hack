@@ -93,12 +93,14 @@ describe("«Мой дом»", () => {
     const nav = links();
     render(<MyHouseScreen api={api({ houseOverview: vi.fn().mockResolvedValue(overview) })} houseId={HOUSE} links={nav} />);
     expect(await screen.findByText("Казань, Синтетическая улица, 1")).toBeTruthy();
-    expect(screen.getByText(/Подъездов: 4 · Этажей: 9/)).toBeTruthy();
-    expect(screen.getByText(/по данным УК, обновлено/)).toBeTruthy();
+    expect(screen.getByText(/4 подъезда, 9 этажей/)).toBeTruthy();
+    expect(screen.getByText(/По данным управляющей компании, обновлено/)).toBeTruthy();
     expect(screen.getByText(/ДомСигнал эти сведения не проверяет/)).toBeTruthy();
     expect(screen.getAllByRole("link", { name: "112" })[0].getAttribute("href")).toBe("tel:112");
     expect(screen.getAllByText(/проверено/).length).toBeGreaterThan(0);
-    expect(screen.getByText("Подключён, бот отвечает на /report")).toBeTruthy();
+    expect(screen.getByText("Подключён. Бот отвечает на команду /report")).toBeTruthy();
+    // «Если авария» — первым блоком раздела.
+    expect(document.querySelector("section")?.id).toBe("emergency");
     fireEvent.click(screen.getByRole("button", { name: "Записаться на приём" }));
     expect(nav.navigate).toHaveBeenCalledWith(`/?view=reception&house=${HOUSE}&poll=`);
     expect(document.body.textContent?.toLowerCase()).not.toMatch(/тариф|норматив|капремонт/);
@@ -130,7 +132,7 @@ describe("Объявления и опрос", () => {
     render(<AnnouncementsScreen api={api({ announcements, setPreferences })} houseId={HOUSE} links={nav} />);
     expect(await screen.findByText("Отключение воды")).toBeTruthy();
     expect(screen.getAllByText("Сообщение от УК «УК Первая»")).toHaveLength(2);
-    fireEvent.click(screen.getByRole("button", { name: "Голосовать" }));
+    fireEvent.click(screen.getByRole("button", { name: "Проголосовать" }));
     expect(nav.navigate).toHaveBeenCalledWith(`/?view=poll&house=${HOUSE}&poll=p1`);
     fireEvent.click(screen.getByRole("button", { name: "Не получать рассылки" }));
     await waitFor(() => expect(setPreferences).toHaveBeenCalledWith(true));
@@ -191,9 +193,9 @@ describe("Выполненные работы и «Мои обращения»",
     render(<WorksScreen api={api({ completedWorks })} houseId={HOUSE} links={nav} />);
     expect(await screen.findByText("Заменён блок управления")).toBeTruthy();
     expect(screen.getByText("Возвращено в работу")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "90 дней" }));
+    fireEvent.click(screen.getByRole("button", { name: "За 90 дней" }));
     await waitFor(() => expect(completedWorks).toHaveBeenLastCalledWith(HOUSE, 90, 0, expect.anything()));
-    fireEvent.click(await screen.findByRole("button", { name: /^Открыть проблему/ }));
+    fireEvent.click(await screen.findByRole("link", { name: /Проблема с лифтом/ }));
     expect(nav.navigate).toHaveBeenCalledWith(`/?house=${HOUSE}&incident=i1`);
   });
 
@@ -208,7 +210,7 @@ describe("Выполненные работы и «Мои обращения»",
     const nav = links();
     const { unmount } = render(<MyActivityScreen api={api({ myActivity })} houseId={HOUSE} links={nav} />);
     expect(await screen.findByText(/ДомСигнал не подтверждает регистрацию во внешней системе/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /^Открыть черновик/ }));
+    fireEvent.click(screen.getByRole("link", { name: /Черновик обращения · Уличное освещение/ }));
     expect(nav.navigate).toHaveBeenCalledWith(`/?house=${HOUSE}&draft=d1`);
     unmount();
     const empty = vi.fn().mockResolvedValue({ items: [], page: { limit: 20, offset: 0, total: 0 } });

@@ -164,13 +164,14 @@ test.describe.serial("D3 community", () => {
     const page = await ctx.newPage();
     try {
       await page.goto(`/?test_actor=a16-resident&house=${ids.house}`);
-      const nav = page.getByRole("navigation", { name: "Разделы дома" });
+      const nav = page.getByRole("navigation", { name: "Разделы" });
       await expect(nav).toBeVisible();
       await nav.getByRole("link", { name: "Мой дом" }).click();
       await expect(page.getByRole("heading", { name: "Мой дом", level: 1 })).toBeVisible();
       await expect(page.getByText("+7 843 000-00-02").first()).toBeVisible();
-      await expect(page.getByText(/по данным УК/i).first()).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Что делать при аварии" })).toBeVisible();
+      await expect(page.getByText(/по данным (УК|управляющей компании)/i).first()).toBeVisible();
+      // «Если авария» — первым блоком раздела.
+      await expect(page.getByRole("heading", { name: "Если авария" })).toBeVisible();
       await noOverflow(page);
       await axeCheck(page);
       await page.emulateMedia({ colorScheme: "dark" });
@@ -181,7 +182,7 @@ test.describe.serial("D3 community", () => {
       await expect(page.getByRole("heading", { name: TITLE })).toBeVisible();
       await noOverflow(page);
       await axeCheck(page);
-      await page.getByRole("button", { name: "Голосовать" }).first().click();
+      await page.getByRole("button", { name: "Проголосовать" }).first().click();
       await expect(page.getByRole("heading", { name: QUESTION })).toBeVisible();
       await expect(page.getByText("Предварительный опрос. Не является решением общего собрания собственников.")).toBeVisible();
       await page.getByLabel(/Светло-серый/).check();
@@ -189,19 +190,23 @@ test.describe.serial("D3 community", () => {
       await expect(page.getByText(/Голос учтён/)).toBeVisible();
       await expect(page.getByText(/Проголосовали: 1/)).toBeVisible();
       await axeCheck(page);
-      await page.getByRole("button", { name: "← К объявлениям" }).click();
+      // «Назад» возвращает к объявлениям, откуда пришли.
+      await page.getByRole("button", { name: /Назад/ }).click();
       await expect(page.getByRole("heading", { name: "Объявления", level: 1 })).toBeVisible();
 
-      await page.getByRole("navigation", { name: "Разделы дома" }).getByRole("link", { name: "Выполненные работы" }).click();
+      // Выполненные работы — внутри «Мой дом».
+      await page.getByRole("navigation", { name: "Разделы" }).getByRole("link", { name: "Мой дом" }).click();
+      await page.getByRole("link", { name: "Что сделано в доме за последние месяцы" }).click();
       await expect(page.getByText("Жители подтвердили").first()).toBeVisible();
       await noOverflow(page);
       await axeCheck(page);
-      await page.getByRole("button", { name: "Открыть проблему" }).first().click();
+      await page.getByRole("list", { name: "Выполненные работы" }).getByRole("link").first().click();
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await page.goBack();
-      await expect(page.getByRole("heading", { name: "Выполненные работы", level: 1 })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Что сделано в доме", level: 1 })).toBeVisible();
 
-      await page.getByRole("navigation", { name: "Разделы дома" }).getByRole("link", { name: "Мои обращения" }).click();
+      await page.getByRole("button", { name: /Назад/ }).click();
+      await page.getByRole("navigation", { name: "Разделы" }).getByRole("link", { name: "Мои обращения" }).click();
       await expect(page.getByText("Ваше сообщение о проблеме").first()).toBeVisible();
       await noOverflow(page);
       await axeCheck(page);
@@ -218,7 +223,8 @@ test.describe.serial("D3 community", () => {
       await axeCheck(page);
       await page.goto(`/?test_actor=a16-admin&house=${ids.house}&view=home`);
       await expect(page.getByText("Раздел доступен жителям дома")).toBeVisible();
-      await expect(page.getByRole("button", { name: "← К доске дома" })).toBeVisible();
+      // Не тупик: разделы и «Проблемы» на месте.
+      await expect(page.getByRole("navigation", { name: "Разделы" }).getByRole("link", { name: "Проблемы" })).toBeVisible();
       await noOverflow(page);
     } finally { await ctx.close(); }
   });

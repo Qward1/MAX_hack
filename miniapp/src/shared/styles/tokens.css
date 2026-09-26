@@ -1,0 +1,145 @@
+/*
+ * Токены ДомСигнала — один источник для мини-приложения, кабинетов и сайта.
+ * Нейтральная основа близка к MAX (фоны #f5f7fa / #17181c), один акцент —
+ * прежний цвет действия проекта #235dcc. Семантические цвета — только по
+ * смыслу: красный — опасность и ошибки, жёлтый — предупреждение и «требует
+ * сверки», зелёный — подтверждено. Контраст пар проверяет tokens.test.ts.
+ * Тёмная тема — отдельные ступени, а не инверсия.
+ */
+:root {
+  color-scheme: light;
+  /* Нейтральные */
+  --ds-bg: #f5f7fa;
+  --ds-surface: #ffffff;
+  --ds-surface-2: #edf0f4;
+  --ds-ink: #121821;
+  --ds-ink-2: #4d5664;
+  --ds-line: #dde2e9;
+  --ds-field: #7a8594;
+  /* Акцент и действие */
+  --ds-accent: #235dcc;
+  --ds-accent-soft: #e8effc;
+  --ds-action: #235dcc;
+  --ds-action-hover: #1d50b3;
+  --ds-action-pressed: #1a4699;
+  --ds-on-action: #ffffff;
+  --ds-secondary: #e6ebf3;
+  --ds-secondary-hover: #dbe2ed;
+  --ds-secondary-ink: #121821;
+  --ds-disabled: #e9ecf0;
+  --ds-disabled-ink: #5c6573;
+  --ds-focus: #235dcc;
+  /* Смысл */
+  --ds-danger: #b3261e;
+  --ds-danger-soft: #fdecea;
+  --ds-warning: #8a5300;
+  --ds-warning-soft: #fff3d6;
+  --ds-warning-line: #b7791f;
+  --ds-success: #1d6b43;
+  --ds-success-soft: #e5f3eb;
+  --ds-info: #235dcc;
+  --ds-info-soft: #e8effc;
+  /* Всплывающий слой — единственное место с тенью */
+  --ds-scrim: rgba(12, 16, 22, 0.48);
+  --ds-shadow-pop: 0 12px 32px rgba(12, 16, 22, 0.18);
+
+  /* Шрифт — системный, как в MAX */
+  --ds-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Шкала: три размера и мелкий служебный. Мини-приложение — крупнее. */
+  --ds-text-title: 1.5rem;      /* 24 — заголовок экрана */
+  --ds-text-subtitle: 1.125rem; /* 18 — заголовок группы */
+  --ds-text-body: 1rem;         /* 16 — основной */
+  --ds-text-small: 0.875rem;    /* 14 — служебный */
+  --ds-leading-tight: 1.25;
+  --ds-leading: 1.5;
+  --ds-weight-strong: 600;
+
+  /* Отступы кратны 4 */
+  --ds-space-1: 4px;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-5: 24px;
+  --ds-space-6: 32px;
+  --ds-space-7: 48px;
+  /* Три радиуса: поле и тег, кнопка и блок, диалог */
+  --ds-radius-s: 8px;
+  --ds-radius-m: 12px;
+  --ds-radius-l: 16px;
+
+  /* Сетка и цели касания */
+  --ds-gutter: 16px;
+  --ds-measure: 68ch;
+  --ds-column: 640px;
+  --ds-target: 44px;
+  --ds-target-min: 24px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ds-bg: #111216;
+    --ds-surface: #1b1c21;
+    --ds-surface-2: #25262d;
+    --ds-ink: #f2f3f5;
+    --ds-ink-2: #b3b7c0;
+    --ds-line: #30323a;
+    --ds-field: #7c8290;
+    --ds-accent: #8ab4ff;
+    --ds-accent-soft: #1d2a44;
+    --ds-action: #2f6ae0;
+    --ds-action-hover: #2860cf;
+    --ds-action-pressed: #285cc4;
+    --ds-on-action: #ffffff;
+    --ds-secondary: #2c2e37;
+    --ds-secondary-hover: #353844;
+    --ds-secondary-ink: #f2f3f5;
+    --ds-disabled: #26282f;
+    --ds-disabled-ink: #9ea3ad;
+    --ds-focus: #8ab4ff;
+    --ds-danger: #ffb4ab;
+    --ds-danger-soft: #3a1d1d;
+    --ds-warning: #f2c14e;
+    --ds-warning-soft: #33290f;
+    --ds-warning-line: #c79a2e;
+    --ds-success: #7fd3a6;
+    --ds-success-soft: #15302a;
+    --ds-info: #8ab4ff;
+    --ds-info-soft: #1d2a44;
+    --ds-scrim: rgba(0, 0, 0, 0.64);
+    --ds-shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.5);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ds-bg: #111216;
+  --ds-surface: #1b1c21;
+  --ds-surface-2: #25262d;
+  --ds-ink: #f2f3f5;
+  --ds-ink-2: #b3b7c0;
+  --ds-line: #30323a;
+  --ds-field: #7c8290;
+  --ds-accent: #8ab4ff;
+  --ds-accent-soft: #1d2a44;
+  --ds-action: #2f6ae0;
+  --ds-action-hover: #2860cf;
+  --ds-action-pressed: #285cc4;
+  --ds-on-action: #ffffff;
+  --ds-secondary: #2c2e37;
+  --ds-secondary-hover: #353844;
+  --ds-secondary-ink: #f2f3f5;
+  --ds-disabled: #26282f;
+  --ds-disabled-ink: #9ea3ad;
+  --ds-focus: #8ab4ff;
+  --ds-danger: #ffb4ab;
+  --ds-danger-soft: #3a1d1d;
+  --ds-warning: #f2c14e;
+  --ds-warning-soft: #33290f;
+  --ds-warning-line: #c79a2e;
+  --ds-success: #7fd3a6;
+  --ds-success-soft: #15302a;
+  --ds-info: #8ab4ff;
+  --ds-info-soft: #1d2a44;
+  --ds-scrim: rgba(0, 0, 0, 0.64);
+  --ds-shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.5);
+}

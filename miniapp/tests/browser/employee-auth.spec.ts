@@ -37,24 +37,24 @@ test("employee cookie flow, reload, real queue, logout and cross-user cache isol
   expect(codes).toHaveLength(10);
   await page.getByRole("button", { name: "Коды сохранены — открыть кабинет" }).click();
   await page.getByRole("navigation", { name: "Разделы кабинета" }).getByRole("link", { name: "Заявки", exact: true }).click();
-  await expect(page.locator(".ticket-row").first()).toBeVisible();
+  await expect(page.locator(".queue-table tbody tr").first()).toBeVisible();
   const cookies = await context.cookies();
   const cookie = cookies.find(c => c.name === "__Host-domsignal_employee")!;
   expect(cookie).toMatchObject({ secure: true, httpOnly: true, sameSite: "Lax", path: "/" });
   const session = await (await context.request.get("/api/v1/auth/employee/session")).json();
   await page.reload();
-  await expect(page.locator(".ticket-row").first()).toBeVisible();
+  await expect(page.locator(".queue-table tbody tr").first()).toBeVisible();
   expect((await context.cookies()).find(c => c.name === cookie.name)?.value).toBe(cookie.value);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
-  await page.locator(".ticket-open").first().click();
+  await page.locator(".queue-table .cell-main a").first().click();
   await expect(page.locator(".ticket-detail, .ticket-panel").first()).toBeVisible();
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Вход сотрудника" })).toBeVisible();
-  await expect(page.locator(".ticket-row, .ticket-detail")).toHaveCount(0);
+  await expect(page.locator(".queue-table tbody tr, .decision-panel")).toHaveCount(0);
   expect((await request.get("/api/v1/me", { headers: { Cookie: `${cookie.name}=${cookie.value}` } })).status()).toBe(401);
   // Back navigation cannot reveal cached private UI; switch to a new authenticated session.
   await page.goBack();
-  await expect(page.locator(".ticket-row, .ticket-detail")).toHaveCount(0);
+  await expect(page.locator(".queue-table tbody tr, .decision-panel")).toHaveCount(0);
   await page.goto("/admin/login");
   await page.getByLabel("Логин").fill("browser.employee");
   await page.getByLabel("Пароль", { exact: true }).fill("Unique browser passphrase 73985!");
@@ -63,7 +63,7 @@ test("employee cookie flow, reload, real queue, logout and cross-user cache isol
   await page.getByLabel("Код восстановления").fill(codes[0]);
   await page.getByRole("button", { name: "Продолжить" }).click();
   await page.getByRole("navigation", { name: "Разделы кабинета" }).getByRole("link", { name: "Заявки", exact: true }).click();
-  await expect(page.locator(".ticket-row").first()).toBeVisible();
+  await expect(page.locator(".queue-table tbody tr").first()).toBeVisible();
   expect(session.csrf_token).toBeTruthy();
   await page.getByRole("button", { name: "Выйти", exact: true }).click();
   const beta = fixture("setup-beta");
@@ -81,5 +81,5 @@ test("employee cookie flow, reload, real queue, logout and cross-user cache isol
   await expect(page.getByRole("heading", { name: "Заявки", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "A16 synthetic house b1", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "A16 synthetic house a1", exact: true })).toHaveCount(0);
-  await expect(page.locator(".ticket-row")).toHaveCount(0);
+  await expect(page.locator(".queue-table tbody tr")).toHaveCount(0);
 });

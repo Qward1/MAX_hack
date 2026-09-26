@@ -1,5 +1,6 @@
 import { warnUnknown } from "../features/incidents/presentation";
 import type { SignalActionCode } from "../shared/api/signals";
+import { countLabel, formatDay as formatDayOnly, formatStaffWhen, pluralize } from "../shared/ui/format";
 
 // Подписи очереди сигналов. Смысл и разрешения приходят с сервера; здесь
 // только слова для уже известных значений и безопасный запасной вариант.
@@ -120,56 +121,22 @@ export function knownSignalActions(
 
 /** Дата проверки справочника — только день, без выдуманного времени. */
 export function formatDay(value?: string | null): string {
-  if (!value) return "";
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "";
-  return new Intl.DateTimeFormat("ru", {
-    dateStyle: "medium",
-    timeZone: "UTC",
-  }).format(date);
+  return formatDayOnly(value) ?? "";
 }
 
-/** «14:05», а для не сегодняшнего дня — «21 сент., 14:05». */
+/** «сегодня, 14:05 МСК», «вчера, 09:30 МСК», «21 сентября, 14:05 МСК». */
 export function shortTime(value?: string | null): string {
-  if (!value) return "";
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "";
-  const time = new Intl.DateTimeFormat("ru", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-  const today = new Date();
-  if (date.toDateString() === today.toDateString()) return time;
-  const day = new Intl.DateTimeFormat("ru", {
-    day: "numeric",
-    month: "short",
-  }).format(date);
-  return `${day}, ${time}`;
+  return formatStaffWhen(value) ?? "";
 }
 
-export function plural(
-  count: number,
-  one: string,
-  few: string,
-  many: string,
-): string {
-  const tens = count % 100;
-  const units = count % 10;
-  if (tens >= 11 && tens <= 14) return many;
-  if (units === 1) return one;
-  if (units >= 2 && units <= 4) return few;
-  return many;
+export function plural(count: number, one: string, few: string, many: string): string {
+  return pluralize(count, [one, few, many]);
 }
 
-export function countsLine(
-  reports: number,
-  authors: number,
-  last: string,
-): string {
-  return `${reports} ${plural(reports, "реплика", "реплики", "реплик")} · ${authors} ${plural(
-    authors,
+export function countsLine(reports: number, authors: number, last: string): string {
+  return `${countLabel(reports, ["реплика", "реплики", "реплик"])} · ${countLabel(authors, [
     "житель",
     "жителя",
     "жителей",
-  )} · последняя в ${shortTime(last)}`;
+  ])} · последняя ${shortTime(last)}`;
 }

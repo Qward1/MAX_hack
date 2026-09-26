@@ -91,11 +91,11 @@ test.describe.serial("UX-D3 sweep", () => {
           ["board", base, "Проблемы дома"],
           ["my-house", `${base}&view=home`, "Мой дом"],
           ["announcements", `${base}&view=news`, "Объявления"],
-          ["works", `${base}&view=works`, "Выполненные работы"],
+          ["works", `${base}&view=works`, "Что сделано в доме"],
           ["my-activity", `${base}&view=mine`, "Мои обращения"],
           ["reception", `${base}&view=reception`, "Запись на приём"],
           ["incident", `${base}&incident=${refs.incident}`, ""],
-          ["route-card", `${base}&card=${refs.card}`, "Следующий шаг"],
+          ["route-card", `${base}&card=${refs.card}`, "Куда обратиться"],
           ["draft", `${base}&draft=${refs.draft}`, "Черновик обращения"],
         ];
         if (refs.poll) screens.push(["poll", `${base}&view=poll&poll=${refs.poll}`, "Опрос"]);
@@ -104,14 +104,16 @@ test.describe.serial("UX-D3 sweep", () => {
           if (heading) await expect(page.getByRole("heading", { level: 1, name: heading }).or(
             page.getByRole("heading", { level: 2, name: heading })).first()).toBeVisible();
           if (name !== "board") {
-            // Нет тупика: у экрана есть путь назад.
-            await expect(page.getByRole("button", { name: /^←/ }).first()).toBeVisible();
+            // Нет тупика: у вложенного экрана есть «Назад», у раздела — вкладки.
+            await expect(
+              page.getByRole("button", { name: /Назад/ }).or(page.getByRole("navigation", { name: "Разделы" })).first(),
+            ).toBeVisible();
           }
           await inspect(page, `resident-${name}`, width);
         }
         // Назад из раздела ведёт туда, откуда пришли.
         await page.goto(`${base}&view=news`);
-        await page.getByRole("navigation", { name: "Разделы дома" }).getByRole("link", { name: "Мой дом" }).click();
+        await page.getByRole("navigation", { name: "Разделы" }).getByRole("link", { name: "Мой дом" }).click();
         await page.goBack();
         await expect(page.getByRole("heading", { level: 1, name: "Объявления" })).toBeVisible();
       } finally { await ctx.close(); }

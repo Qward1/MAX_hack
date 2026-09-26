@@ -1,3 +1,4 @@
+import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
 import { useState } from "react";
 import { Feedback, History, OneTimeLink, Status, Title, connectionErrors, dateInput, formValue, submitted, useAction, useRead, type Schema } from "./administration";
 import { QuotaMeter } from "./charts";
@@ -40,7 +41,7 @@ export function Staff({ base }: { base: string }) {
       <h2>Приглашения</h2><Feedback error={invitations.error} />
       <ul className="admin-records">{invitations.data?.map(inv => <li key={inv.id}>
         <span>{inv.organization_role === "company_admin" ? "Администратор УК" : "Оператор"}</span><Status value={inv.status} />
-        <time>До {new Date(inv.expires_at).toLocaleString("ru-RU")}</time>
+        <time>До {formatStaffTime(inv.expires_at)}</time>
         {["pending", "claimed"].includes(inv.status) && <button className="ticket-button secondary" disabled={action.busy}
           onClick={() => void action.run(`${base}/employee-invitations/${inv.id}/revoke`)}>Отозвать приглашение</button>}
       </li>)}</ul></>}
@@ -102,8 +103,8 @@ export function MyHouses({ base }: { base: string }) {
 }
 export function HouseList({ houses, manage }: { houses: House[]; manage?: { base: string; refresh: () => void } }) {
   return houses.length ? <div className="house-cards">{houses.map(h => <section className="admin-detail" key={h.management_id}>
-    <h2>{h.address}</h2><p>Управление с {new Date(h.valid_from).toLocaleDateString("ru-RU")}{h.valid_to && ` до ${new Date(h.valid_to).toLocaleDateString("ru-RU")}`}</p>
-    <p>{h.open_ticket_count} открытых заявок · {h.operator_count} операторов · {h.responsible_count} ответственных</p>
+    <h2>{h.address}</h2><p>Управление с {formatDay(h.valid_from)}{h.valid_to && ` до ${formatDay(h.valid_to)}`}</p>
+    <p>{countLabel(h.open_ticket_count, ["открытая заявка", "открытые заявки", "открытых заявок"])} · {countLabel(h.operator_count, ["оператор", "оператора", "операторов"])} · {countLabel(h.responsible_count, ["ответственный", "ответственных", "ответственных"])}</p>
     {h.warning && <p className="admin-feedback">{h.warning}</p>}
     <h3>Подключение MAX</h3>{!h.bindings.length && <p className="muted">Чат пока не подключён</p>}
     {h.bindings.map(b => <p key={b.id}>{b.title ?? "MAX-чат"} · <Status value={b.status} />{b.suspension_reason && ` · ${b.suspension_reason}`}
@@ -149,7 +150,7 @@ export function CompanyHouses({ base }: { base: string }) {
   const [key, setKey] = useState(() => crypto.randomUUID());
   const action = useAction(requests.refresh);
   return <><Title description="Действующее управление и заявки на подключение домов">Дома</Title>
-    <button className="ticket-button" onClick={() => setShow(!show)}>Запросить управление домом</button>
+    <div className="button-row"><button className="ticket-button" aria-expanded={show} onClick={() => setShow(!show)}>Запросить управление домом</button></div>
     {show && <form className="ticket-form admin-detail" onSubmit={async e => {
       const data = submitted(e);
       const result = await action.run(`${base}/house-management-requests`, { requested_address: formValue(data, "address"),
@@ -298,7 +299,7 @@ export function ChatQuotaPanel({ base, view, error, refresh, open, setOpen, canR
         {r.granted_delta != null && r.status !== "rejected" && <span>выдано +{r.granted_delta}</span>}
         {r.decision_reason && <span className="muted">{r.decision_reason}</span>}</li>)}</ul>
       <ul className="admin-records">{view.grants.map((g, i) => <li key={i}><span>{g.limit_after === null || g.limit_after === undefined ? "Без ограничения" : `Квота: ${g.limit_after}`}</span>
-        <span className="muted">{g.reason}</span><time>{new Date(g.created_at).toLocaleString("ru-RU")}</time></li>)}</ul>
+        <span className="muted">{g.reason}</span><time>{formatStaffTime(g.created_at)}</time></li>)}</ul>
     </details>}
   </section>;
 }

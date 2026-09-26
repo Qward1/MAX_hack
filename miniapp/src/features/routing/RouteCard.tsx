@@ -1,142 +1,119 @@
-import { Button, Flex, Panel, Typography } from "@maxhub/max-ui";
 import { type ReactNode, useId } from "react";
-import type {
-  ActionCard,
-  ActionCardAction,
-  SafetyBlock,
-} from "../../shared/api/client";
+import type { ActionCard, ActionCardAction, SafetyBlock } from "../../shared/api/client";
 import { maxBridge, safeUrl } from "../../shared/max/bridge";
-import { DemoBadge } from "../../shared/ui/semantic";
+import { Button, LinkButton } from "../../shared/ui/Button";
+import { countLabel, formatDay } from "../../shared/ui/format";
+import { DemoBadge, Notice } from "../../shared/ui/semantic";
 import { SourceLink } from "../../shared/ui/SourceLink";
-import { formatDay } from "../incidents/presentation";
-import {
-  type CardActionType,
-  cardActionLabel,
-  knownCardActions,
-  linkActions,
-} from "./presentation";
+import { type CardActionType, cardActionLabel, knownCardActions, linkActions } from "./presentation";
 
-const UNVERIFIED_NOTE = "Сведения требуют сверки.";
+export const UNVERIFIED_NOTE = "Сведения требуют сверки.";
 
-/** Ссылка на проверенный источник. Непроверенный адрес ссылкой не становится. */
-/** Памятка безопасности. При любом маршруте она стоит первой на экране. */
-function SafetyPanel({ safety }: { safety: SafetyBlock }) {
+/**
+ * Памятка безопасности. При любом ответе она стоит первой на экране:
+ * телефон — настоящая ссылка `tel:`, у каждой строки — источник.
+ */
+export function SafetyPanel({ safety }: { safety: SafetyBlock }) {
   const verified = formatDay(safety.verified_at);
+  const titleId = useId();
   return (
-    <Panel className="safety-panel" role="alert">
-      <Typography.Text variant="label-strong" className="eyebrow">
-        Безопасность прежде всего
-      </Typography.Text>
-      <Typography.Title asChild>
-        <h2>{safety.title}</h2>
-      </Typography.Title>
+    <section className="ds-safety" role="alert" aria-labelledby={titleId}>
+      <h2 id={titleId}>{safety.title}</h2>
       {safety.phone && (
-        <p className="safety-phone">
-          <a href={`tel:${safety.phone}`}>Позвонить {safety.phone}</a>
-        </p>
+        <a className="ds-call" href={`tel:${safety.phone}`}>
+          Позвонить {safety.phone}
+        </a>
       )}
       {(safety.lines ?? []).map((line) => (
-        <p key={line} className="full-text">
+        <p key={line} className="ds-prose">
           {line}
         </p>
       ))}
       {(safety.steps ?? []).length > 0 && (
-        <ul className="safety-steps">
+        <ul className="ds-bullets">
           {(safety.steps ?? []).map((step) => (
             <li key={step.text}>
-              <span className="full-text">{step.text}</span>
+              <span className="ds-prose">{step.text}</span>
               <SourceLink url={step.source_url} title={step.source_title} />
             </li>
           ))}
         </ul>
       )}
       <SourceLink url={safety.source_url} title={safety.source_title} />
-      {verified && <p className="muted">Проверено: {verified}</p>}
-    </Panel>
+      {verified && <p className="ds-meta">Проверено: {verified}</p>}
+    </section>
   );
 }
 
 function CardAction({
   action,
-  group,
+  primary,
   handler,
   busy,
 }: {
   action: ActionCardAction;
-  group: string;
+  primary: boolean;
   handler?: () => void;
   busy: boolean;
 }) {
-  const key = `${group}-${action.type}-${action.url ?? action.phone ?? ""}`;
-  const reasonId = action.reason ? `${key}-reason` : undefined;
   const label = cardActionLabel(action);
   const url = safeUrl(action.url);
-  const reason = action.reason && (
-    <p id={reasonId} className="muted action-reason">
-      {action.reason}
-    </p>
-  );
+  const variant = primary ? "primary" : "secondary";
   if (action.type === "open_official_channel") {
     // Непроверенная ссылка — выключенная кнопка с причиной, а не ссылка в никуда.
     if (!action.enabled || !url)
       return (
-        <div>
-          <Button stretched disabled aria-describedby={reasonId}>
-            {label}
-          </Button>
-          {reason}
-        </div>
+        <Button stretched disabled reason={action.reason ?? "Ссылки на официальный сервис пока нет."}>
+          {label}
+        </Button>
       );
     return (
-      <div>
-        <Button asChild stretched>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(event) => {
-              if (maxBridge.openLink(url)) event.preventDefault();
-            }}
-          >
-            {label} ↗
-          </a>
-        </Button>
-        {reason}
+      <div className="ds-action ds-action-stretched">
+        <LinkButton
+          variant={variant}
+          stretched
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(event) => {
+            if (maxBridge.openLink(url)) event.preventDefault();
+          }}
+        >
+          {label} ↗<span className="ds-visually-hidden"> (откроется отдельно)</span>
+        </LinkButton>
+        {action.reason && <p className="ds-reason">{action.reason}</p>}
       </div>
     );
   }
   if (action.type === "call_phone" && action.phone)
     return (
-      <div>
-        <Button asChild stretched>
-          <a href={`tel:${action.phone}`}>{label}</a>
-        </Button>
-        {reason}
+      <div className="ds-action ds-action-stretched">
+        <LinkButton variant={variant} stretched href={`tel:${action.phone}`}>
+          {label}
+        </LinkButton>
+        {action.reason && <p className="ds-reason">{action.reason}</p>}
       </div>
     );
   return (
-    <div>
-      <Button
-        stretched
-        disabled={busy || !action.enabled}
-        aria-describedby={reasonId}
-        onClick={() => {
-          if (action.enabled && !busy) handler?.();
-        }}
-      >
-        {label}
-      </Button>
-      {reason}
-    </div>
+    <Button
+      variant={variant}
+      stretched
+      disabled={busy || !action.enabled}
+      reason={action.enabled ? action.reason : action.reason ?? "Сейчас недоступно."}
+      onClick={() => handler?.()}
+    >
+      {label}
+    </Button>
   );
 }
 
 /**
- * Экран карточки маршрута. Порядок блоков закреплён сверху вниз: безопасность,
- * маршрут, основание, факты канала, действия, дисклеймер.
+ * Карточка «куда обратиться». Порядок сверху вниз закреплён тестом:
+ * безопасность → кто отвечает → основание → что известно о сервисе →
+ * действия (в порядке backend) → пояснение и пометка демо-данных.
  *
  * Известная подпись — ещё не реализованный шаг: кнопка без обработчика экрана
- * не рисуется вовсе, как и в блоке следующего шага у проблемы дома.
+ * не рисуется вовсе.
  */
 export function RouteCard({
   card,
@@ -144,6 +121,9 @@ export function RouteCard({
   busy = false,
   demo = false,
   extra,
+  hideSafety = false,
+  primaryActions = true,
+  hideActions = false,
 }: {
   card: ActionCard;
   handlers?: Partial<Record<CardActionType, () => void>>;
@@ -151,6 +131,12 @@ export function RouteCard({
   demo?: boolean;
   /** Шаг, которого нет в карточке: например, уже созданная проблема дома. */
   extra?: ReactNode;
+  /** Памятку безопасности экран уже показал выше. */
+  hideSafety?: boolean;
+  /** Первое доступное действие — основное; выключается, где выбор равноправный. */
+  primaryActions?: boolean;
+  /** Решение принимается кнопками экрана (например, выбор при дубле). */
+  hideActions?: boolean;
 }) {
   const group = useId();
   const basis = card.route.basis;
@@ -158,90 +144,72 @@ export function RouteCard({
   const needsCheck =
     card.route.stale ||
     (basis ? basis.verification_status !== "verified" : false) ||
-    (card.route.channels ?? []).some(
-      (channel) => channel.stale || channel.verification_status !== "verified",
-    );
+    (card.route.channels ?? []).some((channel) => channel.stale || channel.verification_status !== "verified");
   const actions = knownCardActions(card.actions).filter(
-    (action) =>
-      linkActions.includes(action.type as CardActionType) ||
-      handlers[action.type as CardActionType],
+    (action) => linkActions.includes(action.type as CardActionType) || handlers[action.type as CardActionType],
   );
+  const primaryIndex = primaryActions ? actions.findIndex((action) => action.enabled) : -1;
   return (
     <>
-      {card.safety && <SafetyPanel safety={card.safety} />}
-      <Panel className="detail-section route-card">
-        <Typography.Text variant="label-strong" className="eyebrow">
-          Маршрут
-        </Typography.Text>
-        <Typography.Title asChild>
-          <h2>{card.title}</h2>
-        </Typography.Title>
-        <p className="full-text">{card.explanation}</p>
-        {card.route.organization_name && (
-          <p className="muted">Вероятный адресат: {card.route.organization_name}</p>
-        )}
-      </Panel>
+      {card.safety && !hideSafety && <SafetyPanel safety={card.safety} />}
+      <section className="ds-section route-card" aria-labelledby={`${group}-title`}>
+        <h2 id={`${group}-title`}>{card.title}</h2>
+        <p className="ds-prose">{card.explanation}</p>
+        {card.route.organization_name && <p>Вероятный адресат: {card.route.organization_name}</p>}
+      </section>
       {basis && (
-        <Panel className="detail-section route-basis">
-          <Typography.Title asChild>
-            <h2>Основание</h2>
-          </Typography.Title>
-          <p className="full-text">{basis.text}</p>
+        <section className="ds-section route-basis" aria-labelledby={`${group}-basis`}>
+          <h2 id={`${group}-basis`}>Основание</h2>
+          <p className="ds-prose">{basis.text}</p>
           <SourceLink url={basis.source_url} title={basis.source_title} />
-          {verified && <p className="muted">Проверено: {verified}</p>}
+          {verified && <p className="ds-meta">Проверено: {verified}</p>}
           {needsCheck && (
-            <p className="honesty-note" role="note">
-              {UNVERIFIED_NOTE}
-            </p>
+            <Notice tone="warning" role="note">
+              <p>{UNVERIFIED_NOTE}</p>
+            </Notice>
           )}
-        </Panel>
+        </section>
       )}
       {(card.facts ?? []).length > 0 && (
-        <Panel className="detail-section route-facts">
-          <Typography.Title asChild>
-            <h2>Что известно о канале</h2>
-          </Typography.Title>
-          <ul>
+        <details className="ds-disclosure route-facts">
+          <summary>
+            <h2 className="ds-summary-title">Что известно об официальном сервисе</h2>
+            <span className="ds-meta">{countLabel((card.facts ?? []).length, ["факт", "факта", "фактов"])} с источниками</span>
+          </summary>
+          <ul className="ds-bullets ds-disclosure-body">
             {(card.facts ?? []).map((fact) => (
               <li key={fact.text}>
-                <span className="full-text">{fact.text}</span>
+                <span className="ds-prose">{fact.text}</span>
                 <SourceLink url={fact.source_url} title={fact.source_title} />
               </li>
             ))}
           </ul>
-        </Panel>
+        </details>
       )}
-      <Panel className="next-action card-actions" aria-labelledby={`${group}-actions`}>
-        <Typography.Text variant="label-strong" className="eyebrow">
-          Следующий шаг
-        </Typography.Text>
-        <Typography.Title asChild>
-          <h2 id={`${group}-actions`}>Что делать сейчас</h2>
-        </Typography.Title>
+      {!hideActions && <section className="ds-section card-actions" aria-labelledby={`${group}-actions`}>
+        <h2 id={`${group}-actions`}>Что можно сделать</h2>
         {actions.length || extra ? (
-          <Flex direction="column" gap={12}>
-            {extra}
-            {actions.map((action) => (
+          <div className="ds-stack">
+            {actions.map((action, index) => (
               <CardAction
                 key={`${action.type}-${action.url ?? action.phone ?? ""}`}
                 action={action}
-                group={group}
+                primary={index === primaryIndex}
                 handler={handlers[action.type as CardActionType]}
                 busy={busy}
               />
             ))}
-          </Flex>
+            {extra}
+          </div>
         ) : (
           <p>Доступных здесь шагов пока нет.</p>
         )}
-      </Panel>
+      </section>}
       {(card.disclaimer || card.demo_notice || demo) && (
-        <Panel className="honesty-note route-disclaimer">
-          {card.disclaimer && <p className="full-text">{card.disclaimer}</p>}
-          <Flex gap={12} wrap="wrap" align="center">
-            {(card.demo_notice || demo) && <DemoBadge />}
-          </Flex>
-        </Panel>
+        <div className="ds-group route-disclaimer">
+          {card.disclaimer && <p className="ds-prose ds-subtle">{card.disclaimer}</p>}
+          {(card.demo_notice || demo) && <DemoBadge />}
+        </div>
       )}
     </>
   );

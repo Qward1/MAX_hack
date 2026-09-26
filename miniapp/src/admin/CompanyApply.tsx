@@ -1,3 +1,4 @@
+import { formatStaffTime, formatDay } from "../shared/ui/format";
 import { useCallback, useState } from "react";
 import { ApiClient } from "../shared/api/client";
 import { useResource } from "../shared/api/useResource";
@@ -130,7 +131,7 @@ export function ApplicationStatus({ token }: { token: string }) {
   return <><PublicHeader /><main className="application-status">
     <Feedback loading={r.loading && !data} error={r.error} />
     {data && <>
-      <p className="muted">Заявка «{data.short_name}» от {new Date(data.submitted_at).toLocaleDateString("ru-RU")}</p>
+      <p className="muted">Заявка «{data.short_name}» от {formatDay(data.submitted_at)}</p>
       <h1>{STATUS_TITLES[data.status] ?? "Статус заявки"}</h1>
       {!["rejected", "cancelled"].includes(data.status) && <ol className="status-steps" aria-label="Этапы заявки">
         {STEPS.map((step, i) => <li key={step} className={i < reached ? "is-done" : undefined} aria-current={i === reached - 1 ? "step" : undefined}>
@@ -153,7 +154,7 @@ export function ApplicationStatus({ token }: { token: string }) {
         <p className="muted">Запрошено: {data.requested_chat_count} {plural(data.requested_chat_count)}. Итоговую квоту назначит платформа.</p>}
       {data.messages.length > 0 && <section className="admin-detail"><h2>Вопросы и ответы</h2>
         <ol className="message-list">{data.messages.map((m, i) => <li key={i} className={`message-${m.author}`}>
-          <strong>{m.author === "platform" ? "Платформа" : "Вы"}</strong><time>{new Date(m.created_at).toLocaleString("ru-RU")}</time><p>{m.text}</p></li>)}</ol></section>}
+          <strong>{m.author === "platform" ? "Платформа" : "Вы"}</strong><time>{formatStaffTime(m.created_at)}</time><p>{m.text}</p></li>)}</ol></section>}
       {data.can_reply && <form className="ticket-form admin-detail" onSubmit={async e => {
         const form = e.currentTarget; const text = formValue(submitted(e), "text");
         if (await reply(text)) form.reset();

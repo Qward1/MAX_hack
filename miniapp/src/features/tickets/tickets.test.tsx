@@ -89,8 +89,8 @@ describe("B-14 resident actions", () => {
       }),
     );
     expect(await screen.findByText("В работе")).toBeTruthy();
-    expect(screen.getByText(/Наблюдения жителей расходятся/)).toBeTruthy();
-    expect(screen.queryByText("Завершено")).toBeNull();
+    expect(screen.getByText(/ответы жителей расходятся/)).toBeTruthy();
+    expect(screen.queryByText("Завершена")).toBeNull();
   });
   it("UI-TK-16 exposes a late objection through allowed_actions after closed", async () => {
     const client = setup({ ...work, status: "closed" });
@@ -135,10 +135,10 @@ describe("B-14 resident actions", () => {
     const button = screen.getByRole("button", { name: "Исправлено" });
     fireEvent.click(button);
     fireEvent.click(button);
-    await screen.findByRole("button", { name: "Повторить сохранение" });
+    await screen.findByRole("button", { name: "Повторить" });
     expect(client.observe).toHaveBeenCalledOnce();
     fireEvent.click(
-      screen.getByRole("button", { name: "Повторить сохранение" }),
+      screen.getByRole("button", { name: "Повторить" }),
     );
     await waitFor(() => expect(client.observe).toHaveBeenCalledTimes(2));
     expect(vi.mocked(client.observe).mock.calls[1]).toEqual(
@@ -152,7 +152,7 @@ describe("B-14 resident actions", () => {
     vi.mocked(client.workStatus).mockRejectedValueOnce(error(503));
     fireEvent.click(screen.getByRole("button", { name: "Исправлено" }));
     fireEvent.click(
-      await screen.findByRole("button", { name: "Повторить сохранение" }),
+      await screen.findByRole("button", { name: "Повторить" }),
     );
     await screen.findByText("Ответ сохранён. Показаны актуальные данные.");
     expect(client.observe).toHaveBeenCalledOnce();

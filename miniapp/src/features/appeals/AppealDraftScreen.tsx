@@ -1,16 +1,16 @@
-import { Button, Flex, Panel, Textarea, Typography } from "@maxhub/max-ui";
-import { useCallback, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
-  ApiProblem,
   type AppealDraftView,
   type DomSignalApi,
   problemStatus,
   retryable,
 } from "../../shared/api/client";
 import { maxBridge, safeUrl } from "../../shared/max/bridge";
-import { SourceChip } from "../../shared/ui/semantic";
+import { Button, LinkButton } from "../../shared/ui/Button";
+import { formatDay, formatWhen } from "../../shared/ui/format";
+import { ConfirmDialog, InfoRow, Notice, SourceChip } from "../../shared/ui/semantic";
 import { SourceLink } from "../../shared/ui/SourceLink";
-import { actionLabels, formatDate, formatDay, knownActions } from "../incidents/presentation";
+import { actionLabels, knownActions } from "../incidents/presentation";
 
 /** Порядок закреплён продуктом: сначала текст в буфер, потом сервис, потом отметка. */
 const ACTION_ORDER = ["copy_draft", "open_official_channel", "mark_filed"] as const;
@@ -21,9 +21,8 @@ const COPY_DONE = "Текст скопирован.";
 const FILED_NOTE =
   "Вы отметили, что отправили обращение. ДомСигнал не подтверждает регистрацию во внешней системе.";
 const CONFLICT_NOTE = "Черновик изменился. Ваш текст сохранён на экране.";
-const UNVERIFIED_CHANNEL = "Канал ещё не проверен в справочнике.";
-const SELF_FILING_NOTE = "ДомСигнал не отправляет обращения за вас — вы отправляете его сами.";
-const TEXT_HINT = "Текст можно поправить перед отправкой — сохраните правку.";
+const UNVERIFIED_CHANNEL = "Официальный сервис ещё не проверен в справочнике.";
+export const SELF_FILING_NOTE = "ДомСигнал не отправляет обращения за вас — вы отправляете его сами.";
 /** Буфер обмена webview может не ответить вовсе: ждём не дольше. */
 const CLIPBOARD_TIMEOUT_MS = 1500;
 
@@ -45,6 +44,14 @@ async function writeClipboard(value: string): Promise<boolean> {
   }
 }
 
+function saveError(error: unknown): string {
+  const status = problemStatus(error);
+  if (status === 401) return "Не удалось сохранить: сессия MAX истекла. Текст остался на экране — скопируйте его, затем откройте мини-приложение снова.";
+  if (status === 403 || status === 404) return "Не удалось сохранить: черновик больше недоступен. Текст остался на экране — скопируйте его.";
+  if (retryable(error)) return "Не удалось сохранить. Проверьте интернет и попробуйте ещё раз. Текст остался на экране.";
+  return "Не удалось сохранить. Обновите страницу. Текст остался на экране — скопируйте его перед обновлением.";
+}
+
 export function AppealDraftScreen({
   draft,
   client,
@@ -64,40 +71,51 @@ export function AppealDraftScreen({
   const [conflict, setConflict] = useState<AppealDraftView | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const pending = useRef(false);
-  const filed = draft.filed_at !== null;
+  const filed = draft.filed_at !== null && draft.filed_at !== undefined;
+  const dirty = !filed && text !== draft.text;
   const actions = knownActions(draft.allowed_actions);
   const descriptor = (code: string) => actions.find((item) => item.code === code);
   const channel = draft.channel;
   const url = safeUrl(channel?.url);
   const verified = formatDay(channel?.verified_at);
-  const needsCheck = Boolean(
-    channel && (channel.stale || channel.verification_status !== "verified"),
-  );
+  const needsCheck = Boolean(channel && (channel.stale || channel.verification_status !== "verified"));
 
-  const guard = useCallback(async (run: () => Promise<AppealDraftView>) => {
-    if (pending.current) return;
-    pending.current = true;
-    setSaving(true);
-    setError(null);
-    try {
-      onLoaded(await run());
-      setConflict(null);
-    } catch (failure) {
-      setError(failure);
-      if (problemStatus(failure) === 409) {
-        // Устаревшая версия не затирает ввод: житель видит обе и решает сам.
-        try {
-          setConflict(await client.appealDraft(draft.id));
-        } catch {
-          /* Свежая версия придёт при следующем обновлении экрана. */
+  // Несохранённая правка — MAX предупредит при закрытии мини-приложения.
+  useEffect(() => {
+    maxBridge.closingConfirmation(dirty);
+    return () => maxBridge.closingConfirmation(false);
+  }, [dirty]);
+
+  const guard = useCallback(
+    async (run: () => Promise<AppealDraftView>, done?: () => void) => {
+      if (pending.current) return;
+      pending.current = true;
+      setSaving(true);
+      setError(null);
+      try {
+        onLoaded(await run());
+        setConflict(null);
+        done?.();
+      } catch (failure) {
+        setError(failure);
+        maxBridge.haptic("error");
+        if (problemStatus(failure) === 409) {
+          // Устаревшая версия не затирает ввод: житель видит обе и решает сам.
+          try {
+            setConflict(await client.appealDraft(draft.id));
+          } catch {
+            /* Свежая версия придёт при следующем обновлении экрана. */
+          }
         }
+      } finally {
+        pending.current = false;
+        setSaving(false);
       }
-    } finally {
-      pending.current = false;
-      setSaving(false);
-    }
-  }, [client, draft.id, onLoaded]);
+    },
+    [client, draft.id, onLoaded],
+  );
 
   async function copyText() {
     setCopy(null);
@@ -118,92 +136,82 @@ export function AppealDraftScreen({
     setCopy(copied ? COPY_DONE : COPY_FALLBACK);
   }
 
+  const saved = formatWhen(draft.updated_at);
   return (
     <>
-      <Panel className="detail-section draft-recipient">
-        <Typography.Title asChild>
-          <h2>Куда отправлять</h2>
-        </Typography.Title>
-        <dl>
-          <div className="info-row">
-            <dt>Адресат</dt>
-            <dd>{draft.organization_name ?? "Не назван в справочнике"}</dd>
-          </div>
-          <div className="info-row">
-            <dt>Официальный канал</dt>
-            <dd>{channel?.label ?? "Проверенного канала пока нет"}</dd>
-          </div>
+      <section className="ds-section draft-recipient" aria-labelledby={`${id}-to`}>
+        <h2 id={`${id}-to`}>Куда отправить</h2>
+        <dl className="ds-kv">
+          <InfoRow label="Адресат">{draft.organization_name ?? "Не назван в справочнике"}</InfoRow>
+          <InfoRow label="Официальный сервис">{channel?.label ?? "Проверенного сервиса пока нет"}</InfoRow>
+          {verified && <InfoRow label="Проверено">{verified}</InfoRow>}
         </dl>
-        {verified && <p className="muted">Проверено: {verified}</p>}
         {needsCheck && (
-          <p className="honesty-note" role="note">
-            Сведения о канале требуют сверки.
-          </p>
+          <Notice tone="warning" role="note">
+            <p>Сведения об официальном сервисе требуют сверки.</p>
+          </Notice>
         )}
-        {!channel && <p className="muted">{UNVERIFIED_CHANNEL}</p>}
+        {!channel && <p className="ds-subtle">{UNVERIFIED_CHANNEL}</p>}
+        {(channel?.facts ?? []).length > 0 && (
+          <details className="ds-disclosure draft-channel-facts">
+            <summary>Что известно об официальном сервисе</summary>
+            <ul className="ds-bullets ds-disclosure-body">
+              {(channel?.facts ?? []).map((fact) => (
+                <li key={fact.text}>
+                  <span className="ds-prose">{fact.text}</span>
+                  <SourceLink url={fact.source_url} title={fact.source_title} />
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
         <SourceChip source={draft.provenance} />
-      </Panel>
+      </section>
 
-      {(channel?.facts ?? []).length > 0 && (
-        <Panel className="detail-section draft-channel-facts">
-          <Typography.Title asChild>
-            <h2>Что известно о канале</h2>
-          </Typography.Title>
-          <ul>
-            {(channel?.facts ?? []).map((fact) => (
-              <li key={fact.text}>
-                <span className="full-text">{fact.text}</span>
-                <SourceLink url={fact.source_url} title={fact.source_title} />
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      )}
-
-      <Panel className="detail-section draft-editor">
-        <Typography.Title asChild>
-          <h2>Текст обращения</h2>
-        </Typography.Title>
+      <section className="ds-section draft-editor" aria-labelledby={`${id}-text-title`}>
+        <h2 id={`${id}-text-title`}>Текст обращения</h2>
         {draft.ai_assisted && (
-          <p className="honesty-note" role="note">
-            {AI_NOTE}
-          </p>
+          <Notice tone="warning" role="note">
+            <p>{AI_NOTE}</p>
+          </Notice>
         )}
-        <p className="muted">{TEXT_HINT}</p>
-        <label htmlFor={`${id}-text`}>Обращение</label>
-        <Textarea
-          id={`${id}-text`}
-          ref={area}
-          value={text}
-          disabled={filed || busy}
-          rows={12}
-          onChange={(event) => {
-            setText(event.target.value);
-            setCopy(null);
-          }}
-        />
-        <p className="muted">
-          Версия {draft.version} · сохранено {formatDate(draft.updated_at) ?? "—"}
+        <div className="ds-field">
+          <label htmlFor={`${id}-text`}>Обращение</label>
+          <p id={`${id}-hint`} className="ds-hint">
+            В тексте только то, что нужно вставить в форму официального сервиса. Правку сохраните перед копированием.
+          </p>
+          <textarea
+            id={`${id}-text`}
+            ref={area}
+            value={text}
+            readOnly={filed || busy}
+            aria-describedby={`${id}-hint ${id}-saved`}
+            rows={12}
+            onChange={(event) => {
+              setText(event.target.value);
+              setCopy(null);
+            }}
+          />
+        </div>
+        <p id={`${id}-saved`} className="ds-meta" role="status">
+          {dirty ? "Есть несохранённая правка." : `Сохранено${saved ? ` ${saved}` : ""}.`}
         </p>
         {!filed && (
           <Button
-            variant="secondary"
-            disabled={saving || busy || text.trim().length === 0 || text === draft.text}
-            onClick={() =>
-              void guard(() =>
-                client.saveAppealDraft(draft.id, { text, version: draft.version }),
-              )
-            }
+            disabled={busy || text.trim().length === 0 || !dirty}
+            loading={saving}
+            loadingLabel="Сохраняем…"
+            onClick={() => void guard(() => client.saveAppealDraft(draft.id, { text, version: draft.version }))}
           >
-            {saving ? "Сохраняем…" : "Сохранить правку"}
+            Сохранить правку
           </Button>
         )}
         {conflict && (
-          <Panel className="draft-conflict" role="alert">
-            <Typography.Text variant="body-strong">{CONFLICT_NOTE}</Typography.Text>
-            <p className="full-text">{conflict.text}</p>
+          <Notice tone="warning" role="alert" className="draft-conflict">
+            <p className="ds-notice-title">{CONFLICT_NOTE}</p>
+            <p>Версия на сервере:</p>
+            <p className="ds-prose">{conflict.text}</p>
             <Button
-              variant="secondary"
               onClick={() => {
                 setText(conflict.text);
                 onLoaded(conflict);
@@ -212,53 +220,37 @@ export function AppealDraftScreen({
             >
               Взять версию с сервера
             </Button>
-          </Panel>
+            <p className="ds-subtle">Или скопируйте свой текст и сохраните его ещё раз.</p>
+          </Notice>
         )}
-        {Boolean(error) && problemStatus(error) !== 409 && (
-          <p role="alert">
-            Не удалось сохранить правку. Текст остался на экране.{" "}
-            {retryable(error) ? "Попробуйте ещё раз." : "Обновите данные и проверьте доступ."}
-          </p>
+        {Boolean(error) && problemStatus(error) !== 409 && !confirming && (
+          <Notice tone="danger" role="alert">
+            <p>{saveError(error)}</p>
+          </Notice>
         )}
-        {error instanceof ApiProblem && problemStatus(error) === 409 && (
-          <p role="status" className="muted">
-            Обновите текст и сохраните ещё раз.
-          </p>
-        )}
-      </Panel>
+      </section>
 
-      <Panel className="next-action draft-actions" aria-labelledby={`${id}-next`}>
-        <Typography.Text variant="label-strong" className="eyebrow">
-          Следующий шаг
-        </Typography.Text>
-        <Typography.Title asChild>
-          <h2 id={`${id}-next`}>Что делать сейчас</h2>
-        </Typography.Title>
-        <p className="muted">{SELF_FILING_NOTE}</p>
-        <Flex direction="column" gap={12}>
+      <section className="ds-section draft-actions" aria-labelledby={`${id}-next`}>
+        <h2 id={`${id}-next`}>Что сделать</h2>
+        <p className="ds-subtle">{SELF_FILING_NOTE}</p>
+        <div className="ds-stack">
           {ACTION_ORDER.map((code) => {
             const action = descriptor(code);
             if (!action) return null;
-            const reasonId = action.reason ? `${id}-${code}-reason` : undefined;
-            const reason = action.reason && (
-              <p id={reasonId} className="muted action-reason">
-                {action.reason}
-              </p>
-            );
             if (code === "copy_draft")
               return (
-                <div key={code}>
+                <div key={code} className="ds-action ds-action-stretched">
                   <Button
+                    variant={filed ? "secondary" : "primary"}
                     stretched
                     disabled={!action.enabled}
-                    aria-describedby={reasonId}
+                    reason={action.enabled ? null : action.reason}
                     onClick={() => void copyText()}
                   >
                     {actionLabels.copy_draft}
                   </Button>
-                  {reason}
                   {copy && (
-                    <p role="status" className="muted">
+                    <p role="status" className="ds-meta">
                       {copy}
                     </p>
                   )}
@@ -266,67 +258,92 @@ export function AppealDraftScreen({
               );
             if (code === "open_official_channel")
               return (
-                <div key={code}>
+                <div key={code} className="ds-action ds-action-stretched">
                   {action.enabled && url ? (
-                    <Button asChild stretched>
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(event) => {
-                          if (maxBridge.openLink(url)) event.preventDefault();
-                        }}
-                      >
-                        {actionLabels.open_official_channel} ↗
-                      </a>
-                    </Button>
+                    <LinkButton
+                      stretched
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(event) => {
+                        if (maxBridge.openLink(url)) event.preventDefault();
+                      }}
+                    >
+                      {actionLabels.open_official_channel} ↗
+                    </LinkButton>
                   ) : (
-                    <Button stretched disabled aria-describedby={reasonId}>
+                    <Button stretched disabled reason={action.reason ?? "Ссылки на официальный сервис пока нет."}>
                       {actionLabels.open_official_channel}
                     </Button>
                   )}
-                  {reason}
-                  {!url && channel?.entry_hint && (
-                    <p className="muted">Вход: {channel.entry_hint}</p>
-                  )}
+                  {action.enabled && url && action.reason && <p className="ds-reason">{action.reason}</p>}
+                  {!url && channel?.entry_hint && <p className="ds-meta">Вход: {channel.entry_hint}</p>}
                 </div>
               );
             return (
-              <div key={code}>
-                <label className="draft-reference" htmlFor={`${id}-reference`}>
-                  Номер обращения, если он есть
-                  <input
-                    id={`${id}-reference`}
-                    value={reference}
-                    disabled={busy || !action.enabled}
-                    maxLength={200}
-                    onChange={(event) => setReference(event.target.value)}
-                  />
-                </label>
-                <Button
-                  stretched
-                  disabled={busy || saving || !action.enabled}
-                  aria-describedby={reasonId}
-                  onClick={() =>
-                    void guard(() =>
-                      client.markAppealFiled(draft.id, reference.trim() || null),
-                    )
-                  }
-                >
-                  {actionLabels.mark_filed}
-                </Button>
-                {reason}
-              </div>
+              <Button
+                key={code}
+                stretched
+                disabled={busy || saving || !action.enabled}
+                reason={action.enabled ? null : action.reason}
+                onClick={() => {
+                  setError(null);
+                  setConfirming(true);
+                }}
+              >
+                {actionLabels.mark_filed}
+              </Button>
             );
           })}
-        </Flex>
+        </div>
         {filed && (
-          <p className="honesty-note" role="status">
-            {FILED_NOTE}
-            {draft.filed_reference ? ` Ваш номер: ${draft.filed_reference}.` : ""}
-          </p>
+          <Notice tone="neutral" role="status">
+            <p>
+              {FILED_NOTE}
+              {draft.filed_reference ? ` Ваш номер: ${draft.filed_reference}.` : ""}
+            </p>
+          </Notice>
         )}
-      </Panel>
+      </section>
+
+      {confirming && (
+        <ConfirmDialog
+          title="Отметить обращение как отправленное?"
+          confirmLabel="Да, я отправил(а)"
+          busy={saving}
+          busyLabel="Сохраняем отметку…"
+          onCancel={() => setConfirming(false)}
+          onConfirm={() =>
+            void guard(
+              () => client.markAppealFiled(draft.id, reference.trim() || null),
+              () => {
+                setConfirming(false);
+                maxBridge.haptic("success");
+              },
+            )
+          }
+        >
+          <p>
+            Отметьте, только если вы уже отправили текст в официальном сервисе. ДомСигнал не проверяет, зарегистрировано
+            ли обращение там. Отметку потом не изменить.
+          </p>
+          <div className="ds-field">
+            <label htmlFor={`${id}-reference`}>Номер обращения, если сервис его выдал</label>
+            <input
+              id={`${id}-reference`}
+              value={reference}
+              maxLength={200}
+              autoComplete="off"
+              onChange={(event) => setReference(event.target.value)}
+            />
+          </div>
+          {Boolean(error) && (
+            <Notice tone="danger" role="alert">
+              <p>{problemStatus(error) === 409 ? "Черновик изменился. Закройте окно и проверьте текст." : saveError(error).replace("сохранить", "сохранить отметку")}</p>
+            </Notice>
+          )}
+        </ConfirmDialog>
+      )}
     </>
   );
 }
