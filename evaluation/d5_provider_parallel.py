@@ -74,7 +74,12 @@ async def level(
     latencies: list[float] = []
     costs: list[float] = []
     outcome: dict[str, int] = {
-        "ok": 0, "invalid_json": 0, "timeout": 0, "http_429": 0, "http_other": 0, "error": 0
+        "ok": 0,
+        "invalid_json": 0,
+        "timeout": 0,
+        "http_429": 0,
+        "http_other": 0,
+        "error": 0,
     }
     stopped = False
 
@@ -159,7 +164,11 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
         "dataset": "datasets/synthetic/d3_dialogs.v1.dev.jsonl (не контроль)",
         "windows": len(windows),
         "levels": results,
-        "slice_budget": {"calls": budget.calls, "rub": round(budget.rub, 3), "max_rub": args.max_rub},
+        "slice_budget": {
+            "calls": budget.calls,
+            "rub": round(budget.rub, 3),
+            "max_rub": args.max_rub,
+        },
     }
 
 
