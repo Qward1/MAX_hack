@@ -7,10 +7,16 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from domsignal.contracts.community import CouncilMemberChange, CouncilMemberRevoke
-from domsignal.db.models import Broadcast, BroadcastHouse, HouseProposal, InboxReceipt
+from domsignal.db.models import (
+    Broadcast,
+    BroadcastHouse,
+    ChatBinding,
+    HouseProposal,
+    InboxReceipt,
+)
 from domsignal.services.errors import AccessDenied, FieldValidationError, ResourceNotFound
 from tests.integration.explicit_harness import ex  # noqa: F401
 
@@ -118,7 +124,15 @@ async def test_proposals_are_limited_and_visible_to_the_author_and_the_council(e
 
 @pytest.mark.integration
 async def test_the_council_publishes_through_the_d3_mechanism(ex) -> None:  # noqa: F811
-    await ex.bind()
+    binding = await ex.bind()
+    # Без тихих часов: иначе ночью (22:00–08:00 МСК) пост честно ждёт утра и
+    # проверка зависела бы от времени запуска (найдено в D5 при ночном прогоне).
+    async with ex.container.session_factory() as session, session.begin():
+        await session.execute(
+            update(ChatBinding)
+            .where(ChatBinding.id == binding["id"])
+            .values(quiet_start_minute=0, quiet_end_minute=0)
+        )
     base = f"/api/v1/houses/{ex.ids['h1']}/council"
     body = {
         "title": "Субботник в субботу",
