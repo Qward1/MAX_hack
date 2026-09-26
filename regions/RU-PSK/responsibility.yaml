@@ -1,0 +1,62 @@
+# Региональный слой справочника ответственности: Псковская область (D4).
+#
+# Регион данными, не кодом: небольшой регион без своих цифровых кадров. Пояс —
+# Москва. Федеральный слой работает без изменений: уличное освещение, дороги
+# и благоустройство на городской территории ведут в «Госуслуги. Решаем
+# вместе», газ и опасность — в 112.
+#
+# Чат-бот Министерства регионального контроля и надзора в MAX записан для
+# сверки, но не проверен: официальный сайт pskov.ru (и rkn.pskov.ru) 26.09.2026
+# отвечал HTTP 403 и с сервера в РФ, и с машины разработчика, а профиль бота на
+# max.ru и новости ИнформПсков (05.08.2026) — не страница органа власти.
+# Поэтому записи остаются needs_verification и жителю не показываются; правил
+# маршрута у слоя нет.
+schema_version: 1
+layer_id: RU-PSK
+layer: region
+region: RU-PSK
+name: Псковская область
+# Часовой пояс региона (IANA): тихие часы, сводка и сутки дашбордов его домов.
+timezone: Europe/Moscow
+version: "1"
+updated_at: "2026-09-26"
+
+organizations:
+  - id: ru_psk_rkn
+    name: Министерство регионального контроля и надзора Псковской области
+    kind: other_authority
+    region: RU-PSK
+    municipality: null
+    verification:
+      status: needs_verification
+      verified_at: null
+      verified_by: null
+      source_title: "Название — из профиля бота max.ru/rkn_ministry_bot и новостей ИнформПсков; официальный сайт pskov.ru 26.09.2026 не открылся (HTTP 403)"
+      source_url: https://max.ru/rkn_ministry_bot
+
+channels:
+  - id: ru_psk_rkn_max_bot
+    organization_id: ru_psk_rkn
+    channel_type: max_bot
+    label: Чат-бот Министерства регионального контроля и надзора Псковской области в MAX
+    url: https://max.ru/rkn_ministry_bot
+    phone: null
+    entry_hint: null
+    routes_to_competent_authority: false
+    facts: []
+    unavailable_regions: []
+    verification:
+      status: needs_verification
+      verified_at: null
+      verified_by: null
+      source_title: "Профиль бота в MAX: «Чат-бот создан Министерством регионального контроля и надзора Псковской области для оперативного решения вопросов ЖКХ»; вторичный источник — ИнформПсков, 05.08.2026 (informpskov.ru/news/514528.html). На сайте органа власти не подтверждено"
+      source_url: https://max.ru/rkn_ministry_bot
+
+rules: []
+
+municipalities:
+  - code: pskov
+    name: Псков
+    organizations: []
+    channels: []
+    rules: []

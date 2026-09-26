@@ -1,0 +1,69 @@
+# Региональный слой справочника ответственности: Приморский край (D4).
+#
+# Регион данными, не кодом: пояс UTC+10 (Asia/Vladivostok) проверяет тихие
+# часы, сводку и сутки дашбордов по местному времени. Федеральный слой
+# работает без изменений: уличное освещение, дороги и благоустройство на
+# городской территории ведут в «Госуслуги. Решаем вместе», газ и опасность —
+# в 112.
+#
+# Источник — официальный сайт Правительства Приморского края primorsky.ru,
+# страницы государственной жилищной инспекции, прочитаны 26.09.2026 с сервера
+# в РФ (с зарубежного адреса сайт не открывается). Цитаты дословные. Правил
+# маршрута у слоя нет: ни один из десяти подтипов не отнесён к инспекции
+# официальной страницей, поэтому инспекция — проверенный канал региона
+# («Мой дом»), а не маршрут. Сроков справочник не утверждает.
+schema_version: 1
+layer_id: RU-PRI
+layer: region
+region: RU-PRI
+name: Приморский край
+# Часовой пояс региона (IANA): тихие часы, сводка и сутки дашбордов его домов.
+timezone: Asia/Vladivostok
+version: "1"
+updated_at: "2026-09-26"
+
+organizations:
+  - id: ru_pri_gji
+    name: Государственная жилищная инспекция Приморского края
+    kind: other_authority
+    region: RU-PRI
+    municipality: null
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (страница инспекции на primorsky.ru, прочитана с сервера в РФ)
+      source_title: "Государственная жилищная инспекция Приморского края — страница на официальном сайте Правительства Приморского края primorsky.ru. Проверено 26.09.2026"
+      source_url: https://www.primorsky.ru/authorities/executive-agencies/offices/housing-supervision/
+
+channels:
+  - id: ru_pri_gji_contacts
+    organization_id: ru_pri_gji
+    channel_type: official_web
+    label: Государственная жилищная инспекция Приморского края
+    url: https://www.primorsky.ru/authorities/executive-agencies/offices/housing-supervision/contact.php
+    phone: "8 (423) 243-26-40"
+    entry_hint: primorsky.ru → государственная жилищная инспекция → «Контакты»
+    routes_to_competent_authority: false
+    facts:
+      - text: "«Электронная почта: gji_pk@primorsky.ru»; приёмная — «Контакты: 8 (423) 243-26-40.»"
+        source_title: "ГЖИ Приморского края — «Контакты», primorsky.ru. Проверено 26.09.2026"
+        source_url: https://www.primorsky.ru/authorities/executive-agencies/offices/housing-supervision/contact.php
+      - text: "«Приём поступающей корреспонденции на бумажном носителе, осуществляется специалистами инспекции ежедневно в 10-00 часов и 16-00 часов в холле 1 этажа по адресу: г. Владивосток, ул. 1-я Морская, 2»."
+        source_title: "ГЖИ Приморского края — «Контакты», primorsky.ru. Проверено 26.09.2026"
+        source_url: https://www.primorsky.ru/authorities/executive-agencies/offices/housing-supervision/contact.php
+    unavailable_regions: []
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (страница «Контакты» инспекции на primorsky.ru, прочитана с сервера в РФ)
+      source_title: "ГЖИ Приморского края — «Контакты», официальный сайт Правительства Приморского края. Проверено 26.09.2026"
+      source_url: https://www.primorsky.ru/authorities/executive-agencies/offices/housing-supervision/contact.php
+
+rules: []
+
+municipalities:
+  - code: vladivostok
+    name: Владивосток
+    organizations: []
+    channels: []
+    rules: []
