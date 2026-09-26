@@ -70,9 +70,7 @@ async def test_region_packs_come_from_the_loaded_directory(env):  # noqa: F811
 
 async def test_moscow_house_approved_with_its_region_routes_to_nash_gorod(env):  # noqa: F811
     request = await house_request(env, f"Москва, ул. Проверочная, {uuid4().hex[:6]}")
-    result = await approve(
-        env, request, approval(region_code="RU-MOW", municipality_code="moscow")
-    )
+    result = await approve(env, request, approval(region_code="RU-MOW", municipality_code="moscow"))
     async with env["container"].session_factory() as db:
         management = await db.get(HouseManagement, UUID(result["management_id"]))
         assert management is not None
@@ -102,9 +100,7 @@ async def test_moscow_house_approved_with_its_region_routes_to_nash_gorod(env): 
     assert record["operator"] == "platform:house_request"
     assert record["updated_by"] == str(env["platform_id"])
     # Повтор того же одобрения — тот же ответ, без второго профиля и аудита.
-    again = await approve(
-        env, request, approval(region_code="RU-MOW", municipality_code="moscow")
-    )
+    again = await approve(env, request, approval(region_code="RU-MOW", municipality_code="moscow"))
     assert again["management_id"] == result["management_id"]
     assert len(await audits(env, house)) == 1
 
@@ -126,9 +122,9 @@ async def test_approval_without_a_known_region_is_refused_and_changes_nothing(en
         assert [error["field"] for error in problem["field_errors"]] == [field]
     async with env["container"].session_factory() as db:
         created = await db.scalar(
-            select(func.count()).select_from(HouseManagement).where(
-                HouseManagement.basis_reference == request
-            )
+            select(func.count())
+            .select_from(HouseManagement)
+            .where(HouseManagement.basis_reference == request)
         )
         assert created == 0
     view = (
