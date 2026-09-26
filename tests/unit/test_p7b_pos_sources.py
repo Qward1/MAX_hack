@@ -23,7 +23,7 @@ from domsignal.contracts.routing import RouteChannel
 from domsignal.services.appeal_drafts import _actions
 from domsignal.services.routing import load_directory
 from tests.unit.test_action_cards import card, packaged, resolve  # noqa: F401
-from tests.unit.test_routing_core import kazan
+from tests.unit.test_routing_core import federal_house
 
 ROOT = Path(__file__).resolve().parents[2]
 REGIONS = ROOT / "regions"
@@ -105,7 +105,7 @@ def test_the_municipal_rule_basis_quotes_the_service_page() -> None:
 def test_the_packaged_card_shows_only_sourced_facts_and_a_disabled_button(
     packaged: Any,  # noqa: F811
 ) -> None:
-    route = resolve(packaged, "street_lighting.failure", "municipal_territory", kazan())
+    route = resolve(packaged, "street_lighting.failure", "municipal_territory", federal_house())
     built = card(route)
     assert built.facts and all(fact.source_title and fact.source_url for fact in built.facts)
     action = next(item for item in built.actions if item.type == "open_official_channel")

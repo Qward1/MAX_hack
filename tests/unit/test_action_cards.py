@@ -22,7 +22,7 @@ from domsignal.services.action_cards import (
 )
 from domsignal.services.routing import load_directory
 from domsignal.tools import print_json
-from tests.unit.test_routing_core import SUBTYPES, kazan, synthetic
+from tests.unit.test_routing_core import SUBTYPES, federal_house, kazan, synthetic
 
 TODAY = date(2026, 9, 20)
 REGIONS = Path(__file__).resolve().parents[2] / "regions"
@@ -112,7 +112,7 @@ def test_municipal_card_offers_the_official_channel_without_naming_an_authority(
 
 
 def test_missing_url_disables_the_transition_with_a_reason(packaged: Any) -> None:
-    route = resolve(packaged, "street_lighting.failure", "municipal_territory", kazan())
+    route = resolve(packaged, "street_lighting.failure", "municipal_territory", federal_house())
     without_url = route.model_copy(
         update={"channels": [item.model_copy(update={"url": None}) for item in route.channels]}
     )
@@ -125,7 +125,7 @@ def test_missing_url_disables_the_transition_with_a_reason(packaged: Any) -> Non
 
 
 def test_the_confirmed_pos_url_enables_the_transition(packaged: Any) -> None:
-    route = resolve(packaged, "street_lighting.failure", "municipal_territory", kazan())
+    route = resolve(packaged, "street_lighting.failure", "municipal_territory", federal_house())
     action = card(route).actions[0]
     assert action.type == "open_official_channel"
     assert action.enabled is True and action.reason is None

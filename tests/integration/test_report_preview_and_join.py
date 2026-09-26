@@ -61,7 +61,9 @@ async def test_preview_shows_the_external_route_and_its_channel(ex) -> None:  # 
     assert response.status_code == 200, response.text
     card = response.json()["action_card"]
     assert card["route"]["route_type"] == "municipality"
-    assert [channel["id"] for channel in card["route"]["channels"]] == ["pos_gosuslugi"]
+    # D4: в Казани — «Народный контроль» и ПОС.
+    channels = [channel["id"] for channel in card["route"]["channels"]]
+    assert channels == ["ru_ta_narodny_kontrol", "pos_gosuslugi"]
     assert card["route"]["can_prepare_appeal"] is True
     assert "prepare_appeal" in [action["type"] for action in card["actions"]]
     lowered = str(card).lower()

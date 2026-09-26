@@ -103,10 +103,10 @@ test("external route: form → review → card → draft → copy → I sent it"
 
   await sendAsNew(page);
   await expect(page.getByRole("heading", { name: "Что дальше" })).toBeVisible();
-  // Адрес входа ПОС подтверждён владельцем (P7b): переход — настоящая ссылка
-  // на официальный сервис; по ней не переходим, проверяем только адрес.
-  const transition = page.getByRole("link", { name: /^Перейти: Госуслуги\. Решаем вместе/ });
-  await expect(transition).toHaveAttribute("href", "https://www.gosuslugi.ru/help/obratitsya_v_pos");
+  // Демо-дом в Казани (D4): первый канал — «Народный контроль» (Портал услуг
+  // РТ), переход — настоящая ссылка; по ней не переходим, проверяем только адрес.
+  const transition = page.getByRole("link", { name: /^Перейти: ГИС РТ «Народный контроль»/ });
+  await expect(transition).toHaveAttribute("href", "https://uslugi.tatarstan.ru/open-gov");
   await expect(transition).toHaveAttribute("target", "_blank");
   await expect(page.getByRole("button", { name: /^Перейти: / })).toHaveCount(0);
   await page.screenshot({ path: "test-results/p3c-external-card-390.png", fullPage: true });
@@ -137,7 +137,7 @@ test("external route: form → review → card → draft → copy → I sent it"
   ]);
   await expect(
     page.getByRole("link", { name: "Открыть официальный сервис" }),
-  ).toHaveAttribute("href", "https://www.gosuslugi.ru/help/obratitsya_v_pos");
+  ).toHaveAttribute("href", "https://uslugi.tatarstan.ru/open-gov");
   await expect(page.getByText(/^Вход: /)).toHaveCount(0);
 
   await page.screenshot({ path: "test-results/p3c-draft-390.png", fullPage: true });

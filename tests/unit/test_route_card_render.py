@@ -25,7 +25,7 @@ from domsignal.services.route_card_render import (
     render_route_card,
 )
 from domsignal.services.routing import load_directory
-from tests.unit.test_routing_core import SUBTYPES, kazan
+from tests.unit.test_routing_core import SUBTYPES, federal_house, kazan
 
 TODAY = date(2026, 9, 20)
 REGIONS = Path(__file__).resolve().parents[2] / "regions"
@@ -89,7 +89,9 @@ def test_external_route_message_names_the_route_and_its_basis(packaged: Any) -> 
 
 def test_message_is_short_with_one_source_link_at_the_end(packaged: Any) -> None:
     """P6b, владелец: без «Источник: …», «Проверено без входа …» и повторов."""
-    card, _ = _card(packaged, "street_lighting.failure", "municipal_territory")
+    card, _ = _card(
+        packaged, "street_lighting.failure", "municipal_territory", house=federal_house()
+    )
     message = render_route_card(_intent(card), ref=REF)
     assert "Источник:" not in message.text
     assert "Проверено" not in message.text
@@ -100,7 +102,9 @@ def test_message_is_short_with_one_source_link_at_the_end(packaged: Any) -> None
 
 def test_appeal_message_walks_through_the_mini_app_buttons(packaged: Any) -> None:
     """P6b, владелец: инструкция «что нажать» по кнопкам карточки и черновика."""
-    card, _ = _card(packaged, "street_lighting.failure", "municipal_territory")
+    card, _ = _card(
+        packaged, "street_lighting.failure", "municipal_territory", house=federal_house()
+    )
     text = render_route_card(_intent(card), ref=REF).text
     steps = text[text.index("Что делать:") : text.index("ДомСигнал не отправляет")]
     for label in (

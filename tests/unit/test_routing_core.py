@@ -199,6 +199,15 @@ def kazan(**overrides: Any) -> HouseRoutingContext:
     return HouseRoutingContext(**values)
 
 
+def federal_house(**overrides: Any) -> HouseRoutingContext:
+    """Дом без регионального слоя: только федеральный справочник (ПОС, 112).
+
+    D4: у Казани свои правила («Народный контроль»), поэтому поведение ПОС
+    проверяется на доме без профиля региона.
+    """
+    return kazan(region_code=None, municipality_code=None, **overrides)
+
+
 def route(directory: Any, subtype: str, scope: str, house: HouseRoutingContext) -> Any:
     return resolve_route(
         RoutingQuery(subtype=subtype, location_scope=scope, house=house),
@@ -374,7 +383,8 @@ def test_packaged_directory_routes_the_five_demo_behaviours(packaged: Any) -> No
     assert route(packaged, "elevator.doors", "house_common", house).route_type == "uk_internal"
     municipal = route(packaged, "street_lighting.failure", "municipal_territory", house)
     assert municipal.route_type == "municipality"
-    assert [item.id for item in municipal.channels] == ["pos_gosuslugi"]
+    # D4: в Казани — «Народный контроль» и ПОС.
+    assert [item.id for item in municipal.channels] == ["ru_ta_narodny_kontrol", "pos_gosuslugi"]
     assert municipal.organization_id is None
     emergency = route(packaged, "gas.smell", "house_common", house)
     assert emergency.route_type == "emergency_service"

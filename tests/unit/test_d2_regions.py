@@ -21,15 +21,17 @@ from domsignal.tools.route_preview import REGION_COMPARISON, compare_regions, re
 ROOT = Path(__file__).resolve().parents[2]
 ROUTING = RoutingService(load_directory(ROOT / "regions"))
 
-Cell = tuple[str, str | None, str | None]
-#: Ожидание по строкам сравнения: (Казань, Москва) — тип маршрута, канал, правило.
+Cell = tuple[str, str | tuple[str, ...] | None, str | None]
+#: Ожидание по строкам сравнения: (Казань, Москва) — тип маршрута, канал(ы), правило.
+#: D4: в Казани у освещения, дорог и благоустройства — «Народный контроль» и ПОС.
+KAZAN_BOTH = ("ru_ta_narodny_kontrol", "pos_gosuslugi")
 EXPECTED: dict[str, tuple[Cell, Cell]] = {
     "street_lighting.failure": (
-        ("municipality", "pos_gosuslugi", "federal.municipal_territory.default"),
+        ("municipality", KAZAN_BOTH, "ru_ta.street_lighting.narodny_kontrol"),
         ("municipality", "ru_mow_nash_gorod", "ru_mow.street_lighting.nash_gorod"),
     ),
     "road.damage": (
-        ("municipality", "pos_gosuslugi", "federal.municipal_territory.default"),
+        ("municipality", KAZAN_BOTH, "ru_ta.road_damage.narodny_kontrol"),
         ("municipality", "ru_mow_nash_gorod", "ru_mow.road_damage.nash_gorod"),
     ),
     "snow.street": (
@@ -37,7 +39,7 @@ EXPECTED: dict[str, tuple[Cell, Cell]] = {
         ("municipality", "ru_mow_nash_gorod", "ru_mow.snow_street.nash_gorod"),
     ),
     "landscaping.public": (
-        ("municipality", "pos_gosuslugi", "federal.municipal_territory.default"),
+        ("municipality", KAZAN_BOTH, "ru_ta.landscaping.narodny_kontrol"),
         ("municipality", "ru_mow_nash_gorod", "ru_mow.landscaping.nash_gorod"),
     ),
     "waste.removal_regional": (
@@ -68,7 +70,8 @@ def test_same_code_different_data(subtype: str, scope: str, routes: dict[str, An
     pair = (routes["RU-TA"], routes["RU-MOW"])
     for route, (route_type, channel, rule) in zip(pair, EXPECTED[subtype], strict=True):
         assert route.route_type == route_type, (subtype, route)
-        assert [c.id for c in route.channels] == ([channel] if channel else []), subtype
+        expected = [channel] if isinstance(channel, str) else list(channel or ())
+        assert [c.id for c in route.channels] == expected, subtype
         assert (route.basis.rule_id if route.basis else None) == rule, subtype
         # Ни один маршрут не называет непроверенную организацию.
         assert route.organization_name is None

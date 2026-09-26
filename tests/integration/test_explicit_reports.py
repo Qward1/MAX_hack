@@ -125,7 +125,8 @@ async def test_external_route_creates_no_ticket_but_sends_a_card(ex) -> None:  #
     outcome = await ex.scalar(select(RouteOutcome))
     assert outcome.decision == "external" and outcome.report_id is None
     assert outcome.route_type == "municipality"
-    assert outcome.channel_id == "pos_gosuslugi"
+    # D4: в Казани первый канал — «Народный контроль», вторым остаётся ПОС.
+    assert outcome.channel_id == "ru_ta_narodny_kontrol"
     assert outcome.intake_event_id is not None
 
     intake = await ex.scalar(select(ExplicitIntake))

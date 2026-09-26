@@ -176,7 +176,7 @@ async def test_a_form_appeal_draft_contains_the_residents_own_words(ex) -> None:
     # из самого исхода, иначе черновик остался бы без описания проблемы.
     assert STREET_LIGHT in draft["text"]
     assert "Суть проблемы или предложения:" in draft["text"]
-    assert draft["channel"]["id"] == "pos_gosuslugi"
+    assert draft["channel"]["id"] == "ru_ta_narodny_kontrol"  # D4: Казань
     assert await ex.scalar(select(func.count()).select_from(AppealDraft)) == 1
 
 
