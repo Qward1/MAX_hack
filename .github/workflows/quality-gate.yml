@@ -1,10 +1,24 @@
 name: Repository quality gate
 
+# Минуты Actions приватного репозитория ограничены (D5, аудит В-7): push
+# проверяется только на main — dev/a-core и dev/b-experience двигаются
+# fast-forward на тот же SHA; коммиты только с документами и отчётами CI не
+# запускают. Полный набор проверок гоняется локально (scripts/check.py).
 on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'scenarios/**'
+      - 'evaluation/reports/**'
   push:
-    branches: [main, dev/a-core, dev/b-experience]
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'scenarios/**'
+      - 'evaluation/reports/**'
   workflow_dispatch:
 
 permissions:
