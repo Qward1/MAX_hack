@@ -1,0 +1,10 @@
+{
+  "n": 100,
+  "device": "cuda",
+  "load_seconds": 9.467,
+  "single_warm_p50_ms": 33.512,
+  "single_warm_p95_ms": 48.458,
+  "batch_messages_per_second": 73.92,
+  "rss_mb": 2295.2,
+  "gpu_peak_allocated_mb": 1816.8
+}

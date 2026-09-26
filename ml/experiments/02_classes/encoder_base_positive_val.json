@@ -1,0 +1,93 @@
+{
+  "name": "base_positive",
+  "mode": "flat",
+  "model": "ml\\artifacts\\models\\rubert-base",
+  "seed": 42,
+  "epochs": 3,
+  "batch_size": 8,
+  "max_length": 64,
+  "lr": 2e-05,
+  "class_weights": "moderate",
+  "train_rows": 3140,
+  "positive_only": true,
+  "negative_ratio": 0.0,
+  "real_train": 16933,
+  "synthetic_train": 2008,
+  "device": "cuda",
+  "gpu_peak_mb": 3417.8,
+  "rss_mb": 694.6,
+  "total_seconds": 1353.2,
+  "best_val_mean_macro_f1": 0.5728,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 2.3525,
+      "seconds_so_far": 440.5,
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.274,
+          "gate_ap_flat": 0.2613,
+          "gate_ap_head": 0.1555,
+          "class_f1_true_positives": 0.7432,
+          "end_f1_with_frozen_gate": 0.5723
+        },
+        "real_telegram": {
+          "macro_f1": 0.2321,
+          "gate_ap_flat": 0.1989,
+          "gate_ap_head": 0.1112,
+          "class_f1_true_positives": 0.5876,
+          "end_f1_with_frozen_gate": 0.4602
+        }
+      },
+      "mean_macro_f1": 0.253,
+      "mean_end_f1_with_frozen_gate": 0.5162
+    },
+    {
+      "epoch": 2,
+      "loss": 0.7026,
+      "seconds_so_far": 877.0,
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.2337,
+          "gate_ap_flat": 0.4878,
+          "gate_ap_head": 0.1673,
+          "class_f1_true_positives": 0.7573,
+          "end_f1_with_frozen_gate": 0.5844
+        },
+        "real_telegram": {
+          "macro_f1": 0.215,
+          "gate_ap_flat": 0.4109,
+          "gate_ap_head": 0.1128,
+          "class_f1_true_positives": 0.6832,
+          "end_f1_with_frozen_gate": 0.5304
+        }
+      },
+      "mean_macro_f1": 0.2243,
+      "mean_end_f1_with_frozen_gate": 0.5574
+    },
+    {
+      "epoch": 3,
+      "loss": 0.3263,
+      "seconds_so_far": 1327.0,
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.2594,
+          "gate_ap_flat": 0.4926,
+          "gate_ap_head": 0.1643,
+          "class_f1_true_positives": 0.7793,
+          "end_f1_with_frozen_gate": 0.6175
+        },
+        "real_telegram": {
+          "macro_f1": 0.2714,
+          "gate_ap_flat": 0.4206,
+          "gate_ap_head": 0.116,
+          "class_f1_true_positives": 0.7584,
+          "end_f1_with_frozen_gate": 0.5281
+        }
+      },
+      "mean_macro_f1": 0.2654,
+      "mean_end_f1_with_frozen_gate": 0.5728
+    }
+  ],
+  "checkpoint_bytes": 713439431
+}

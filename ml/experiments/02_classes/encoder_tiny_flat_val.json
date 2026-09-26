@@ -1,0 +1,82 @@
+{
+  "name": "tiny_flat",
+  "mode": "flat",
+  "model": "ml\\artifacts\\models\\rubert-tiny2",
+  "seed": 42,
+  "epochs": 3,
+  "batch_size": 32,
+  "max_length": 96,
+  "lr": 5e-05,
+  "class_weights": "moderate",
+  "train_rows": 18941,
+  "real_train": 16933,
+  "synthetic_train": 2008,
+  "device": "cuda",
+  "gpu_peak_mb": 583.1,
+  "rss_mb": 324.7,
+  "total_seconds": 363.6,
+  "best_val_mean_macro_f1": 0.4637,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 0.5137,
+      "seconds_so_far": 124.7,
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.4013,
+          "gate_ap_flat": 0.8126,
+          "gate_ap_head": 0.4077,
+          "class_f1_true_positives": 0.4055
+        },
+        "real_telegram": {
+          "macro_f1": 0.3077,
+          "gate_ap_flat": 0.7233,
+          "gate_ap_head": 0.2563,
+          "class_f1_true_positives": 0.3258
+        }
+      },
+      "mean_macro_f1": 0.3545
+    },
+    {
+      "epoch": 2,
+      "loss": 0.254,
+      "seconds_so_far": 244.2,
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.466,
+          "gate_ap_flat": 0.8348,
+          "gate_ap_head": 0.3777,
+          "class_f1_true_positives": 0.4777
+        },
+        "real_telegram": {
+          "macro_f1": 0.4359,
+          "gate_ap_flat": 0.7745,
+          "gate_ap_head": 0.243,
+          "class_f1_true_positives": 0.4822
+        }
+      },
+      "mean_macro_f1": 0.451
+    },
+    {
+      "epoch": 3,
+      "loss": 0.1884,
+      "seconds_so_far": 363.4,
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.4939,
+          "gate_ap_flat": 0.848,
+          "gate_ap_head": 0.4082,
+          "class_f1_true_positives": 0.4989
+        },
+        "real_telegram": {
+          "macro_f1": 0.4334,
+          "gate_ap_flat": 0.7897,
+          "gate_ap_head": 0.2766,
+          "class_f1_true_positives": 0.4898
+        }
+      },
+      "mean_macro_f1": 0.4637
+    }
+  ],
+  "checkpoint_bytes": 116852824
+}

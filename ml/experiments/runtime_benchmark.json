@@ -1,0 +1,9 @@
+{
+  "n": 500,
+  "split": "telegram val",
+  "load_ms": 2062.4,
+  "warm_single_p50_ms": 8.1,
+  "warm_single_p95_ms": 10.19,
+  "warm_single_mean_ms": 8.42,
+  "rss_mb": 246.8
+}

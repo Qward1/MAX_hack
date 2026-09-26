@@ -1,0 +1,41 @@
+version: 1
+source_dataset: datasets_v3.0_L3
+source_product: taxonomy.v2
+# Advisory mapping only. Actual addressee depends on house, region, location and danger.
+# A null product_subtype means the dataset class does not determine one safely.
+classes:
+  elevator_out: {dataset_code: elevator, proposed_code: elevator, product_category: elevator, product_subtype: elevator.stopped, recipient_hint: uk_first_line, status: exact}
+  elevator_trapped: {dataset_code: elevator, proposed_code: elevator, product_category: elevator, product_subtype: null, candidate_subtypes: [elevator.stopped, elevator.doors], recipient_hint: emergency_if_current, status: conditional}
+  elevator_vandal: {dataset_code: elevator, proposed_code: elevator, product_category: elevator, product_subtype: null, recipient_hint: uk_review, status: unsupported_subtype}
+  no_hot_water: {dataset_code: water, proposed_code: water, product_category: water, product_subtype: water.hot_outage, recipient_hint: uk_or_resource_supplier, status: exact}
+  no_cold_water: {dataset_code: water, proposed_code: water, product_category: water, product_subtype: water.supply_outage, recipient_hint: uk_or_resource_supplier, status: exact}
+  towel_rail_cold: {dataset_code: water, proposed_code: water, product_category: water, product_subtype: null, recipient_hint: uk_review, status: unsupported_subtype}
+  water_leak: {dataset_code: water, proposed_code: water, product_category: water, product_subtype: water.leak, recipient_hint: emergency_if_active_else_uk, status: exact}
+  water_pressure: {dataset_code: water, proposed_code: water, product_category: water, product_subtype: water.pressure, recipient_hint: uk_first_line, status: exact}
+  water_quality: {dataset_code: water, proposed_code: water, product_category: water, product_subtype: water.quality, recipient_hint: uk_first_line, status: exact}
+  roof_leak: {dataset_code: water, proposed_code: roof, product_category: water, product_subtype: roof.leak, recipient_hint: emergency_if_active_else_uk, status: exact}
+  sewer_blockage: {dataset_code: water, proposed_code: sewer, product_category: water, product_subtype: null, recipient_hint: uk_review, status: unsupported_subtype}
+  heating_none: {dataset_code: other, proposed_code: heating, product_category: other, product_subtype: null, candidate_subtypes: [heating.cold_radiators], recipient_hint: uk_or_resource_supplier, status: conditional}
+  chute_blockage: {dataset_code: waste, proposed_code: chute, product_category: waste, product_subtype: waste.chute, recipient_hint: uk_first_line, status: exact}
+  waste_not_collected: {dataset_code: waste, proposed_code: waste, product_category: waste, product_subtype: null, candidate_subtypes: [waste.container_site, waste.removal_regional], recipient_hint: uk_or_regional_operator, status: conditional}
+  lighting_entrance: {dataset_code: lighting, proposed_code: lighting, product_category: lighting, product_subtype: lighting.stairwell, recipient_hint: uk_first_line, status: exact}
+  power_outage: {dataset_code: other, proposed_code: power, product_category: lighting, product_subtype: null, candidate_subtypes: [power.grid_outage, electrical.panel], recipient_hint: uk_or_resource_supplier, status: conditional}
+  electrical_hazard: {dataset_code: other, proposed_code: power, product_category: null, product_subtype: null, candidate_subtypes: [electrical.panel], recipient_hint: emergency_if_current, status: conditional}
+  cleaning_entrance: {dataset_code: other, proposed_code: cleaning, product_category: other, product_subtype: null, candidate_subtypes: [cleaning.stairwell], recipient_hint: uk_review, status: conditional}
+  snow_removal: {dataset_code: other, proposed_code: yard, product_category: other, product_subtype: null, candidate_subtypes: [snow.yard, snow.street], recipient_hint: uk_or_municipality, status: conditional}
+  intercom: {dataset_code: other, proposed_code: intercom, product_category: other, product_subtype: intercom.broken, recipient_hint: uk_review, status: exact}
+  door_defect: {dataset_code: other, proposed_code: door, product_category: other, product_subtype: entrance_door.broken, recipient_hint: uk_first_line, status: exact}
+  yard_defect: {dataset_code: other, proposed_code: yard, product_category: null, product_subtype: null, candidate_subtypes: [lighting.yard, playground.damaged, landscaping.public, road.damage, structure.damage], recipient_hint: uk_or_municipality, status: conditional}
+  pests: {dataset_code: other, proposed_code: pests, product_category: other, product_subtype: null, recipient_hint: uk_review, status: unsupported_subtype}
+  gas_smell: {dataset_code: other, proposed_code: gas, product_category: other, product_subtype: gas.smell, recipient_hint: emergency_if_current, status: exact}
+  fire_smoke: {dataset_code: other, proposed_code: fire, product_category: other, product_subtype: null, recipient_hint: emergency_if_current, status: unsupported_subtype}
+  fire_alarm: {dataset_code: other, proposed_code: fire, product_category: other, product_subtype: null, recipient_hint: emergency_if_current_else_uk, status: unsupported_subtype}
+  noise_neighbors: {dataset_code: other, proposed_code: noise, product_category: null, product_subtype: null, recipient_hint: external_review, status: outside_uk_default}
+  smoke_neighbors: {dataset_code: other, proposed_code: noise, product_category: null, product_subtype: null, recipient_hint: external_review, status: outside_uk_default}
+  neighbor_conduct: {dataset_code: other, proposed_code: noise, product_category: null, product_subtype: null, recipient_hint: external_review, status: outside_uk_default}
+  pets_violation: {dataset_code: other, proposed_code: pets, product_category: null, product_subtype: null, recipient_hint: external_review, status: outside_uk_default}
+  parking_violation: {dataset_code: other, proposed_code: yard, product_category: null, product_subtype: null, recipient_hint: external_review, status: outside_uk_default}
+  security_incident: {dataset_code: other, proposed_code: security, product_category: null, product_subtype: null, recipient_hint: external_review, status: outside_uk_default}
+  other_problem: {dataset_code: other, proposed_code: other, product_category: other, product_subtype: other.unspecified, recipient_hint: manual_review, status: catch_all}
+  not_a_problem: {dataset_code: null, proposed_code: null, product_category: null, product_subtype: null, recipient_hint: none, status: negative}
+  ambiguous: {dataset_code: null, proposed_code: null, product_category: null, product_subtype: null, recipient_hint: manual_review, status: abstain_no_training_examples}

@@ -1,0 +1,35 @@
+{
+  "variant": "synthetic_gate_classes",
+  "seed": 42,
+  "data_version": "v3.0",
+  "real_train": {
+    "real_whatsapp": 3536,
+    "real_telegram": 13397
+  },
+  "real_val": {
+    "real_whatsapp": 1008,
+    "real_telegram": 3195
+  },
+  "synthetic_train": 2008,
+  "synthetic_gate_eligible": 735,
+  "gate_val_ap_pooled": 0.8386044465507599,
+  "gate_operating_point": {
+    "threshold": 0.6591191690735769,
+    "val_precision": 0.8,
+    "val_recall": 0.7247706422018348
+  },
+  "safety_operating_point": {
+    "threshold": 0.6699529615629317,
+    "val_recall": 0.6164383561643836,
+    "val_fpr": 0.04878048780487805
+  },
+  "train_seconds": 9.52,
+  "artifact_bytes": 27231024,
+  "rss_mb_after": 431.2,
+  "cpu": "Intel64 Family 6 Model 165 Stepping 2, GenuineIntel",
+  "logical_cores": 8,
+  "ram_gb": 7.87,
+  "python": "3.10.10",
+  "sklearn": "1.7.1",
+  "feature_count": 111872
+}

@@ -1,0 +1,8 @@
+{
+  "split": "test",
+  "n": 7912,
+  "device": "cuda",
+  "seconds": 47.29,
+  "gpu_peak_mb": 1142.0,
+  "cache_bytes": 24305792
+}

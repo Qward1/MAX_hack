@@ -1,0 +1,24 @@
+{
+  "checkpoint": "ml\\artifacts\\encoder_base_positive.pt",
+  "epoch": 3,
+  "split": "val",
+  "frozen_gate": true,
+  "sources": {
+    "real_whatsapp": {
+      "macro_f1": 0.3538,
+      "gate_ap_flat": 0.4926,
+      "gate_ap_head": 0.1644,
+      "class_f1_true_positives": 0.8535,
+      "end_f1_with_frozen_gate": 0.6736
+    },
+    "real_telegram": {
+      "macro_f1": 0.2977,
+      "gate_ap_flat": 0.4206,
+      "gate_ap_head": 0.116,
+      "class_f1_true_positives": 0.7584,
+      "end_f1_with_frozen_gate": 0.5451
+    }
+  },
+  "mean_macro_f1": 0.3257,
+  "mean_end_f1_with_frozen_gate": 0.6094
+}

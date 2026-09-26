@@ -1,0 +1,32 @@
+{
+  "split": "val",
+  "n": 196,
+  "emergencies": 73,
+  "model_ap": 0.8515,
+  "results": [
+    {
+      "name": "model",
+      "threshold": 0.669953,
+      "val_recall": 0.6164,
+      "val_fpr": 0.0488,
+      "direct_tp": 18,
+      "direct_fp": 1
+    },
+    {
+      "name": "direct_or_model",
+      "threshold": 0.72394,
+      "val_recall": 0.5616,
+      "val_fpr": 0.0407,
+      "direct_tp": 18,
+      "direct_fp": 1
+    },
+    {
+      "name": "direct_or_cued_model",
+      "threshold": 0.669953,
+      "val_recall": 0.5479,
+      "val_fpr": 0.0407,
+      "direct_tp": 18,
+      "direct_fp": 1
+    }
+  ]
+}

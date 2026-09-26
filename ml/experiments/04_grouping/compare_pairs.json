@@ -1,0 +1,80 @@
+{
+  "kind": "weak_heuristic_pairs",
+  "n": 8298,
+  "positive": 4579,
+  "unique_texts": 2740,
+  "seconds": 1.0,
+  "warning": "Labels use class, day and entrance. These are not human incident labels.",
+  "results": [
+    {
+      "name": "current_conservative",
+      "precision": 1.0,
+      "recall": 0.0644,
+      "f1": 0.1211,
+      "predicted_pairs": 295
+    },
+    {
+      "name": "same_class_entrance_24h",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "predicted_pairs": 4579
+    },
+    {
+      "name": "same_class_entrance_6h",
+      "precision": 1.0,
+      "recall": 0.85,
+      "f1": 0.9189,
+      "predicted_pairs": 3892
+    },
+    {
+      "name": "same_class_entrance_2h",
+      "precision": 1.0,
+      "recall": 0.6036,
+      "f1": 0.7528,
+      "predicted_pairs": 2764
+    },
+    {
+      "name": "class_6h_cosine_0.25",
+      "precision": 1.0,
+      "recall": 0.0926,
+      "f1": 0.1695,
+      "predicted_pairs": 424
+    },
+    {
+      "name": "class_6h_cosine_0.4",
+      "precision": 1.0,
+      "recall": 0.0323,
+      "f1": 0.0626,
+      "predicted_pairs": 148
+    },
+    {
+      "name": "class_6h_cosine_0.6",
+      "precision": 1.0,
+      "recall": 0.0096,
+      "f1": 0.019,
+      "predicted_pairs": 44
+    },
+    {
+      "name": "class_24h_cosine_0.25",
+      "precision": 1.0,
+      "recall": 0.1092,
+      "f1": 0.1969,
+      "predicted_pairs": 500
+    },
+    {
+      "name": "class_24h_cosine_0.4",
+      "precision": 1.0,
+      "recall": 0.0373,
+      "f1": 0.072,
+      "predicted_pairs": 171
+    },
+    {
+      "name": "class_24h_cosine_0.6",
+      "precision": 1.0,
+      "recall": 0.0105,
+      "f1": 0.0207,
+      "predicted_pairs": 48
+    }
+  ]
+}
