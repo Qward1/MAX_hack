@@ -32,8 +32,135 @@ downgrade → upgrade` — чисто; откат с данными совета
 | 7 Эксплуатация (№13) | `uptime.yml` раз в 10 минут; копии БД — systemd-таймер 03:00 МСК, 14 копий, `pg_restore --list`, место; CI на `ubuntu-24.04`; строка о датах решений | `.github/workflows/uptime.yml`, `scripts/backup_postgres.py`, `deploy/systemd/` |
 | 8 Порядок в production (П-9) | CLI `platform_ops` — переименование, открытый доступ, сигналы, заявки, скрытие текста; квитанции `operator.platform_ops` | `tools/platform_ops.py` |
 
-Проверки, выкладка, живые шаги и действия в production — ниже (дополняется
-после выкладки).
+**SHA и push.** `39e3dcc` (`b82241b` UX-1 → `87f4f0e` код D4 → `39e3dcc`
+данные D4, все `--no-ff`); `dev/b-experience`, `main`, `dev/a-core` —
+fast-forward и push. CI: `main` 36256251695, `dev/a-core` 36256251532,
+`dev/b-experience` 36256251602 — success.
+
+### Регионы
+
+Данные — отдельными коммитами без `src/`, влиты после кода, поэтому merge
+`39e3dcc` содержит только данные:
+
+```
+a7389d7 data(d4): regions RU-PSK and RU-PRI as data, no src changes
+ regions/RU-PRI/responsibility.yaml       | 69 +++
+ regions/RU-PSK/responsibility.yaml       | 62 +++
+ tests/integration/test_d4_region_time.py | 60 +++
+1574b05 data(d4): reference pages for RU-PRI and RU-PSK, no src changes
+ regions/RU-PRI/responsibility.yaml | 23 +++
+ regions/RU-PSK/responsibility.yaml | 13 +++
+```
+
+| Пакет | Версия | Правила verified / needs_verification | Организации и каналы verified / needs_verification | Справочные ссылки |
+|---|---|---|---|---|
+| `_federal` | 3 | 5 / 3 | 3 / 2 | — |
+| `RU-MOW` | 2 | 5 / 0 | 1 / 0 | 2 |
+| `RU-TA` | 2 | 3 / 0 | 1 / 2 | 2 |
+| `RU-PRI` | 1 | — | 2 / 0 | 2 |
+| `RU-PSK` | 1 | — | 0 / 2 | 1 |
+
+Таблица 10 подтипов × 4 региона — [SCALING](../SCALING.md#10-подтипов--4-региона).
+
+### Проверки (дерево выкладки `39e3dcc`, своя PostgreSQL 16.10 в Docker)
+
+| Проверка | Результат |
+|---|---|
+| `check.py --scope backend` | ruff, mypy, pytest — 971 passed |
+| `check.py --scope contracts` | PASS — OpenAPI ↔ TS, `validate_region_pack.py` по всем пакетам |
+| `check.py --scope integration` | PASS — 497 PostgreSQL-тестов |
+| `check.py --scope frontend` | typecheck, vitest 306 passed, сборка |
+| `npm --prefix=miniapp run test:browser` | 67 passed, 12 skipped по флагам окружения (снимки UX-1, ND, B09) |
+| `docker_smoke.py` | PASS |
+| Секреты | detect-secrets по файлам среза: только прежние синтетические находки |
+
+Новые тесты: unit 14 (`test_d4_timezones` — Владивосток 23:30 откладывается,
+Москва в тот же UTC отправляется; `test_d4_region_packs` — по всем пакетам;
+`test_d4_backup`), контрактных 4 (`test_d4_privacy`), PostgreSQL 17
+(`test_d4_house_region`, `test_d4_council`, `test_d4_platform_ops`,
+`test_d4_migration`, `test_d4_references`, `test_d4_region_time`), vitest 7.
+
+### Выкладка — 26.09.2026, «Safe redeploy»
+
+- До выкладки: образ отката `domsignal-backend:pre-bc0ffbe`, копия env
+  `env-production-pre-d4-20260926T165043Z`, копия БД
+  `/var/backups/domsignal/domsignal-pre-d4-20260926T165043Z.dump` (333 555
+  байт, 600, `pg_restore --list` — 476 записей).
+- Код — bundle и `--ff-only` до `39e3dcc`; `BUILD_COMMIT`; бюджет модели в env.
+- Миграция сначала на копии `domsignal_d4copy`: `0013 → 0014`, `alembic
+  check` чисто, копия удалена. Образ собирает сервис `migrate` (`build api`
+  ничего не собирает — у `api` нет раздела `build`).
+- `up -d --build`: `migrate` завершился с 0, head `20260928_0014`; api,
+  worker, ai-worker работают; подписка MAX не менялась (одна, URL и типы
+  совпадают).
+- Снаружи: `/ready` — 200; `/version` — `39e3dcc…`, `region_packs`
+  `{_federal: 3, RU-MOW: 2, RU-PRI: 1, RU-PSK: 1, RU-TA: 2}`; webhook без
+  секрета — 401; `/privacy` — 200.
+
+**Мониторинг.** Первый зелёный запуск `uptime.yml` — 36256260180. Репозиторий
+приватный, запуск стоит минуту Actions, а за сентябрь CI уже израсходовал
+≈ 1740 из 2000 бесплатных минут (оценка по длительности jobs; счёт GitHub без
+права `user` не читается). Поэтому раз в 10 минут заменено расписанием: до
+29.09 раз в час, 30.09 раз в 30 минут, 1–14.10 раз в 15 минут (≈ 1350 минут).
+Оповещение: письмо GitHub, письмо на `ALERT_EMAIL` через SMTP (переменные
+`ALERT_EMAIL` и `ALERT_SMTP_USER` заданы — почта владельца; секрет
+`ALERT_SMTP_PASSWORD` задаёт владелец), сообщение в MAX по секретам
+`ALERT_MAX_*`. Адреса меняются в настройках репозитория без правки кода;
+ручной запуск с `test_alert` проверяет доставку. Выбор места настройки —
+владелец (вариант «переменная GitHub + SMTP»: поле в кабинете не сообщит об
+упавшем сервере).
+
+**Копии БД.** `domsignal-backup.timer` включён, 03:00 МСК, 14 копий, порог
+свободного места 2048 МБ. Первая копия —
+`/var/backups/domsignal/daily/domsignal-20260926T165243475660Z.dump` (341 626
+байт, root, 600): `pg_restore --list` — 494 записи, свободно 38 192 МБ.
+
+**Модель** (`openai/gpt-5-mini` через polza, после выкладки). Пробный вызов:
+`ok`, 1997 мс, 6743/53 токена, 0,106 ₽; реплику с приставкой «Синтетическая
+проверка:» модель не считает проблемой, обычная «В третьем подъезде не работает
+лифт» — `elevator.stopped`, во входящие, уверенно, 0,036 ₽. Баланс аккаунта
+393,89 ₽, ключу доступно 99,89 ₽. Бюджет по решению владельца (вариант А, с
+запасом): `LLM_DAILY_CALL_BUDGET=500`, `LLM_CHAT_DAILY_SHARE=0.5`. Прогноз: до
+D4 за всё время 32 вызова на 5,09 ₽, окно — 0,04–0,46 ₽; при ≈ 50 окнах в сутки
+≈ 5 ₽ в сутки, ≈ 90 ₽ до 14.10 — у края лимита ключа; при потолке 500 вызовов —
+до 50 ₽ в сутки. Когда лимит ключа исчерпан, разбор идёт правилами
+(`fallback_provider_error`), продукт работает.
+
+### Действия в production (§8) и живые шаги
+
+26.09 по разрешению владельца — командой `platform_ops`, 10 квитанций
+`operator.platform_ops`: дом TEST_MAX — «Казань, ул. Пилотная, 7» (название и
+адрес), УК — «УК «Пилотная, 7»»; закрыты сигналы P6b «дым», «человек не может
+выйти» и «запах газа» от 24.09 (открытых в доме — 0); T-1 и T-3 отменены,
+оба описания скрыты (в квитанции — длина и хеш); открытый доступ TEST_MAX
+включён; тихие часы TEST_MAX выключены и сводка «A K» включена — проверено.
+Роль «de» — до живого шага 5, затем УК «de» приостанавливается (вариант (а)).
+Подробно — [чекпоинт D4](../MAX_LIVE_SMOKE.md#d4-checkpoint--26-сентября-2026-регион-и-пояс-дома-политика-данных-совет-порядок-в-production).
+
+Живые шаги ожидают: владелец составит тест-кейсы и проведёт их с посторонним
+человеком; сценарий постороннего жителя и шаги 2–5 записаны в чекпоинте D4.
+
+### Что не сделано и почему
+
+- `RU-PSK` — `needs_verification`: pskov.ru 26.09 отвечал 403 и с сервера в
+  РФ; жителю Пскова маршруты даёт федеральный слой.
+- Пример первого экрана — «на улице не горит фонарь», а не «во дворе»: двор —
+  придомовая территория, до внешнего сервиса он не доходит
+  ([BOT-FIRST-SCREEN](../decisions.md#bot-first-screen-2026-09-27)).
+- Письмо о сбое — нужен секрет `ALERT_SMTP_PASSWORD` (пароль для внешних
+  приложений mail.ru); оповещение в MAX — секреты `ALERT_MAX_*`. Оба задаёт
+  владелец.
+- Контакт на `/privacy` — ссылка на страницу продукта (владелец: «пока оставь
+  как есть»).
+- Лимит ключа polza — владелец поднимает 27.09.
+- Живые шаги 1–5 — после тест-кейсов владельца.
+
+### Передать этапу упаковки
+
+`/privacy` и ссылки на неё; `/version` с версиями слоёв; [SCALING](../SCALING.md)
+(чек-лист, стоимость, таблица регионов); откат — образ
+`domsignal-backend:pre-bc0ffbe` и копия `pre-d4`; мониторинг `uptime.yml` и
+копии по таймеру; чекпоинт D4 в [MAX_LIVE_SMOKE](../MAX_LIVE_SMOKE.md).
 
 ## UX-1 — единая визуальная система, мини-приложение и кабинеты — 26.09.2026
 

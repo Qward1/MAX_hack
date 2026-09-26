@@ -452,14 +452,24 @@ systemctl list-timers domsignal-backup.timer --no-pager
 sudo journalctl -u domsignal-backup.service -n 5 --no-pager   # path, size, toc_entries, free_mb
 ```
 
-External monitoring is `.github/workflows/uptime.yml`: every 10 minutes it
-checks `/ready` 200, `/version` with a commit and the webhook without the
-secret → 401. A failed run e-mails the owner of the schedule (GitHub). With
-repository secrets `ALERT_MAX_BOT_TOKEN` and `ALERT_MAX_USER_ID` (set by the
-owner; tokens are never committed) it also sends a MAX message to that user,
-who must have started a dialog with that bot. The public address can be
-overridden by the repository variable `DOMSIGNAL_URL`. Each scheduled run of
-a private repository uses about one Actions minute.
+External monitoring is `.github/workflows/uptime.yml`: it checks `/ready`
+200, `/version` with a commit and the webhook without the secret → 401. The
+schedule fits the free Actions minutes of a private repository (one minute
+per run): hourly until 29.09, every 30 minutes on 30.09, every 15 minutes
+during the jury period 1–14.10 (≈ 1350 of 2000 monthly minutes), none after.
+A failed run e-mails the owner of the schedule (GitHub) and sends:
+- an e-mail to the repository variable `ALERT_EMAIL` (comma-separated list)
+  from the mailbox in the variable `ALERT_SMTP_USER`; the mailbox app
+  password is the repository secret named `ALERT_SMTP_PASSWORD`, the server —
+  the variable `ALERT_SMTP_HOST` (default `smtp.mail.ru`, SSL port 465);
+- a MAX message with secrets `ALERT_MAX_BOT_TOKEN` and `ALERT_MAX_USER_ID`
+  (that user must have started a dialog with that bot).
+
+All of them are changed in GitHub → Settings → Secrets and variables →
+Actions, without code changes; secrets are set by the owner and never
+committed. A manual run with `test_alert` fails on purpose to test the alerts.
+The public address can be overridden by the repository variable
+`DOMSIGNAL_URL`.
 
 ## 7. Explicit isolated live resident scope
 
