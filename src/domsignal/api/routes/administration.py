@@ -24,6 +24,10 @@ from domsignal.contracts.onboarding import (
     CompanyOverview,
     CompanyView,
     HouseApproval,
+    HouseBatchApproval,
+    HouseBatchApproved,
+    HouseBatchCreate,
+    HouseBatchSubmitted,
     HouseRegionChange,
     HouseRequestCreate,
     HouseRequestView,
@@ -372,6 +376,26 @@ async def request_house(
         )
 
 
+@router.post(
+    "/companies/{company_id}/house-management-requests/batch",
+    response_model=HouseBatchSubmitted,
+    status_code=201,
+)
+async def request_houses_batch(
+    company_id: UUID,
+    payload: HouseBatchCreate,
+    key: Key,
+    user: CurrentUserDep,
+    db: DbDep,
+    container: ContainerDep,
+) -> HouseBatchSubmitted:
+    """Список до 200 адресов → заявки на дома (D5); результат по каждому адресу."""
+    async with db.begin():
+        return await AdministrationService(container.settings).submit_houses_batch(
+            db, user.id, company_id, payload, key
+        )
+
+
 @router.get(
     "/companies/{company_id}/house-management-requests", response_model=list[HouseRequestView]
 )
@@ -521,6 +545,19 @@ async def platform_requests(
                 .limit(100)
             )
         ]
+
+
+@router.post(
+    "/platform/house-management-requests/approve-batch", response_model=HouseBatchApproved
+)
+async def approve_houses_batch(
+    payload: HouseBatchApproval, user: Employee, db: DbDep, container: ContainerDep
+) -> HouseBatchApproved:
+    """Одобрить выбранные заявки на дома одним действием с одним регионом (D5)."""
+    async with db.begin():
+        return await AdministrationService(container.settings).approve_houses_batch(
+            db, user.id, payload, container.routing.directory
+        )
 
 
 @router.get("/platform/house-management-requests/{obj}", response_model=HouseRequestView)
