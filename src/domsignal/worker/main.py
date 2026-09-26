@@ -3,18 +3,21 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
-from datetime import UTC, datetime
+import signal
+from datetime import UTC, datetime, timedelta
 
 from domsignal.bootstrap import build_container
 from domsignal.logs import configure_logging
 from domsignal.services.digest import TICK_JOB as DIGEST_TICK_JOB
 from domsignal.services.digest import next_hour
 from domsignal.services.followups import TICK_JOB as FOLLOWUP_TICK_JOB
+from domsignal.services.job_cleanup import TICK_JOB as JOB_CLEANUP_TICK_JOB
+from domsignal.services.job_cleanup import TICK_PRIORITY as JOB_CLEANUP_PRIORITY
 from domsignal.services.periodic import ensure_periodic
 from domsignal.services.reception import TICK_JOB as RECEPTION_TICK_JOB
-from domsignal.settings import get_settings
+from domsignal.settings import Settings, get_settings
 from domsignal.worker.pools import DEFAULT_POOL, POOLS, WorkerPool, lease_seconds_for
-from domsignal.worker.runner import WorkerRunner
+from domsignal.worker.runner import WorkerRunner, run_loops
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +44,13 @@ async def run(pool: WorkerPool = DEFAULT_POOL) -> None:
             now = datetime.now(UTC)
             await ensure_periodic(container.session_factory, FOLLOWUP_TICK_JOB)
             await ensure_periodic(container.session_factory, RECEPTION_TICK_JOB)
+            # D5: очистка очереди задач раз в час, первая — через час после старта.
+            await ensure_periodic(
+                container.session_factory,
+                JOB_CLEANUP_TICK_JOB,
+                priority=JOB_CLEANUP_PRIORITY,
+                first_at=now + timedelta(hours=1),
+            )
             await ensure_periodic(
                 container.session_factory,
                 DIGEST_TICK_JOB,
@@ -60,12 +70,35 @@ async def run(pool: WorkerPool = DEFAULT_POOL) -> None:
             notifications=container.notifications,
             pool=pool,
         )
-        while True:
-            handled = await runner.run_once()
-            if not handled:
-                await asyncio.sleep(1)
+        concurrency = concurrency_for(pool, container.settings)
+        stop = asyncio.Event()
+        install_stop_signals(stop)
+        logger.info("worker_started", extra={"pool": pool, "concurrency": concurrency})
+        await run_loops(runner, concurrency=concurrency, stop=stop)
+        logger.info("worker_stopped", extra={"pool": pool})
     finally:
         await container.aclose()
+
+
+def concurrency_for(pool: WorkerPool, settings: Settings) -> int:
+    """Число параллельных циклов пула: `AI_WORKER_CONCURRENCY` или операционного."""
+    if pool == "ai":
+        return settings.ai_worker_concurrency
+    return settings.operational_worker_concurrency
+
+
+def install_stop_signals(stop: asyncio.Event) -> None:
+    """SIGTERM/SIGINT — корректная остановка: начатые задачи доходят до конца.
+
+    На Windows обработчики сигналов цикла недоступны: там процесс
+    останавливается как раньше, аренда задач вернёт их в очередь.
+    """
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            loop.add_signal_handler(sig, stop.set)
+        except (NotImplementedError, RuntimeError):
+            return
 
 
 if __name__ == "__main__":

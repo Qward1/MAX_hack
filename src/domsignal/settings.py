@@ -90,6 +90,15 @@ class Settings(BaseSettings):
     # Аренда задачи AI-пула: не меньше таймаута модели + 20 с, иначе второй
     # воркер перехватит задачу посреди вызова. Операционный пул — 30 с.
     ai_worker_lease_seconds: int = Field(default=60, ge=30, le=600)
+    # Параллельные циклы «claim → обработка» в одном процессе пула (D5). Каждый
+    # цикл открывает свои сессии БД; семафор провайдера (`LLM_MAX_CONCURRENCY`)
+    # и дневной бюджет общие для процесса и для всех процессов соответственно.
+    ai_worker_concurrency: int = Field(default=1, ge=1, le=32)
+    operational_worker_concurrency: int = Field(default=1, ge=1, le=16)
+    # Пул соединений SQLAlchemy на процесс: процессы × (размер + запас) ≤
+    # max_connections PostgreSQL (docs/SCALING.md).
+    db_pool_size: int = Field(default=5, ge=1, le=100)
+    db_max_overflow: int = Field(default=10, ge=0, le=100)
     # Пассивное чтение подключённого чата (A-17/Product). Глобальный выключатель
     # по умолчанию выключен: без него реплики не сохраняются вовсе.
     passive_capture_enabled: bool = False
@@ -301,6 +310,30 @@ class Settings(BaseSettings):
             raise ValueError(
                 "llm provider openai_compatible needs credentials: " + "; ".join(problems)
             )
+        return self
+
+    @model_validator(mode="after")
+    def require_capacity_for_concurrency(self) -> Settings:
+        """Циклов воркера не больше, чем соединений и мест в семафоре модели.
+
+        Лишний цикл AI-пула не ускоряет разбор: он ждал бы семафор и уходил в
+        правила (`fallback_overloaded`); цикл без соединения ждал бы пул БД.
+        """
+        problems: list[str] = []
+        connections = self.db_pool_size + self.db_max_overflow
+        for name, loops in (
+            ("AI_WORKER_CONCURRENCY", self.ai_worker_concurrency),
+            ("OPERATIONAL_WORKER_CONCURRENCY", self.operational_worker_concurrency),
+        ):
+            if loops + 1 > connections:
+                problems.append(f"{name} + 1 must not exceed DB_POOL_SIZE + DB_MAX_OVERFLOW")
+        if (
+            self.llm_provider is LlmProvider.OPENAI_COMPATIBLE
+            and self.ai_worker_concurrency > self.llm_max_concurrency
+        ):
+            problems.append("AI_WORKER_CONCURRENCY must not exceed LLM_MAX_CONCURRENCY")
+        if problems:
+            raise ValueError("worker concurrency: " + "; ".join(problems))
         return self
 
     @model_validator(mode="after")

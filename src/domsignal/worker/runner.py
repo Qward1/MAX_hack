@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -131,3 +132,42 @@ class WorkerRunner:
             return handled
         await self.process(job)
         return True
+
+
+#: Пауза цикла, когда работы нет.
+IDLE_SECONDS = 1.0
+
+
+async def run_loops(
+    runner: WorkerRunner,
+    *,
+    concurrency: int,
+    stop: asyncio.Event,
+    idle_seconds: float = IDLE_SECONDS,
+) -> None:
+    """N параллельных циклов «claim → обработка» одного процесса (D5).
+
+    Циклы делят только настройки воркера: каждая операция открывает свою
+    сессию БД, задачу забирает `FOR UPDATE SKIP LOCKED` с арендой — двойного
+    разбора нет ни между циклами, ни между процессами. Семафор провайдера и
+    бюджет модели живут в общем анализаторе процесса.
+
+    Остановка: после `stop` новые задачи не забираются, начатые доходят до
+    конца. Ошибка цикла вне обработчика (например, БД недоступна) завершает
+    процесс, как и раньше, — перезапуск делает Compose.
+    """
+    if concurrency < 1:
+        raise ValueError("worker concurrency must be at least 1")
+
+    async def loop() -> None:
+        while not stop.is_set():
+            if await runner.run_once():
+                continue
+            try:
+                await asyncio.wait_for(stop.wait(), idle_seconds)
+            except TimeoutError:
+                pass
+
+    async with asyncio.TaskGroup() as group:
+        for _ in range(concurrency):
+            group.create_task(loop())
