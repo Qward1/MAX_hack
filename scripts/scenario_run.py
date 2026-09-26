@@ -215,8 +215,12 @@ SCENARIOS: list[tuple[str, list[tuple[str, str]]]] = [
                 f"{IT}test_d4_house_region.py::test_moscow_house_approved_with_its_region_routes_to_nash_gorod",
             ),
             (
-                "пост ждёт утра пояса дома",
-                f"{IT}test_d4_region_time.py::test_the_chat_post_waits_for_the_morning_of_the_house_zone",
+                "владивостокский дом: пост ждёт утра по местному времени",
+                f"{IT}test_d4_region_time.py::test_the_chat_post_waits_for_the_morning_of_the_house_zone[RU-PRI-vladivostok-until0]",
+            ),
+            (
+                "московский дом: в то же время пост уходит сразу",
+                f"{IT}test_d4_region_time.py::test_the_chat_post_waits_for_the_morning_of_the_house_zone[RU-MOW-moscow-None]",
             ),
         ],
     ),
