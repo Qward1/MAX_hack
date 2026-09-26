@@ -73,12 +73,58 @@
       "rub_per_window_mean": 0.0467,
       "rub_total": 0.933,
       "stopped_by_budget": false
+    },
+    {
+      "concurrency": 12,
+      "calls": 60,
+      "outcomes": {
+        "ok": 60,
+        "invalid_json": 0,
+        "timeout": 0,
+        "http_429": 0,
+        "http_other": 0,
+        "error": 0
+      },
+      "latency_s": {
+        "p50": 4.918,
+        "p95": 6.804,
+        "max": 7.172
+      },
+      "wall_s": 26.2,
+      "windows_per_hour": 8235,
+      "valid_json_share": 1.0,
+      "rub_per_window_mean": 0.0517,
+      "rub_total": 3.104,
+      "stopped_by_budget": false
+    },
+    {
+      "concurrency": 16,
+      "calls": 60,
+      "outcomes": {
+        "ok": 60,
+        "invalid_json": 0,
+        "timeout": 0,
+        "http_429": 0,
+        "http_other": 0,
+        "error": 0
+      },
+      "latency_s": {
+        "p50": 3.961,
+        "p95": 6.94,
+        "max": 8.494
+      },
+      "wall_s": 19.9,
+      "windows_per_hour": 10867,
+      "valid_json_share": 1.0,
+      "rub_per_window_mean": 0.051,
+      "rub_total": 3.059,
+      "stopped_by_budget": false
     }
   ],
   "slice_budget": {
-    "calls": 142,
-    "rub": 7.738,
-    "max_rub": 13.5
+    "calls": 262,
+    "rub": 13.901,
+    "max_rub": 30.0
   },
-  "windows_note": "60 окон при параллельности 8 и 4, 20 — последовательно"
+  "windows_note": "60 окон при параллельности 8, 4, 12 и 16, 20 — последовательно; лимит 30 ₽ снят владельцем 27.09"
 }
