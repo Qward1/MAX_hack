@@ -10,6 +10,7 @@
     python -m domsignal.tools.platform_ops open-access --house-id … --enable
     python -m domsignal.tools.platform_ops dismiss-signal --signal-id … --actor …
     python -m domsignal.tools.platform_ops cancel-ticket --ticket-id … --actor …
+    python -m domsignal.tools.platform_ops redact-report --report-id …
 
 Все команды принимают `--operator` и `--reason`.
 """
@@ -18,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -28,7 +30,15 @@ from domsignal.bootstrap import Container, build_container
 from domsignal.contracts.signals import SignalDismiss
 from domsignal.contracts.tickets import ReasonCommand
 from domsignal.core.tickets import TicketAction
-from domsignal.db.models import House, InboxReceipt, ManagementCompany, Signal, Ticket
+from domsignal.db.models import (
+    House,
+    InboxReceipt,
+    Incident,
+    ManagementCompany,
+    Report,
+    Signal,
+    Ticket,
+)
 from domsignal.services.onboarding import audit
 from domsignal.services.resident_access import ResidentAccessService
 from domsignal.settings import get_settings
@@ -142,6 +152,38 @@ async def open_access(
     return {"house_id": str(house_id), "open_resident_access": enabled, "ended": ended}
 
 
+#: Текст вместо скрытого описания проблемы (D4: снятие проверочных записей).
+REDACTED = "Описание скрыто оператором платформы"
+
+
+async def redact_report(
+    session: AsyncSession, *, report_id: UUID, operator: str, reason: str
+) -> dict[str, Any]:
+    """Скрыть описание сообщения о проблеме и совпадающее описание проблемы.
+
+    В квитанции — длина и хеш прежнего текста, не сам текст.
+    """
+    report = await session.get(Report, report_id, with_for_update=True)
+    if report is None:
+        raise ValueError("Report was not found")
+    before = report.description
+    digest = hashlib.sha256(before.encode("utf-8")).hexdigest()
+    report.description = REDACTED
+    incident = await session.get(Incident, report.incident_id, with_for_update=True)
+    if incident is not None and incident.description == before:
+        incident.description = REDACTED
+    receipt(
+        session,
+        action="redact-report",
+        object_id=report_id,
+        before={"length": len(before), "sha256": digest},
+        after=REDACTED,
+        operator=operator,
+        reason=reason,
+    )
+    return {"report_id": str(report_id), "incident_redacted": bool(incident)}
+
+
 async def dismiss_signal(
     container: Container, *, signal_id: UUID, actor: UUID, operator: str, reason: str
 ) -> dict[str, Any]:
@@ -224,6 +266,8 @@ async def run(args: argparse.Namespace) -> None:
                         address=args.address,
                         **common,
                     )
+                elif args.command == "redact-report":
+                    result = await redact_report(session, report_id=args.report_id, **common)
                 elif args.command == "rename-company":
                     result = await rename_company(
                         session, company_id=args.company_id, name=args.name, **common
@@ -258,7 +302,9 @@ def main() -> None:
     ticket = commands.add_parser("cancel-ticket")
     ticket.add_argument("--ticket-id", dest="ticket_id", type=UUID, required=True)
     ticket.add_argument("--actor", type=UUID, required=True)
-    for sub in (house, company, access, signal, ticket):
+    redact = commands.add_parser("redact-report")
+    redact.add_argument("--report-id", dest="report_id", type=UUID, required=True)
+    for sub in (house, company, access, signal, ticket, redact):
         sub.add_argument("--operator", required=True)
         sub.add_argument("--reason", required=True)
     asyncio.run(run(parser.parse_args()))

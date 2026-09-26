@@ -7,7 +7,15 @@ from typing import Any
 import pytest
 from sqlalchemy import select
 
-from domsignal.db.models import House, InboxReceipt, ManagementCompany, Signal, Ticket
+from domsignal.db.models import (
+    House,
+    InboxReceipt,
+    Incident,
+    ManagementCompany,
+    Report,
+    Signal,
+    Ticket,
+)
 from domsignal.tools import platform_ops
 from tests.integration.explicit_harness import ex  # noqa: F401
 from tests.integration.passive_harness import pv  # noqa: F401
@@ -76,6 +84,14 @@ async def test_cancel_ticket_goes_through_the_ticket_service(ex) -> None:  # noq
     assert result["status"] == "cancelled"
     [cancelled] = await receipts(ex, "cancel-ticket")
     assert (cancelled["before"], cancelled["after"]) == ("new", "cancelled")
+    report = await ex.scalar(select(Report))
+    async with ex.container.session_factory() as session, session.begin():
+        await platform_ops.redact_report(session, report_id=report.id, **OPS)
+    redacted = await ex.scalar(select(Report).where(Report.id == report.id))
+    incident = await ex.scalar(select(Incident).where(Incident.id == report.incident_id))
+    assert redacted.description == incident.description == platform_ops.REDACTED
+    [hidden] = await receipts(ex, "redact-report")
+    assert hidden["before"]["length"] > 0 and "лифт" not in str(hidden)
     # Посторонний сотрудник заявку не отменит: права проверяет сервис заявок.
     with pytest.raises(Exception):  # noqa: B017 - любой отказ сервиса
         await platform_ops.cancel_ticket(
