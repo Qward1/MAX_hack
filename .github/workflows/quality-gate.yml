@@ -17,7 +17,7 @@ concurrency:
 jobs:
   repository-sanity:
     name: repository-sanity
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out tested ref
         uses: actions/checkout@v7
@@ -45,7 +45,7 @@ jobs:
 
   backend:
     name: backend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -62,7 +62,7 @@ jobs:
 
   frontend:
     name: frontend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -79,7 +79,7 @@ jobs:
 
   contracts:
     name: contracts
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -103,7 +103,7 @@ jobs:
 
   postgres-and-docker:
     name: postgres-and-docker
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16.10-bookworm
@@ -140,7 +140,7 @@ jobs:
     name: quality-gate
     if: always()
     needs: [repository-sanity, backend, frontend, contracts, postgres-and-docker]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Require every mandatory job
         env:

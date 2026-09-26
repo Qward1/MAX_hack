@@ -49,7 +49,7 @@ assignments, revokes/expiry, management switches or platform roles cannot be
 represented safely by C0. Do not force this downgrade: restore a pre-A15 backup
 into a separate database with the matching C0 application version.
 
-## Backup: seven successful copies
+## Backup: verified copies, fourteen by default
 
 Find the DB container with `docker compose -f compose.yaml -f compose.prod.yaml
 ps -q db`. Run from the repository using a private directory outside the checkout:
@@ -61,11 +61,13 @@ uv run python scripts/backup_postgres.py \
 ```
 
 The script uses `pg_dump --format=custom --no-owner --no-acl`, publishes the dump
-only after success, then retains the seven newest `domsignal-*.dump` files in
+only after success, checks it with `pg_restore --list` (an unreadable dump is
+removed), then retains the `--keep` newest (14 by default) `domsignal-*.dump` files in
 that directory. Failed dumps never rotate successful copies. Protect directory
-permissions and copy backups to protected storage outside the VPS. Scheduling,
-off-host transport/encryption and monitoring remain operational setup, not an
-implemented backup platform. Avoid concurrent runs against the same directory.
+permissions and copy backups to protected storage outside the VPS. The daily
+schedule is a systemd timer (`deploy/systemd`, D4; see `deploy/README.md`);
+off-host transport and encryption remain operational setup. Avoid concurrent
+runs against the same directory.
 
 ## Restore into a separate database first
 
