@@ -159,6 +159,50 @@ export function PlatformOverview({ open }: { open: (page: string) => void }) {
         <StatTile label="В работе" value={formatNumber(data.delivery.in_flight)} />
       </dl>
       <p className="muted">«Принято» — MAX принял сообщение к отправке; это не подтверждение прочтения. Сутки — по московскому времени.</p>
+      {data.queue && <QueueHealthBlock queue={data.queue} />}
+      {(data.directory?.length ?? 0) > 0 && <DirectoryReadiness packs={data.directory ?? []} />}
     </div>}
   </>;
+}
+
+const POOL_LABELS: Record<string, string> = { operational: "Операционный пул", ai: "Пул модели" };
+
+function seconds(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "очередь пуста";
+  return value < 90 ? `ждёт ${formatNumber(Math.round(value))} с` : `ждёт ${formatNumber(Math.round(value / 60))} мин`;
+}
+
+/** D5: здоровье очереди — ожидающие задачи, доля окон у правил, бюджет модели. */
+function QueueHealthBlock({ queue }: { queue: Schema["QueueHealth"] }) {
+  const windows = queue.windows_24h;
+  return <section className="ds-section" aria-labelledby="queue-health">
+    <h2 id="queue-health">Очередь задач</h2>
+    <dl className="stat-row">
+      {queue.pools.map(pool => <StatTile key={pool.pool} label={POOL_LABELS[pool.pool] ?? pool.pool}
+        value={formatNumber(pool.due)} note={`${seconds(pool.oldest_due_seconds)} · в работе ${formatNumber(pool.leased)} · отложено ${formatNumber(pool.scheduled)}`} />)}
+      <StatTile label="Доставки ждут отправки" value={formatNumber(queue.deliveries_due)} />
+      <StatTile label="Окна у правил из-за перегрузки или бюджета, 24 ч"
+        value={windows.share_rules_overload_or_budget === null || windows.share_rules_overload_or_budget === undefined
+          ? "—" : percent.format(windows.share_rules_overload_or_budget)}
+        note={`${formatNumber(windows.by_rules_overload_or_budget)} из ${formatNumber(windows.total)}: сторож ${formatNumber(windows.watchdog)}, бюджет ${formatNumber(windows.budget)}, перегрузка ${formatNumber(windows.provider_overload)}`} />
+      <StatTile label="Бюджет модели сегодня" value={`${formatNumber(queue.model_budget_today.used)} из ${formatNumber(queue.model_budget_today.limit)}`}
+        note={queue.model_budget_today.share === null || queue.model_budget_today.share === undefined ? undefined : percent.format(queue.model_budget_today.share)} />
+    </dl>
+    <p className="muted">Опасность распознают правила при приёме, без очереди модели: окна, не разобранные моделью, разбирают правила.</p>
+  </section>;
+}
+
+/** D5 (аудит Р-3): готовность справочника по пакетам регионов. */
+function DirectoryReadiness({ packs }: { packs: Schema["DirectoryPackReadiness"][] }) {
+  return <section className="ds-section" aria-labelledby="directory-readiness">
+    <h2 id="directory-readiness">Справочник регионов</h2>
+    <div className="table-scroll"><table className="data-table">
+      <thead><tr><th scope="col">Пакет</th><th scope="col">Версия</th><th scope="col">Проверено</th><th scope="col">Ждёт сверки</th>
+        <th scope="col">Старше 180 дней</th><th scope="col">Недоступны в регионе</th></tr></thead>
+      <tbody>{packs.map(pack => <tr key={pack.pack}><th scope="row">{pack.name} <span className="muted">{pack.pack}</span></th>
+        <td>{pack.version}</td><td>{formatNumber(pack.verified)}</td><td>{formatNumber(pack.needs_verification)}</td>
+        <td>{formatNumber(pack.stale)}</td><td>{pack.unavailable_channels.length ? pack.unavailable_channels.join(", ") : "—"}</td></tr>)}</tbody>
+    </table></div>
+    <p className="muted">Жителю показываются только проверенные записи; «ждёт сверки» хранится и не показывается.</p>
+  </section>;
 }

@@ -1,4 +1,5 @@
 import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
+import { AddressListForm } from "./HouseBatch";
 import { useState, type FormEvent } from "react";
 import { Feedback, History, OneTimeLink, Status, Title, connectionErrors, dateInput, formValue, submitted, useAction, useRead, type Schema } from "./administration";
 import { QuotaMeter } from "./charts";
@@ -238,10 +239,13 @@ export function CompanyHouses({ base }: { base: string }) {
   const houses = useRead<House[]>(`${base}/houses`);
   const requests = useRead<Schema["HouseRequestView"][]>(`${base}/house-management-requests`);
   const [show, setShow] = useState(false);
+  const [list, setList] = useState(false);
   const [key, setKey] = useState(() => crypto.randomUUID());
   const action = useAction(requests.refresh);
   return <><Title description="Действующее управление и заявки на подключение домов">Дома</Title>
-    <div className="button-row"><button className="ticket-button" aria-expanded={show} onClick={() => setShow(!show)}>Запросить управление домом</button></div>
+    <div className="button-row"><button className="ticket-button" aria-expanded={show} onClick={() => setShow(!show)}>Запросить управление домом</button>
+      <button className="ticket-button secondary" aria-expanded={list} onClick={() => setList(!list)}>Вставить список адресов</button></div>
+    {list && <AddressListForm base={base} onDone={requests.refresh} />}
     {show && <form className="ticket-form admin-detail" onSubmit={async e => {
       const data = submitted(e);
       const result = await action.run(`${base}/house-management-requests`, { requested_address: formValue(data, "address"),

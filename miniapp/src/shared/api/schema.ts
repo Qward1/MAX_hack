@@ -892,6 +892,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/house-management-requests/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Houses Batch
+         * @description Список до 200 адресов → заявки на дома (D5); результат по каждому адресу.
+         */
+        post: operations["request_houses_batch_api_v1_companies__company_id__house_management_requests_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/houses": {
         parameters: {
             query?: never;
@@ -2104,6 +2124,26 @@ export interface paths {
         get: operations["platform_requests_api_v1_platform_house_management_requests_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/house-management-requests/approve-batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Houses Batch
+         * @description Одобрить выбранные заявки на дома одним действием с одним регионом (D5).
+         */
+        post: operations["approve_houses_batch_api_v1_platform_house_management_requests_approve_batch_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4714,6 +4754,28 @@ export interface components {
             unknown: number;
         };
         /**
+         * DirectoryPackReadiness
+         * @description Готовность пакета справочника (D5, аудит Р-3).
+         */
+        DirectoryPackReadiness: {
+            /** Name */
+            name: string;
+            /** Needs Verification */
+            needs_verification: number;
+            /** Pack */
+            pack: string;
+            /** Stale */
+            stale: number;
+            /** Timezone */
+            timezone: string | null;
+            /** Unavailable Channels */
+            unavailable_channels: string[];
+            /** Verified */
+            verified: number;
+            /** Version */
+            version: string;
+        };
+        /**
          * DuplicateCandidate
          * @description Уже открытая проблема того же дома, о которой, возможно, идёт речь.
          *
@@ -4906,6 +4968,107 @@ export interface components {
              */
             valid_from: string;
         };
+        /**
+         * HouseBatchApproval
+         * @description Одобрить выбранные заявки на дома одним действием с одним регионом (D5).
+         *
+         *     Дом выбирается как при одиночном одобрении, но без вопросов: найденный по
+         *     адресу при подаче или существующий с тем же адресом — иначе новый.
+         */
+        HouseBatchApproval: {
+            /**
+             * Confirm Backdate
+             * @default false
+             */
+            confirm_backdate: boolean;
+            /** Municipality Code */
+            municipality_code?: string | null;
+            /** Reason */
+            reason: string;
+            /** Region Code */
+            region_code?: string | null;
+            /** Request Ids */
+            request_ids: string[];
+            /**
+             * Territory Policy
+             * @default mixed
+             * @enum {string}
+             */
+            territory_policy: "uk" | "municipal" | "mixed" | "unknown";
+            /**
+             * Valid From
+             * Format: date-time
+             */
+            valid_from: string;
+        };
+        /** HouseBatchApproved */
+        HouseBatchApproved: {
+            /** Already Approved */
+            already_approved: number;
+            /** Approved */
+            approved: number;
+            /** Failed */
+            failed: number;
+            /** Items */
+            items: components["schemas"]["HouseBatchDecision"][];
+        };
+        /**
+         * HouseBatchCreate
+         * @description Список адресов от администратора УК (D5, аудит Р-1): каждый — заявка на дом.
+         *
+         *     Квота остаётся на чатах: заявка на дом слот не расходует.
+         */
+        HouseBatchCreate: {
+            /** Addresses */
+            addresses: string[];
+            /** Basis Text */
+            basis_text: string;
+            /**
+             * Requested Valid From
+             * Format: date-time
+             */
+            requested_valid_from: string;
+        };
+        /** HouseBatchDecision */
+        HouseBatchDecision: {
+            /** House Id */
+            house_id?: string | null;
+            /** Management Id */
+            management_id?: string | null;
+            /** Message */
+            message?: string | null;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "approved" | "already_approved" | "conflict" | "not_found" | "failed";
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+        };
+        /** HouseBatchSubmitItem */
+        HouseBatchSubmitItem: {
+            /** Address */
+            address: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "created" | "duplicate" | "already_open" | "already_managed";
+            /** Request Id */
+            request_id?: string | null;
+        };
+        /** HouseBatchSubmitted */
+        HouseBatchSubmitted: {
+            /** Created */
+            created: number;
+            /** Items */
+            items: components["schemas"]["HouseBatchSubmitItem"][];
+            /** Skipped */
+            skipped: number;
+        };
         /** HouseFactsUpdate */
         HouseFactsUpdate: {
             /** Entrance Count */
@@ -5026,6 +5189,8 @@ export interface components {
             requested_valid_from: string;
             /** Reviewed At */
             reviewed_at: string | null;
+            /** Source Application Id */
+            source_application_id?: string | null;
             /**
              * Status
              * @enum {string}
@@ -5309,6 +5474,18 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+        };
+        /**
+         * ModelBudgetToday
+         * @description Дневной бюджет вызовов модели (сутки UTC, счётчик PostgreSQL).
+         */
+        ModelBudgetToday: {
+            /** Limit */
+            limit: number;
+            /** Share */
+            share: number | null;
+            /** Used */
+            used: number;
         };
         /** ModelCompany */
         ModelCompany: {
@@ -5810,6 +5987,8 @@ export interface components {
             /** Companies */
             companies: components["schemas"]["PlatformCompanyRow"][];
             delivery: components["schemas"]["DeliveryTotals"];
+            /** Directory */
+            directory?: components["schemas"]["DirectoryPackReadiness"][];
             funnel: components["schemas"]["Funnel"];
             /**
              * Generated At
@@ -5822,6 +6001,7 @@ export interface components {
              * @enum {integer}
              */
             period_days: 7 | 14 | 30;
+            queue?: components["schemas"]["QueueHealth"] | null;
             /** Timezone */
             timezone: string;
             totals: components["schemas"]["PlatformTotals"];
@@ -6128,6 +6308,39 @@ export interface components {
             source_url?: string | null;
             /** Verified At */
             verified_at?: string | null;
+        };
+        /**
+         * QueueHealth
+         * @description Здоровье очереди задач (D5): только агрегаты.
+         */
+        QueueHealth: {
+            /** Deliveries Due */
+            deliveries_due: number;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            model_budget_today: components["schemas"]["ModelBudgetToday"];
+            /** Pools */
+            pools: components["schemas"]["QueuePoolHealth"][];
+            windows_24h: components["schemas"]["WindowFallbacks"];
+        };
+        /** QueuePoolHealth */
+        QueuePoolHealth: {
+            /** Due */
+            due: number;
+            /** Leased */
+            leased: number;
+            /** Oldest Due Seconds */
+            oldest_due_seconds: number | null;
+            /**
+             * Pool
+             * @enum {string}
+             */
+            pool: "operational" | "ai";
+            /** Scheduled */
+            scheduled: number;
         };
         /** ReasonCommand */
         ReasonCommand: {
@@ -7346,6 +7559,26 @@ export interface components {
             url?: string | null;
             /** Verified At */
             verified_at?: string | null;
+        };
+        /**
+         * WindowFallbacks
+         * @description Окна чатов, разобранные за 24 часа.
+         */
+        WindowFallbacks: {
+            /** Budget */
+            budget: number;
+            /** By Model */
+            by_model: number;
+            /** By Rules Overload Or Budget */
+            by_rules_overload_or_budget: number;
+            /** Provider Overload */
+            provider_overload: number;
+            /** Share Rules Overload Or Budget */
+            share_rules_overload_or_budget: number | null;
+            /** Total */
+            total: number;
+            /** Watchdog */
+            watchdog: number;
         };
         /** WorkAttemptCreate */
         WorkAttemptCreate: {
@@ -14007,6 +14240,135 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HouseRequestView"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    request_houses_batch_api_v1_companies__company_id__house_management_requests_batch_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseBatchCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseBatchSubmitted"];
                 };
             };
             /** @description Unauthorized */
@@ -23253,6 +23615,131 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HouseRequestView"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    approve_houses_batch_api_v1_platform_house_management_requests_approve_batch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseBatchApproval"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseBatchApproved"];
                 };
             };
             /** @description Unauthorized */
