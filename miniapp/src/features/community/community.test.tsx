@@ -109,6 +109,25 @@ describe("«Мой дом»", () => {
     expect(document.body.textContent?.toLowerCase()).not.toMatch(/тариф|норматив|капремонт/);
   });
 
+  it("D4: справочные ссылки региона — только официальные страницы с источником, без цифр", async () => {
+    const withLinks: HouseOverview = {
+      ...overview,
+      reference_links: [
+        {
+          kind: "tariffs",
+          label: "Тарифы — Государственный комитет Республики Татарстан по тарифам",
+          url: "https://kt.tatarstan.ru/ntarif.htm",
+          source: { title: "kt.tatarstan.ru", url: "https://kt.tatarstan.ru/ntarif.htm", verified_at: "2026-09-26" },
+        },
+      ],
+    };
+    render(<MyHouseScreen api={api({ houseOverview: vi.fn().mockResolvedValue(withLinks) })} houseId={HOUSE} links={links()} />);
+    expect(await screen.findByRole("heading", { name: "Где посмотреть тарифы и капремонт" })).toBeTruthy();
+    const link = screen.getByRole("link", { name: /Государственный комитет Республики Татарстан по тарифам/ });
+    expect(link.getAttribute("href")).toBe("https://kt.tatarstan.ru/ntarif.htm");
+    expect(screen.getAllByText(/проверено/).length).toBeGreaterThan(0);
+  });
+
   it("403 объясняет, как стать жителем, без тупика", async () => {
     const problem = new ApiProblem({ status: 403, type: "about:blank", code: "house_access_denied", title: "",
       detail: "", trace_id: "", retryable: false });

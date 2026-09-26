@@ -286,6 +286,26 @@ export function MyHouseScreen({
           <p className="muted">Проверенных каналов для региона дома пока нет в справочнике.</p>
         )}
       </Panel>
+      {(house.reference_links ?? []).length > 0 && (
+        <Panel className="detail-section">
+          <Typography.Title asChild>
+            <h2>Где посмотреть тарифы и капремонт</h2>
+          </Typography.Title>
+          <p className="muted">Официальные страницы региона. Цифры и сроки смотрите на них — ДомСигнал их не пересказывает.</p>
+          <ul className="community-list">
+            {(house.reference_links ?? []).map((link) => (
+              <li key={link.url}>
+                <p>
+                  <strong>
+                    <ExternalLink href={link.url}>{link.label}</ExternalLink>
+                  </strong>
+                </p>
+                <Source source={link.source} />
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
       <HouseCouncil api={api} houseId={houseId} links={links} />
       <p className="muted">
         <ExternalLink href={`${window.location.origin}/privacy`}>Политика данных</ExternalLink> — что бот читает и
