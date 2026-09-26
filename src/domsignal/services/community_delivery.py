@@ -8,21 +8,22 @@
 Тихие часы: пост рассылки или опроса в чат и его необязательные правки ждут
 конца тихих часов чата; удаление поста правится сразу. Пост о заявке
 уходит сразу — факт принятия тихие часы не задерживают, — а правки ждут,
-кроме правки «УК приняла в работу». Личные рассылки ночью (22:00–08:00 МСК)
-тоже ждут утра.
+кроме правки «УК приняла в работу». Личные рассылки ночью (22:00–08:00
+местного времени дома, D4) тоже ждут утра.
 """
 
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, tzinfo
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domsignal.bot.messaging import MessageButton, PersonalMessage
-from domsignal.core.quiet_hours import quiet_until
+from domsignal.core.display_time import display_zone
+from domsignal.core.quiet_hours import MSK, quiet_until
 from domsignal.db.models import (
     Broadcast,
     BroadcastCompany,
@@ -56,6 +57,7 @@ from domsignal.services.community_texts import (
     staff_notice_text,
 )
 from domsignal.services.errors import ResourceNotFound
+from domsignal.services.house_zone import HouseZones
 
 #: Коды остановки доставки D3, которые попадают в статистику как есть.
 STOP_CODES = frozenset(
@@ -247,17 +249,33 @@ async def defer_until(
     at: datetime,
     *,
     dm_window: tuple[int, int] | None = None,
+    zones: HouseZones | None = None,
 ) -> datetime | None:
-    """До какого момента отложить отправку или правку. `None` — сейчас."""
+    """До какого момента отложить отправку или правку. `None` — сейчас.
+
+    Окно — местное время дома чата; у личной рассылки — домов её аудитории
+    (D4). Без `zones` — Москва.
+    """
     edit = delivery.provider_message_id is not None
     if delivery.purpose == BROADCAST_DM_PURPOSE:
-        return None if edit else dm_quiet_until(at, dm_window)
+        if edit:
+            return None
+        zone: tzinfo = MSK
+        if zones is not None:
+            houses = await session.scalars(
+                select(BroadcastHouse.house_id).where(
+                    BroadcastHouse.broadcast_id == delivery.broadcast_id
+                )
+            )
+            zone = display_zone(await zones.of_houses(session, houses))
+        return dm_quiet_until(at, dm_window, zone)
     if delivery.purpose not in {BROADCAST_CHAT_PURPOSE, TICKET_CHAT_PURPOSE}:
         return None
     binding = await session.get(ChatBinding, delivery.chat_binding_id)
     if binding is None:
         return None
-    window = quiet_until(binding.quiet_start_minute, binding.quiet_end_minute, at)
+    chat_zone = display_zone(await zones.of_house(session, binding.house_id)) if zones else MSK
+    window = quiet_until(binding.quiet_start_minute, binding.quiet_end_minute, at, chat_zone)
     if window is None:
         return None
     if delivery.purpose == TICKET_CHAT_PURPOSE:

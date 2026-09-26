@@ -21,15 +21,17 @@ from domsignal.tools.route_preview import REGION_COMPARISON, compare_regions, re
 ROOT = Path(__file__).resolve().parents[2]
 ROUTING = RoutingService(load_directory(ROOT / "regions"))
 
-Cell = tuple[str, str | None, str | None]
-#: Ожидание по строкам сравнения: (Казань, Москва) — тип маршрута, канал, правило.
+Cell = tuple[str, str | tuple[str, ...] | None, str | None]
+#: Ожидание по строкам сравнения: (Казань, Москва) — тип маршрута, канал(ы), правило.
+#: D4: в Казани у освещения, дорог и благоустройства — «Народный контроль» и ПОС.
+KAZAN_BOTH = ("ru_ta_narodny_kontrol", "pos_gosuslugi")
 EXPECTED: dict[str, tuple[Cell, Cell]] = {
     "street_lighting.failure": (
-        ("municipality", "pos_gosuslugi", "federal.municipal_territory.default"),
+        ("municipality", KAZAN_BOTH, "ru_ta.street_lighting.narodny_kontrol"),
         ("municipality", "ru_mow_nash_gorod", "ru_mow.street_lighting.nash_gorod"),
     ),
     "road.damage": (
-        ("municipality", "pos_gosuslugi", "federal.municipal_territory.default"),
+        ("municipality", KAZAN_BOTH, "ru_ta.road_damage.narodny_kontrol"),
         ("municipality", "ru_mow_nash_gorod", "ru_mow.road_damage.nash_gorod"),
     ),
     "snow.street": (
@@ -37,14 +39,18 @@ EXPECTED: dict[str, tuple[Cell, Cell]] = {
         ("municipality", "ru_mow_nash_gorod", "ru_mow.snow_street.nash_gorod"),
     ),
     "landscaping.public": (
-        ("municipality", "pos_gosuslugi", "federal.municipal_territory.default"),
+        ("municipality", KAZAN_BOTH, "ru_ta.landscaping.narodny_kontrol"),
         ("municipality", "ru_mow_nash_gorod", "ru_mow.landscaping.nash_gorod"),
     ),
     "waste.removal_regional": (
         ("regional_operator", None, "federal.waste_removal.regional_operator"),
         ("regional_operator", "ru_mow_nash_gorod", "ru_mow.waste_removal.nash_gorod"),
     ),
-    "elevator.stopped": (("uk_internal", None, None), ("uk_internal", None, None)),
+    # D4: заявку в УК житель может направить и сам — через «Госуслуги Дом».
+    "elevator.stopped": (
+        ("uk_internal", "gosuslugi_dom", None),
+        ("uk_internal", "gosuslugi_dom", None),
+    ),
     "water.hot_outage": (
         ("resource_supplier", None, "federal.external_network.resource_supplier"),
         ("resource_supplier", None, "federal.external_network.resource_supplier"),
@@ -64,17 +70,20 @@ def test_the_table_covers_ten_subtypes_in_two_regions() -> None:
 
 
 @pytest.mark.parametrize(("subtype", "scope", "routes"), compare_regions(ROUTING))
-def test_same_code_different_data(subtype: str, scope: str, routes: list[Any]) -> None:
-    for route, (route_type, channel, rule) in zip(routes, EXPECTED[subtype], strict=True):
+def test_same_code_different_data(subtype: str, scope: str, routes: dict[str, Any]) -> None:
+    pair = (routes["RU-TA"], routes["RU-MOW"])
+    for route, (route_type, channel, rule) in zip(pair, EXPECTED[subtype], strict=True):
         assert route.route_type == route_type, (subtype, route)
-        assert [c.id for c in route.channels] == ([channel] if channel else []), subtype
+        expected = [channel] if isinstance(channel, str) else list(channel or ())
+        assert [c.id for c in route.channels] == expected, subtype
         assert (route.basis.rule_id if route.basis else None) == rule, subtype
         # Ни один маршрут не называет непроверенную организацию.
         assert route.organization_name is None
 
 
 def test_moscow_never_offers_the_pos_and_kazan_never_offers_nash_gorod() -> None:
-    for _, _, (kazan, moscow) in compare_regions(ROUTING):
+    for _, _, routes in compare_regions(ROUTING):
+        kazan, moscow = routes["RU-TA"], routes["RU-MOW"]
         assert "ru_mow_nash_gorod" not in {c.id for c in kazan.channels}
         assert "pos_gosuslugi" not in {c.id for c in moscow.channels}
 

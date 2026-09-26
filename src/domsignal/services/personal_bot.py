@@ -55,6 +55,7 @@ from domsignal.services.bot_replies import (
     CONNECT_CLAIMED,
     CONNECT_INVALID,
     DM_JOB,
+    EXAMPLES,
     EXPIRED,
     GREETING,
     GROUP_ACK,
@@ -68,16 +69,17 @@ from domsignal.services.bot_replies import (
     LIMIT,
     NO_ACCESS,
     NO_HOUSES,
-    NO_HOUSES_OPEN,
     NO_OPEN_HOUSES,
     NOT_A_PROBLEM,
     OPEN_HOUSES_LEAD,
     OTHER_CHOSEN,
+    PICK_OPEN_HOUSE,
     VERSION,
     ReplyButton,
     as_message,
     callback_button,
     enqueue_reply,
+    example_button,
     open_app_button,
 )
 from domsignal.services.chat_voice import (
@@ -96,6 +98,7 @@ from domsignal.services.group_messages import (
 )
 from domsignal.services.membership import MembershipService
 from domsignal.services.notifications import TicketNotificationHandler
+from domsignal.services.privacy import with_privacy
 from domsignal.services.reports import IncidentClosed, ReportService
 from domsignal.services.resident_access import ResidentAccessService, ensure_max_user
 from domsignal.services.route_card_render import safety_lines
@@ -157,6 +160,7 @@ class PersonalBotService:
         daily_limit: int = 10,
         hold_seconds: int = 1800,
         application_digest: Callable[[str], str] | None = None,
+        privacy_url: str | None = None,
     ) -> None:
         self.sessions = session_factory
         self.resident_access = resident_access
@@ -176,6 +180,11 @@ class PersonalBotService:
         self.application_digest = application_digest
         #: Кнопки сопровождения обращения (A-09, D3): действие → обработчик.
         self.followups: dict[str, FollowupCallback] = {}
+        #: Ссылка на страницу /privacy в приветствии и справке (D4).
+        self.privacy_url = privacy_url
+
+    def _with_privacy(self, text: str) -> str:
+        return with_privacy(text, self.privacy_url) if self.privacy_url else text
 
     # ============================================================ вебхук
 
@@ -264,6 +273,8 @@ class PersonalBotService:
         user = await ensure_max_user(session, event.actor, None)
         _touch_dialog(user, event.occurred_at)
         text = (event.text or "").strip()
+        # Кнопка-пример (D4) присылает свой текст: разбираем сам пример.
+        text = EXAMPLES.get(text, text)
         command, body = split_command(text)
         if command in {"/start", "/help", "/version"}:
             return await self._job(session, event.event_id, user.id, command[1:])
@@ -386,7 +397,8 @@ class PersonalBotService:
         elif kind == "start":
             await self.resident_access.refresh(user_id)
             async with self.sessions() as session, session.begin():
-                buttons = [[open_app_button()]]
+                buttons = [[example_button(label)] for label in EXAMPLES]
+                buttons.append([open_app_button()])
                 if await self._offer_open_houses(session, user_id):
                     buttons.append([callback_button(CHOOSE_HOUSE_LABEL, "b:houses")])
                 await enqueue_reply(
@@ -394,7 +406,7 @@ class PersonalBotService:
                     user_id=user_id,
                     event_id=event_id,
                     key="start",
-                    text=GREETING,
+                    text=self._with_privacy(GREETING),
                     buttons=buttons,
                 )
                 # Карточка по `/report`, которая не ушла без диалога (≤ 24 ч).
@@ -403,7 +415,7 @@ class PersonalBotService:
                 )
         else:
             text, buttons = {
-                "help": (HELP, [[open_app_button()]]),
+                "help": (self._with_privacy(HELP), [[open_app_button()]]),
                 "version": (VERSION.format(version=self.version), []),
                 "short": (f"{NOT_A_PROBLEM}\n\n{HELP}", []),
                 "limit": (LIMIT.format(limit=self.daily_limit), []),
@@ -454,11 +466,24 @@ class PersonalBotService:
                 # Опасность — блок безопасности первым, до выбора дома.
                 await self._safety_reply(session, user_id, event_id, danger)
             if not houses:
+                open_houses = await self.resident_access.open_houses(session, user_id=user_id)
+                if open_houses:
+                    # Посторонний без дома (D4): выбор открытого дома сразу, сообщение
+                    # ждёт выбора и разбирается после него — одно касание.
+                    await self._offer_pick(
+                        session,
+                        intake,
+                        user_id,
+                        text=PICK_OPEN_HOUSE,
+                        buttons=[
+                            [callback_button(house.address, f"b:joinpick:{event_id}:{house.id}")]
+                            for house in open_houses[:MAX_HOUSE_BUTTONS]
+                        ],
+                        now=now,
+                    )
+                    return
                 text = NO_HOUSES
                 buttons: list[list[ReplyButton]] = [[open_app_button()]]
-                if await self.resident_access.has_open_houses(session):
-                    text = f"{NO_HOUSES}\n{NO_HOUSES_OPEN}"
-                    buttons.append([callback_button(CHOOSE_HOUSE_LABEL, "b:houses")])
                 await enqueue_reply(
                     session,
                     user_id=user_id,
@@ -469,24 +494,44 @@ class PersonalBotService:
                 )
                 self._finish(intake, "ignored", now)
                 return
-            await enqueue_reply(
+            await self._offer_pick(
                 session,
-                user_id=user_id,
-                event_id=event_id,
-                key="choose",
+                intake,
+                user_id,
                 text=CHOOSE_HOUSE,
                 buttons=[
                     [callback_button(house.address, f"b:pick:{event_id}:{house.id}")]
                     for house, _ in houses[:MAX_HOUSE_BUTTONS]
                 ],
+                now=now,
             )
-            intake.hold_until = now + self.hold
-            await ReliabilityRepository(session).add_job(
-                kind=HOLD_JOB,
-                payload={"event_id": event_id},
-                priority=90,
-                delay_seconds=int(self.hold.total_seconds()),
-            )
+
+    async def _offer_pick(
+        self,
+        session: AsyncSession,
+        intake: ExplicitIntake,
+        user_id: UUID,
+        *,
+        text: str,
+        buttons: list[list[ReplyButton]],
+        now: datetime,
+    ) -> None:
+        """Кнопки выбора дома; текст ждёт выбора не дольше `hold` и стирается."""
+        await enqueue_reply(
+            session,
+            user_id=user_id,
+            event_id=intake.event_id,
+            key="choose",
+            text=text,
+            buttons=buttons,
+        )
+        intake.hold_until = now + self.hold
+        await ReliabilityRepository(session).add_job(
+            kind=HOLD_JOB,
+            payload={"event_id": intake.event_id},
+            priority=90,
+            delay_seconds=int(self.hold.total_seconds()),
+        )
 
     async def _rules_danger(self, text: str, now: datetime) -> tuple[DangerKind, ...]:
         """Опасность по правилам — без сети и без модели, за миллисекунды."""
@@ -622,6 +667,17 @@ class PersonalBotService:
             except (ValueError, ResourceNotFound):
                 return HOUSE_UNAVAILABLE, []
             return HOUSE_JOINED.format(address=address), [[open_app_button()]]
+        if action == "joinpick" and argument and ":" in argument:
+            # Открытый дом для отложенного сообщения (D4): вступить и разобрать.
+            event_id, house_ref = argument.rsplit(":", 1)
+            try:
+                async with self.sessions() as session, session.begin():
+                    await self.resident_access.join_open_house(
+                        session, user_id=user_id, house_id=UUID(house_ref)
+                    )
+            except (ValueError, ResourceNotFound):
+                return HOUSE_UNAVAILABLE, []
+            return await self._pick(user_id, event_id, house_ref)
         if action == "pick" and argument and ":" in argument:
             return await self._pick(user_id, *argument.rsplit(":", 1))
         if action == "same" and argument and ":" in argument:

@@ -111,6 +111,8 @@ function HouseRequestDetail({ id, refresh }: { id: string; refresh: () => void }
   const [offset, setOffset] = useState(0);
   const houses = useRead<Schema["PlatformHouseView"][]>(`/api/v1/platform/houses?offset=${offset}`);
   const [resolution, setResolution] = useState("");
+  const [region, setRegion] = useState("");
+  const packs = useRead<Schema["RegionPackView"][]>("/api/v1/platform/region-packs");
   const action = useAction(() => { r.refresh(); refresh(); });
   return <section className="admin-detail"><Feedback loading={r.loading} error={r.error ?? action.error} />{r.data && <>
     <h2>{r.data.requested_address}</h2><p>УК: <code>{r.data.company_id}</code></p><p>{r.data.basis_text}</p><Status value={r.data.status} />
@@ -123,16 +125,18 @@ function HouseRequestDetail({ id, refresh }: { id: string; refresh: () => void }
       await action.run(`/api/v1/platform/house-management-requests/${id}/${verb}`, verb === "approve" ? {
         reason, resolution, house_id: resolution === "existing" ? formValue(data, "house") : null,
         valid_from: new Date(`${formValue(data, "date")}T00:00:00`).toISOString(), confirm_backdate: data.get("backdate") === "on",
+        ...regionPayload(data),
       } : { reason });
     }}><label>Решение о доме<select value={resolution} onChange={e => setResolution(e.target.value)}>
       <option value="">Выберите решение</option><option value="existing">Использовать существующий дом</option><option value="new">Создать новый дом</option></select></label>
       {resolution === "existing" && <><label>Существующий дом<select name="house" required defaultValue=""><option value="">Выберите дом</option>
         {houses.data?.map(h => <option key={h.id} value={h.id}>{h.address}</option>)}</select></label>
         <Pages offset={offset} set={setOffset} count={houses.data?.length ?? 0} /></>}
+      <RegionFields packs={packs.data} region={region} onRegion={setRegion} />
       <label>Одобренная дата начала<input type="date" name="date" required defaultValue={dateInput(r.data.requested_valid_from)} /></label>
       <label className="checkbox-label"><input type="checkbox" name="backdate" />Явно подтверждаю прошлую дату на указанном основании</label>
       <label>Основание решения / уточнения<textarea name="reason" required maxLength={2000} /></label>
-      <div className="button-row"><button className="ticket-button" value="approve" disabled={action.busy || !resolution}>Одобрить управление</button>
+      <div className="button-row"><button className="ticket-button" value="approve" disabled={action.busy || !resolution || !region}>Одобрить управление</button>
         <button className="ticket-button secondary" value="start-review" disabled={action.busy}>Начать рассмотрение</button>
         <button className="ticket-button secondary" value="request-info" disabled={action.busy}>Запросить уточнения</button>
         <button className="ticket-button secondary" value="reject" disabled={action.busy}>Отклонить заявку</button></div></form>}
@@ -173,10 +177,44 @@ function PlatformCompany({ id, refresh }: { id: string; refresh: () => void }) {
     {link && <OneTimeLink url={link} />}
   </>}</section>;
 }
-function PlatformHouses() {
+export function PlatformHouses() {
   const [offset, setOffset] = useState(0);
   const r = useRead<Schema["PlatformHouseView"][]>(`/api/v1/platform/houses?offset=${offset}`);
-  return <><Title>Дома</Title><OpenHouses /><h2>Все дома</h2><Feedback loading={r.loading} error={r.error} /><ul className="admin-records">{r.data?.map(h => <li key={h.id}>{h.address}<code>{h.id}</code></li>)}</ul><Pages offset={offset} set={setOffset} count={r.data?.length ?? 0} /></>;
+  const packs = useRead<Schema["RegionPackView"][]>("/api/v1/platform/region-packs");
+  return <><Title>Дома</Title><OpenHouses /><h2>Все дома</h2><Feedback loading={r.loading} error={r.error} /><ul className="admin-records">{r.data?.map(h => <li key={h.id}>{h.address}<code>{h.id}</code>
+    {h.region_code ? <span>{[h.region_code, h.municipality_code].filter(Boolean).join(" / ")}</span>
+      : <><span className="admin-status status-needs_info">Регион не задан</span><SetRegion house={h.id} packs={packs.data} refresh={r.refresh} /></>}</li>)}</ul>
+    <Pages offset={offset} set={setOffset} count={r.data?.length ?? 0} /></>;
+}
+/** Регион дома из загруженного справочника (D4): каналы, пояс тихих часов и сводки. */
+const TERRITORIES: [string, string][] = [["mixed", "Смешанная: двор решает диспетчер"], ["uk", "Двор — зона УК"],
+  ["municipal", "Двор — муниципальная территория"], ["unknown", "Не известна"]];
+function RegionFields({ packs, region, onRegion }: { packs?: Schema["RegionPackView"][]; region: string; onRegion: (value: string) => void }) {
+  const pack = packs?.find(p => p.region_code === region);
+  return <fieldset className="quota-fieldset"><legend>Регион дома</legend>
+    <label>Регион<select name="region" value={region} onChange={e => onRegion(e.target.value)}><option value="">Выберите регион</option>
+      {packs?.map(p => <option key={p.region_code} value={p.region_code}>{p.name} ({p.region_code})</option>)}</select></label>
+    {pack && pack.municipalities.length > 0 && <label>Муниципалитет<select name="municipality" key={pack.region_code}>
+      {pack.municipalities.map(m => <option key={m.code} value={m.code}>{m.name}</option>)}</select></label>}
+    <label>Территория двора<select name="territory" defaultValue="mixed">{TERRITORIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+    <p className="muted">Регион определяет официальные каналы и часовой пояс тихих часов и сводки. Без региона дом видит только федеральные каналы.</p>
+  </fieldset>;
+}
+function regionPayload(data: FormData) {
+  return { region_code: formValue(data, "region") || null, municipality_code: formValue(data, "municipality") || null,
+    territory_policy: formValue(data, "territory") || "mixed" };
+}
+function SetRegion({ house, packs, refresh }: { house: string; packs?: Schema["RegionPackView"][]; refresh: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [region, setRegion] = useState("");
+  const action = useAction(() => { setOpen(false); refresh(); });
+  if (!open) return <button type="button" className="ticket-button secondary" onClick={() => setOpen(true)}>Задать регион</button>;
+  return <form className="inline-form" onSubmit={e => { const data = submitted(e);
+    void action.run(`/api/v1/platform/houses/${house}/region`, { reason: formValue(data, "reason"), ...regionPayload(data) });
+  }}><Feedback error={action.error || undefined} /><RegionFields packs={packs} region={region} onRegion={setRegion} />
+    <label>Основание<input name="reason" required minLength={3} maxLength={2000} /></label>
+    <button className="ticket-button" disabled={action.busy || !region}>Сохранить регион</button>
+    <button type="button" className="ticket-button secondary" onClick={() => setOpen(false)}>Отмена</button></form>;
 }
 /** Дома с открытым доступом: платформа видит все и может закрыть с причиной. */
 function OpenHouses() {

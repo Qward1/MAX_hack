@@ -1,6 +1,13 @@
-import { type ReactNode, useCallback, useId, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { ApiProblem, problemStatus, retryable } from "../../shared/api/client";
-import type { ActivityItem, AnnouncementItem, CommunityApi, PollView, VerifiedSource } from "../../shared/api/community";
+import type {
+  ActivityItem,
+  AnnouncementItem,
+  CommunityApi,
+  PollView,
+  ProposalView,
+  VerifiedSource,
+} from "../../shared/api/community";
 import { PAGE_SIZE } from "../../shared/api/community";
 import { useResource } from "../../shared/api/useResource";
 import { maxBridge, safeUrl } from "../../shared/max/bridge";
@@ -271,7 +278,549 @@ export function MyHouseScreen({ api, houseId, links }: { api: CommunityApi; hous
           <p className="ds-subtle">Проверенных сервисов для региона дома пока нет в справочнике.</p>
         )}
       </section>
+      {(house.reference_links ?? []).length > 0 && (
+        <section className="ds-section" aria-labelledby="references-title">
+          <h2 id="references-title">Где посмотреть тарифы и капремонт</h2>
+          <p className="ds-subtle">Официальные страницы региона. Цифры и сроки смотрите на них — ДомСигнал их не пересказывает.</p>
+          <ul className="ds-bullets">
+            {(house.reference_links ?? []).map((link) => (
+              <li key={link.url}>
+                <p>
+                  <strong>
+                    <ExternalLink href={link.url}>{link.label}</ExternalLink>
+                  </strong>
+                </p>
+                <Source source={link.source} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <HouseCouncil api={api} houseId={houseId} links={links} />
+      <p className="ds-subtle">
+        <ExternalLink href={`${window.location.origin}/privacy`}>Политика данных</ExternalLink> — что бот читает и
+        хранит, как отключить чтение чата.
+      </p>
     </>
+  );
+}
+
+// ------------------------------------------- совет дома и «Предложить вопрос» (D4)
+
+const proposalLabels: Record<ProposalView["status"], string> = {
+  new: "Ждёт рассмотрения",
+  converted: "Вынесено на опрос",
+};
+const SERVICE_RULE = "Только сервисные сообщения для жителей. Реклама запрещена.";
+const POLL_NOTE = "Предварительный опрос. Не является решением общего собрания собственников.";
+const NOT_MEMBER = "Публиковать от имени совета могут только члены совета дома.";
+const PUBLISHED = "Опубликовано: сообщение уйдёт в чат дома и в ленту «Объявления».";
+
+/**
+ * Ошибка формы. Правило сервиса при 422 уже сказано по-русски («Можно
+ * предложить не больше 3 тем…») — показать его как есть; ошибка схемы —
+ * назвать поля по словарю; отказ в доступе — словами `denied`.
+ */
+function formError(error: unknown, fields: Record<string, string>, denied: string): string {
+  if (error instanceof ApiProblem) {
+    const { problem } = error;
+    if (problem.code === "validation_error") {
+      const errors = problem.field_errors ?? [];
+      const told = errors.map((item) => item.message).filter((message) => /[а-яё]/i.test(message ?? ""));
+      if (told.length) return [...new Set(told)].join(" ");
+      const named = errors.map((item) => fields[item.field.split(".")[1] ?? item.field]).filter(Boolean);
+      return named.length ? `Проверьте: ${[...new Set(named)].join("; ")}.` : "Проверьте заполнение полей формы.";
+    }
+    if (problem.status === 403) return denied;
+    // «Предложение уже вынесено на опрос», «Предложение не найдено» — сервер уже сказал словами.
+    if ([404, 409].includes(problem.status) && /[а-яё]/i.test(problem.detail)) return problem.detail;
+    if (problem.status === 429) return "Слишком много запросов. Подождите минуту.";
+  }
+  return "Не получилось. Проверьте соединение и попробуйте ещё раз.";
+}
+
+/** Ключ идемпотентности живёт, пока повторяется тот же запрос: повтор после сбоя не создаст второе. */
+function useRetryKey() {
+  const last = useRef<{ body: string; key: string } | null>(null);
+  const keyFor = useCallback((body: unknown) => {
+    const text = JSON.stringify(body);
+    if (last.current?.body !== text) last.current = { body: text, key: crypto.randomUUID() };
+    return last.current.key;
+  }, []);
+  const reset = useCallback(() => {
+    last.current = null;
+  }, []);
+  return { keyFor, reset };
+}
+
+function localInput(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+type Note = { text: string; error: boolean } | null;
+function FormNote({ note }: { note: Note }) {
+  if (!note) return null;
+  return (
+    <p role={note.error ? "alert" : "status"} className="ds-subtle">
+      {note.text}
+    </p>
+  );
+}
+
+function ProposalItem({
+  item,
+  houseId,
+  links,
+  children,
+}: {
+  item: ProposalView;
+  houseId: string;
+  links: CommunityLinks;
+  children?: ReactNode;
+}) {
+  const pollId = item.poll_id;
+  return (
+    <li>
+      <p className="full-text">{item.text}</p>
+      <div className="ds-actions">
+        <StatusTag entry={{ label: proposalLabels[item.status], tone: item.status === "converted" ? "success" : "neutral" }} />
+        <time className="ds-meta" dateTime={item.created_at}>
+          {formatDay(item.created_at)}
+        </time>
+      </div>
+      {item.status === "converted" && pollId && (
+        <Button
+          small
+          variant="secondary"
+          onClick={() => links.navigate(links.view("poll", { house: houseId, poll: pollId }))}
+        >
+          Открыть опрос
+        </Button>
+      )}
+      {children}
+    </li>
+  );
+}
+
+/** «Предложить вопрос» для каждого жителя и «Совет дома» для его членов. */
+function HouseCouncil({ api, houseId, links }: { api: CommunityApi; houseId: string; links: CommunityLinks }) {
+  const load = useCallback((signal: AbortSignal) => api.council(houseId, signal), [api, houseId]);
+  const resource = useResource(`council:${houseId}`, load);
+  if (resource.error && !resource.data) {
+    // Доступ к дому уже объяснил экран; без права предлагать темы панели просто нет.
+    if ([401, 403, 404].includes(problemStatus(resource.error) ?? 0)) return null;
+    return (
+      <StatePanel
+        title="Не удалось загрузить предложения"
+        detail="Проверьте соединение и попробуйте ещё раз."
+        action={retryable(resource.error) ? "Попробовать снова" : undefined}
+        onAction={resource.refresh}
+      />
+    );
+  }
+  if (!resource.data) return <StatePanel title="Загрузка предложений" loading />;
+  const proposals = resource.data.proposals ?? [];
+  return (
+    <>
+      <ProposePanel
+        api={api}
+        houseId={houseId}
+        links={links}
+        mine={proposals.filter((item) => item.mine)}
+        onChanged={resource.refresh}
+      />
+      {resource.data.is_member && (
+        <CouncilPanel
+          api={api}
+          houseId={houseId}
+          links={links}
+          proposals={proposals}
+          onChanged={resource.refresh}
+        />
+      )}
+    </>
+  );
+}
+
+function ProposePanel({
+  api,
+  houseId,
+  links,
+  mine,
+  onChanged,
+}: {
+  api: CommunityApi;
+  houseId: string;
+  links: CommunityLinks;
+  mine: ProposalView[];
+  onChanged: () => void;
+}) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<Note>(null);
+  // Только что добавленная тема видна сразу, не дожидаясь обновления списка.
+  const [created, setCreated] = useState<ProposalView[]>([]);
+  const retry = useRetryKey();
+  const shown = [...created.filter((item) => !mine.some((known) => known.id === item.id)), ...mine];
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const value = text.trim();
+    setBusy(true);
+    setNote(null);
+    try {
+      const item = await api.propose(houseId, value, retry.keyFor(value));
+      retry.reset();
+      setCreated((list) => [item, ...list]);
+      setText("");
+      setNote({ text: "Тема добавлена. Её статус — в списке «Мои предложения».", error: false });
+      onChanged();
+    } catch (error) {
+      setNote({
+        text: formError(error, { text: "текст темы — от 3 до 1000 символов" }, "Предлагать темы могут жители дома."),
+        error: true,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="ds-section">
+      <h2>Предложить вопрос</h2>
+      <p>Тему увидят совет дома и управляющая компания; её можно вынести на опрос.</p>
+      <form className="ds-form" onSubmit={(event) => void submit(event)}>
+        <label className="ds-field">
+          Тема или вопрос
+          <textarea
+            value={text}
+            required
+            minLength={3}
+            maxLength={1000}
+            rows={3}
+            disabled={busy}
+            onChange={(event) => setText(event.target.value)}
+            placeholder="Например: поставить велопарковку у второго подъезда"
+          />
+        </label>
+        <Button type="submit" variant="primary" disabled={busy || text.trim().length < 3}>
+          Предложить
+        </Button>
+        <FormNote note={note} />
+      </form>
+      {shown.length > 0 && (
+        <>
+          <h3>Мои предложения</h3>
+          <ul className="ds-bullets" aria-label="Мои предложения">
+            {shown.map((item) => (
+              <ProposalItem key={item.id} item={item} houseId={houseId} links={links} />
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
+type PollForm = {
+  question: string;
+  options: string[];
+  multiple: boolean;
+  closes: string;
+  proposalId: string | null;
+  service: boolean;
+};
+const emptyPoll = (): PollForm => ({
+  question: "",
+  options: ["", ""],
+  multiple: false,
+  closes: localInput(new Date(Date.now() + 3 * 86400000)),
+  proposalId: null,
+  service: false,
+});
+const ANNOUNCEMENT_FIELDS = { title: "заголовок — от 3 до 200 символов", body: "текст — до 3000 символов" };
+const POLL_FIELDS = { poll: "вопрос, варианты (без повторов, до 100 символов) и срок опроса", proposal_id: "предложение" };
+
+function CouncilPanel({
+  api,
+  houseId,
+  links,
+  proposals,
+  onChanged,
+}: {
+  api: CommunityApi;
+  houseId: string;
+  links: CommunityLinks;
+  proposals: ProposalView[];
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [announcement, setAnnouncement] = useState({ title: "", body: "", service: false });
+  const [announcementNote, setAnnouncementNote] = useState<Note>(null);
+  const [poll, setPoll] = useState<PollForm>(emptyPoll);
+  const [pollNote, setPollNote] = useState<Note>(null);
+  const [publishedPoll, setPublishedPoll] = useState<string | null>(null);
+  const announcementKey = useRetryKey();
+  const pollKey = useRetryKey();
+  const question = useRef<HTMLInputElement>(null);
+  const setPollField = (patch: Partial<PollForm>) => setPoll((value) => ({ ...value, ...patch }));
+  useEffect(() => {
+    if (poll.proposalId) question.current?.focus();
+  }, [poll.proposalId]);
+
+  async function publishAnnouncement(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const payload = { title: announcement.title.trim(), body: announcement.body.trim(), service_only: true as const };
+    setBusy(true);
+    setAnnouncementNote(null);
+    try {
+      await api.councilAnnouncement(houseId, payload, announcementKey.keyFor(payload));
+      announcementKey.reset();
+      setAnnouncement({ title: "", body: "", service: false });
+      setAnnouncementNote({ text: PUBLISHED, error: false });
+      onChanged();
+    } catch (error) {
+      setAnnouncementNote({ text: formError(error, ANNOUNCEMENT_FIELDS, NOT_MEMBER), error: true });
+      if (problemStatus(error) === 403) onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function publishPoll(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const closes = new Date(poll.closes);
+    setPollNote(null);
+    setPublishedPoll(null);
+    if (!Number.isFinite(closes.getTime())) {
+      setPollNote({ text: "Укажите дату и время, до которых идёт голосование.", error: true });
+      return;
+    }
+    const payload = {
+      poll: {
+        question: poll.question.trim(),
+        options: poll.options.map((option) => option.trim()),
+        multiple: poll.multiple,
+        closes_at: closes.toISOString(),
+      },
+      proposal_id: poll.proposalId,
+      service_only: true as const,
+    };
+    setBusy(true);
+    try {
+      const result = await api.councilPoll(houseId, payload, pollKey.keyFor(payload));
+      pollKey.reset();
+      setPoll(emptyPoll());
+      setPublishedPoll(result.poll_id ?? null);
+      setPollNote({ text: PUBLISHED, error: false });
+      onChanged();
+    } catch (error) {
+      setPollNote({ text: formError(error, POLL_FIELDS, NOT_MEMBER), error: true });
+      if (problemStatus(error) === 403 || problemStatus(error) === 404) onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const source = poll.proposalId ? proposals.find((item) => item.id === poll.proposalId) : undefined;
+  const pollReady =
+    poll.service && poll.question.trim().length >= 3 && poll.options.every((option) => option.trim()) && Boolean(poll.closes);
+  return (
+    <section className="ds-section">
+      <h2>Совет дома</h2>
+      <p>
+        Вы в совете дома. Объявления и опросы совета подписаны «Сообщение от совета дома» и появляются в ленте
+        «Объявления». В чат дома они уходят, если это разрешено настройками чата; в тихие часы — после их окончания.
+      </p>
+      <p className="honesty-inline">{SERVICE_RULE}</p>
+
+      <form className="ds-form" onSubmit={(event) => void publishAnnouncement(event)}>
+        <h3>Объявление от совета</h3>
+        <label className="ds-field">
+          Заголовок
+          <input
+            value={announcement.title}
+            required
+            minLength={3}
+            maxLength={200}
+            disabled={busy}
+            onChange={(event) => setAnnouncement({ ...announcement, title: event.target.value })}
+          />
+        </label>
+        <label className="ds-field">
+          Текст
+          <textarea
+            value={announcement.body}
+            required
+            maxLength={3000}
+            rows={4}
+            disabled={busy}
+            onChange={(event) => setAnnouncement({ ...announcement, body: event.target.value })}
+          />
+        </label>
+        <label className="poll-option">
+          <input
+            type="checkbox"
+            required
+            checked={announcement.service}
+            disabled={busy}
+            onChange={(event) => setAnnouncement({ ...announcement, service: event.target.checked })}
+          />
+          <span>Это сервисное сообщение, не реклама</span>
+        </label>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={
+            busy || !announcement.service || announcement.title.trim().length < 3 || !announcement.body.trim()
+          }
+        >
+          Опубликовать
+        </Button>
+        <FormNote note={announcementNote} />
+      </form>
+
+      <form className="ds-form" onSubmit={(event) => void publishPoll(event)}>
+        <h3>Опрос от совета</h3>
+        {poll.proposalId && (
+          <div className="honesty-inline">
+            <p>
+              Опрос по предложению жителя{source ? `: «${source.text}»` : ""}. После публикации предложение получит
+              статус «Вынесено на опрос».
+            </p>
+            <Button
+              type="button"
+              small
+              variant="secondary"
+              disabled={busy}
+              onClick={() => setPollField({ proposalId: null })}
+            >
+              Не связывать с предложением
+            </Button>
+          </div>
+        )}
+        <label className="ds-field">
+          Вопрос
+          <input
+            ref={question}
+            value={poll.question}
+            required
+            minLength={3}
+            maxLength={300}
+            disabled={busy}
+            onChange={(event) => setPollField({ question: event.target.value })}
+          />
+        </label>
+        {poll.options.map((option, index) => (
+          <div key={index} className="ds-actions">
+            <label className="ds-field">
+              Вариант {index + 1}
+              <input
+                value={option}
+                required
+                maxLength={100}
+                disabled={busy}
+                onChange={(event) =>
+                  setPollField({ options: poll.options.map((item, i) => (i === index ? event.target.value : item)) })
+                }
+              />
+            </label>
+            {poll.options.length > 2 && (
+              <Button
+                type="button"
+                small
+                variant="secondary"
+                disabled={busy}
+                onClick={() => setPollField({ options: poll.options.filter((_, i) => i !== index) })}
+              >
+                Убрать вариант {index + 1}
+              </Button>
+            )}
+          </div>
+        ))}
+        {poll.options.length < 10 && (
+          <Button
+            type="button"
+            small
+            variant="secondary"
+            disabled={busy}
+            onClick={() => setPollField({ options: [...poll.options, ""] })}
+          >
+            Добавить вариант
+          </Button>
+        )}
+        <label className="poll-option">
+          <input
+            type="checkbox"
+            checked={poll.multiple}
+            disabled={busy}
+            onChange={(event) => setPollField({ multiple: event.target.checked })}
+          />
+          <span>Можно выбрать несколько</span>
+        </label>
+        <label className="ds-field">
+          Голосование до
+          <input
+            type="datetime-local"
+            value={poll.closes}
+            required
+            disabled={busy}
+            onChange={(event) => setPollField({ closes: event.target.value })}
+          />
+        </label>
+        <label className="poll-option">
+          <input
+            type="checkbox"
+            required
+            checked={poll.service}
+            disabled={busy}
+            onChange={(event) => setPollField({ service: event.target.checked })}
+          />
+          <span>Это сервисное сообщение, не реклама</span>
+        </label>
+        <p className="ds-subtle">{POLL_NOTE}</p>
+        <Button type="submit" variant="primary" disabled={busy || !pollReady}>
+          Опубликовать опрос
+        </Button>
+        <FormNote note={pollNote} />
+        {publishedPoll && (
+          <Button
+            type="button"
+            small
+            variant="secondary"
+            onClick={() => links.navigate(links.view("poll", { house: houseId, poll: publishedPoll }))}
+          >
+            Открыть опрос
+          </Button>
+        )}
+      </form>
+
+      <h3>Предложения жителей</h3>
+      {proposals.length ? (
+        <ul className="ds-bullets" aria-label="Предложения жителей">
+          {proposals.map((item) => (
+            <ProposalItem key={item.id} item={item} houseId={houseId} links={links}>
+              {item.status === "new" && (
+                <Button
+                  small
+                  variant="secondary"
+                  disabled={busy}
+                  aria-label={`Сделать опросом: ${item.text.slice(0, 80)}`}
+                  onClick={() => {
+                    setPollNote(null);
+                    setPublishedPoll(null);
+                    setPollField({ question: item.text.slice(0, 300), proposalId: item.id });
+                  }}
+                >
+                  Сделать опросом
+                </Button>
+              )}
+            </ProposalItem>
+          ))}
+        </ul>
+      ) : (
+        <p className="ds-subtle">Жители пока ничего не предложили.</p>
+      )}
+    </section>
   );
 }
 

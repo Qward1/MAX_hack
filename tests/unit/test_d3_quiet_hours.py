@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 import pytest
 
 from domsignal.core.quiet_hours import MSK, minutes_label, parse_minutes, quiet_until
-from domsignal.services.digest import next_run
+from domsignal.services.digest import next_hour
 
 
 def msk(hour: int, minute: int = 0, day: int = 27) -> datetime:
@@ -40,6 +40,7 @@ def test_labels_round_trip_and_reject_bad_input() -> None:
             parse_minutes(bad)
 
 
-def test_the_digest_runs_at_nine_moscow_time() -> None:
-    assert next_run(msk(8, 59).astimezone(UTC), 9) == msk(9, 0).astimezone(UTC)
-    assert next_run(msk(9, 0).astimezone(UTC), 9) == msk(9, 0, day=28).astimezone(UTC)
+def test_the_digest_ticks_every_hour() -> None:
+    # D4: тик раз в час; местные 09:00 каждой УК проверяет сама сводка.
+    assert next_hour(msk(8, 59).astimezone(UTC)) == msk(9, 0).astimezone(UTC)
+    assert next_hour(msk(9, 0).astimezone(UTC)) == msk(10, 0).astimezone(UTC)

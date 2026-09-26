@@ -99,6 +99,8 @@ class PlatformTotals(ContractModel):
     houses: int
     #: Дома с открытым доступом жителей (D1).
     open_houses: int
+    #: Текущие дома без профиля маршрутизации: «регион не задан» (D4).
+    houses_without_region: int = 0
 
 
 class PlatformDashboard(ContractModel):

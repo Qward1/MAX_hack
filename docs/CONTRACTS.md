@@ -1949,3 +1949,67 @@ production — она же (SITE-ENTRY); `/login` — единый вход;
 Статистика (`ChannelStats`): `accepted`, `failed`, `unknown`, `pending`,
 `deferred_quiet_hours`, `skipped` по причинам (`UNSUBSCRIBED`, `NO_DIALOG`,
 `CHAT_SETTING_OFF`, `RETRACTED`, `ACCESS_REVOKED`, `CHAT_BINDING_INACTIVE`).
+
+## Регион дома, пояс, политика данных, совет дома — срез D4
+
+Аддитивно; решения —
+[HOUSE-REGION](decisions.md#house-region-2026-09-27),
+[REGION-TIMEZONE](decisions.md#region-timezone-2026-09-27),
+[REGIONS-AS-DATA](decisions.md#regions-as-data-2026-09-27),
+[PRIVACY-PAGE](decisions.md#privacy-page-2026-09-27),
+[BOT-FIRST-SCREEN](decisions.md#bot-first-screen-2026-09-27),
+[OPS-JURY-PERIOD](decisions.md#ops-jury-period-2026-09-27). Миграция
+`20260928_0014`.
+
+### Регион дома (платформа)
+
+| Метод | Путь | Что |
+|---|---|---|
+| GET | `/api/v1/platform/region-packs` | `RegionPackView[]`: код, название, пояс, версия, муниципалитеты загруженного справочника |
+| POST | `/api/v1/platform/house-management-requests/{id}/approve` | `HouseApproval` + `region_code`, `municipality_code`, `territory_policy` (`mixed` по умолчанию); без региона или не из справочника — 422 с `field_errors`; повтор того же одобрения — тот же ответ |
+| GET | `/api/v1/platform/houses` | `PlatformHouseView` + профиль; `region_code = null` — «регион не задан» |
+| POST | `/api/v1/platform/houses/{id}/region` | `HouseRegionChange` (регион и основание) → `PlatformHouseView`; аудит `operator.house_routing_profile`, как у CLI |
+
+`PlatformTotals.houses_without_region` — текущие дома без профиля.
+`/version` → `region_packs: {"_federal": "3", "RU-MOW": "2", …}` вместо
+`region_pack: "demo-1"`.
+
+### Пояс и справочник
+
+Слой региона: обязательные `name`, `timezone` (IANA); `reference_links[]`
+(`tariffs` | `capital_repair`, `label`, `url`, `verification`);
+`uk_default.channel_ids` — проверенные каналы заявки в УК, которые житель
+использует сам («Госуслуги Дом»). `ChatSettingsView.timezone_label` — подпись
+пояса дома чата. `CompanyDashboard.timezone` — пояс большинства домов УК.
+`HouseOverview.reference_links[]` — только `verified`, без цифр.
+
+### Бот
+
+Кнопка `message` (тип и текст, без `payload`) — пример в приветствии;
+`b:joinpick:{event_id}:{house_id}` — вступить в открытый дом и разобрать
+ожидающее сообщение. Приветствие, `/help`, сообщения о подключении и чтении
+чата заканчиваются строкой «Как ДомСигнал обращается с данными: {адрес}/privacy».
+
+### Совет дома и предложения
+
+| Метод | Путь | Кто | Что |
+|---|---|---|---|
+| GET | `/api/v1/houses/{house}/council` | житель дома | `CouncilView`: член ли совета; предложения — все для совета, свои для остальных |
+| POST | `/api/v1/houses/{house}/proposals` | житель дома | `ProposalCreate` → 201 `ProposalView`; не больше 3 нерассмотренных на жителя и дом (422) |
+| POST | `/api/v1/houses/{house}/council/announcements` | член совета | `CouncilAnnouncementCreate` (`service_only: true`) → 201 `CouncilPublished` |
+| POST | `/api/v1/houses/{house}/council/polls` | член совета | `CouncilPollCreate` (+`proposal_id`) → 201 `CouncilPublished` (`poll_id`) |
+| GET | `/api/v1/companies/{c}/houses/{house}/council` | сотрудник с доступом к дому | `CouncilAdminView`; жители для выбора — только администратору |
+| POST | `/api/v1/companies/{c}/houses/{house}/council/members` | администратор УК | `CouncilMemberChange` (житель дома, основание) |
+| POST | `/api/v1/companies/{c}/houses/{house}/council/members/{user}/revoke` | администратор УК | `CouncilMemberRevoke` |
+| POST | `/api/v1/companies/{c}/proposals/{id}/poll` | сотрудник с `broadcast.send` | 201 `BroadcastView` — черновик опроса «За / Против / Нужно обсудить», 3 дня |
+
+Сообщение совета — `Broadcast.origin = 'council'` с `tenant_id` УК дома:
+аудитория — один дом, каналы `chat` и `feed`, настройки чата — как у сообщений
+УК, подпись «Сообщение от совета дома»; полномочия проверяются при
+подтверждении и заново при отправке. Посторонний — маскированный 404.
+
+### Операции платформы
+
+`python -m domsignal.tools.platform_ops rename-house | rename-company |
+open-access | dismiss-signal | cancel-ticket` — с `--operator` и `--reason`,
+квитанция `operator.platform_ops` с прежним и новым значением.

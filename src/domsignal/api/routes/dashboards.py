@@ -27,7 +27,7 @@ def period_days(days: int) -> PeriodDays:
 
 
 def service(container: ContainerDep) -> DashboardService:
-    return DashboardService(container.settings.llm_daily_call_budget)
+    return DashboardService(container.settings.llm_daily_call_budget, container.zones)
 
 
 @router.get("/platform/dashboard", response_model=PlatformDashboard)

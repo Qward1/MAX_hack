@@ -100,6 +100,7 @@ export function PlatformOverview({ open }: { open: (page: string) => void }) {
         <StatTile label="Запросы на расширение" value={<button type="button" className="stat-link" onClick={() => open("quota-requests")}>{formatNumber(data.totals.quota_requests_pending)}</button>} />
         <StatTile label="Чаты подключены" value={formatNumber(data.totals.chats_active)} note={`подключались всего: ${formatNumber(data.totals.chats_total)}`} />
         <StatTile label="Дома в управлении" value={formatNumber(data.totals.houses)} note={`с открытым доступом: ${formatNumber(data.totals.open_houses)}`} />
+        {(data.totals.houses_without_region ?? 0) > 0 && <StatTile label="Регион не задан" value={<button type="button" className="stat-link" onClick={() => open("houses")}>{formatNumber(data.totals.houses_without_region ?? 0)}</button>} note="такие дома видят только федеральные каналы" />}
       </dl>
       <h2>Управляющие компании</h2>
       {data.companies.length === 0 ? <p className="state-panel">Организаций пока нет. Они появляются после одобрения заявки УК.</p> :

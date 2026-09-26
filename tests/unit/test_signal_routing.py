@@ -273,7 +273,9 @@ def of_type(directory: Any, route_type: str, subtype: str, **house: Any) -> Any:
 def test_a_chosen_type_takes_the_channel_only_from_the_directory(packaged: Any) -> None:
     lighting = of_type(packaged, "municipality", "street_lighting.failure")
     assert lighting.route_type == "municipality"
-    assert [channel.id for channel in lighting.channels] == ["pos_gosuslugi"]
+    # D4: в Казани правило «Народного контроля» — его каналы из справочника.
+    channels = [channel.id for channel in lighting.channels]
+    assert channels == ["ru_ta_narodny_kontrol", "pos_gosuslugi"]
     assert lighting.basis is not None and lighting.match == "rule"
     unknown = of_type(packaged, "municipality", "other.unspecified")
     assert unknown.route_type == "municipality" and unknown.match == "none"

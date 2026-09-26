@@ -2,8 +2,9 @@
 
 Правила:
 * только счётчики и длительности — ни текста жителей, ни цитат, ни авторов;
-* сутки считаются по московскому времени (Казань и Москва — UTC+3), границы
-  периода вычисляет PostgreSQL, а не часовой пояс процесса;
+* сутки платформы считаются по московскому времени, сутки УК — по поясу
+  большинства её домов из пакета региона (D4); границы периода вычисляет
+  PostgreSQL, а не часовой пояс процесса;
 * область УК — управления этой УК (`management_id`), а не адрес дома: заявки
   прежней УК того же дома в её обзор не попадают; оператор видит только
   назначенные ему дома.
@@ -46,11 +47,13 @@ from domsignal.db.models import (
     House,
     HouseAssignment,
     HouseManagement,
+    HouseRoutingProfile,
     ManagementCompany,
     Poll,
 )
 from domsignal.services.broadcasts import poll_closed, tally
 from domsignal.services.chat_quota import quota_state
+from domsignal.services.house_zone import HouseZones
 from domsignal.services.onboarding import OPEN, current_management, require_company
 
 TIMEZONE = "Europe/Moscow"
@@ -79,8 +82,10 @@ _START = text(
 )
 
 
-async def period(db: AsyncSession, days: int) -> tuple[list[date], datetime]:
-    params = {"tz": TIMEZONE, "days": days}
+async def period(
+    db: AsyncSession, days: int, zone: str = TIMEZONE
+) -> tuple[list[date], datetime]:
+    params = {"tz": zone, "days": days}
     day_list = [row.day for row in await db.execute(_PERIOD, params)]
     start = cast(datetime, await db.scalar(_START, params))
     return day_list, start
@@ -91,8 +96,9 @@ def _count_map(rows: Any) -> dict[Any, int]:
 
 
 class DashboardService:
-    def __init__(self, daily_call_budget: int) -> None:
+    def __init__(self, daily_call_budget: int, zones: HouseZones | None = None) -> None:
         self.daily_call_budget = daily_call_budget
+        self.zones = zones or HouseZones(None)
 
     # --- платформа ----------------------------------------------------------------
 
@@ -149,6 +155,15 @@ class DashboardService:
                 select(func.count())
                 .select_from(House)
                 .where(House.open_resident_access.is_(True), House.id.in_(current))
+            )
+            or 0,
+            houses_without_region=await db.scalar(
+                select(func.count())
+                .select_from(House)
+                .where(
+                    House.id.in_(current),
+                    House.id.not_in(select(HouseRoutingProfile.house_id)),
+                )
             )
             or 0,
         )
@@ -411,9 +426,10 @@ class DashboardService:
         self, db: AsyncSession, actor: UUID, company: UUID, days: PeriodDays
     ) -> CompanyDashboard:
         scope, houses = await self.company_scope(db, actor, company)
-        day_list, start = await period(db, days)
+        zone = await self.zones.of_company(db, company)
+        day_list, start = await period(db, days, zone)
         managements = [m for m, _, _ in houses]
-        params: dict[str, Any] = {"tz": TIMEZONE, "start": start, "ms": managements}
+        params: dict[str, Any] = {"tz": zone, "start": start, "ms": managements}
         by_management: dict[UUID, dict[str, Any]] = {m: defaultdict(int) for m in managements}
         activity: dict[date, dict[str, int]] = defaultdict(lambda: defaultdict(int))
         if managements:
@@ -508,7 +524,7 @@ class DashboardService:
         return CompanyDashboard(
             period_days=days,
             generated_at=datetime.now(UTC),
-            timezone=TIMEZONE,
+            timezone=zone,
             scope=scope,
             quota=(await quota_state(db, company)).view(),
             houses=[

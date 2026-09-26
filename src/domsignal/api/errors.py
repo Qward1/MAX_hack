@@ -74,7 +74,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         ):
             response.headers["Cache-Control"] = "no-store"
         if request.url.path.startswith(
-            ("/admin", "/platform-admin", "/company", "/login", "/join", "/site")
+            ("/admin", "/platform-admin", "/company", "/login", "/join", "/site", "/privacy")
         ):
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "

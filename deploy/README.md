@@ -262,10 +262,11 @@ previous image under its own tag for rollback.
 ```bash
 PREVIOUS="$(git rev-parse HEAD)"
 sudo docker tag domsignal-backend:local "domsignal-backend:pre-${PREVIOUS:0:7}"
-# Private directory outside the checkout; the script keeps seven copies.
+# Private directory outside the checkout. The script checks the new dump with
+# `pg_restore --list` itself; --keep 1000 leaves earlier manual copies in place
+# (the daily timer rotates only its own daily/ directory, see below).
 sudo sh -c 'umask 077; python3 scripts/backup_postgres.py \
-  --container domsignal-prod-db-1 --directory /var/backups/domsignal'
-sudo sh -c 'docker exec -i domsignal-prod-db-1 pg_restore --list < /var/backups/domsignal/<new>.dump | wc -l'
+  --container domsignal-prod-db-1 --directory /var/backups/domsignal --keep 1000'
 
 git fetch origin --prune
 git merge --ff-only origin/dev/b-experience
@@ -425,8 +426,40 @@ done
 sudo docker logs domsignal-prod-api-1 2>&1 | grep -cE '([0-9]{1,3}\.){3}[0-9]{1,3}(:[0-9]+)?([^/0-9]|$)'
 ```
 
-`DISPLAY_TIMEZONE` (default `Europe/Moscow`) sets the time zone of staff
-messages in MAX; an unknown zone stops the process at settings validation.
+`DISPLAY_TIMEZONE` (default `Europe/Moscow`) is the fallback time zone for
+houses without a region profile; since D4 staff messages, quiet hours, the
+09:00 digest and company dashboards use the zone of the house region pack
+(`timezone` in `regions/<code>/responsibility.yaml`). An unknown zone stops the
+process at settings validation.
+
+### Daily database backup and external monitoring (D4)
+
+A systemd timer makes a verified copy every day at 03:00 Moscow time.
+`scripts/backup_postgres.py` refuses to start below 2 GB free, dumps, checks
+the new file with `pg_restore --list` (an unreadable dump is removed and the
+unit fails), then keeps the 14 newest `domsignal-*.dump` in
+`/var/backups/domsignal/daily`. Manual pre-deploy copies in
+`/var/backups/domsignal` are outside that directory and never rotated by it.
+
+```bash
+sudo install -m 644 deploy/systemd/domsignal-backup.service \
+  deploy/systemd/domsignal-backup.timer /etc/systemd/system/
+sudo install -d -m 700 /var/backups/domsignal/daily
+sudo systemctl daemon-reload
+sudo systemctl enable --now domsignal-backup.timer
+sudo systemctl start domsignal-backup.service      # the first copy right away
+systemctl list-timers domsignal-backup.timer --no-pager
+sudo journalctl -u domsignal-backup.service -n 5 --no-pager   # path, size, toc_entries, free_mb
+```
+
+External monitoring is `.github/workflows/uptime.yml`: every 10 minutes it
+checks `/ready` 200, `/version` with a commit and the webhook without the
+secret → 401. A failed run e-mails the owner of the schedule (GitHub). With
+repository secrets `ALERT_MAX_BOT_TOKEN` and `ALERT_MAX_USER_ID` (set by the
+owner; tokens are never committed) it also sends a MAX message to that user,
+who must have started a dialog with that bot. The public address can be
+overridden by the repository variable `DOMSIGNAL_URL`. Each scheduled run of
+a private repository uses about one Actions minute.
 
 ## 7. Explicit isolated live resident scope
 

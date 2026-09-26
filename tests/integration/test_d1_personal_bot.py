@@ -28,6 +28,7 @@ from domsignal.db.models import (
     User,
 )
 from domsignal.services import bot_replies
+from domsignal.services.privacy import with_privacy
 from tests.integration.passive_harness import (
     CHAT_1,
     RESIDENT,
@@ -52,6 +53,11 @@ async def bot(integration_settings: Any) -> Any:
     finally:
         await harness.client.aclose()
         await harness.container.aclose()
+
+
+def privacy(h: Any) -> str:
+    """Адрес страницы /privacy, который бот ставит под приветствием и справкой (D4)."""
+    return str(h.container.personal_bot.privacy_url)
 
 
 class Dialog:
@@ -143,10 +149,12 @@ async def test_bot_started_without_a_token_greets_with_the_app_button(bot: Any) 
     await dialog.start()
     await dialog.settle()
     [greeting] = dialog.replies()
-    assert greeting.text == bot_replies.GREETING
-    assert 3 <= len(greeting.text.splitlines()) <= 4
-    assert labels(greeting) == ["Открыть ДомСигнал"]  # открытых домов нет
-    assert greeting.buttons[0][0].kind == "open_app"
+    # D4: под приветствием — ссылка на страницу /privacy.
+    assert greeting.text == with_privacy(bot_replies.GREETING, privacy(bot))
+    assert 3 <= len(bot_replies.GREETING.splitlines()) <= 4
+    # D4: сначала кнопки-примеры (тип `message`), затем «Открыть ДомСигнал».
+    assert labels(greeting) == [*bot_replies.EXAMPLES, "Открыть ДомСигнал"]  # открытых домов нет
+    assert [row[0].kind for row in greeting.buttons] == ["message", "message", "open_app"]
     user = await bot.scalar(select(User).where(User.max_user_id == str(GUEST)))
     assert user.dialog_open and user.max_identity_verified_at is None
 
@@ -157,8 +165,8 @@ async def test_a_user_without_houses_is_offered_the_open_ones(bot: Any) -> None:
     await dialog.start("from_somewhere")  # чужой параметр — тоже приветствие
     await dialog.settle()
     [greeting] = dialog.replies()
-    assert labels(greeting) == ["Открыть ДомСигнал", "Выбрать дом"]
-    assert payloads(greeting)[1] == "b:houses"
+    assert labels(greeting) == [*bot_replies.EXAMPLES, "Открыть ДомСигнал", "Выбрать дом"]
+    assert payloads(greeting)[-1] == "b:houses"
 
     await dialog.press("b:houses")
     await dialog.settle()
@@ -182,7 +190,9 @@ async def test_a_user_without_houses_is_offered_the_open_ones(bot: Any) -> None:
 async def test_the_connection_token_flow_is_unchanged(bot: Any) -> None:
     await bot.bind()  # подключение по токену `connect_…` проходит как раньше
     assert not [
-        message for message in bot.messaging.sent if message[2].text == bot_replies.GREETING
+        message
+        for message in bot.messaging.sent
+        if message[2].text.startswith(bot_replies.GREETING)
     ]
 
 
@@ -193,7 +203,8 @@ async def test_help_and_version(bot: Any) -> None:
     await dialog.say("/unknown")
     await dialog.settle()
     texts = [message.text for message in dialog.replies()]
-    assert texts == [bot_replies.HELP, "ДомСигнал, версия abcdef1.", bot_replies.HELP]
+    help_text = with_privacy(bot_replies.HELP, privacy(bot))
+    assert texts == [help_text, "ДомСигнал, версия abcdef1.", help_text]
 
 
 # ------------------------------------------------------ проблема в личке
@@ -274,6 +285,45 @@ async def test_a_replayed_event_gives_one_reply(bot: Any) -> None:
     await dialog.settle()
     assert len(dialog.replies()) == 1
     assert await bot.scalar(select(func.count()).select_from(RouteOutcome)) == 1
+
+
+async def test_an_example_button_leads_a_stranger_to_the_route_card_in_one_tap(
+    bot: Any,
+) -> None:
+    """D4, У-3: пример → выбор открытого дома → карточка маршрута, без повторного текста."""
+    await open_house(bot)
+    dialog = Dialog(bot, GUEST)
+    street, _ = bot_replies.EXAMPLES
+    await dialog.say(street)  # кнопка `message` присылает свой текст
+    await dialog.settle()
+    [choose] = dialog.replies()
+    assert choose.text == bot_replies.PICK_OPEN_HOUSE
+    [payload] = payloads(choose)
+    assert payload.startswith("b:joinpick:") and payload.endswith(str(bot.ids["h1"]))
+    intake = await bot.scalar(select(ExplicitIntake))
+    assert intake.text == bot_replies.EXAMPLES[street] and intake.state == "awaiting_house"
+    await dialog.press(payload)
+    await dialog.settle()
+    assert dialog.answers()[-1].text.startswith("Дом: Казань, Синтетическая улица, 1")
+    [outcome] = await bot.all(select(RouteOutcome))
+    assert outcome.decision == "external" and outcome.source == "dm_report"
+    card = dialog.replies()[-1]
+    assert "не к вашей УК" in card.text and labels(card) == ["Открыть карточку"]
+    # Повтор нажатия не создаёт второго разбора.
+    await dialog.press(payload)
+    await dialog.settle()
+    assert await bot.scalar(select(func.count()).select_from(RouteOutcome)) == 1
+
+
+async def test_the_elevator_example_gives_a_ticket(bot: Any) -> None:
+    dialog = Dialog(bot, RESIDENT)
+    _, elevator = bot_replies.EXAMPLES
+    await dialog.say(elevator)
+    await dialog.settle()
+    [ticket] = await bot.all(select(Ticket))
+    assert ticket.house_id == bot.ids["h1"] and ticket.source == "max_dm"
+    intake = await bot.scalar(select(ExplicitIntake))
+    assert intake.result_kind == "ticket"
 
 
 async def test_no_houses_explains_how_to_get_one(bot: Any) -> None:
@@ -414,7 +464,7 @@ async def test_a_group_report_without_a_dialog_is_answered_in_the_group_once(bot
     await dialog.start()
     await dialog.settle()
     texts = [message.text for message in dialog.replies()]
-    assert texts[0] == bot_replies.GREETING
+    assert texts[0] == with_privacy(bot_replies.GREETING, privacy(bot))
     assert any("не к вашей УК" in text for text in texts[1:])
 
 

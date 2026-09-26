@@ -25,7 +25,7 @@ BroadcastKind = Literal["announcement", "mailing", "poll"]
 BroadcastTopic = Literal["outage", "works", "meeting", "other"]
 BroadcastStatus = Literal["draft", "scheduled", "sent", "cancelled"]
 BroadcastChannel = Literal["chat", "dm", "feed", "staff"]
-BroadcastOrigin = Literal["company", "platform"]
+BroadcastOrigin = Literal["company", "platform", "council"]
 
 
 def _phone(value: str | None) -> str | None:
@@ -70,6 +70,8 @@ class ChatSettingsView(ContractModel):
     changed_at: datetime | None = None
     can_edit: bool = False
     history: list[ChatSettingsChange] = Field(default_factory=list)
+    #: Подпись пояса дома чата для тихих часов: «МСК», «ВЛАД» (D4, аддитивно).
+    timezone_label: str = "МСК"
 
 
 class ChatSettingsUpdate(ContractModel):
@@ -188,6 +190,15 @@ class OverviewStep(ContractModel):
     source: VerifiedSource | None = None
 
 
+class OverviewReference(ContractModel):
+    """Где посмотреть тарифы и капремонт (D4): официальная страница, без цифр."""
+
+    kind: Literal["tariffs", "capital_repair"]
+    label: str
+    url: str
+    source: VerifiedSource
+
+
 class HouseOverview(ContractModel):
     house_id: UUID
     name: str
@@ -201,6 +212,8 @@ class HouseOverview(ContractModel):
     channels: list[OverviewChannel] = Field(default_factory=list)
     accident_steps: list[OverviewStep] = Field(default_factory=list)
     reception_available: bool = False
+    #: Официальные страницы тарифов и капремонта региона (D4); нет источника — пусто.
+    reference_links: list[OverviewReference] = Field(default_factory=list)
 
 
 # ------------------------------------------------------ выполненные работы
@@ -574,3 +587,103 @@ class ReceptionOverview(ContractModel):
 class ReceptionBookingCreate(ContractModel):
     slot_id: UUID
     topic: str = Field(min_length=3, max_length=300)
+
+
+# ------------------------------------------------ совет дома и предложения (D4)
+
+ProposalStatus = Literal["new", "converted"]
+
+
+class ProposalCreate(ContractModel):
+    """«Предложить вопрос»: тема для обсуждения или опроса."""
+
+    text: str = Field(min_length=3, max_length=1000)
+
+    @field_validator("text")
+    @classmethod
+    def clean_text(cls, value: str) -> str:
+        cleaned = value.strip()
+        if len(cleaned) < 3:
+            raise ValueError("Text must have at least 3 characters")
+        return cleaned
+
+
+class ProposalView(ContractModel):
+    id: UUID
+    house_id: UUID
+    text: str
+    #: `new` — ждёт совета или УК; `converted` — вынесено на опрос.
+    status: ProposalStatus
+    created_at: datetime
+    #: Предложение текущего пользователя (автор видит статус своего).
+    mine: bool = False
+    #: Опрос, в который превратили предложение (ссылка `p_…` не нужна: экран опроса по id).
+    poll_id: UUID | None = None
+
+
+class CouncilView(ContractModel):
+    """Совет дома глазами жителя: член ли он совета и предложения.
+
+    Член совета видит все предложения дома, остальные — только свои.
+    """
+
+    house_id: UUID
+    is_member: bool
+    proposals: list[ProposalView] = Field(default_factory=list)
+
+
+class CouncilAnnouncementCreate(ContractModel):
+    """Объявление от совета дома: в чат дома (по настройкам чата) и в ленту."""
+
+    title: str = Field(min_length=3, max_length=200)
+    body: str = Field(min_length=1, max_length=3000)
+    #: «Только сервисные сообщения, реклама запрещена» — подтверждение автора.
+    service_only: Literal[True]
+
+
+class CouncilPollCreate(ContractModel):
+    """Опрос от совета дома; `proposal_id` — предложение, которое он закрывает."""
+
+    poll: PollDraft
+    proposal_id: UUID | None = None
+    service_only: Literal[True]
+
+
+class CouncilPublished(ContractModel):
+    broadcast_id: UUID
+    status: BroadcastStatus
+    poll_id: UUID | None = None
+
+
+class CouncilMemberView(ContractModel):
+    user_id: UUID
+    display_name: str
+    since: datetime
+
+
+class CouncilResident(ContractModel):
+    """Житель дома — участник домового чата — для выбора в совет."""
+
+    user_id: UUID
+    display_name: str
+    is_member: bool
+
+
+class CouncilAdminView(ContractModel):
+    """Совет дома в кабинете УК: члены, жители для выбора (только администратору), предложения."""
+
+    house_id: UUID
+    can_manage: bool
+    members: list[CouncilMemberView] = Field(default_factory=list)
+    residents: list[CouncilResident] = Field(default_factory=list)
+    proposals: list[ProposalView] = Field(default_factory=list)
+
+
+class CouncilMemberChange(ContractModel):
+    user_id: UUID
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class CouncilMemberRevoke(ContractModel):
+    reason: str = Field(min_length=3, max_length=500)
+

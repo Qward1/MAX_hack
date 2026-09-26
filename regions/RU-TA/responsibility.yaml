@@ -1,15 +1,22 @@
 # Региональный слой справочника ответственности: Республика Татарстан.
 #
 # Регион демонстрации и пилота — Казань (решение владельца 20.09.2026).
-# Проверенных региональных и муниципальных организаций пока нет: Казань
-# наследует федеральный слой. Записи ниже остаются needs_verification и
-# жителю не показываются, пока владелец не сверит сценарий подачи и ссылку.
+# D4: ГИС РТ «Народный контроль» сверена по официальным страницам 26.09.2026
+# (с сервера в РФ): описание системы — digital.tatarstan.ru (Минцифры РТ),
+# вход и категории — uslugi.tatarstan.ru/open-gov (Портал услуг РТ). Три
+# правила — по дословным названиям категорий: первым каналом — «Народный
+# контроль», вторым — «Госуслуги. Решаем вместе» (федеральный канал работает и
+# в Казани). Черновик обращения готовится для первого канала.
+# ГЖИ РТ по-прежнему needs_verification и жителю не показывается.
 schema_version: 1
 layer_id: RU-TA
 layer: region
 region: RU-TA
-version: "1"
-updated_at: "2026-09-20"
+name: Республика Татарстан
+# Часовой пояс региона (IANA): тихие часы, сводка и сутки дашбордов его домов.
+timezone: Europe/Moscow
+version: "2"
+updated_at: "2026-09-26"
 
 organizations:
   - id: ru_ta_gji
@@ -29,18 +36,24 @@ channels:
     organization_id: null
     channel_type: official_web
     label: ГИС РТ «Народный контроль»
-    url: null
+    url: https://uslugi.tatarstan.ru/open-gov
     phone: null
-    entry_hint: null
+    entry_hint: uslugi.tatarstan.ru → «Народный контроль», вход через Портал услуг РТ
     routes_to_competent_authority: false
-    facts: []
+    facts:
+      - text: "«ГИС РТ «Народный контроль» … представляет собой систему публикации и рассмотрения уведомлений граждан, содержащих информацию о проблемах благоустройства республики, города, села, района, улицы»."
+        source_title: "ГИС РТ «Народный контроль» — страница Министерства цифрового развития Республики Татарстан, digital.tatarstan.ru. Проверено 26.09.2026"
+        source_url: https://digital.tatarstan.ru/gosudarstvennaya-informatsionnaya-sistema.htm
+      - text: "«Жители нашей республики могут сообщить о волнующей их проблеме, указав ее местонахождение и приложив фотодоказательства, по 61 категории»."
+        source_title: "ГИС РТ «Народный контроль» — страница Министерства цифрового развития Республики Татарстан, digital.tatarstan.ru. Проверено 26.09.2026"
+        source_url: https://digital.tatarstan.ru/gosudarstvennaya-informatsionnaya-sistema.htm
     unavailable_regions: []
     verification:
-      status: needs_verification
-      verified_at: null
-      verified_by: null
-      source_title: Страницы digital.tatarstan.ru и uslugi.tatarstan.ru найдены поиском; сценарий подачи вручную не проверен
-      source_url: null
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (страницы digital.tatarstan.ru и uslugi.tatarstan.ru/open-gov, прочитаны с сервера в РФ)
+      source_title: "ГИС РТ «Народный контроль» — Минцифры РТ, digital.tatarstan.ru; вход — Портал услуг РТ, uslugi.tatarstan.ru/open-gov. Проверено 26.09.2026"
+      source_url: https://digital.tatarstan.ru/gosudarstvennaya-informatsionnaya-sistema.htm
 
   - id: ru_ta_gji_web
     organization_id: ru_ta_gji
@@ -59,7 +72,99 @@ channels:
       source_title: Страницы gji.tatarstan.ru найдены поиском, содержимое не открывалось
       source_url: null
 
-rules: []
+rules:
+  - id: ru_ta.street_lighting.narodny_kontrol
+    priority: 100
+    match:
+      subtypes:
+        - street_lighting.failure
+      location_scopes:
+        - municipal_territory
+    route_type: municipality
+    organization_id: null
+    channel_ids:
+      - ru_ta_narodny_kontrol
+      - pos_gosuslugi
+    can_prepare_appeal: true
+    basis:
+      text: "В «Народном контроле» Республики Татарстан есть категория «Организация наружного освещения». Сообщение принимает и «Госуслуги. Решаем вместе». Ответственный орган определяет сервис, а не ДомСигнал."
+      source_title: "Портал услуг Республики Татарстан, «Народный контроль» — категории уведомлений, uslugi.tatarstan.ru/open-gov. Проверено 26.09.2026"
+      source_url: https://uslugi.tatarstan.ru/open-gov
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (страница категорий Портала услуг РТ, прочитана с сервера в РФ)
+      source_title: "Портал услуг Республики Татарстан, «Народный контроль», uslugi.tatarstan.ru/open-gov. Проверено 26.09.2026"
+      source_url: https://uslugi.tatarstan.ru/open-gov
+  - id: ru_ta.road_damage.narodny_kontrol
+    priority: 100
+    match:
+      subtypes:
+        - road.damage
+      location_scopes:
+        - municipal_territory
+    route_type: municipality
+    organization_id: null
+    channel_ids:
+      - ru_ta_narodny_kontrol
+      - pos_gosuslugi
+    can_prepare_appeal: true
+    basis:
+      text: "В «Народном контроле» Республики Татарстан есть категория «Содержание и ремонт муниципальных дорог». Сообщение принимает и «Госуслуги. Решаем вместе». Ответственный орган определяет сервис, а не ДомСигнал."
+      source_title: "Портал услуг Республики Татарстан, «Народный контроль» — категории уведомлений, uslugi.tatarstan.ru/open-gov. Проверено 26.09.2026"
+      source_url: https://uslugi.tatarstan.ru/open-gov
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (страница категорий Портала услуг РТ, прочитана с сервера в РФ)
+      source_title: "Портал услуг Республики Татарстан, «Народный контроль», uslugi.tatarstan.ru/open-gov. Проверено 26.09.2026"
+      source_url: https://uslugi.tatarstan.ru/open-gov
+  - id: ru_ta.landscaping.narodny_kontrol
+    priority: 100
+    match:
+      subtypes:
+        - landscaping.public
+      location_scopes:
+        - municipal_territory
+    route_type: municipality
+    organization_id: null
+    channel_ids:
+      - ru_ta_narodny_kontrol
+      - pos_gosuslugi
+    can_prepare_appeal: true
+    basis:
+      text: "В «Народном контроле» Республики Татарстан есть категория «Комплексное благоустройство территории». Сообщение принимает и «Госуслуги. Решаем вместе». Ответственный орган определяет сервис, а не ДомСигнал."
+      source_title: "Портал услуг Республики Татарстан, «Народный контроль» — категории уведомлений, uslugi.tatarstan.ru/open-gov. Проверено 26.09.2026"
+      source_url: https://uslugi.tatarstan.ru/open-gov
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (страница категорий Портала услуг РТ, прочитана с сервера в РФ)
+      source_title: "Портал услуг Республики Татарстан, «Народный контроль», uslugi.tatarstan.ru/open-gov. Проверено 26.09.2026"
+      source_url: https://uslugi.tatarstan.ru/open-gov
+
+# Где посмотреть тарифы и капремонт (D4): только официальные страницы, без цифр.
+reference_links:
+  - id: ru_ta.tariffs
+    kind: tariffs
+    label: "Тарифы — Государственный комитет Республики Татарстан по тарифам"
+    url: https://kt.tatarstan.ru/ntarif.htm
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (официальная страница, прочитана 26.09.2026)
+      source_title: "Страница «Тарифы» Государственного комитета Республики Татарстан по тарифам, kt.tatarstan.ru. Проверено 26.09.2026 с сервера в РФ"
+      source_url: https://kt.tatarstan.ru/ntarif.htm
+  - id: ru_ta.capital_repair
+    kind: capital_repair
+    label: "Капитальный ремонт — региональный оператор НО «Фонд ЖКХ Республики Татарстан»"
+    url: https://fgkh.tatar/informaciya-o-regionalnom-operatore
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (официальная страница, прочитана 26.09.2026)
+      source_title: "fgkh.tatar, «Информация о региональном операторе»: «Региональный оператор капитального ремонта МКД в Республике Татарстан Некоммерческая организация «Фонд жилищно-коммунального хозяйства РТ»». Проверено 26.09.2026"
+      source_url: https://fgkh.tatar/informaciya-o-regionalnom-operatore
 
 municipalities:
   - code: kazan

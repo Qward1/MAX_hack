@@ -29,6 +29,9 @@ from domsignal.contracts.community import (
     ChatSettingsView,
     CompanyProfileUpdate,
     CompanyProfileView,
+    CouncilAdminView,
+    CouncilMemberChange,
+    CouncilMemberRevoke,
     HouseFactsUpdate,
     HouseFactsView,
     PlatformNoticeList,
@@ -315,7 +318,7 @@ async def update_staff_settings(
     db: DbDep,
     container: ContainerDep,
 ) -> StaffSettings:
-    """Ежедневная сводка в 09:00 МСК в личку MAX — включает сам сотрудник."""
+    """Ежедневная сводка в 09:00 по местному времени УК в личку MAX — включает сам сотрудник."""
     async with db.begin():
         return await container.digest.update_settings(
             db, actor_id=user.id, company_id=company_id, payload=payload
@@ -383,4 +386,90 @@ async def cancel_reception_slot(
     async with db.begin():
         return await container.reception.cancel_slot(
             db, actor_id=user.id, company_id=company_id, slot_id=slot_id
+        )
+
+
+# ------------------------------------------------ совет дома и предложения (D4)
+
+
+@router.get(
+    "/companies/{company_id}/houses/{house_id}/council", response_model=CouncilAdminView
+)
+async def house_council(
+    company_id: UUID, house_id: UUID, user: Employee, db: DbDep, container: ContainerDep
+) -> CouncilAdminView:
+    """Совет дома и предложения жителей; жители для выбора — только администратору."""
+    assert container.council is not None
+    async with db.begin():
+        return await container.council.admin_view(
+            db, actor_id=user.id, company_id=company_id, house_id=house_id
+        )
+
+
+@router.post(
+    "/companies/{company_id}/houses/{house_id}/council/members",
+    response_model=CouncilAdminView,
+)
+async def grant_council(
+    company_id: UUID,
+    house_id: UUID,
+    payload: CouncilMemberChange,
+    user: Employee,
+    db: DbDep,
+    container: ContainerDep,
+) -> CouncilAdminView:
+    assert container.council is not None
+    async with db.begin():
+        return await container.council.grant(
+            db, actor_id=user.id, company_id=company_id, house_id=house_id, payload=payload
+        )
+
+
+@router.post(
+    "/companies/{company_id}/houses/{house_id}/council/members/{member_id}/revoke",
+    response_model=CouncilAdminView,
+)
+async def revoke_council(
+    company_id: UUID,
+    house_id: UUID,
+    member_id: UUID,
+    payload: CouncilMemberRevoke,
+    user: Employee,
+    db: DbDep,
+    container: ContainerDep,
+) -> CouncilAdminView:
+    assert container.council is not None
+    async with db.begin():
+        return await container.council.revoke(
+            db,
+            actor_id=user.id,
+            company_id=company_id,
+            house_id=house_id,
+            user_id=member_id,
+            payload=payload,
+        )
+
+
+@router.post(
+    "/companies/{company_id}/proposals/{proposal_id}/poll",
+    response_model=BroadcastView,
+    status_code=status.HTTP_201_CREATED,
+)
+async def proposal_to_poll(
+    company_id: UUID,
+    proposal_id: UUID,
+    key: Key,
+    user: Employee,
+    db: DbDep,
+    container: ContainerDep,
+) -> BroadcastView:
+    """Предложение жителя → черновик опроса; отправка — обычным подтверждением."""
+    assert container.council is not None
+    async with db.begin():
+        return await container.council.proposal_to_poll(
+            db,
+            actor_id=user.id,
+            company_id=company_id,
+            proposal_id=proposal_id,
+            idempotency_key=key,
         )

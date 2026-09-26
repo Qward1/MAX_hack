@@ -1,6 +1,7 @@
 """Ежедневная сводка сотрудникам (D3).
 
-В 09:00 МСК — личное сообщение в MAX сотрудникам, которые включили сводку в
+В 09:00 по местному времени УК (D4: пояс большинства её домов из пакета
+региона) — личное сообщение в MAX сотрудникам, которые включили сводку в
 кабинете и которым бот может написать: новые сигналы за сутки по силе,
 заявки без исполнителя, ожидающие проверки жителями, возвращённые в работу и
 ссылка в кабинет. Пустой день — без сообщения. Только числа по домам, к
@@ -24,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from domsignal.bot.messaging import PersonalMessage
 from domsignal.contracts.community import StaffSettings, StaffSettingsUpdate
-from domsignal.core.quiet_hours import MSK
+from domsignal.core.display_time import display_zone
 from domsignal.db.models import (
     ManagementCompany,
     NotificationDelivery,
@@ -47,6 +48,7 @@ from domsignal.services.community_texts import (
     DIGEST_VERIFICATION,
 )
 from domsignal.services.errors import RescheduleJob, ResourceNotFound
+from domsignal.services.house_zone import HouseZones
 from domsignal.services.membership import MembershipService
 from domsignal.services.onboarding import require_company
 
@@ -65,13 +67,9 @@ ACTIVE_TICKETS = (
 )
 
 
-def next_run(now: datetime, hour: int) -> datetime:
-    """Ближайшие `hour`:00 по Москве строго после `now`."""
-    local = now.astimezone(MSK)
-    candidate = local.replace(hour=hour, minute=0, second=0, microsecond=0)
-    if candidate <= local:
-        candidate += timedelta(days=1)
-    return candidate.astimezone(UTC)
+def next_hour(now: datetime) -> datetime:
+    """Начало следующего часа: тик раз в час ищет УК, у которых местные 09:00."""
+    return now.astimezone(UTC).replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
 
 
 class DigestService:
@@ -81,10 +79,13 @@ class DigestService:
         session_factory: async_sessionmaker[AsyncSession],
         public_base_url: str | None,
         hour_msk: int = 9,
+        zones: HouseZones | None = None,
     ) -> None:
         self.sessions = session_factory
         self.public_base_url = public_base_url
+        #: Час сводки по местному времени УК (`DAILY_DIGEST_HOUR_MSK` — историческое имя).
         self.hour = hour_msk
+        self.zones = zones or HouseZones(None)
         self.memberships = MembershipService()
 
     # ------------------------------------------------------------ настройка
@@ -117,13 +118,24 @@ class DigestService:
     async def tick(self, payload: dict[str, Any], *, now: datetime | None = None) -> None:
         del payload
         at = now or datetime.now(UTC)
-        await self.run(now=at)
-        raise RescheduleJob(next_run(at, self.hour))
+        await self.run(now=at, due_only=True)
+        raise RescheduleJob(next_hour(at))
 
-    async def run(self, *, now: datetime | None = None, company_id: UUID | None = None) -> int:
-        """Поставить сводки дня. Возвращает число поставленных сообщений."""
+    async def run(
+        self,
+        *,
+        now: datetime | None = None,
+        company_id: UUID | None = None,
+        due_only: bool = False,
+    ) -> int:
+        """Поставить сводки дня. Возвращает число поставленных сообщений.
+
+        `due_only` — только УК, у которых по их местному времени сейчас час
+        сводки (тик); ручной запуск ставит сводку сразу. День сводки и ключ
+        повтора — местная дата УК.
+        """
         at = now or datetime.now(UTC)
-        day = at.astimezone(MSK).strftime("%d.%m.%Y")
+        zones: dict[UUID, str] = {}
         queued = 0
         async with self.sessions() as session, session.begin():
             query = (
@@ -142,10 +154,17 @@ class DigestService:
             for membership, user, company in (await session.execute(query)).tuples():
                 if not dialog_ready(user):
                     continue
-                text = await self._text(session, user.id, company, day, at)
+                if company.id not in zones:
+                    zones[company.id] = await self.zones.of_company(session, company.id)
+                local = at.astimezone(display_zone(zones[company.id]))
+                if due_only and local.hour != self.hour:
+                    continue
+                text = await self._text(
+                    session, user.id, company, local.strftime("%d.%m.%Y"), at
+                )
                 if text is None:
                     continue  # Пустой день — без сообщения.
-                key = f"digest:{at.astimezone(MSK).date().isoformat()}:{company.id}:{user.id}"
+                key = f"digest:{local.date().isoformat()}:{company.id}:{user.id}"
                 outbox_id = uuid4()
                 inserted = await session.scalar(
                     insert(OutboxMessage)
@@ -276,4 +295,4 @@ class DigestService:
         return max_destination(user, delivery), PersonalMessage(str(outbox.payload["text"]), ()), 0
 
 
-__all__ = ["DigestService", "TICK_JOB", "next_run"]
+__all__ = ["DigestService", "TICK_JOB", "next_hour"]

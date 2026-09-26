@@ -1,5 +1,5 @@
 import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Feedback, History, OneTimeLink, Status, Title, connectionErrors, dateInput, formValue, submitted, useAction, useRead, type Schema } from "./administration";
 import { QuotaMeter } from "./charts";
 import { ChatSettingsPanel, CompanyProfileForm, HouseFactsForm } from "./CommunityPages";
@@ -99,9 +99,9 @@ function CredentialReset({ base, user }: { base: string; user: string }) {
 export function MyHouses({ base }: { base: string }) {
   const r = useRead<House[]>(`${base}/houses`);
   return <><Title description="Дома, на которые вы назначены">Мои дома</Title><Feedback loading={r.loading} error={r.error} />
-    {!r.error && <HouseList houses={r.data ?? []} />}</>;
+    {!r.error && <HouseList houses={r.data ?? []} base={base} />}</>;
 }
-export function HouseList({ houses, manage }: { houses: House[]; manage?: { base: string; refresh: () => void } }) {
+export function HouseList({ houses, manage, base = manage?.base }: { houses: House[]; manage?: { base: string; refresh: () => void }; base?: string }) {
   return houses.length ? <div className="house-cards">{houses.map(h => <section className="admin-detail" key={h.management_id}>
     <h2>{h.address}</h2><p>Управление с {formatDay(h.valid_from)}{h.valid_to && ` до ${formatDay(h.valid_to)}`}</p>
     <p>{countLabel(h.open_ticket_count, ["открытая заявка", "открытые заявки", "открытых заявок"])} · {countLabel(h.operator_count, ["оператор", "оператора", "операторов"])} · {countLabel(h.responsible_count, ["ответственный", "ответственных", "ответственных"])}</p>
@@ -111,7 +111,98 @@ export function HouseList({ houses, manage }: { houses: House[]; manage?: { base
       {b.status === "active" && b.passive_capture_enabled != null && ` · Чтение чата: ${b.passive_capture_enabled ? "включено" : "выключено"}`}</p>)}
     {manage && <OpenAccessSwitch base={manage.base} house={h} refresh={manage.refresh} />}
     {manage && <HouseFactsForm base={manage.base} house={h} refresh={manage.refresh} />}
+    {base && <HouseCouncil base={base} house={h} />}
   </section>)}</div> : <p className="state-panel">Доступных домов пока нет.</p>;
+}
+
+/**
+ * Совет дома (D4): члены совета и предложения жителей. Отмечает и снимает
+ * членов совета только администратор УК (`can_manage`), с основанием;
+ * остальные сотрудники видят состав и предложения. Данные — при раскрытии.
+ */
+export function HouseCouncil({ base, house }: { base: string; house: House }) {
+  const [open, setOpen] = useState(false);
+  return <details className="passive-switch" onToggle={e => setOpen(e.currentTarget.open)}>
+    <summary>Совет дома</summary>
+    {open && <CouncilDetail base={base} houseId={house.house_id} />}
+  </details>;
+}
+const councilStatus: Record<string, string> = { new: "Ждёт рассмотрения", converted: "Вынесено на опрос" };
+const COUNCIL_FIELDS = { user_id: "житель", reason: "основание — от 3 до 500 символов" };
+function CouncilDetail({ base, houseId }: { base: string; houseId: string }) {
+  const path = `${base}/houses/${houseId}/council`;
+  const r = useRead<Schema["CouncilAdminView"]>(path);
+  const action = useAction(r.refresh, COUNCIL_FIELDS);
+  const [asking, setAsking] = useState<{ user: string; name: string; revoke: boolean } | null>(null);
+  const [search, setSearch] = useState("");
+  const [notice, setNotice] = useState("");
+  // Повтор после сбоя — с тем же ключом: второй черновик опроса не появится.
+  const [pollKeys] = useState(() => new Map<string, string>());
+  const view = r.data;
+  const members = view?.members ?? [];
+  const query = search.trim().toLowerCase();
+  const candidates = (view?.residents ?? []).filter(p => !p.is_member && p.display_name.toLowerCase().includes(query));
+  const proposals = view?.proposals ?? [];
+  const ask = (user: string, name: string, revoke: boolean) => { setNotice(""); setAsking({ user, name, revoke }); };
+  const change = async (event: FormEvent<HTMLFormElement>) => {
+    if (!asking) return;
+    const reason = formValue(submitted(event), "reason");
+    const result = asking.revoke
+      ? await action.run<Schema["CouncilAdminView"]>(`${path}/members/${asking.user}/revoke`, { reason })
+      : await action.run<Schema["CouncilAdminView"]>(`${path}/members`, { user_id: asking.user, reason });
+    if (result) { setNotice(asking.revoke ? `${asking.name}: отметка о членстве в совете снята.` : `${asking.name} отмечен(а) в совете дома.`); setAsking(null); }
+  };
+  const toPoll = async (proposal: string) => {
+    setNotice("");
+    const key = pollKeys.get(proposal) ?? crypto.randomUUID();
+    pollKeys.set(proposal, key);
+    const result = await action.run<Schema["BroadcastView"]>(`${base}/proposals/${proposal}/poll`, {}, key);
+    if (result) setNotice("Черновик опроса создан — откройте раздел «Рассылки», проверьте и отправьте.");
+  };
+  const reasonForm = (revoke: boolean) => asking && asking.revoke === revoke &&
+    <form className="ticket-form admin-feedback" aria-label="Подтверждение: совет дома" onSubmit={e => void change(e)}>
+      <p>{revoke ? `Снять ${asking.name} из совета дома?` : `Отметить ${asking.name} в совете дома?`} Основание попадёт в журнал действий.</p>
+      <label>Основание<textarea name="reason" required minLength={3} maxLength={500}
+        placeholder={revoke ? "Например: житель попросил снять отметку" : "Например: избран на общем собрании"} /></label>
+      <div className="button-row"><button className="ticket-button" disabled={action.busy}>{revoke ? "Подтвердить: снять" : "Подтвердить: отметить в совет"}</button>
+        <button type="button" className="ticket-button secondary" disabled={action.busy} onClick={() => setAsking(null)}>Отмена</button></div>
+    </form>;
+  return <>
+    <Feedback loading={r.loading && !view} error={r.error ?? (action.error || undefined)} />
+    {notice && <p role="status" className="muted">{notice}</p>}
+    {view && !r.error && <>
+      <p className="muted">Совет дома публикует объявления и опросы для своего дома с подписью «Сообщение от совета дома».
+        {view.can_manage ? " Отмечать и снимать членов совета может администратор УК." : " Состав совета меняет администратор УК."}</p>
+      <h4>Члены совета</h4>
+      {members.length ? <ul className="admin-records">{members.map(m => <li key={m.user_id}>
+        <span>{m.display_name}</span><time>в совете с {new Date(m.since).toLocaleDateString("ru-RU")}</time>
+        {view.can_manage && <button className="ticket-button secondary" disabled={action.busy} aria-label={`Снять из совета: ${m.display_name}`}
+          onClick={() => ask(m.user_id, m.display_name, true)}>Снять</button>}
+      </li>)}</ul> : <p className="muted">В совете дома пока никого нет.</p>}
+      {reasonForm(true)}
+      {view.can_manage && <>
+        <h4>Жители дома</h4>
+        {(view.residents ?? []).some(p => !p.is_member) ? <>
+          <div className="inline-form"><label>Найти жителя<input value={search} onChange={e => setSearch(e.target.value)} maxLength={100} /></label></div>
+          <ul className="admin-records">{candidates.map(p => <li key={p.user_id}><span>{p.display_name}</span>
+            <button className="ticket-button secondary" disabled={action.busy} aria-label={`Отметить в совет: ${p.display_name}`}
+              onClick={() => ask(p.user_id, p.display_name, false)}>Отметить в совет</button></li>)}</ul>
+          {!candidates.length && <p className="muted">Никого не нашли.</p>}
+        </> : <p className="muted">Жителей для выбора нет. В совет можно отметить участника домового чата или жителя, выбравшего дом с открытым доступом.</p>}
+        {reasonForm(false)}
+      </>}
+      <h4>Предложения жителей</h4>
+      {proposals.length ? <ul className="admin-records">{proposals.map(p => <li key={p.id}>
+        <span className="pre-wrap">{p.text}</span>
+        <span className="admin-status">{councilStatus[p.status] ?? p.status}</span>
+        <time>{new Date(p.created_at).toLocaleString("ru-RU")}</time>
+        {view.can_manage && p.status === "new" && <button className="ticket-button secondary" disabled={action.busy}
+          aria-label={`Сделать опросом: ${p.text.slice(0, 80)}`} onClick={() => void toPoll(p.id)}>Сделать опросом</button>}
+      </li>)}</ul> : <p className="muted">Жители пока ничего не предложили.</p>}
+      {view.can_manage && proposals.some(p => p.status === "new") &&
+        <p className="muted">«Сделать опросом» создаёт черновик опроса с вариантами «За», «Против», «Нужно обсудить» на 3 дня. Его можно изменить в разделе «Рассылки» до отправки.</p>}
+    </>}
+  </>;
 }
 
 /** Открытый доступ к дому (OPEN-HOUSE-ACCESS-2026-09-25): включение — с подтверждением. */

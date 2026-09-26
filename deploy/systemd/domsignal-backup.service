@@ -1,0 +1,12 @@
+# Ежесуточная копия БД production (D4, №13): pg_dump → pg_restore --list →
+# 14 копий в отдельном каталоге daily/ (ручные копии перед выкладкой в
+# /var/backups/domsignal ротация не трогает). Установка — deploy/README.md §7.
+[Unit]
+Description=DomSignal PostgreSQL daily backup
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/usr/bin/python3 /opt/domsignal/scripts/backup_postgres.py --container domsignal-prod-db-1 --directory /var/backups/domsignal/daily --keep 14 --min-free-mb 2048

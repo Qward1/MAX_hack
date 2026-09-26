@@ -387,7 +387,7 @@ export function ChatSettingsPanel({ bindingId }: { bindingId: string }) {
           onChange={e => setForm({ ...value, [name]: e.target.checked })} />{label}</label>)}
       </fieldset>
       <p className="muted">Памятка безопасности и сообщение о чтении чата не отключаются: это автоматический голос бота.</p>
-      <fieldset className="choice-row" disabled={!view.can_edit}><legend>Тихие часы, МСК</legend>
+      <fieldset className="choice-row" disabled={!view.can_edit}><legend>Тихие часы, {view.timezone_label}</legend>
         <label className="checkbox-label"><input type="checkbox" checked={noQuiet}
           onChange={e => setForm({ ...value, quiet_start: e.target.checked ? "00:00" : "22:00", quiet_end: e.target.checked ? "00:00" : "08:00" })} />Без тихих часов</label>
         {!noQuiet && <div className="inline-form">
@@ -480,7 +480,7 @@ export function Notices({ base }: { base: string }) {
     <Title description="Сообщения платформы ДомСигнал и ваша ежедневная сводка">Уведомления</Title>
     <section className="admin-detail" aria-label="Ежедневная сводка">
       <h2>Ежедневная сводка в MAX</h2>
-      <p>В 09:00 МСК бот пришлёт в личные сообщения: новые сигналы за сутки по силе, заявки без исполнителя, ожидающие проверки жителями, возвращённые в работу. В пустой день сообщения нет.</p>
+      <p>В 09:00 по местному времени ваших домов бот пришлёт в личные сообщения: новые сигналы за сутки по силе, заявки без исполнителя, ожидающие проверки жителями, возвращённые в работу. В пустой день сообщения нет.</p>
       <Feedback loading={settings.loading && !s} error={settings.error ?? (action.error || undefined)} />
       {s && <>
         <p>Сводка: <strong>{s.daily_digest_enabled ? "включена" : "выключена"}</strong></p>

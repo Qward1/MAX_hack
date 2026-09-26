@@ -32,6 +32,7 @@ from domsignal.contracts.common import ContractModel
 from domsignal.contracts.routing import SafetyBlock
 from domsignal.core.display_time import DEFAULT_DISPLAY_TIMEZONE, staff_moment
 from domsignal.core.signals import DANGER_LABELS, author_label
+from domsignal.services.privacy import PRIVACY_LINE
 from domsignal.services.route_card_render import safety_lines
 
 #: Вид сообщения в существующем outbox: сообщение в групповой чат.
@@ -115,11 +116,11 @@ def _company(name: str | None) -> str:
     return f"управляющей компанией «{cleaned}»" if cleaned else _UNNAMED_COMPANY
 
 
-def reading_notice_text(company_name: str | None) -> str:
+def reading_notice_text(company_name: str | None, privacy_url: str | None = None) -> str:
     """Сообщение о чтении чата: кто подключил, что читает, кто отключит.
 
-    Никаких сроков, гарантий и ссылок: только то, что продукт делает на самом
-    деле и что можно проверить.
+    Никаких сроков, гарантий и ссылок, кроме страницы о данных (D4): только
+    то, что продукт делает на самом деле и что можно проверить.
     """
     who = _company(company_name)
     subject = (
@@ -139,11 +140,16 @@ def reading_notice_text(company_name: str | None) -> str:
             "Сообщение в этом чате не является официальным обращением.",
             f"Отключить чтение может {subject}. "
             "Администратор чата может удалить бота из чата.",
+            *_privacy(privacy_url),
         )
     )
 
 
-def connection_notice_text(company_name: str | None) -> str:
+def _privacy(url: str | None) -> tuple[str, ...]:
+    return (PRIVACY_LINE.format(url=url),) if url else ()
+
+
+def connection_notice_text(company_name: str | None, privacy_url: str | None = None) -> str:
     """Сообщение о подключении без чтения переписки: бот читает только /report."""
     who = _company(company_name)
     return "\n".join(
@@ -153,6 +159,7 @@ def connection_notice_text(company_name: str | None) -> str:
             "боту или кнопка «Открыть ДомСигнал» ниже.",
             "Сообщение в этом чате не является официальным обращением.",
             "Администратор чата может удалить бота из чата.",
+            *_privacy(privacy_url),
         )
     )
 

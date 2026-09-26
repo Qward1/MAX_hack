@@ -7,9 +7,9 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
-from domsignal.db.models import AppealDraft, RouteOutcome
+from domsignal.db.models import AppealDraft, HouseRoutingProfile, RouteOutcome
 from domsignal.services.action_cards import FORBIDDEN_PHRASES
 from domsignal.services.appeal_drafts import (
     AI_NOTE,
@@ -42,6 +42,14 @@ async def _create(harness, outcome, actor="resident"):  # noqa: ANN001
 
 @pytest.mark.integration
 async def test_draft_is_composed_from_verified_data_and_the_residents_words(ex) -> None:  # noqa: F811
+    # Черновик ПОС: дом без профиля региона — только федеральный слой (D4: у
+    # Казани свой первый канал, «Народный контроль»).
+    async with ex.container.session_factory() as session, session.begin():
+        await session.execute(
+            update(HouseRoutingProfile)
+            .where(HouseRoutingProfile.house_id == ex.ids["h1"])
+            .values(region_code=None, municipality_code=None)
+        )
     outcome = await _external_outcome(ex)
     response = await _create(ex, outcome)
     assert response.status_code == 201, response.text

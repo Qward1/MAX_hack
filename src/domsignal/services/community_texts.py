@@ -23,6 +23,8 @@ CHAT_DISCLAIMER = "Сообщение в этом чате не является
 SERVICE_ONLY_RULE = "Только сервисные сообщения для жителей. Реклама запрещена."
 
 PLATFORM_SENDER = "Сообщение от ДомСигнала"
+#: Подпись объявлений и опросов совета дома (D4).
+COUNCIL_SENDER = "Сообщение от совета дома"
 UNNAMED_COMPANY_SENDER = "Сообщение от управляющей компании дома"
 
 KIND_LABELS = {"announcement": "Объявление", "mailing": "Рассылка", "poll": "Опрос"}
@@ -117,6 +119,8 @@ STAFF_NOTICE_LINK = "В кабинете: {url}"
 def sender_label(origin: str, company_name: str | None) -> str:
     if origin == "platform":
         return PLATFORM_SENDER
+    if origin == "council":
+        return COUNCIL_SENDER
     cleaned = (company_name or "").strip()
     return f"Сообщение от УК «{cleaned}»" if cleaned else UNNAMED_COMPANY_SENDER
 

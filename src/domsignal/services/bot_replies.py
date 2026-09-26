@@ -61,6 +61,14 @@ HELP = (
     "Команды: /start — начало, /help — эта справка, /version — версия."
 )
 NOT_A_PROBLEM = "Не похоже на описание проблемы. Напишите, что случилось и где."
+#: Кнопки-примеры первого экрана (D4, У-3): текст кнопки → текст сообщения о проблеме.
+#: Фонарь — на улице, а не во дворе: уличное освещение ведёт к официальному каналу с
+#: черновиком обращения, двор решает диспетчер УК. Лифт — заявка управляющей компании.
+EXAMPLES = {
+    "Попробовать: на улице не горит фонарь": "На улице у дома не горит фонарь",
+    "Попробовать: лифт во 2 подъезде стоит": "Лифт во 2 подъезде стоит",
+}
+PICK_OPEN_HOUSE = "Пока не вижу вашего дома. Выберите его — и я разберу сообщение:"
 # Код подключения домового чата (A-07) из кабинета УК: что делать дальше.
 CONNECT_CLAIMED = (
     "Код подключения принят. Теперь добавьте бота ДомСигнал в группу дома и сделайте "
@@ -79,7 +87,6 @@ NO_HOUSES = (
     "Пока не вижу вашего дома. Откройте ДомСигнал кнопкой из вашего домового чата — "
     "так я узнаю, в каком доме вы живёте."
 )
-NO_HOUSES_OPEN = "Или выберите дом из списка."
 CHOOSE_HOUSE = "В каком доме это случилось?"
 OPEN_HOUSES_LEAD = "Выберите ваш дом:"
 NO_OPEN_HOUSES = (
@@ -106,7 +113,7 @@ GROUP_ACK_LINK = "Диалог с ботом: https://max.ru/{bot}"
 
 
 class ReplyButton(ContractModel):
-    kind: Literal["open_app", "callback"]
+    kind: Literal["open_app", "callback", "message"]
     text: str = Field(min_length=1, max_length=64)
     payload: str = Field(min_length=1, max_length=1024)
 
@@ -126,6 +133,11 @@ def open_app_button() -> ReplyButton:
 
 def callback_button(text: str, payload: str) -> ReplyButton:
     return ReplyButton(kind="callback", text=text[:64], payload=payload)
+
+
+def example_button(label: str) -> ReplyButton:
+    """Кнопка-пример (D4): MAX отправляет её текст боту от имени нажавшего."""
+    return ReplyButton(kind="message", text=label, payload=label)
 
 
 def render_bot_reply(intent: BotReplyIntent) -> PersonalMessage:

@@ -1,0 +1,56 @@
+# Внешняя проверка production на период проверки жюри (D4, аудит №13).
+#
+# Раз в 10 минут: /ready отвечает 200, /version — 200 с полем commit, webhook
+# без секрета — 401. Падение job — письмо GitHub владельцу расписания. Если
+# владелец задал секреты ALERT_MAX_BOT_TOKEN и ALERT_MAX_USER_ID (личка
+# получателя с начатым диалогом с этим ботом), приходит ещё сообщение в MAX.
+# Адрес можно заменить переменной репозитория DOMSIGNAL_URL без правки кода.
+name: Production uptime
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-uptime
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      URL: ${{ vars.DOMSIGNAL_URL || 'https://domsignal.176-108-244-168.sslip.io' }}
+      ALERT_MAX_BOT_TOKEN: ${{ secrets.ALERT_MAX_BOT_TOKEN }}
+      ALERT_MAX_USER_ID: ${{ secrets.ALERT_MAX_USER_ID }}
+    steps:
+      - name: /ready is 200
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --retry 2 --retry-all-errors --max-time 20 "$URL/ready")
+          echo "ready: $code"
+          test "$code" = "200"
+      - name: /version answers with the build commit
+        run: |
+          body=$(curl -sf --retry 2 --retry-all-errors --max-time 20 "$URL/version")
+          echo "$body"
+          echo "$body" | python3 -c 'import json,sys; assert json.load(sys.stdin)["commit"]'
+      - name: webhook without the secret is 401
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST -H 'content-type: application/json' -d '{}' "$URL/max/webhook")
+          echo "webhook: $code"
+          test "$code" = "401"
+      - name: Alert in MAX
+        if: failure() && env.ALERT_MAX_BOT_TOKEN != '' && env.ALERT_MAX_USER_ID != ''
+        run: |
+          text="ДомСигнал: проверка $URL не прошла $(date -u '+%d.%m %H:%M UTC'). Журнал: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          python3 - "$text" > payload.json <<'PY'
+          import json, sys
+          print(json.dumps({"text": sys.argv[1]}))
+          PY
+          curl -s -o /dev/null -w 'max alert: %{http_code}\n' --max-time 20 -X POST \
+            -H "Authorization: $ALERT_MAX_BOT_TOKEN" -H 'content-type: application/json' \
+            --data @payload.json "https://platform-api2.max.ru/messages?user_id=$ALERT_MAX_USER_ID"

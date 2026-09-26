@@ -40,6 +40,8 @@ APP = {
     "requested_chat_count": 2,
 }
 STATUS = "/api/v1/onboarding/application-status"
+#: Регион дома при одобрении — из загруженного справочника (D4, В-1).
+REGION = {"region_code": "RU-TA", "municipality_code": "kazan", "territory_policy": "mixed"}
 
 
 @pytest_asyncio.fixture
@@ -458,6 +460,7 @@ async def test_houses_assignment_requests_approval_overlap_and_suspension(env):
             "resolution": "new",
             "valid_from": payload["requested_valid_from"],
             "reason": "Управление проверено",
+            **REGION,
         },
     )
     houses = (await env["admin"].get(base + "/houses")).json()
@@ -483,6 +486,7 @@ async def test_houses_assignment_requests_approval_overlap_and_suspension(env):
             "house_id": house["house_id"],
             "valid_from": payload["requested_valid_from"],
             "reason": "Пересечение",
+            **REGION,
         },
         409,
     )
@@ -569,7 +573,7 @@ async def test_platform_privacy_every_read_endpoint(env, caplog):
     for action in ("start-review", "request-info", "approve"):
         body = {"reason": "Administrative house review"}
         if action == "approve":
-            body.update(resolution="new", valid_from=datetime.now(UTC).isoformat())
+            body.update(resolution="new", valid_from=datetime.now(UTC).isoformat(), **REGION)
         result = await post(
             env["platform"],
             f"/api/v1/platform/house-management-requests/{request['id']}/{action}",
@@ -728,12 +732,22 @@ async def test_backdating_explicit_reuse_and_concurrent_house_approve(env):
         "house_id": str(house_id),
         "valid_from": "2026-01-01T00:00:00Z",
         "reason": "Explicit documents",
+        **REGION,
     }
     await post(env["platform"], path, body, 409)
     results = await asyncio.gather(
         *[env["platform"].post(path, json={**body, "confirm_backdate": True}) for _ in range(2)]
     )
-    assert sorted(r.status_code for r in results) == [200, 409]
+    # D4: повтор того же одобрения идемпотентен — второй ответ тот же, управление одно.
+    assert [r.status_code for r in results] == [200, 200]
+    assert results[0].json() == results[1].json()
+    # Другое решение по уже одобренной заявке — конфликт, а не перезапись.
+    await post(
+        env["platform"],
+        path,
+        {**body, "confirm_backdate": True, "region_code": "RU-MOW", "municipality_code": "moscow"},
+        409,
+    )
     async with env["container"].session_factory() as db:
         assert (
             await db.scalar(

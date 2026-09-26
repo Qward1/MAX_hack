@@ -1,0 +1,12 @@
+# 03:00 по Москве каждый день; пропущенный запуск (сервер был выключен)
+# выполняется при старте.
+[Unit]
+Description=DomSignal PostgreSQL daily backup at 03:00 Moscow time
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 Europe/Moscow
+Persistent=true
+RandomizedDelaySec=0
+
+[Install]
+WantedBy=timers.target

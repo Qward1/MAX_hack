@@ -11,6 +11,9 @@
 * `Poll`, `PollOption`, `PollBallot`, `PollChoice` — предварительный опрос:
   один голос на человека, итоги — только числа.
 * `ReceptionSlot`, `ReceptionBooking` — запись на приём в УК.
+* `HouseCouncilMember`, `HouseProposal` — совет дома и предложения жителей
+  (D4): совет пишет объявления и опросы своего дома тем же механизмом
+  (`Broadcast.origin = 'council'`), жители предлагают темы.
 """
 
 from __future__ import annotations
@@ -40,7 +43,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from domsignal.db.base import Base
 from domsignal.db.models.access import Timestamps
 
-BROADCAST_ORIGINS = ("company", "platform")
+BROADCAST_ORIGINS = ("company", "platform", "council")
 BROADCAST_KINDS = ("announcement", "mailing", "poll")
 BROADCAST_TOPICS = ("outage", "works", "meeting", "other")
 BROADCAST_STATUSES = ("draft", "scheduled", "sent", "cancelled")
@@ -81,7 +84,9 @@ class Broadcast(Timestamps, Base):
         CheckConstraint(f"kind IN {_in(BROADCAST_KINDS)}", name="kind"),
         CheckConstraint(f"topic IS NULL OR topic IN {_in(BROADCAST_TOPICS)}", name="topic"),
         CheckConstraint(f"status IN {_in(BROADCAST_STATUSES)}", name="status"),
-        CheckConstraint("(origin = 'company') = (tenant_id IS NOT NULL)", name="origin_tenant"),
+        CheckConstraint(
+            "(origin IN ('company','council')) = (tenant_id IS NOT NULL)", name="origin_tenant"
+        ),
         CheckConstraint("char_length(body) <= 3000", name="body_length"),
         CheckConstraint("version >= 1 AND content_version >= 1", name="version"),
         CheckConstraint(
@@ -261,3 +266,59 @@ class ReceptionBooking(Timestamps, Base):
     topic: Mapped[str] = mapped_column(String(300))
     status: Mapped[str] = mapped_column(String(20), default="booked", server_default="booked")
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class HouseCouncilMember(Base):
+    """Житель дома в совете дома (D4): отмечает и снимает администратор УК."""
+
+    __tablename__ = "house_council_members"
+    __table_args__ = (
+        CheckConstraint("status IN ('active','revoked')", name="status"),
+        Index(
+            "uq_house_council_member_active",
+            "house_id",
+            "user_id",
+            unique=True,
+            postgresql_where=text("status = 'active'"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    house_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("houses.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    status: Mapped[str] = mapped_column(String(20), default="active", server_default="active")
+    granted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    granted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    revoked_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class HouseProposal(Base):
+    """«Предложить вопрос» (D4): тема жителя для обсуждения или опроса."""
+
+    __tablename__ = "house_proposals"
+    __table_args__ = (
+        CheckConstraint("status IN ('new','converted')", name="status"),
+        CheckConstraint("char_length(text) BETWEEN 3 AND 1000", name="text_length"),
+        Index("ix_house_proposals_house_created", "house_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    house_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("houses.id", ondelete="CASCADE"))
+    author_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    text: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="new", server_default="new")
+    broadcast_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("broadcasts.id", ondelete="SET NULL")
+    )
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

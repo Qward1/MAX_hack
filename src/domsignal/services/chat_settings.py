@@ -18,11 +18,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domsignal.contracts.community import ChatSettingsChange, ChatSettingsUpdate, ChatSettingsView
+from domsignal.core.display_time import display_zone, zone_label
 from domsignal.core.quiet_hours import minutes_label, parse_minutes
 from domsignal.db.models import ChatBinding, InboxReceipt, User
 from domsignal.db.repositories.chat_connections import ChatRepository
 from domsignal.services.chat_connections import ChatConnectionError, ChatConnectionService
 from domsignal.services.errors import AccessDenied, ResourceNotFound
+from domsignal.services.house_zone import HouseZones
 from domsignal.services.membership import MembershipService
 from domsignal.services.onboarding import audit
 
@@ -57,7 +59,7 @@ def broadcast_kind(origin: str, kind: str) -> str:
     return "company_poll" if kind == "poll" else "company_message"
 
 
-def _summary(before: dict[str, object], after: dict[str, object]) -> str:
+def _summary(before: dict[str, object], after: dict[str, object], zone: str) -> str:
     parts: list[str] = []
     for key, label in _FLAG_LABELS.items():
         if before[key] != after[key]:
@@ -66,7 +68,7 @@ def _summary(before: dict[str, object], after: dict[str, object]) -> str:
         if after["quiet_start"] == after["quiet_end"]:
             parts.append("Тихие часы: выключены")
         else:
-            parts.append(f"Тихие часы: {after['quiet_start']}–{after['quiet_end']} МСК")
+            parts.append(f"Тихие часы: {after['quiet_start']}–{after['quiet_end']} {zone}")
     return "; ".join(parts) or "Без изменений"
 
 
@@ -82,9 +84,16 @@ def _state(binding: ChatBinding) -> dict[str, object]:
 
 
 class ChatSettingsService:
-    def __init__(self, connections: ChatConnectionService) -> None:
+    def __init__(
+        self, connections: ChatConnectionService, zones: HouseZones | None = None
+    ) -> None:
         self.connections = connections
         self.memberships = MembershipService()
+        self.zones = zones or HouseZones(None)
+
+    async def _zone_label(self, session: AsyncSession, binding: ChatBinding) -> str:
+        zone = await self.zones.of_house(session, binding.house_id)
+        return zone_label(zone, datetime.now(UTC).astimezone(display_zone(zone)))
 
     async def _readable(
         self, session: AsyncSession, binding_id: UUID, actor_id: UUID
@@ -147,7 +156,8 @@ class ChatSettingsService:
         if before != after:
             binding.settings_changed_at = datetime.now(UTC)
             binding.settings_changed_by = actor_id
-            audit(session, AUDIT_EVENT, actor_id, binding.id, _summary(before, after))
+            label = await self._zone_label(session, binding)
+            audit(session, AUDIT_EVENT, actor_id, binding.id, _summary(before, after, label))
         await session.flush()
         return await self._view(session, binding, can_edit=True)
 
@@ -189,6 +199,7 @@ class ChatSettingsService:
             quiet_end=minutes_label(binding.quiet_end_minute),
             changed_at=binding.settings_changed_at,
             can_edit=can_edit,
+            timezone_label=await self._zone_label(session, binding),
             history=[
                 ChatSettingsChange(
                     occurred_at=row.accepted_at,

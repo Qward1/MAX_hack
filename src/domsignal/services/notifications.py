@@ -86,6 +86,7 @@ from domsignal.services.community_delivery import (
     max_destination,
 )
 from domsignal.services.errors import AccessDenied, ResourceNotFound
+from domsignal.services.house_zone import HouseZones
 from domsignal.services.notification_render import actionable, render
 from domsignal.services.route_card_render import (
     ROUTE_CARD_INTENT_KIND,
@@ -181,12 +182,15 @@ class TicketNotificationHandler:
         self.enabled = enabled
         # Адрес кабинета для ссылки в оповещении оператора. Пусто — без ссылки.
         self.public_base_url = public_base_url
-        # Пояс времени в сообщениях сотрудникам (кабинет показывает МСК).
+        # Пояс времени в сообщениях сотрудникам, если пояс дома не подключён.
         self.display_timezone = display_timezone
         #: Личные сообщения D3 по ключу: сопровождение, сводка, напоминание.
         self.keyed: dict[str, KeyedSnapshot] = {}
-        #: Ночное окно личных рассылок (`BROADCAST_DM_QUIET_HOURS`), минуты МСК.
+        #: Ночное окно личных рассылок (`BROADCAST_DM_QUIET_HOURS`), минуты суток
+        #: местного времени дома.
         self.dm_quiet_window: tuple[int, int] | None = (22 * 60, 8 * 60)
+        #: Пояс дома из пакета региона (D4): тихие часы и время в оповещении.
+        self.zones: HouseZones | None = None
 
     async def _snapshot(
         self,
@@ -266,7 +270,11 @@ class TicketNotificationHandler:
                 quote_sent_at=quote[2] if quote else None,
                 cabinet_url=signal_cabinet_url(self.public_base_url, signal.id),
                 new_kinds=new_kinds,
-                display_timezone=self.display_timezone,
+                display_timezone=(
+                    await self.zones.of_house(session, signal.house_id)
+                    if self.zones is not None
+                    else self.display_timezone
+                ),
             ),
         )
 
@@ -901,7 +909,9 @@ class TicketNotificationHandler:
                 )
                 self._stop(delivery, code, at)
                 return True
-            until = await defer_until(session, delivery, at, dm_window=self.dm_quiet_window)
+            until = await defer_until(
+                session, delivery, at, dm_window=self.dm_quiet_window, zones=self.zones
+            )
             if until is not None:
                 # Тихие часы: отправка или необязательная правка ждут утра.
                 delivery.next_attempt_at = until
