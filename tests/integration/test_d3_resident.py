@@ -68,7 +68,9 @@ async def test_my_house_shows_company_data_and_only_verified_directory_facts(d3)
     assert emergency["source"]["verified_at"] and emergency["source"]["title"]
     channel_ids = [item["id"] for item in body["channels"]]
     assert "pos_gosuslugi" in channel_ids
-    assert "gosuslugi_dom" not in channel_ids and "gas_emergency_104" not in phones
+    # D4: «Госуслуги Дом» проверен и показан; непроверенные (104, ГИС ЖКХ) — нет.
+    assert "gosuslugi_dom" in channel_ids and "gis_zkh_max_bot" not in channel_ids
+    assert "gas_emergency_104" not in phones
     assert all(item["verification_status"] == "verified" for item in body["channels"])
     steps = [item["basis"] for item in body["accident_steps"]]
     assert steps[:2] == ["directory", "company"]
