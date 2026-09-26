@@ -157,7 +157,7 @@ async def test_missing_profile_keeps_the_federal_layer_only(
             )
             assert municipal.route_type == "municipality"
             assert [channel.id for channel in municipal.channels] == ["pos_gosuslugi"]
-            assert municipal.directory_version == "_federal@2"
+            assert municipal.directory_version == "_federal@3"  # D4: «Госуслуги Дом»
             yard = container.routing.route(
                 subtype="playground.damaged", location_scope="house_territory", house=house
             )
