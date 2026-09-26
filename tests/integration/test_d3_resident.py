@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -74,8 +75,12 @@ async def test_my_house_shows_company_data_and_only_verified_directory_facts(d3)
     assert all(item["verification_status"] == "verified" for item in body["channels"])
     steps = [item["basis"] for item in body["accident_steps"]]
     assert steps[:2] == ["directory", "company"]
+    # D4: тарифы и капремонт — только ссылками на официальные страницы региона,
+    # без цифр; вне этих ссылок о них ничего не утверждается.
+    links = body.pop("reference_links")
+    assert all(link["source"]["url"] and link["source"]["verified_at"] for link in links)
     for forbidden in ("тариф", "норматив", "капремонт"):
-        assert forbidden not in overview.text.lower()
+        assert forbidden not in json.dumps(body, ensure_ascii=False).lower()
 
 
 async def test_my_house_is_for_residents_of_the_house(d3) -> None:  # noqa: F811
