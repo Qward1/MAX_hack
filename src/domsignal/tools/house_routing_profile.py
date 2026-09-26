@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -19,24 +18,17 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domsignal.bootstrap import build_container
-from domsignal.db.models import HouseRoutingProfile, InboxReceipt
-from domsignal.db.repositories.routing import RoutingRepository
+from domsignal.db.models import InboxReceipt
+from domsignal.services.house_region import (
+    PROFILE_AUDIT_PREFIX,
+    PROFILE_AUDIT_TYPE,
+    write_profile,
+)
 from domsignal.settings import AppEnvironment, get_settings
 from domsignal.tools import print_json
 from domsignal.tools.live_fixture import AUDIT_KEY as LIVE_FIXTURE_KEY
 
-PROFILE_AUDIT_PREFIX = "operator:house-routing-profile:v1"
-PROFILE_AUDIT_TYPE = "operator.house_routing_profile"
-
-
-def _view(profile: HouseRoutingProfile | None) -> dict[str, Any] | None:
-    if profile is None:
-        return None
-    return {
-        "region_code": profile.region_code,
-        "municipality_code": profile.municipality_code,
-        "territory_policy": profile.territory_policy,
-    }
+__all__ = ["PROFILE_AUDIT_PREFIX", "PROFILE_AUDIT_TYPE", "operate"]
 
 
 async def operate(
@@ -51,7 +43,8 @@ async def operate(
     operator: str | None = None,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """Записать профиль дома. Транзакцией владеет вызывающий."""
+    """Записать профиль дома тем же сервисом, что у платформы (D4). Транзакцией
+    владеет вызывающий; событие аудита пишется всегда."""
     if production:
         if not (operator or "").strip() or not (reason or "").strip():
             raise ValueError("Production profile changes need --operator and --reason")
@@ -66,41 +59,16 @@ async def operate(
             or fixture.payload.get("house_id") != str(house_id)
         ):
             raise ValueError("In production only the active audited live-test house is allowed")
-    repository = RoutingRepository(session)
-    if await repository.house(house_id) is None:
-        raise ValueError("House was not found")
-    previous = _view(await repository.profile(house_id))
-    profile = await repository.upsert_profile(
+    return await write_profile(
+        session,
         house_id=house_id,
-        region_code=region,
-        municipality_code=municipality,
-        territory_policy=territory,
-        updated_by=actor,
+        region=region,
+        municipality=municipality,
+        territory=territory,
+        actor=actor,
+        operator=operator,
+        reason=reason,
     )
-    result: dict[str, Any] = {
-        "house_id": str(profile.house_id),
-        **(_view(profile) or {}),
-        "updated_by": str(profile.updated_by) if profile.updated_by else None,
-    }
-    if production:
-        now = datetime.now(UTC)
-        session.add(
-            InboxReceipt(
-                event_id=f"{PROFILE_AUDIT_PREFIX}:{house_id}:{now:%Y%m%dT%H%M%S%fZ}",
-                event_type=PROFILE_AUDIT_TYPE,
-                payload={
-                    "house_id": str(house_id),
-                    "previous": previous,
-                    "profile": _view(profile),
-                    "updated_by": result["updated_by"],
-                    "operator": operator,
-                    "reason": reason,
-                    "at": now.isoformat(),
-                },
-            )
-        )
-        await session.flush()
-    return result
 
 
 async def run(args: argparse.Namespace) -> None:

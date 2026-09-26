@@ -30,6 +30,7 @@ from domsignal.contracts.onboarding import (
     CompanyOverview,
     CompanyView,
     HouseApproval,
+    HouseRegionChange,
     HouseRequestCreate,
     HouseRequestView,
     InvitationView,
@@ -43,6 +44,7 @@ from domsignal.contracts.onboarding import (
     Role,
     StaffDetail,
 )
+from domsignal.core.responsibility import ResponsibilityDirectory
 from domsignal.db.models import (
     ChatBinding,
     ChatQuotaGrant,
@@ -56,6 +58,7 @@ from domsignal.db.models import (
     HouseAssignment,
     HouseManagement,
     HouseManagementRequest,
+    HouseRoutingProfile,
     InboxReceipt,
     Job,
     ManagementCompany,
@@ -77,6 +80,7 @@ from domsignal.services.errors import (
     ResourceNotFound,
     ServiceError,
 )
+from domsignal.services.house_region import check_choice, profile_view, write_profile
 from domsignal.services.management import ManagementService
 from domsignal.services.resident_access import ResidentAccessService
 from domsignal.settings import Settings
@@ -828,6 +832,7 @@ class AdministrationService:
         target: str,
         reason: str,
         approval: HouseApproval | None = None,
+        regions: ResponsibilityDirectory | None = None,
     ) -> HouseRequestView:
         await authority_lock(db, exclusive=True)
         await require_platform(db, actor)
@@ -837,6 +842,12 @@ class AdministrationService:
         company = await db.get(ManagementCompany, row.company_id)
         if company is None or company.status != "active":
             raise AdministrationConflict("Организация приостановлена")
+        if target == "approved":
+            assert approval is not None
+            # Регион дома — из загруженного справочника, иначе 422 (D4, В-1).
+            check_choice(regions, approval.region_code, approval.municipality_code)
+            if row.status == "approved" and await self._same_approval(db, row, approval):
+                return await self.house_request(db, obj)  # Повтор того же одобрения.
         transition(db, row, target, actor, reason)
         if target == "approved":
             assert approval is not None
@@ -876,8 +887,69 @@ class AdministrationService:
             management.ticket_intake_enabled = True
             row.management_id = management.id
             audit(db, "management.approved", actor, management.id, reason)
+            await write_profile(
+                db,
+                house_id=house_id,
+                region=approval.region_code,
+                municipality=approval.municipality_code,
+                territory=approval.territory_policy,
+                actor=actor,
+                operator="platform:house_request",
+                reason=reason,
+            )
         await db.flush()
         return await self.house_request(db, obj)
+
+    @staticmethod
+    async def _same_approval(
+        db: AsyncSession, row: HouseManagementRequest, approval: HouseApproval
+    ) -> bool:
+        """Одобренная заявка и тот же дом с тем же профилем — повтор, а не новое решение."""
+        management = await db.get(HouseManagement, row.management_id) if row.management_id else None
+        if management is None:
+            return False
+        if approval.resolution == "existing" and approval.house_id != management.house_id:
+            return False
+        profile = await db.get(HouseRoutingProfile, management.house_id)
+        return profile_view(profile) == {
+            "region_code": approval.region_code,
+            "municipality_code": approval.municipality_code,
+            "territory_policy": approval.territory_policy,
+        }
+
+    async def set_house_region(
+        self,
+        db: AsyncSession,
+        actor: UUID,
+        house_id: UUID,
+        change: HouseRegionChange,
+        regions: ResponsibilityDirectory | None,
+    ) -> PlatformHouseView:
+        """«Задать регион» дому у платформы — та же запись профиля, что у CLI."""
+        await authority_lock(db, exclusive=True)
+        await require_platform(db, actor)
+        house = await db.get(House, house_id)
+        if house is None:
+            raise ResourceNotFound("Дом не найден")
+        check_choice(regions, change.region_code, change.municipality_code)
+        await write_profile(
+            db,
+            house_id=house_id,
+            region=change.region_code,
+            municipality=change.municipality_code,
+            territory=change.territory_policy,
+            actor=actor,
+            operator="platform:set_region",
+            reason=change.reason,
+        )
+        return await self._platform_house(db, house)
+
+    @staticmethod
+    async def _platform_house(db: AsyncSession, house: House) -> PlatformHouseView:
+        profile = await db.get(HouseRoutingProfile, house.id)
+        return PlatformHouseView(
+            id=house.id, address=house.address, name=house.name, **(profile_view(profile) or {})
+        )
 
     async def houses(self, db: AsyncSession, actor: UUID, company: UUID) -> list[CompanyHouseView]:
         member = await require_company(db, actor, company, admin=False)
@@ -1222,11 +1294,21 @@ class AdministrationService:
         return result
 
     async def platform_houses(self, db: AsyncSession, offset: int = 0) -> list[PlatformHouseView]:
+        rows = await db.execute(
+            select(House, HouseRoutingProfile)
+            .outerjoin(HouseRoutingProfile, HouseRoutingProfile.house_id == House.id)
+            .order_by(House.address)
+            .offset(offset)
+            .limit(100)
+        )
         return [
-            PlatformHouseView.model_validate(h, from_attributes=True)
-            for h in await db.scalars(
-                select(House).order_by(House.address).offset(offset).limit(100)
+            PlatformHouseView(
+                id=house.id,
+                address=house.address,
+                name=house.name,
+                **(profile_view(profile) or {}),
             )
+            for house, profile in rows.tuples()
         ]
 
     async def disputes(self, db: AsyncSession, offset: int = 0) -> list[PlatformBindingView]:

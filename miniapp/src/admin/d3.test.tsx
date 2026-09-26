@@ -176,7 +176,7 @@ describe("Настройки бота в чате", () => {
   it("памятка не отключается, изменения сохраняются, история видна", async () => {
     const view: Schema["ChatSettingsView"] = {
       binding_id: "cb1", post_ticket_status: true, post_company_messages: true, post_polls: true,
-      post_platform_messages: false, quiet_start: "22:00", quiet_end: "08:00", can_edit: true,
+      post_platform_messages: false, quiet_start: "22:00", quiet_end: "08:00", can_edit: true, timezone_label: "МСК",
       history: [{ occurred_at: "2026-09-27T07:00:00Z", actor_name: "Администратор", summary: "Опросы: выключены" }],
     };
     const request = route({ "/api/v1/chat-bindings/cb1/settings": () => view });

@@ -28,6 +28,7 @@ from domsignal.db.models import (
     User,
 )
 from domsignal.services import bot_replies
+from domsignal.services.privacy import with_privacy
 from tests.integration.passive_harness import (
     CHAT_1,
     RESIDENT,
@@ -52,6 +53,11 @@ async def bot(integration_settings: Any) -> Any:
     finally:
         await harness.client.aclose()
         await harness.container.aclose()
+
+
+def privacy(h: Any) -> str:
+    """Адрес страницы /privacy, который бот ставит под приветствием и справкой (D4)."""
+    return str(h.container.personal_bot.privacy_url)
 
 
 class Dialog:
@@ -143,8 +149,9 @@ async def test_bot_started_without_a_token_greets_with_the_app_button(bot: Any) 
     await dialog.start()
     await dialog.settle()
     [greeting] = dialog.replies()
-    assert greeting.text == bot_replies.GREETING
-    assert 3 <= len(greeting.text.splitlines()) <= 4
+    # D4: под приветствием — ссылка на страницу /privacy.
+    assert greeting.text == with_privacy(bot_replies.GREETING, privacy(bot))
+    assert 3 <= len(bot_replies.GREETING.splitlines()) <= 4
     assert labels(greeting) == ["Открыть ДомСигнал"]  # открытых домов нет
     assert greeting.buttons[0][0].kind == "open_app"
     user = await bot.scalar(select(User).where(User.max_user_id == str(GUEST)))
@@ -182,7 +189,9 @@ async def test_a_user_without_houses_is_offered_the_open_ones(bot: Any) -> None:
 async def test_the_connection_token_flow_is_unchanged(bot: Any) -> None:
     await bot.bind()  # подключение по токену `connect_…` проходит как раньше
     assert not [
-        message for message in bot.messaging.sent if message[2].text == bot_replies.GREETING
+        message
+        for message in bot.messaging.sent
+        if message[2].text.startswith(bot_replies.GREETING)
     ]
 
 
@@ -193,7 +202,8 @@ async def test_help_and_version(bot: Any) -> None:
     await dialog.say("/unknown")
     await dialog.settle()
     texts = [message.text for message in dialog.replies()]
-    assert texts == [bot_replies.HELP, "ДомСигнал, версия abcdef1.", bot_replies.HELP]
+    help_text = with_privacy(bot_replies.HELP, privacy(bot))
+    assert texts == [help_text, "ДомСигнал, версия abcdef1.", help_text]
 
 
 # ------------------------------------------------------ проблема в личке
@@ -414,7 +424,7 @@ async def test_a_group_report_without_a_dialog_is_answered_in_the_group_once(bot
     await dialog.start()
     await dialog.settle()
     texts = [message.text for message in dialog.replies()]
-    assert texts[0] == bot_replies.GREETING
+    assert texts[0] == with_privacy(bot_replies.GREETING, privacy(bot))
     assert any("не к вашей УК" in text for text in texts[1:])
 
 

@@ -15,6 +15,9 @@ schema_version: 1
 layer_id: RU-MOW
 layer: region
 region: RU-MOW
+name: Москва
+# Часовой пояс региона (IANA): тихие часы, сводка и сутки дашбордов его домов.
+timezone: Europe/Moscow
 version: "1"
 updated_at: "2026-09-24"
 

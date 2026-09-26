@@ -130,6 +130,8 @@ class PassiveCaptureService:
         self.sessions = session_factory
         self.connections = connections
         self.engine = engine
+        #: Ссылка на страницу /privacy в сообщении о подключении и чтении (D4).
+        self.privacy_url: str | None = None
 
     @property
     def config(self) -> PassiveConfig:
@@ -562,7 +564,11 @@ class PassiveCaptureService:
             purpose=READING_NOTICE_PURPOSE if reading else CONNECTION_NOTICE_PURPOSE,
             chat_binding_id=binding.id,
             binding_version=binding.binding_version,
-            text=reading_notice_text(company) if reading else connection_notice_text(company),
+            text=(
+                reading_notice_text(company, self.privacy_url)
+                if reading
+                else connection_notice_text(company, self.privacy_url)
+            ),
             app_button=True,
         )
         ReliabilityRepository(session).add_outbox(

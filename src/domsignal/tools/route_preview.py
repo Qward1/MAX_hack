@@ -3,9 +3,9 @@
 Инструмент владельца и подготовки демонстрации: показывает ровно то, что
 увидит житель или оператор, включая скрытые непроверенные каналы как счётчик.
 
-`--compare-regions` (D2) печатает две колонки — Казань (RU-TA) и Москва
-(RU-MOW) — для одних и тех же подтипов: один код роутера, разные пакеты
-данных, разные каналы и основания.
+`--compare-regions` печатает колонку на каждый пакет региона из `regions/`
+(D4; в D2 — только Казань и Москва) для одних и тех же подтипов: один код
+роутера, разные пакеты данных, разные каналы и основания.
 """
 
 from __future__ import annotations
@@ -30,11 +30,6 @@ from domsignal.services.routing import RoutingService
 from domsignal.settings import get_settings
 from domsignal.tools import print_json
 
-#: Регионы сравнения: (подпись, регион, муниципалитет).
-REGIONS: tuple[tuple[str, str, str], ...] = (
-    ("Казань (RU-TA)", "RU-TA", "kazan"),
-    ("Москва (RU-MOW)", "RU-MOW", "moscow"),
-)
 #: Десять подтипов сравнения: подтип, территория и опасность.
 REGION_COMPARISON: tuple[tuple[str, LocationScope, tuple[DangerKind, ...]], ...] = (
     ("street_lighting.failure", "municipal_territory", ()),
@@ -50,7 +45,21 @@ REGION_COMPARISON: tuple[tuple[str, LocationScope, tuple[DangerKind, ...]], ...]
 )
 
 
-def region_context(region: str, municipality: str) -> HouseRoutingContext:
+def regions(routing: RoutingService) -> list[tuple[str, str, str | None]]:
+    """Все загруженные пакеты регионов: (подпись, регион, первый муниципалитет)."""
+    directory = routing.directory
+    if directory is None:
+        return []
+    result: list[tuple[str, str, str | None]] = []
+    for code, layer in sorted(directory.regions.items()):
+        sections = sorted(directory.municipalities.get(code, {}).items())
+        municipality = sections[0] if sections else None
+        place = (municipality[1].name if municipality else None) or layer.name or code
+        result.append((f"{place} ({code})", code, municipality[0] if municipality else None))
+    return result
+
+
+def region_context(region: str, municipality: str | None) -> HouseRoutingContext:
     """Дом с подключённой УК и смешанной территорией в указанном регионе."""
     return HouseRoutingContext(
         has_active_connected_uk=True,
@@ -63,21 +72,22 @@ def region_context(region: str, municipality: str) -> HouseRoutingContext:
 def compare_regions(
     routing: RoutingService,
     rows: tuple[tuple[str, LocationScope, tuple[DangerKind, ...]], ...] = REGION_COMPARISON,
-) -> list[tuple[str, str, list[ResponsibilityRoute]]]:
-    """Маршрут каждого подтипа в каждом регионе сравнения."""
+) -> list[tuple[str, str, dict[str, ResponsibilityRoute]]]:
+    """Маршрут каждого подтипа в каждом пакете региона: `{регион: маршрут}`."""
+    packs = regions(routing)
     return [
         (
             subtype,
             scope,
-            [
-                routing.route(
+            {
+                region: routing.route(
                     subtype=subtype,
                     location_scope=scope,
                     danger_kinds=danger,
                     house=region_context(region, municipality),
                 )
-                for _, region, municipality in REGIONS
-            ],
+                for _, region, municipality in packs
+            },
         )
         for subtype, scope, danger in rows
     ]
@@ -91,11 +101,12 @@ def describe(route: ResponsibilityRoute) -> str:
 
 
 def print_comparison(routing: RoutingService) -> None:
-    header = ["Подтип", "Территория", *(label for label, _, _ in REGIONS)]
+    packs = regions(routing)
+    header = ["Подтип", "Территория", *(label for label, _, _ in packs)]
     print(" | ".join(header))
     print(" | ".join("---" for _ in header))
     for subtype, scope, routes in compare_regions(routing):
-        print(" | ".join([subtype, scope, *(describe(route) for route in routes)]))
+        print(" | ".join([subtype, scope, *(describe(routes[code]) for _, code, _ in packs)]))
 
 
 async def run(args: argparse.Namespace) -> None:
@@ -141,7 +152,7 @@ def main() -> None:
         "--compare-regions",
         dest="compare_regions",
         action="store_true",
-        help="Две колонки: Казань (RU-TA) и Москва (RU-MOW) для десяти подтипов",
+        help="Колонка на каждый пакет региона из regions/ для десяти подтипов",
     )
     asyncio.run(run(parser.parse_args()))
 

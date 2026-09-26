@@ -24,6 +24,7 @@ from domsignal.contracts.onboarding import (
     CompanyOverview,
     CompanyView,
     HouseApproval,
+    HouseRegionChange,
     HouseRequestCreate,
     HouseRequestView,
     InvitationCreate,
@@ -40,6 +41,7 @@ from domsignal.contracts.onboarding import (
     PlatformHealth,
     PlatformHouseView,
     PlatformOpenHouseView,
+    RegionPackView,
     ReviewDecision,
     Role,
     StaffDetail,
@@ -61,6 +63,7 @@ from domsignal.services.employee_auth import (
     normalize_login,
 )
 from domsignal.services.errors import AuthenticationRequired, ResourceNotFound
+from domsignal.services.house_region import region_packs
 from domsignal.services.onboarding import (
     AdministrationConflict,
     AdministrationService,
@@ -535,7 +538,27 @@ async def approve_house(
 ) -> HouseRequestView:
     async with db.begin():
         return await AdministrationService(container.settings).decide_house(
-            db, obj, user.id, "approved", payload.reason, payload
+            db, obj, user.id, "approved", payload.reason, payload, container.routing.directory
+        )
+
+
+@router.get("/platform/region-packs", response_model=list[RegionPackView])
+async def platform_region_packs(
+    user: Employee, db: DbDep, container: ContainerDep
+) -> list[RegionPackView]:
+    """Регионы загруженного справочника — варианты при одобрении дома (D4)."""
+    async with db.begin():
+        await require_platform(db, user.id)
+    return region_packs(container.routing.directory)
+
+
+@router.post("/platform/houses/{house_id}/region", response_model=PlatformHouseView)
+async def platform_house_region(
+    house_id: UUID, payload: HouseRegionChange, user: Employee, db: DbDep, container: ContainerDep
+) -> PlatformHouseView:
+    async with db.begin():
+        return await AdministrationService(container.settings).set_house_region(
+            db, user.id, house_id, payload, container.routing.directory
         )
 
 

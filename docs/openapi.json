@@ -2989,6 +2989,11 @@
           "quiet_start": {
             "title": "Quiet Start",
             "type": "string"
+          },
+          "timezone_label": {
+            "default": "МСК",
+            "title": "Timezone Label",
+            "type": "string"
           }
         },
         "required": [
@@ -5274,11 +5279,35 @@
             ],
             "title": "House Id"
           },
+          "municipality_code": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Municipality Code"
+          },
           "reason": {
             "maxLength": 2000,
             "minLength": 1,
             "title": "Reason",
             "type": "string"
+          },
+          "region_code": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Code"
           },
           "resolution": {
             "enum": [
@@ -5286,6 +5315,17 @@
               "new"
             ],
             "title": "Resolution",
+            "type": "string"
+          },
+          "territory_policy": {
+            "default": "mixed",
+            "enum": [
+              "uk",
+              "municipal",
+              "mixed",
+              "unknown"
+            ],
+            "title": "Territory Policy",
             "type": "string"
           },
           "valid_from": {
@@ -5485,6 +5525,58 @@
           "chat"
         ],
         "title": "HouseOverview",
+        "type": "object"
+      },
+      "HouseRegionChange": {
+        "additionalProperties": false,
+        "description": "«Задать регион» дому без профиля — тот же сервис, что у CLI.",
+        "properties": {
+          "municipality_code": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Municipality Code"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "region_code": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Code"
+          },
+          "territory_policy": {
+            "default": "mixed",
+            "enum": [
+              "uk",
+              "municipal",
+              "mixed",
+              "unknown"
+            ],
+            "title": "Territory Policy",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "HouseRegionChange",
         "type": "object"
       },
       "HouseRequestCreate": {
@@ -7795,9 +7887,48 @@
             "title": "Id",
             "type": "string"
           },
+          "municipality_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Municipality Code"
+          },
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "region_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Code"
+          },
+          "territory_policy": {
+            "anyOf": [
+              {
+                "enum": [
+                  "uk",
+                  "municipal",
+                  "mixed",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Territory Policy"
           }
         },
         "required": [
@@ -7946,6 +8077,11 @@
           },
           "houses": {
             "title": "Houses",
+            "type": "integer"
+          },
+          "houses_without_region": {
+            "default": 0,
+            "title": "Houses Without Region",
             "type": "integer"
           },
           "open_houses": {
@@ -8608,6 +8744,63 @@
           "status"
         ],
         "title": "ReceptionSlotView",
+        "type": "object"
+      },
+      "RegionMunicipality": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "RegionMunicipality",
+        "type": "object"
+      },
+      "RegionPackView": {
+        "additionalProperties": false,
+        "description": "Регион загруженного справочника — вариант выбора при одобрении дома.",
+        "properties": {
+          "municipalities": {
+            "items": {
+              "$ref": "#/components/schemas/RegionMunicipality"
+            },
+            "title": "Municipalities",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "region_code": {
+            "title": "Region Code",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "region_code",
+          "name",
+          "timezone",
+          "version",
+          "municipalities"
+        ],
+        "title": "RegionPackView",
         "type": "object"
       },
       "ReportAnalysisView": {
@@ -24053,7 +24246,7 @@
         ]
       },
       "post": {
-        "description": "Ежедневная сводка в 09:00 МСК в личку MAX — включает сам сотрудник.",
+        "description": "Ежедневная сводка в 09:00 по местному времени УК в личку MAX — включает сам сотрудник.",
         "operationId": "update_staff_settings_api_v1_companies__company_id__me_settings_post",
         "parameters": [
           {
@@ -38096,6 +38289,219 @@
         ]
       }
     },
+    "/api/v1/platform/houses/{house_id}/region": {
+      "post": {
+        "operationId": "platform_house_region_api_v1_platform_houses__house_id__region_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "house_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "House Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HouseRegionChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformHouseView"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Platform House Region",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
     "/api/v1/platform/open-houses": {
       "get": {
         "operationId": "platform_open_houses_api_v1_platform_open_houses_get",
@@ -38286,6 +38692,202 @@
           }
         },
         "summary": "Platform Open Houses",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/platform/region-packs": {
+      "get": {
+        "description": "Регионы загруженного справочника — варианты при одобрении дома (D4).",
+        "operationId": "platform_region_packs_api_v1_platform_region_packs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RegionPackView"
+                  },
+                  "title": "Response Platform Region Packs Api V1 Platform Region Packs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Platform Region Packs",
         "tags": [
           "administration"
         ]

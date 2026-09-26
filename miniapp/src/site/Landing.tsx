@@ -103,6 +103,7 @@ export function Landing() {
         <li><a href="/company/apply">Подключить УК</a></li>
         <li><a href="/login">Вход для сотрудников</a></li>
         {botUrl && <li><a href={botUrl} rel="noopener">Бот в MAX</a></li>}
+        <li><a href="/privacy">Политика данных</a></li>
       </ul>
     </footer>
   </div>;

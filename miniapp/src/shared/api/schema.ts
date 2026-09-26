@@ -975,7 +975,7 @@ export interface paths {
         put?: never;
         /**
          * Update Staff Settings
-         * @description Ежедневная сводка в 09:00 МСК в личку MAX — включает сам сотрудник.
+         * @description Ежедневная сводка в 09:00 по местному времени УК в личку MAX — включает сам сотрудник.
          */
         post: operations["update_staff_settings_api_v1_companies__company_id__me_settings_post"];
         delete?: never;
@@ -2041,6 +2041,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/houses/{house_id}/region": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Platform House Region */
+        post: operations["platform_house_region_api_v1_platform_houses__house_id__region_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/open-houses": {
         parameters: {
             query?: never;
@@ -2050,6 +2067,26 @@ export interface paths {
         };
         /** Platform Open Houses */
         get: operations["platform_open_houses_api_v1_platform_open_houses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/region-packs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Platform Region Packs
+         * @description Регионы загруженного справочника — варианты при одобрении дома (D4).
+         */
+        get: operations["platform_region_packs_api_v1_platform_region_packs_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3735,6 +3772,11 @@ export interface components {
             quiet_end: string;
             /** Quiet Start */
             quiet_start: string;
+            /**
+             * Timezone Label
+             * @default МСК
+             */
+            timezone_label: string;
         };
         /** ChatSummary */
         ChatSummary: {
@@ -4562,13 +4604,23 @@ export interface components {
             confirm_backdate: boolean;
             /** House Id */
             house_id?: string | null;
+            /** Municipality Code */
+            municipality_code?: string | null;
             /** Reason */
             reason: string;
+            /** Region Code */
+            region_code?: string | null;
             /**
              * Resolution
              * @enum {string}
              */
             resolution: "existing" | "new";
+            /**
+             * Territory Policy
+             * @default mixed
+             * @enum {string}
+             */
+            territory_policy: "uk" | "municipal" | "mixed" | "unknown";
             /**
              * Valid From
              * Format: date-time
@@ -4626,6 +4678,24 @@ export interface components {
              * @default false
              */
             reception_available: boolean;
+        };
+        /**
+         * HouseRegionChange
+         * @description «Задать регион» дому без профиля — тот же сервис, что у CLI.
+         */
+        HouseRegionChange: {
+            /** Municipality Code */
+            municipality_code?: string | null;
+            /** Reason */
+            reason: string;
+            /** Region Code */
+            region_code?: string | null;
+            /**
+             * Territory Policy
+             * @default mixed
+             * @enum {string}
+             */
+            territory_policy: "uk" | "municipal" | "mixed" | "unknown";
         };
         /** HouseRequestCreate */
         HouseRequestCreate: {
@@ -5482,8 +5552,14 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Municipality Code */
+            municipality_code?: string | null;
             /** Name */
             name: string;
+            /** Region Code */
+            region_code?: string | null;
+            /** Territory Policy */
+            territory_policy?: ("uk" | "municipal" | "mixed" | "unknown") | null;
         };
         /** PlatformNotice */
         PlatformNotice: {
@@ -5545,6 +5621,11 @@ export interface components {
             companies_suspended: number;
             /** Houses */
             houses: number;
+            /**
+             * Houses Without Region
+             * @default 0
+             */
+            houses_without_region: number;
             /** Open Houses */
             open_houses: number;
             /** Quota Requests Pending */
@@ -5805,6 +5886,29 @@ export interface components {
              * @enum {string}
              */
             status: "open" | "cancelled";
+        };
+        /** RegionMunicipality */
+        RegionMunicipality: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * RegionPackView
+         * @description Регион загруженного справочника — вариант выбора при одобрении дома.
+         */
+        RegionPackView: {
+            /** Municipalities */
+            municipalities: components["schemas"]["RegionMunicipality"][];
+            /** Name */
+            name: string;
+            /** Region Code */
+            region_code: string;
+            /** Timezone */
+            timezone: string;
+            /** Version */
+            version: string;
         };
         /**
          * ReportAnalysisView
@@ -22526,6 +22630,133 @@ export interface operations {
             };
         };
     };
+    platform_house_region_api_v1_platform_houses__house_id__region_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                house_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseRegionChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformHouseView"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     platform_open_houses_api_v1_platform_open_houses_get: {
         parameters: {
             query?: never;
@@ -22544,6 +22775,127 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlatformOpenHouseView"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    platform_region_packs_api_v1_platform_region_packs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegionPackView"][];
                 };
             };
             /** @description Unauthorized */

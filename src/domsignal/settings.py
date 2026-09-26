@@ -116,8 +116,10 @@ class Settings(BaseSettings):
     # Сторож разбора окна: если AI-пул не разобрал окно за это время, окно
     # разбирают правила в операционном пуле.
     passive_analysis_fallback_seconds: int = Field(default=90, ge=5, le=3600)
-    # Часовой пояс времени в сообщениях сотрудникам (кабинет показывает МСК).
+    # Пояс по умолчанию для домов без профиля региона (D4: пояс дома — из пакета региона).
     display_timezone: str = "Europe/Moscow"
+    # Контакт по вопросам данных на странице /privacy (D4); пусто — ссылка на /site.
+    privacy_contact: str | None = Field(default=None, max_length=200)
     # Житель = участник домового чата (RESIDENT-BY-CHAT-2026-09-25). Если
     # активных привязок не больше этого числа, при входе проверяются все.
     resident_check_all_max_chats: int = Field(default=20, ge=0, le=200)

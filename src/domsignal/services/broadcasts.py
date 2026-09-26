@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 import secrets
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, tzinfo
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -60,7 +60,12 @@ from domsignal.contracts.community import (
     PollVote,
     ResidentPreferences,
 )
-from domsignal.core.quiet_hours import DEFAULT_QUIET_END, DEFAULT_QUIET_START, quiet_until
+from domsignal.core.quiet_hours import (
+    DEFAULT_QUIET_END,
+    DEFAULT_QUIET_START,
+    MSK,
+    quiet_until,
+)
 from domsignal.db.models import (
     Broadcast,
     BroadcastCompany,
@@ -1488,11 +1493,14 @@ def poll_closed(poll: Poll, now: datetime | None = None) -> bool:
 
 
 def dm_quiet_until(
-    at: datetime, window: tuple[int, int] | None = (DEFAULT_QUIET_START, DEFAULT_QUIET_END)
+    at: datetime,
+    window: tuple[int, int] | None = (DEFAULT_QUIET_START, DEFAULT_QUIET_END),
+    zone: tzinfo = MSK,
 ) -> datetime | None:
     """Личные рассылки ночью не приходят: `BROADCAST_DM_QUIET_HOURS`, по умолчанию
-    22:00–08:00 МСК, как у чатов. `None` — без окна."""
-    return quiet_until(window[0], window[1], at) if window else None
+    22:00–08:00 местного времени (D4: пояс домов рассылки), как у чатов.
+    `None` — без окна."""
+    return quiet_until(window[0], window[1], at, zone) if window else None
 
 
 __all__ = [

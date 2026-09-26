@@ -1,14 +1,14 @@
 """Тихие часы домового чата (BOT-VOICE-HUMAN-2026-09-27).
 
-Окно задаётся минутами суток по Москве: начало и конец. Окно может
-переходить через полночь (22:00–08:00). Начало, равное концу, — тихих часов
-нет. Москва живёт по UTC+3 без перехода на летнее время, поэтому пояс
-фиксирован и не зависит от базы часовых поясов.
+Окно задаётся минутами суток по местному времени дома: начало и конец.
+Окно может переходить через полночь (22:00–08:00). Начало, равное концу, —
+тихих часов нет. Пояс дома — из пакета его региона (D4, `HouseZones`); по
+умолчанию Москва, UTC+3 без перехода на летнее время.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 
 MSK = timezone(timedelta(hours=3))
 
@@ -34,15 +34,15 @@ def parse_minutes(value: str) -> int:
     return result
 
 
-def quiet_until(start: int, end: int, at: datetime) -> datetime | None:
+def quiet_until(start: int, end: int, at: datetime, zone: tzinfo = MSK) -> datetime | None:
     """Конец тихих часов, если `at` внутри окна, иначе `None`.
 
-    Возвращает момент в UTC-совместимом `datetime` с поясом МСК: сравнивать
-    его можно с любым осведомлённым о поясе временем.
+    Окно — минуты суток в поясе `zone`. Возвращает момент с этим поясом:
+    сравнивать его можно с любым осведомлённым о поясе временем.
     """
     if start == end:
         return None
-    local = at.astimezone(MSK)
+    local = at.astimezone(zone)
     minute = local.hour * 60 + local.minute
     if start < end:
         inside = start <= minute < end

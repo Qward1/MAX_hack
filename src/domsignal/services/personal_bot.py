@@ -96,6 +96,7 @@ from domsignal.services.group_messages import (
 )
 from domsignal.services.membership import MembershipService
 from domsignal.services.notifications import TicketNotificationHandler
+from domsignal.services.privacy import with_privacy
 from domsignal.services.reports import IncidentClosed, ReportService
 from domsignal.services.resident_access import ResidentAccessService, ensure_max_user
 from domsignal.services.route_card_render import safety_lines
@@ -157,6 +158,7 @@ class PersonalBotService:
         daily_limit: int = 10,
         hold_seconds: int = 1800,
         application_digest: Callable[[str], str] | None = None,
+        privacy_url: str | None = None,
     ) -> None:
         self.sessions = session_factory
         self.resident_access = resident_access
@@ -176,6 +178,11 @@ class PersonalBotService:
         self.application_digest = application_digest
         #: Кнопки сопровождения обращения (A-09, D3): действие → обработчик.
         self.followups: dict[str, FollowupCallback] = {}
+        #: Ссылка на страницу /privacy в приветствии и справке (D4).
+        self.privacy_url = privacy_url
+
+    def _with_privacy(self, text: str) -> str:
+        return with_privacy(text, self.privacy_url) if self.privacy_url else text
 
     # ============================================================ вебхук
 
@@ -394,7 +401,7 @@ class PersonalBotService:
                     user_id=user_id,
                     event_id=event_id,
                     key="start",
-                    text=GREETING,
+                    text=self._with_privacy(GREETING),
                     buttons=buttons,
                 )
                 # Карточка по `/report`, которая не ушла без диалога (≤ 24 ч).
@@ -403,7 +410,7 @@ class PersonalBotService:
                 )
         else:
             text, buttons = {
-                "help": (HELP, [[open_app_button()]]),
+                "help": (self._with_privacy(HELP), [[open_app_button()]]),
                 "version": (VERSION.format(version=self.version), []),
                 "short": (f"{NOT_A_PROBLEM}\n\n{HELP}", []),
                 "limit": (LIMIT.format(limit=self.daily_limit), []),

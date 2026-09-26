@@ -70,6 +70,8 @@ class ChatSettingsView(ContractModel):
     changed_at: datetime | None = None
     can_edit: bool = False
     history: list[ChatSettingsChange] = Field(default_factory=list)
+    #: Подпись пояса дома чата для тихих часов: «МСК», «ВЛАД» (D4, аддитивно).
+    timezone_label: str = "МСК"
 
 
 class ChatSettingsUpdate(ContractModel):

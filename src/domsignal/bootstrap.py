@@ -36,6 +36,7 @@ from domsignal.services.followups import CALLBACK_ACTION as FOLLOWUP_ACTION
 from domsignal.services.followups import TICK_JOB as FOLLOWUP_TICK_JOB
 from domsignal.services.followups import FollowupService
 from domsignal.services.group_messages import MaxWebhookService
+from domsignal.services.house_zone import HouseZones
 from domsignal.services.membership import MembershipService
 from domsignal.services.my_activity import MyActivityService
 from domsignal.services.navigator import NavigatorService
@@ -43,6 +44,7 @@ from domsignal.services.notifications import TicketNotificationHandler
 from domsignal.services.passive_analysis import PassiveWindowAnalysis
 from domsignal.services.passive_capture import PassiveCaptureService
 from domsignal.services.personal_bot import PersonalBotService
+from domsignal.services.privacy import privacy_url
 from domsignal.services.reception import TICK_JOB as RECEPTION_TICK_JOB
 from domsignal.services.reception import ReceptionService
 from domsignal.services.reports import DemoRule, ReportService
@@ -104,6 +106,8 @@ class Container:
     ai_provider: OpenAICompatibleProvider | None = field(default=None, repr=False)
     #: Таймаут одного вызова модели; `None` — модель не подключена.
     ai_timeout_seconds: float | None = None
+    #: Пояс дома и УК из пакета региона (D4).
+    zones: HouseZones | None = None
 
     @property
     def ai_analysis_enabled(self) -> bool:
@@ -246,6 +250,9 @@ def build_container(settings: Settings) -> Container:
     # Справочник проверяется один раз на старте; ошибка данных оставляет все
     # маршруты unknown и не меняет готовность приложения.
     routing = RoutingService(load_directory_or_none(Path(settings.regions_dir)))
+    zones = HouseZones(routing.directory, default=settings.display_timezone)
+    # Страница /privacy в сообщениях бота и в сообщениях о подключении чата (D4).
+    privacy_link = privacy_url(settings.public_base_url)
     action_cards = ActionCardBuilder(routing)
     report_service = ReportService(
         demo_rule=DemoRule(
@@ -319,10 +326,11 @@ def build_container(settings: Settings) -> Container:
         daily_limit=settings.bot_daily_report_limit,
         hold_seconds=settings.bot_hold_seconds,
         application_digest=lambda code: notify_digest(settings, code),
+        privacy_url=privacy_link,
     )
     appeal_drafts = AppealDraftService(routing=routing, followup_days=settings.appeal_followup_days)
     # D3: жилищный навигатор и домовое сообщество (BOT-VOICE-HUMAN-2026-09-27).
-    chat_settings = ChatSettingsService(chat_connections)
+    chat_settings = ChatSettingsService(chat_connections, zones)
     navigator = NavigatorService(routing)
     broadcasts = BroadcastService(
         session_factory=session_factory, public_base_url=settings.public_base_url
@@ -339,6 +347,7 @@ def build_container(settings: Settings) -> Container:
         session_factory=session_factory,
         public_base_url=settings.public_base_url,
         hour_msk=settings.daily_digest_hour_msk,
+        zones=zones,
     )
     reception = ReceptionService(session_factory=session_factory, navigator=navigator)
     notifications.keyed.update(
@@ -350,6 +359,7 @@ def build_container(settings: Settings) -> Container:
     )
     personal_bot.followups[FOLLOWUP_ACTION] = followups.answer
     notifications.dm_quiet_window = settings.broadcast_dm_quiet_window
+    notifications.zones = zones
     # Пассивное чтение чата: приём и окна в операционном контуре, разбор окна —
     # тем же анализатором, что и явный путь, в AI-пуле.
     signals = SignalEngine(routing, PassiveConfig.from_settings(settings))
@@ -358,6 +368,7 @@ def build_container(settings: Settings) -> Container:
         connections=chat_connections,
         engine=signals,
     )
+    passive.privacy_url = privacy_link
     # Выключатель модели пассивного режима (P6-DECISION): окна идут в правила,
     # бюджет модели не списывается; явный путь сохраняет модель.
     passive_llm = settings.passive_llm_enabled
@@ -433,4 +444,5 @@ def build_container(settings: Settings) -> Container:
         ai_budget=ai.budget,
         ai_provider=ai.provider,
         ai_timeout_seconds=ai.timeout_seconds,
+        zones=zones,
     )

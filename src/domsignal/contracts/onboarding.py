@@ -10,6 +10,7 @@ from pydantic import AwareDatetime, Field, field_validator, model_validator
 from domsignal.contracts.chat_connections import ConnectionView
 from domsignal.contracts.common import ContractModel
 from domsignal.contracts.quota import ChatQuotaView
+from domsignal.contracts.routing import TerritoryPolicy
 
 Role = Literal["operator", "company_admin"]
 ReviewStatus = Literal[
@@ -312,7 +313,19 @@ class HouseRequestView(ContractModel):
     history: list[AuditView] = Field(default_factory=list)
 
 
-class HouseApproval(ReviewDecision):
+class HouseRegionChoice(ContractModel):
+    """Регион дома из загруженного справочника (D4, В-1).
+
+    Регион обязателен: без него сервис отвечает 422 с объяснением. Варианты —
+    `GET /api/v1/platform/region-packs`.
+    """
+
+    region_code: str | None = Field(default=None, max_length=20)
+    municipality_code: str | None = Field(default=None, max_length=60)
+    territory_policy: TerritoryPolicy = "mixed"
+
+
+class HouseApproval(ReviewDecision, HouseRegionChoice):
     resolution: Literal["existing", "new"]
     house_id: UUID | None = None
     valid_from: AwareDatetime
@@ -430,6 +443,29 @@ class PlatformHouseView(ContractModel):
     id: UUID
     address: str
     name: str
+    #: Профиль маршрутизации дома (D4). `None` — «регион не задан».
+    region_code: str | None = None
+    municipality_code: str | None = None
+    territory_policy: TerritoryPolicy | None = None
+
+
+class HouseRegionChange(ReviewDecision, HouseRegionChoice):
+    """«Задать регион» дому без профиля — тот же сервис, что у CLI."""
+
+
+class RegionMunicipality(ContractModel):
+    code: str
+    name: str
+
+
+class RegionPackView(ContractModel):
+    """Регион загруженного справочника — вариант выбора при одобрении дома."""
+
+    region_code: str
+    name: str
+    timezone: str
+    version: str
+    municipalities: list[RegionMunicipality]
 
 
 class PlatformBindingView(ChatSummary):

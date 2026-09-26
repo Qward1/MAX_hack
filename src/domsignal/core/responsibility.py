@@ -387,6 +387,30 @@ class SafetyBlockData:
 
 
 @dataclass(frozen=True)
+class ReferenceLink:
+    """Официальная страница тарифов или программы капремонта региона (D4)."""
+
+    id: str
+    kind: str
+    label: str
+    url: str
+    verification: Verification
+
+    @classmethod
+    def parse(cls, raw: Any, where: str) -> ReferenceLink:
+        entry = _mapping(raw, where)
+        return cls(
+            id=_text(entry, "id", where),
+            kind=_literal(
+                _text(entry, "kind", where), ("tariffs", "capital_repair"), where, "kind"
+            ),
+            label=_text(entry, "label", where),
+            url=_text(entry, "url", where),
+            verification=Verification.parse(entry.get("verification"), f"{where}.verification"),
+        )
+
+
+@dataclass(frozen=True)
 class DirectoryLayer:
     """Один слой справочника после разбора документа."""
 
@@ -398,6 +422,10 @@ class DirectoryLayer:
     channels: tuple[Channel, ...] = ()
     rules: tuple[Rule, ...] = ()
     uk_default: UkDefault | None = None
+    #: Только у слоя региона (D4): название, пояс IANA и справочные ссылки.
+    name: str | None = None
+    timezone: str | None = None
+    reference_links: tuple[ReferenceLink, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -449,6 +477,14 @@ def parse_layer(document: Any, *, depth: int) -> DirectoryLayer:
         channels=channels,
         rules=rules,
         uk_default=UkDefault.parse(raw_default, f"{where}.uk_default") if raw_default else None,
+        name=_optional_text(entry, "name", where),
+        timezone=_optional_text(entry, "timezone", where),
+        reference_links=tuple(
+            ReferenceLink.parse(item, f"{where}.reference_links[{index}]")
+            for index, item in enumerate(
+                _sequence(entry.get("reference_links"), f"{where}.reference_links")
+            )
+        ),
     )
 
 
@@ -471,6 +507,7 @@ def parse_municipalities(document: Any, *, depth: int) -> dict[str, DirectoryLay
             depth=depth,
             version=version,
             updated_at=updated_at,
+            name=_text(section, "name", where),
             organizations=tuple(
                 Organization.parse(raw, f"{where}.organizations[{position}]")
                 for position, raw in enumerate(
@@ -549,6 +586,18 @@ class ResponsibilityDirectory:
         }
         self.safety = tuple(safety)
         self._cache: dict[tuple[str | None, str | None], EffectiveDirectory] = {}
+
+    def timezone_for(self, region_code: str | None) -> str | None:
+        """Пояс IANA из слоя региона; неизвестный регион — `None`."""
+        layer = self.regions.get(region_code or "")
+        return layer.timezone if layer is not None else None
+
+    def versions(self) -> dict[str, str]:
+        """Версии загруженных слоёв: `{"_federal": "2", "RU-MOW": "1", …}`."""
+        return {
+            self.federal.layer_id: self.federal.version,
+            **{code: layer.version for code, layer in sorted(self.regions.items())},
+        }
 
     def layers_for(self, region_code: str | None, municipality_code: str | None) -> list[
         DirectoryLayer

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import zoneinfo
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any
@@ -178,7 +179,7 @@ def check_verification(document: dict[str, Any], path: Path) -> bool:
     """
     failed = False
     for where, section in sections(document):
-        for key in ("organizations", "channels", "rules"):
+        for key in ("organizations", "channels", "rules", "reference_links"):
             for index, entry in enumerate(section.get(key) or []):
                 location = f"{where}.{key}.{index}"
                 for position, fact in enumerate(entry.get("facts") or []):
@@ -202,6 +203,14 @@ def check_verification(document: dict[str, Any], path: Path) -> bool:
                     report(path, f"{location}.basis", "verified rule basis needs a source_url")
                     failed = True
     return failed
+
+
+def timezone_error(document: dict[str, Any]) -> str | None:
+    """Пояс слоя региона должен существовать в базе IANA (D4, В-2)."""
+    zone = document.get("timezone")
+    if zone is None or zone in zoneinfo.available_timezones():
+        return None
+    return f"unknown time zone {zone}"
 
 
 def legacy_packs() -> bool:
@@ -240,6 +249,10 @@ def responsibility_layers() -> bool:
     for path, document in zip(paths, documents, strict=True):
         failed |= check_references(document, path, known)
         failed |= check_verification(document, path)
+        zone_problem = timezone_error(document)
+        if zone_problem is not None:
+            report(path, "timezone", zone_problem)
+            failed = True
         for location, message in unavailable_channel_errors(documents, document):
             report(path, location, message)
             failed = True

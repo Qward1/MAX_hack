@@ -285,6 +285,10 @@ export function MyHouseScreen({
           <p className="muted">Проверенных каналов для региона дома пока нет в справочнике.</p>
         )}
       </Panel>
+      <p className="muted">
+        <ExternalLink href={`${window.location.origin}/privacy`}>Политика данных</ExternalLink> — что бот читает и
+        хранит, как отключить чтение чата.
+      </p>
     </>
   );
 }

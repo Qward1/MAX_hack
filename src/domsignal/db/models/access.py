@@ -298,7 +298,7 @@ class OrganizationMembership(Timestamps, Base):
     )
     role: Mapped[str] = mapped_column(String(30))
     status: Mapped[str] = mapped_column(String(30), default="active", server_default="active")
-    # Ежедневная сводка в 09:00 МСК в личку MAX (D3); включает сам сотрудник.
+    # Ежедневная сводка в 09:00 по местному времени УК (D3, D4); включает сотрудник.
     daily_digest_enabled: Mapped[bool] = mapped_column(Boolean, server_default="false")
 
 

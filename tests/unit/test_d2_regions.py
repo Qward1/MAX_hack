@@ -64,8 +64,9 @@ def test_the_table_covers_ten_subtypes_in_two_regions() -> None:
 
 
 @pytest.mark.parametrize(("subtype", "scope", "routes"), compare_regions(ROUTING))
-def test_same_code_different_data(subtype: str, scope: str, routes: list[Any]) -> None:
-    for route, (route_type, channel, rule) in zip(routes, EXPECTED[subtype], strict=True):
+def test_same_code_different_data(subtype: str, scope: str, routes: dict[str, Any]) -> None:
+    pair = (routes["RU-TA"], routes["RU-MOW"])
+    for route, (route_type, channel, rule) in zip(pair, EXPECTED[subtype], strict=True):
         assert route.route_type == route_type, (subtype, route)
         assert [c.id for c in route.channels] == ([channel] if channel else []), subtype
         assert (route.basis.rule_id if route.basis else None) == rule, subtype
@@ -74,7 +75,8 @@ def test_same_code_different_data(subtype: str, scope: str, routes: list[Any]) -
 
 
 def test_moscow_never_offers_the_pos_and_kazan_never_offers_nash_gorod() -> None:
-    for _, _, (kazan, moscow) in compare_regions(ROUTING):
+    for _, _, routes in compare_regions(ROUTING):
+        kazan, moscow = routes["RU-TA"], routes["RU-MOW"]
         assert "ru_mow_nash_gorod" not in {c.id for c in kazan.channels}
         assert "pos_gosuslugi" not in {c.id for c in moscow.channels}
 

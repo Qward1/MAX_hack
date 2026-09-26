@@ -315,7 +315,7 @@ async def update_staff_settings(
     db: DbDep,
     container: ContainerDep,
 ) -> StaffSettings:
-    """Ежедневная сводка в 09:00 МСК в личку MAX — включает сам сотрудник."""
+    """Ежедневная сводка в 09:00 по местному времени УК в личку MAX — включает сам сотрудник."""
     async with db.begin():
         return await container.digest.update_settings(
             db, actor_id=user.id, company_id=company_id, payload=payload
