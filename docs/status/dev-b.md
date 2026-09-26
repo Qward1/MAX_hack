@@ -1,5 +1,37 @@
 # DEV-B — current handoff
 
+## D4 — регион и пояс дома, регионы данными, политика данных, совет дома, эксплуатация — 26.09.2026
+
+Единый статус проекта; последний срез разработки перед заморозкой. Сделан в
+`agent/d4-finish` (код) и `agent/d4-regions` (только данные) поверх `main`
+(`840a03d`). Полный отчёт — `Claude outputs/DEV_REPORT_D4.md`. Решения:
+[HOUSE-REGION](../decisions.md#house-region-2026-09-27),
+[REGION-TIMEZONE](../decisions.md#region-timezone-2026-09-27),
+[REGIONS-AS-DATA](../decisions.md#regions-as-data-2026-09-27),
+[PRIVACY-PAGE](../decisions.md#privacy-page-2026-09-27),
+[BOT-FIRST-SCREEN](../decisions.md#bot-first-screen-2026-09-27),
+[OPS-JURY-PERIOD](../decisions.md#ops-jury-period-2026-09-27); контракт —
+[CONTRACTS: срез D4](../CONTRACTS.md#регион-дома-пояс-политика-данных-совет-дома--срез-d4);
+регионы — [SCALING](../SCALING.md).
+
+**Миграция** `20260928_0014` (аддитивная): `house_council_members`,
+`house_proposals`, `broadcasts.origin = 'council'` с УК дома. `upgrade → check →
+downgrade → upgrade` — чисто; откат с данными совета отказывается.
+
+| § | Результат | Пути |
+|---|---|---|
+| 1 Регион при одобрении (В-1) | регион, муниципалитет, территория — только из загруженного справочника (`GET /platform/region-packs`); профиль в той же транзакции, аудит `operator.house_routing_profile` как у CLI (один сервис); без региона — 422 с объяснением; повтор идемпотентен; «Регион не задан» и «Задать регион» в кабинете платформы, счётчик в обзоре | `services/house_region.py`, `services/onboarding.py`, `admin/PlatformApp.tsx` |
+| 2 Пояс из пакета (В-2) | `timezone` у слоя региона (валидатор проверяет IANA); `HouseZones`: пояс дома и УК (большинство домов); тихие часы, сводка в 09:00 местного (тик раз в час), сутки обзора УК, время в оповещении («МСК»/«ВЛАД»); `tzdata` | `services/house_zone.py`, `core/quiet_hours.py`, `services/digest.py`, `services/dashboards.py` |
+| 3 Регионы данными (В-3, В-4, В-10, У-4) | RU-PSK и RU-PRI — commit без `src/`; RU-TA «Народный контроль» — 3 правила; «Госуслуги Дом» проверен → альтернатива в карточке УК; `route_preview` по всем пакетам; `/version` — версии слоёв; тест по всем пакетам | `regions/*`, `tools/route_preview.py`, `tests/unit/test_d4_region_packs.py` |
+| 4 Политика данных (В-5) | `/privacy` (сервер); ссылка — приветствие и `/help`, сообщения о подключении и чтении, подвал сайта, «Мой дом», заявка УК; контрактный тест | `services/privacy.py`, `tests/contract/test_d4_privacy.py` |
+| 5 Первый экран (У-3, №4) | кнопки-примеры типа `message` (сверено: dev.max.ru и официальный клиент MAX); без дома — сразу открытые дома, сообщение ждёт выбора | `services/personal_bot.py`, `services/bot_replies.py` |
+| 6 Совет дома и предложения | совет отмечает/снимает администратор УК; объявления и опросы совета — механизм D3 (`origin = 'council'`); «Предложить вопрос» и «Сделать опросом»; «Где посмотреть тарифы и капремонт» | `services/council.py`, `features/community/CommunityScreens.tsx`, `admin/CompanyPages.tsx` |
+| 7 Эксплуатация (№13) | `uptime.yml` раз в 10 минут; копии БД — systemd-таймер 03:00 МСК, 14 копий, `pg_restore --list`, место; CI на `ubuntu-24.04`; строка о датах решений | `.github/workflows/uptime.yml`, `scripts/backup_postgres.py`, `deploy/systemd/` |
+| 8 Порядок в production (П-9) | CLI `platform_ops` — переименование, открытый доступ, сигналы, заявки, скрытие текста; квитанции `operator.platform_ops` | `tools/platform_ops.py` |
+
+Проверки, выкладка, живые шаги и действия в production — ниже (дополняется
+после выкладки).
+
 ## D3 — жилищный навигатор, домовое сообщество, рассылки, сопровождение — 25.09.2026
 
 Единый статус проекта. D1 и D2 уже были в `main` (`aadd5a4`), D3 сделан поверх
