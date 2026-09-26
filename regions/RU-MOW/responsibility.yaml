@@ -18,8 +18,8 @@ region: RU-MOW
 name: Москва
 # Часовой пояс региона (IANA): тихие часы, сводка и сутки дашбордов его домов.
 timezone: Europe/Moscow
-version: "1"
-updated_at: "2026-09-24"
+version: "2"
+updated_at: "2026-09-26"
 
 organizations: []
 
@@ -164,6 +164,29 @@ rules:
       verified_by: DEV-B (страница тем портала без входа; новость mos.ru/news/item/97753073)
       source_title: "Портал «Наш город», gorod.mos.ru/themes. Проверено без входа 24.09.2026"
       source_url: https://gorod.mos.ru/themes
+
+# Где посмотреть тарифы и капремонт (D4): только официальные страницы, без цифр.
+reference_links:
+  - id: ru_mow.tariffs
+    kind: tariffs
+    label: "Тарифы ЖКУ — Департамент экономической политики и развития города Москвы"
+    url: https://www.mos.ru/depr/function/tarif/
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (официальная страница, прочитана 26.09.2026)
+      source_title: "ДЭПиР, mos.ru: «Департамент экономической политики и развития города Москвы - орган исполнительной власти города Москвы, осуществляющий, в том числе, функции в области государственного регулирования цен (тарифов)…». Проверено 26.09.2026"
+      source_url: https://www.mos.ru/depr/function/tarif/
+  - id: ru_mow.capital_repair
+    kind: capital_repair
+    label: "Региональная программа капитального ремонта — Департамент капитального ремонта города Москвы"
+    url: https://www.mos.ru/dkr/function/deyatelnost/regionalnaya-programma-kapitalnogo-remonta/
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (официальная страница, прочитана 26.09.2026)
+      source_title: "«Региональная программа капитального ремонта / Департамент капитального ремонта города Москвы / ДКР», mos.ru — разделы «Дом в программе», «Начисление взносов на капремонт». Проверено 26.09.2026"
+      source_url: https://www.mos.ru/dkr/function/deyatelnost/regionalnaya-programma-kapitalnogo-remonta/
 
 municipalities:
   - code: moscow

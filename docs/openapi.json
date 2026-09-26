@@ -5777,6 +5777,13 @@
             "default": false,
             "title": "Reception Available",
             "type": "boolean"
+          },
+          "reference_links": {
+            "items": {
+              "$ref": "#/components/schemas/OverviewReference"
+            },
+            "title": "Reference Links",
+            "type": "array"
           }
         },
         "required": [
@@ -7677,6 +7684,39 @@
           "source"
         ],
         "title": "OverviewEmergency",
+        "type": "object"
+      },
+      "OverviewReference": {
+        "additionalProperties": false,
+        "description": "Где посмотреть тарифы и капремонт (D4): официальная страница, без цифр.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "tariffs",
+              "capital_repair"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/VerifiedSource"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "url",
+          "source"
+        ],
+        "title": "OverviewReference",
         "type": "object"
       },
       "OverviewStep": {

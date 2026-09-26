@@ -4957,6 +4957,8 @@ export interface components {
              * @default false
              */
             reception_available: boolean;
+            /** Reference Links */
+            reference_links?: components["schemas"]["OverviewReference"][];
         };
         /**
          * HouseRegionChange
@@ -5642,6 +5644,22 @@ export interface components {
             source: components["schemas"]["VerifiedSource"];
             /** Title */
             title: string;
+        };
+        /**
+         * OverviewReference
+         * @description Где посмотреть тарифы и капремонт (D4): официальная страница, без цифр.
+         */
+        OverviewReference: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "tariffs" | "capital_repair";
+            /** Label */
+            label: string;
+            source: components["schemas"]["VerifiedSource"];
+            /** Url */
+            url: string;
         };
         /** OverviewStep */
         OverviewStep: {

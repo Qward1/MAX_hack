@@ -190,6 +190,15 @@ class OverviewStep(ContractModel):
     source: VerifiedSource | None = None
 
 
+class OverviewReference(ContractModel):
+    """Где посмотреть тарифы и капремонт (D4): официальная страница, без цифр."""
+
+    kind: Literal["tariffs", "capital_repair"]
+    label: str
+    url: str
+    source: VerifiedSource
+
+
 class HouseOverview(ContractModel):
     house_id: UUID
     name: str
@@ -203,6 +212,8 @@ class HouseOverview(ContractModel):
     channels: list[OverviewChannel] = Field(default_factory=list)
     accident_steps: list[OverviewStep] = Field(default_factory=list)
     reception_available: bool = False
+    #: Официальные страницы тарифов и капремонта региона (D4); нет источника — пусто.
+    reference_links: list[OverviewReference] = Field(default_factory=list)
 
 
 # ------------------------------------------------------ выполненные работы

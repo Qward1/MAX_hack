@@ -31,6 +31,7 @@ from domsignal.contracts.community import (
     OverviewChat,
     OverviewCompany,
     OverviewEmergency,
+    OverviewReference,
     OverviewStep,
     VerifiedSource,
 )
@@ -265,7 +266,26 @@ class NavigatorService:
             channels=channels,
             accident_steps=steps,
             reception_available=reception,
+            reference_links=await self._references(session, house_id),
         )
+
+    async def _references(self, session: AsyncSession, house_id: UUID) -> list[OverviewReference]:
+        """Проверенные справочные ссылки слоя региона дома (D4): тарифы и капремонт."""
+        directory = self.routing.directory
+        profile = await RoutingRepository(session).profile(house_id)
+        layer = directory.regions.get(profile.region_code or "") if directory and profile else None
+        if layer is None:
+            return []
+        return [
+            OverviewReference(
+                kind=link.kind,
+                label=link.label,
+                url=link.url,
+                source=_source(link.verification),
+            )
+            for link in layer.reference_links
+            if link.verification.status == "verified"
+        ]
 
     async def _directory(
         self, session: AsyncSession, house_id: UUID

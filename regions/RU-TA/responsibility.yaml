@@ -143,6 +143,29 @@ rules:
       source_title: "Портал услуг Республики Татарстан, «Народный контроль», uslugi.tatarstan.ru/open-gov. Проверено 26.09.2026"
       source_url: https://uslugi.tatarstan.ru/open-gov
 
+# Где посмотреть тарифы и капремонт (D4): только официальные страницы, без цифр.
+reference_links:
+  - id: ru_ta.tariffs
+    kind: tariffs
+    label: "Тарифы — Государственный комитет Республики Татарстан по тарифам"
+    url: https://kt.tatarstan.ru/ntarif.htm
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (официальная страница, прочитана 26.09.2026)
+      source_title: "Страница «Тарифы» Государственного комитета Республики Татарстан по тарифам, kt.tatarstan.ru. Проверено 26.09.2026 с сервера в РФ"
+      source_url: https://kt.tatarstan.ru/ntarif.htm
+  - id: ru_ta.capital_repair
+    kind: capital_repair
+    label: "Капитальный ремонт — региональный оператор НО «Фонд ЖКХ Республики Татарстан»"
+    url: https://fgkh.tatar/informaciya-o-regionalnom-operatore
+    verification:
+      status: verified
+      verified_at: "2026-09-26"
+      verified_by: DEV-B (официальная страница, прочитана 26.09.2026)
+      source_title: "fgkh.tatar, «Информация о региональном операторе»: «Региональный оператор капитального ремонта МКД в Республике Татарстан Некоммерческая организация «Фонд жилищно-коммунального хозяйства РТ»». Проверено 26.09.2026"
+      source_url: https://fgkh.tatar/informaciya-o-regionalnom-operatore
+
 municipalities:
   - code: kazan
     name: Казань
