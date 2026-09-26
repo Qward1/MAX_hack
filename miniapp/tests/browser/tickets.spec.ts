@@ -141,7 +141,7 @@ async function openResident(
 ) {
   await page.goto(`/?test_actor=${actor}&incident=${incident}`);
   await expect(
-    page.getByRole("heading", { name: "Ход решения" }),
+    page.getByRole("heading", { name: "Что происходит" }),
   ).toBeVisible();
 }
 async function workReport(page: Page, text: string) {
@@ -205,14 +205,12 @@ test("UI-TK-01/02/03/04 scoped queues and foreign house denial", async ({
   ).toBe(true);
   await expect(
     page.getByRole("link", {
-      name: `Открыть заявку ${one.ticket.internal_number}`,
-      exact: true,
+      name: new RegExp(`^Открыть заявку ${one.ticket.internal_number}:`),
     }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", {
-      name: `Открыть заявку ${two.ticket.internal_number}`,
-      exact: true,
+      name: new RegExp(`^Открыть заявку ${two.ticket.internal_number}:`),
     }),
   ).toBeVisible();
   await expect(
@@ -221,8 +219,7 @@ test("UI-TK-01/02/03/04 scoped queues and foreign house denial", async ({
   await openEmployee(page);
   await expect(
     page.getByRole("link", {
-      name: `Открыть заявку ${one.ticket.internal_number}`,
-      exact: true,
+      name: new RegExp(`^Открыть заявку ${one.ticket.internal_number}:`),
     }),
   ).toBeVisible();
   await expect(
@@ -290,8 +287,7 @@ test("UI-TK-07/08/09/13/14/15/21 full product path uses HTTP + PostgreSQL", asyn
   await openEmployee(page);
   await page
     .getByRole("link", {
-      name: `Открыть заявку ${ticket.internal_number}`,
-      exact: true,
+      name: new RegExp(`^Открыть заявку ${ticket.internal_number}:`),
     })
     .click();
   await page
@@ -318,7 +314,7 @@ test("UI-TK-07/08/09/13/14/15/21 full product path uses HTTP + PostgreSQL", asyn
   await page.reload();
   await workReport(page, "Заменён неисправный узел. Лифт проверен повторно.");
   await resident.reload();
-  await expect(resident.getByText(/Попытка №2/)).toBeVisible();
+  await expect(resident.getByText(/попытка 2/)).toBeVisible();
   await resident
     .getByRole("button", { name: "Исправлено", exact: true })
     .click();
@@ -329,11 +325,11 @@ test("UI-TK-07/08/09/13/14/15/21 full product path uses HTTP + PostgreSQL", asyn
   ).toBeVisible();
   await page.reload();
   await resident.reload();
-  await expect(page.locator(".page-header .status-badge")).toHaveText(
-    "Результат подтверждён жителем",
+  await expect(page.locator(".page-header .ds-tag")).toHaveText(
+    "Закрыта: жители подтвердили",
   );
-  await expect(resident.locator(".resident-work .status-badge")).toHaveText(
-    "Завершено",
+  await expect(resident.locator(".resident-work .ds-tag")).toHaveText(
+    "Завершена",
   );
   const saved = fixture("snapshot", ticket.id);
   expect(saved).toMatchObject({
@@ -362,7 +358,7 @@ test("UI-TK-10/27 assignment uses scoped candidates, native focus trap and Escap
 }) => {
   const { ticket } = await createTicket(request);
   await openEmployee(page, ticket.id, "a16-admin");
-  const trigger = page.getByRole("button", { name: "Назначить", exact: true });
+  const trigger = page.getByRole("button", { name: "Назначить исполнителя", exact: true });
   await trigger.click();
   const dialog = page.getByRole("dialog");
   await expect(
@@ -387,14 +383,14 @@ test("UI-TK-10/27 assignment uses scoped candidates, native focus trap and Escap
   await dialog
     .getByRole("textbox", { name: "Причина" })
     .fill("Передача дежурному исполнителю");
-  await dialog.getByRole("button", { name: "Назначить", exact: true }).click();
+  await dialog.getByRole("button", { name: "Назначить исполнителя", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByText("A16 operator", { exact: true })).toBeVisible();
+  await expect(page.locator("dl").getByText("A16 operator", { exact: true })).toBeVisible();
   await page.reload();
   expect((await detail(request, ticket.id)).assignee_name).toBe("A16 operator");
   await openEmployee(page, ticket.id, "a16-operator");
   await expect(
-    page.getByRole("button", { name: "Назначить", exact: true }),
+    page.getByRole("button", { name: "Назначить исполнителя", exact: true }),
   ).toHaveCount(0);
 });
 
@@ -456,8 +452,7 @@ test("UI-TK-16/18/19 late objection, conflict and resident allowlist", async ({
   await page.getByRole("link", { name: "В работе", exact: true }).click();
   await expect(
     page.getByRole("link", {
-      name: `Открыть заявку ${ticket.internal_number}`,
-      exact: true,
+      name: new RegExp(`^Открыть заявку ${ticket.internal_number}:`),
     }),
   ).toBeVisible();
 });
@@ -611,7 +606,7 @@ for (const width of [390, 768, 1024, 1366])
       page.getByRole("heading", { name: "Заявки", exact: true }),
     ).toBeVisible();
     await expect(
-      page.locator(".ticket-queue .ticket-open").first(),
+      page.locator(".queue-table .cell-main a").first(),
     ).toBeVisible();
     await noOverflow(page);
     await axe(page);

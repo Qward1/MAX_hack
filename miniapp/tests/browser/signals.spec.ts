@@ -65,7 +65,7 @@ test("P5-a thread of 7 lines → one card → create ticket → accepted in Tick
   await expect(weak).toHaveAttribute("aria-expanded", "true");
   const cards = page.getByRole("link", { name: "Открыть сигнал: Лифт" });
   await expect(cards).toHaveCount(1);
-  const card = page.locator("article", { has: cards });
+  const card = page.locator("tr", { has: cards });
   await expect(card.getByText(/^7 реплик · \d жител/)).toBeVisible();
   await expect(card.getByText("Подъезд 2")).toBeVisible();
   await expect(card.getByText("УК", { exact: true })).toBeVisible();
@@ -76,7 +76,10 @@ test("P5-a thread of 7 lines → one card → create ticket → accepted in Tick
   await cards.click();
   await expect(page).toHaveURL(new RegExp(`signal=${id}`));
   await expect(page.getByRole("heading", { level: 1, name: "Лифт" })).toBeVisible();
-  await expect(page.getByRole("heading", { level: 2 }).first()).toHaveText("Что, где и когда");
+  // Деталь открыта рядом с очередью; без признаков опасности первым идёт решение оператора.
+  await expect(
+    page.getByRole("region", { name: "Сигнал", exact: true }).getByRole("heading", { level: 2 }).first(),
+  ).toHaveText("Действия по сигналу");
   await page.getByRole("button", { name: "Создать заявку" }).click();
   const form = page.getByRole("form", { name: "Создать заявку" });
   await expect(form.getByRole("combobox", { name: "Категория" })).toHaveValue("elevator");
@@ -111,20 +114,21 @@ test("P5-b gas → critical banner, safety block first, emergency route before a
     await openQueue(page);
     const banner = page.getByRole("region", { name: /^Критические сигналы: \d+$/ });
     await expect(banner).toBeVisible();
-    await expect(banner.getByText(/Последний — в \d{2}:\d{2}/)).toBeVisible();
+    await expect(banner.getByText(/Последний — (сегодня|вчера|\d+ \S+), \d{2}:\d{2} МСК/)).toBeVisible();
     const critical = page.getByRole("link", { name: "Открыть сигнал: Признак опасности" }).first();
-    await expect(page.locator("article", { has: critical }).getByText("Критический")).toBeVisible();
-    await expect(page.locator("article", { has: critical }).getByText("Экстренные службы")).toBeVisible();
+    await expect(page.locator("tr", { has: critical }).getByText("Критический")).toBeVisible();
+    await expect(page.locator("tr", { has: critical }).getByText("Экстренные службы")).toBeVisible();
     await page.screenshot({ path: `test-results/p5-queue-critical-${width}.png`, fullPage: true });
     await noOverflow(page);
     await axe(page);
     await banner.getByRole("link", { name: "Открыть последний критический сигнал" }).click();
     await expect(page).toHaveURL(new RegExp(`signal=${id}`));
-    const headings = page.getByRole("heading", { level: 2 });
+    const scope = width >= 1200 ? page.getByRole("region", { name: "Сигнал", exact: true }) : page.locator("main");
+    const headings = scope.getByRole("heading", { level: 2 });
     await expect(headings.first()).toHaveText("Опасность: запах газа");
     await expect(page.getByText(/Переписку ещё разбирают/)).toBeVisible();
     await expect(page.getByRole("link", { name: "Позвонить 112" })).toHaveAttribute("href", "tel:112");
-    await expect(page.getByText("Маршрут: Экстренные службы")).toBeVisible();
+    await expect(page.getByText("Маршрут: Экстренные службы", { exact: true })).toBeVisible();
     await expect(page.getByText(/Федеральный закон от 30\.12\.2020 № 488-ФЗ/).first()).toBeVisible();
     await page.screenshot({ path: `test-results/p5-gas-detail-${width}.png`, fullPage: true });
     await noOverflow(page);
@@ -165,7 +169,7 @@ test("P5-d unknown route → operator chooses → external route without sending
   const { signal_id: id } = fixture("playground");
   await page.setViewportSize({ width: 1366, height: 900 });
   await openSignal(page, id, "Детская площадка");
-  await expect(page.getByText("Маршрут: Не определён")).toBeVisible();
+  await expect(page.getByText("Маршрут: Не определён", { exact: true })).toBeVisible();
   const external = page.getByRole("button", { name: "Отметить внешний маршрут" });
   await expect(external).toBeDisabled();
   const reason = await external.getAttribute("aria-describedby");
@@ -183,7 +187,7 @@ test("P5-d unknown route → operator chooses → external route without sending
   await axe(page);
   await form.getByRole("button", { name: "Выбрать маршрут" }).click();
   await expect(page.getByText("Маршрут выбран. Теперь примите решение по сигналу.")).toBeVisible();
-  await expect(page.getByText("Маршрут: Муниципалитет")).toBeVisible();
+  await expect(page.getByText("Маршрут: Муниципалитет", { exact: true })).toBeVisible();
   await expect(page.getByText(/^Маршрут выбран оператором Оператор П5/)).toBeVisible();
   await page.getByRole("button", { name: "Отметить внешний маршрут" }).click();
   const confirm = page.getByRole("form", { name: "Отметить внешний маршрут" });
