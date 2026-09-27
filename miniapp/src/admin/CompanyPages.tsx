@@ -215,7 +215,7 @@ function CouncilDetail({ base, houseId }: { base: string; houseId: string }) {
         {view.can_manage ? " Отмечать и снимать членов совета может администратор УК." : " Состав совета меняет администратор УК."}</p>
       <h4>Члены совета</h4>
       {members.length ? <ul className="admin-records">{members.map(m => <li key={m.user_id}>
-        <span>{m.display_name}</span><time>в совете с {new Date(m.since).toLocaleDateString("ru-RU")}</time>
+        <span>{m.display_name}</span><time>в совете с {formatDay(m.since)}</time>
         {view.can_manage && <button className="ticket-button secondary" disabled={action.busy} aria-label={`Снять из совета: ${m.display_name}`}
           onClick={() => ask(m.user_id, m.display_name, true)}>Снять</button>}
       </li>)}</ul> : <p className="muted">В совете дома пока никого нет.</p>}
@@ -235,7 +235,7 @@ function CouncilDetail({ base, houseId }: { base: string; houseId: string }) {
       {proposals.length ? <ul className="admin-records">{proposals.map(p => <li key={p.id}>
         <span className="pre-wrap">{p.text}</span>
         <span className="admin-status">{councilStatus[p.status] ?? p.status}</span>
-        <time>{new Date(p.created_at).toLocaleString("ru-RU")}</time>
+        <time>{formatStaffTime(p.created_at)}</time>
         {view.can_manage && p.status === "new" && <button className="ticket-button secondary" disabled={action.busy}
           aria-label={`Сделать опросом: ${p.text.slice(0, 80)}`} onClick={() => void toPoll(p.id)}>Сделать опросом</button>}
       </li>)}</ul> : <p className="muted">Жители пока ничего не предложили.</p>}

@@ -13,7 +13,7 @@ import { PAGE_SIZE } from "../../shared/api/community";
 import { useResource } from "../../shared/api/useResource";
 import { maxBridge, safeUrl } from "../../shared/max/bridge";
 import { Button } from "../../shared/ui/Button";
-import { countLabel, formatDay, formatWhen } from "../../shared/ui/format";
+import { countLabel, formatDay, formatWhen, sentence } from "../../shared/ui/format";
 import { IconExternal } from "../../shared/ui/icons";
 import { ConfirmDialog, InfoRow, Notice, StatePanel, StatusTag } from "../../shared/ui/semantic";
 import { SourceDisclosure } from "../../shared/ui/SourceLink";
@@ -200,7 +200,7 @@ export function MyHouseScreen({ api, houseId, links }: { api: CommunityApi; hous
                       ))}
                     </dl>
                     <p className="ds-meta">
-                      По данным управляющей компании{companyUpdated && `, обновлено ${companyUpdated}`}. ДомСигнал эти
+                      {sentence(`По данным управляющей компании${companyUpdated ? `, обновлено ${companyUpdated}` : ""}`)} ДомСигнал эти
                       сведения не проверяет.
                     </p>
                   </>

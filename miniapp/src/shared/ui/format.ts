@@ -67,11 +67,27 @@ export function formatStaffTime(value?: string | null): string | null {
   }).format(date)} МСК`;
 }
 
-/** Только день — для даты проверки справочника: «20 сентября 2026 г.». Время не выдумываем. */
-export function formatDay(value?: string | null): string | null {
+/**
+ * Только день: «27 сентября 2026 г.». Дата без времени («2026-09-27») — этот
+ * день как есть. Момент времени (ISO со временем) — день в поясе дома; по
+ * умолчанию МСК, как у кабинетов (B-05, D-07: полночь по Москве хранится в UTC
+ * как 21:00 предыдущего дня, и срез строки давал вчерашний день).
+ */
+export function formatDay(value?: string | null, timeZone: string = STAFF_TIME_ZONE): string | null {
   if (!value) return null;
-  const day = /^\d{4}-\d{2}-\d{2}/.exec(value)?.[0];
-  const date = day ? new Date(`${day}T12:00:00Z`) : parse(value);
-  if (!date || !Number.isFinite(date.getTime())) return null;
-  return new Intl.DateTimeFormat(LOCALE, { dateStyle: "long", timeZone: "UTC" }).format(date);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const date = new Date(`${value}T12:00:00Z`);
+    return Number.isFinite(date.getTime())
+      ? new Intl.DateTimeFormat(LOCALE, { dateStyle: "long", timeZone: "UTC" }).format(date)
+      : null;
+  }
+  const date = parse(value);
+  if (!date) return null;
+  return new Intl.DateTimeFormat(LOCALE, { dateStyle: "long", timeZone }).format(date);
+}
+
+/** Конец предложения без двойной точки: дата «2026 г.» уже кончается точкой (F-13). */
+export function sentence(text: string): string {
+  const trimmed = text.trimEnd();
+  return /[.!?…]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }

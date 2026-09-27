@@ -1,4 +1,4 @@
-import { formatStaffTime } from "../shared/ui/format";
+import { formatStaffTime, sentence } from "../shared/ui/format";
 import { useEffect, useState } from "react";
 import { adminClient, Feedback, Title, useAction, useRead, type Schema } from "./administration";
 
@@ -466,7 +466,7 @@ export function HouseFactsForm({ base, house, refresh }: { base: string; house: 
       <label>Этажей<input name="floors" type="number" min={1} max={200} inputMode="numeric" defaultValue={house.floor_count ?? ""} /></label>
       <button className="ticket-button secondary" disabled={action.busy}>Сохранить</button>
     </form>
-    <p className="muted">Необязательно. Жители увидят «по данным УК»{house.facts_updated_at ? `, обновлено ${when(house.facts_updated_at)}` : ""}.</p>
+    <p className="muted">{sentence(`Необязательно. Жители увидят «по данным УК»${house.facts_updated_at ? `, обновлено ${when(house.facts_updated_at)}` : ""}`)}</p>
     <Feedback error={action.error || undefined} />
   </details>;
 }
