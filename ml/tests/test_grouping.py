@@ -60,6 +60,48 @@ class GroupingTests(unittest.TestCase):
         self.assertEqual(direct_rule("Запах газа в подъезде"), "gas")
         self.assertIsNone(direct_rule("Нет запаха газа в подъезде"))
 
+    def test_service_policy_joins_entrances_and_keeps_resolution_for_review(self):
+        tracker = ChatTracker(merge_policy="service_context_6h")
+        one = tracker.consume(
+            {"id": "1", "house_id": "A", "text": "Нет горячей воды в 1 подъезде",
+             "ts": "2026-09-26T10:00:00"}, pred("no_hot_water", entrance=1))
+        two = tracker.consume(
+            {"id": "2", "house_id": "A", "text": "Нет горячей воды в 2 подъезде",
+             "ts": "2026-09-26T10:10:00"}, pred("no_hot_water", entrance=2))
+        self.assertEqual(one["case_id"], two["case_id"])
+        self.assertIsNone(tracker.cases[0].entrance)
+        done = tracker.consume(
+            {"id": "3", "house_id": "A", "text": "Воду дали",
+             "ts": "2026-09-26T11:00:00"},
+            pred("no_hot_water", utterance="resolved_notice", entrance=None))
+        self.assertEqual(done["action"], "resolution_pending_human")
+        self.assertEqual(tracker.cases[0].status, "open")
+
+    def test_service_policy_does_not_join_distinct_parking_issues(self):
+        tracker = ChatTracker(merge_policy="service_context_6h")
+        first = tracker.consume(
+            {"id": "1", "text": "Машина закрыла проезд у 1 подъезда",
+             "ts": "2026-09-26T10:00:00"}, pred("parking_violation", entrance=1))
+        second = tracker.consume(
+            {"id": "2", "text": "Машина закрыла проезд у 2 подъезда",
+             "ts": "2026-09-26T10:10:00"}, pred("parking_violation", entrance=2))
+        self.assertNotEqual(first["case_id"], second["case_id"])
+
+    def test_context_reply_requires_evidence(self):
+        tracker = ChatTracker(merge_policy="service_context_6h")
+        first = tracker.consume(
+            {"id": "1", "text": "Нет отопления", "ts": "2026-09-26T10:00:00"},
+            pred("heating_none", entrance=None))
+        negative = {"is_problem": False, "fine_class": None, "urgent_human_review": False}
+        attached = tracker.consume(
+            {"id": "2", "reply_to": "1", "text": "У нас тоже",
+             "ts": "2026-09-26T10:05:00"}, negative)
+        unrelated = tracker.consume(
+            {"id": "3", "reply_to": "1", "text": "Спасибо за фото",
+             "ts": "2026-09-26T10:06:00"}, negative)
+        self.assertEqual(attached["case_id"], first["case_id"])
+        self.assertIsNone(unrelated["case_id"])
+
 
 if __name__ == "__main__":
     unittest.main()

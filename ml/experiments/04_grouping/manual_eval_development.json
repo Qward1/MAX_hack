@@ -1,0 +1,1761 @@
+{
+  "annotation_version": "assistant_review_v1",
+  "scope": "development",
+  "independent_human_gold": false,
+  "days": {
+    "2024-10-25": {
+      "light": {
+        "conservative": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 26,
+            "fp": 2,
+            "fn": 14,
+            "precision": 0.9286,
+            "recall": 0.65,
+            "f1": 0.7647
+          },
+          "pair_all": {
+            "tp": 6,
+            "fp": 1,
+            "fn": 283,
+            "precision": 0.8571,
+            "recall": 0.0208,
+            "f1": 0.0405
+          },
+          "pair_explicit_single_issue": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 42,
+            "precision": 1.0,
+            "recall": 0.0233,
+            "f1": 0.0455
+          },
+          "gold_positive_message_case_recall": 0.55,
+          "gold_context_message_case_recall": 0.1429,
+          "negative_messages_assigned_case": 2,
+          "cases_created": 20,
+          "cases_with_distinct_single_issue_gold": 1,
+          "cases_with_negative_message": 2,
+          "gold_incidents_split_across_cases": 2,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 0,
+          "actions": {
+            "ignored": 40,
+            "created_preliminary": 20,
+            "attached": 4,
+            "urgent_human_review": 1,
+            "unmatched_update": 1,
+            "unmatched_resolution": 3
+          }
+        },
+        "broad_6h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 26,
+            "fp": 2,
+            "fn": 14,
+            "precision": 0.9286,
+            "recall": 0.65,
+            "f1": 0.7647
+          },
+          "pair_all": {
+            "tp": 35,
+            "fp": 4,
+            "fn": 254,
+            "precision": 0.8974,
+            "recall": 0.1211,
+            "f1": 0.2134
+          },
+          "pair_explicit_single_issue": {
+            "tp": 10,
+            "fp": 0,
+            "fn": 33,
+            "precision": 1.0,
+            "recall": 0.2326,
+            "f1": 0.3774
+          },
+          "gold_positive_message_case_recall": 0.65,
+          "gold_context_message_case_recall": 0.3571,
+          "negative_messages_assigned_case": 2,
+          "cases_created": 12,
+          "cases_with_distinct_single_issue_gold": 1,
+          "cases_with_negative_message": 2,
+          "gold_incidents_split_across_cases": 3,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 3,
+          "actions": {
+            "ignored": 40,
+            "created_preliminary": 12,
+            "attached": 13,
+            "urgent_human_review": 1,
+            "closed_unverified": 3
+          }
+        },
+        "broad_24h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 26,
+            "fp": 2,
+            "fn": 14,
+            "precision": 0.9286,
+            "recall": 0.65,
+            "f1": 0.7647
+          },
+          "pair_all": {
+            "tp": 35,
+            "fp": 4,
+            "fn": 254,
+            "precision": 0.8974,
+            "recall": 0.1211,
+            "f1": 0.2134
+          },
+          "pair_explicit_single_issue": {
+            "tp": 10,
+            "fp": 0,
+            "fn": 33,
+            "precision": 1.0,
+            "recall": 0.2326,
+            "f1": 0.3774
+          },
+          "gold_positive_message_case_recall": 0.65,
+          "gold_context_message_case_recall": 0.3571,
+          "negative_messages_assigned_case": 2,
+          "cases_created": 12,
+          "cases_with_distinct_single_issue_gold": 1,
+          "cases_with_negative_message": 2,
+          "gold_incidents_split_across_cases": 3,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 3,
+          "actions": {
+            "ignored": 40,
+            "created_preliminary": 12,
+            "attached": 13,
+            "urgent_human_review": 1,
+            "closed_unverified": 3
+          }
+        },
+        "service_context_6h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 26,
+            "fp": 2,
+            "fn": 14,
+            "precision": 0.9286,
+            "recall": 0.65,
+            "f1": 0.7647
+          },
+          "pair_all": {
+            "tp": 60,
+            "fp": 13,
+            "fn": 229,
+            "precision": 0.8219,
+            "recall": 0.2076,
+            "f1": 0.3315
+          },
+          "pair_explicit_single_issue": {
+            "tp": 18,
+            "fp": 3,
+            "fn": 25,
+            "precision": 0.8571,
+            "recall": 0.4186,
+            "f1": 0.5625
+          },
+          "gold_positive_message_case_recall": 0.625,
+          "gold_context_message_case_recall": 0.3571,
+          "negative_messages_assigned_case": 2,
+          "cases_created": 11,
+          "cases_with_distinct_single_issue_gold": 1,
+          "cases_with_negative_message": 2,
+          "gold_incidents_split_across_cases": 3,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 0,
+          "actions": {
+            "ignored": 40,
+            "created_preliminary": 11,
+            "attached": 14,
+            "urgent_human_review": 1,
+            "resolution_pending_human": 2,
+            "unmatched_resolution": 1
+          }
+        }
+      },
+      "heavy": {
+        "conservative": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 28,
+            "fp": 1,
+            "fn": 12,
+            "precision": 0.9655,
+            "recall": 0.7,
+            "f1": 0.8116
+          },
+          "pair_all": {
+            "tp": 7,
+            "fp": 2,
+            "fn": 282,
+            "precision": 0.7778,
+            "recall": 0.0242,
+            "f1": 0.047
+          },
+          "pair_explicit_single_issue": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 42,
+            "precision": 1.0,
+            "recall": 0.0233,
+            "f1": 0.0455
+          },
+          "gold_positive_message_case_recall": 0.6,
+          "gold_context_message_case_recall": 0.2143,
+          "negative_messages_assigned_case": 1,
+          "cases_created": 20,
+          "cases_with_distinct_single_issue_gold": 1,
+          "cases_with_negative_message": 1,
+          "gold_incidents_split_across_cases": 3,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 0,
+          "actions": {
+            "ignored": 39,
+            "created_preliminary": 20,
+            "attached": 5,
+            "urgent_human_review": 1,
+            "unmatched_update": 1,
+            "unmatched_resolution": 3
+          }
+        },
+        "broad_6h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 28,
+            "fp": 1,
+            "fn": 12,
+            "precision": 0.9655,
+            "recall": 0.7,
+            "f1": 0.8116
+          },
+          "pair_all": {
+            "tp": 40,
+            "fp": 8,
+            "fn": 249,
+            "precision": 0.8333,
+            "recall": 0.1384,
+            "f1": 0.2374
+          },
+          "pair_explicit_single_issue": {
+            "tp": 10,
+            "fp": 4,
+            "fn": 33,
+            "precision": 0.7143,
+            "recall": 0.2326,
+            "f1": 0.3509
+          },
+          "gold_positive_message_case_recall": 0.65,
+          "gold_context_message_case_recall": 0.3571,
+          "negative_messages_assigned_case": 1,
+          "cases_created": 11,
+          "cases_with_distinct_single_issue_gold": 2,
+          "cases_with_negative_message": 1,
+          "gold_incidents_split_across_cases": 3,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 1,
+          "actions": {
+            "ignored": 39,
+            "created_preliminary": 11,
+            "attached": 15,
+            "urgent_human_review": 1,
+            "closed_unverified": 1,
+            "unmatched_resolution": 2
+          }
+        },
+        "broad_24h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 28,
+            "fp": 1,
+            "fn": 12,
+            "precision": 0.9655,
+            "recall": 0.7,
+            "f1": 0.8116
+          },
+          "pair_all": {
+            "tp": 40,
+            "fp": 8,
+            "fn": 249,
+            "precision": 0.8333,
+            "recall": 0.1384,
+            "f1": 0.2374
+          },
+          "pair_explicit_single_issue": {
+            "tp": 10,
+            "fp": 4,
+            "fn": 33,
+            "precision": 0.7143,
+            "recall": 0.2326,
+            "f1": 0.3509
+          },
+          "gold_positive_message_case_recall": 0.65,
+          "gold_context_message_case_recall": 0.3571,
+          "negative_messages_assigned_case": 1,
+          "cases_created": 11,
+          "cases_with_distinct_single_issue_gold": 2,
+          "cases_with_negative_message": 1,
+          "gold_incidents_split_across_cases": 3,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 1,
+          "actions": {
+            "ignored": 39,
+            "created_preliminary": 11,
+            "attached": 15,
+            "urgent_human_review": 1,
+            "closed_unverified": 1,
+            "unmatched_resolution": 2
+          }
+        },
+        "service_context_6h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 28,
+            "fp": 1,
+            "fn": 12,
+            "precision": 0.9655,
+            "recall": 0.7,
+            "f1": 0.8116
+          },
+          "pair_all": {
+            "tp": 66,
+            "fp": 17,
+            "fn": 223,
+            "precision": 0.7952,
+            "recall": 0.2284,
+            "f1": 0.3548
+          },
+          "pair_explicit_single_issue": {
+            "tp": 18,
+            "fp": 9,
+            "fn": 25,
+            "precision": 0.6667,
+            "recall": 0.4186,
+            "f1": 0.5143
+          },
+          "gold_positive_message_case_recall": 0.65,
+          "gold_context_message_case_recall": 0.3571,
+          "negative_messages_assigned_case": 1,
+          "cases_created": 10,
+          "cases_with_distinct_single_issue_gold": 2,
+          "cases_with_negative_message": 1,
+          "gold_incidents_split_across_cases": 3,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 0,
+          "actions": {
+            "ignored": 39,
+            "created_preliminary": 10,
+            "attached": 16,
+            "urgent_human_review": 1,
+            "resolution_pending_human": 1,
+            "unmatched_resolution": 2
+          }
+        }
+      },
+      "gate_union": {
+        "conservative": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 28,
+            "fp": 2,
+            "fn": 12,
+            "precision": 0.9333,
+            "recall": 0.7,
+            "f1": 0.8
+          },
+          "pair_all": {
+            "tp": 7,
+            "fp": 2,
+            "fn": 282,
+            "precision": 0.7778,
+            "recall": 0.0242,
+            "f1": 0.047
+          },
+          "pair_explicit_single_issue": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 42,
+            "precision": 1.0,
+            "recall": 0.0233,
+            "f1": 0.0455
+          },
+          "gold_positive_message_case_recall": 0.6,
+          "gold_context_message_case_recall": 0.2143,
+          "negative_messages_assigned_case": 2,
+          "cases_created": 21,
+          "cases_with_distinct_single_issue_gold": 1,
+          "cases_with_negative_message": 2,
+          "gold_incidents_split_across_cases": 3,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 0,
+          "actions": {
+            "ignored": 38,
+            "created_preliminary": 21,
+            "attached": 5,
+            "urgent_human_review": 1,
+            "unmatched_update": 1,
+            "unmatched_resolution": 3
+          }
+        },
+        "broad_6h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 28,
+            "fp": 2,
+            "fn": 12,
+            "precision": 0.9333,
+            "recall": 0.7,
+            "f1": 0.8
+          },
+          "pair_all": {
+            "tp": 40,
+            "fp": 8,
+            "fn": 249,
+            "precision": 0.8333,
+            "recall": 0.1384,
+            "f1": 0.2374
+          },
+          "pair_explicit_single_issue": {
+            "tp": 10,
+            "fp": 4,
+            "fn": 33,
+            "precision": 0.7143,
+            "recall": 0.2326,
+            "f1": 0.3509
+          },
+          "gold_positive_message_case_recall": 0.65,
+          "gold_context_message_case_recall": 0.3571,
+          "negative_messages_assigned_case": 2,
+          "cases_created": 12,
+          "cases_with_distinct_single_issue_gold": 2,
+          "cases_with_negative_message": 2,
+          "gold_incidents_split_across_cases": 3,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 1,
+          "actions": {
+            "ignored": 38,
+            "created_preliminary": 12,
+            "attached": 15,
+            "urgent_human_review": 1,
+            "closed_unverified": 1,
+            "unmatched_resolution": 2
+          }
+        },
+        "broad_24h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 28,
+            "fp": 2,
+            "fn": 12,
+            "precision": 0.9333,
+            "recall": 0.7,
+            "f1": 0.8
+          },
+          "pair_all": {
+            "tp": 40,
+            "fp": 8,
+            "fn": 249,
+            "precision": 0.8333,
+            "recall": 0.1384,
+            "f1": 0.2374
+          },
+          "pair_explicit_single_issue": {
+            "tp": 10,
+            "fp": 4,
+            "fn": 33,
+            "precision": 0.7143,
+            "recall": 0.2326,
+            "f1": 0.3509
+          },
+          "gold_positive_message_case_recall": 0.65,
+          "gold_context_message_case_recall": 0.3571,
+          "negative_messages_assigned_case": 2,
+          "cases_created": 12,
+          "cases_with_distinct_single_issue_gold": 2,
+          "cases_with_negative_message": 2,
+          "gold_incidents_split_across_cases": 3,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 1,
+          "actions": {
+            "ignored": 38,
+            "created_preliminary": 12,
+            "attached": 15,
+            "urgent_human_review": 1,
+            "closed_unverified": 1,
+            "unmatched_resolution": 2
+          }
+        },
+        "service_context_6h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 28,
+            "fp": 2,
+            "fn": 12,
+            "precision": 0.9333,
+            "recall": 0.7,
+            "f1": 0.8
+          },
+          "pair_all": {
+            "tp": 66,
+            "fp": 17,
+            "fn": 223,
+            "precision": 0.7952,
+            "recall": 0.2284,
+            "f1": 0.3548
+          },
+          "pair_explicit_single_issue": {
+            "tp": 18,
+            "fp": 9,
+            "fn": 25,
+            "precision": 0.6667,
+            "recall": 0.4186,
+            "f1": 0.5143
+          },
+          "gold_positive_message_case_recall": 0.65,
+          "gold_context_message_case_recall": 0.3571,
+          "negative_messages_assigned_case": 2,
+          "cases_created": 11,
+          "cases_with_distinct_single_issue_gold": 2,
+          "cases_with_negative_message": 2,
+          "gold_incidents_split_across_cases": 3,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 0,
+          "actions": {
+            "ignored": 38,
+            "created_preliminary": 11,
+            "attached": 16,
+            "urgent_human_review": 1,
+            "resolution_pending_human": 1,
+            "unmatched_resolution": 2
+          }
+        }
+      },
+      "gate_intersection": {
+        "conservative": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 26,
+            "fp": 1,
+            "fn": 14,
+            "precision": 0.963,
+            "recall": 0.65,
+            "f1": 0.7761
+          },
+          "pair_all": {
+            "tp": 7,
+            "fp": 2,
+            "fn": 282,
+            "precision": 0.7778,
+            "recall": 0.0242,
+            "f1": 0.047
+          },
+          "pair_explicit_single_issue": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 42,
+            "precision": 1.0,
+            "recall": 0.0233,
+            "f1": 0.0455
+          },
+          "gold_positive_message_case_recall": 0.55,
+          "gold_context_message_case_recall": 0.1429,
+          "negative_messages_assigned_case": 1,
+          "cases_created": 18,
+          "cases_with_distinct_single_issue_gold": 1,
+          "cases_with_negative_message": 1,
+          "gold_incidents_split_across_cases": 2,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 0,
+          "actions": {
+            "ignored": 41,
+            "created_preliminary": 18,
+            "attached": 5,
+            "urgent_human_review": 1,
+            "unmatched_update": 1,
+            "unmatched_resolution": 3
+          }
+        },
+        "broad_6h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 26,
+            "fp": 1,
+            "fn": 14,
+            "precision": 0.963,
+            "recall": 0.65,
+            "f1": 0.7761
+          },
+          "pair_all": {
+            "tp": 40,
+            "fp": 8,
+            "fn": 249,
+            "precision": 0.8333,
+            "recall": 0.1384,
+            "f1": 0.2374
+          },
+          "pair_explicit_single_issue": {
+            "tp": 10,
+            "fp": 4,
+            "fn": 33,
+            "precision": 0.7143,
+            "recall": 0.2326,
+            "f1": 0.3509
+          },
+          "gold_positive_message_case_recall": 0.6,
+          "gold_context_message_case_recall": 0.2857,
+          "negative_messages_assigned_case": 1,
+          "cases_created": 9,
+          "cases_with_distinct_single_issue_gold": 2,
+          "cases_with_negative_message": 1,
+          "gold_incidents_split_across_cases": 2,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 1,
+          "actions": {
+            "ignored": 41,
+            "created_preliminary": 9,
+            "attached": 15,
+            "urgent_human_review": 1,
+            "closed_unverified": 1,
+            "unmatched_resolution": 2
+          }
+        },
+        "broad_24h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 26,
+            "fp": 1,
+            "fn": 14,
+            "precision": 0.963,
+            "recall": 0.65,
+            "f1": 0.7761
+          },
+          "pair_all": {
+            "tp": 40,
+            "fp": 8,
+            "fn": 249,
+            "precision": 0.8333,
+            "recall": 0.1384,
+            "f1": 0.2374
+          },
+          "pair_explicit_single_issue": {
+            "tp": 10,
+            "fp": 4,
+            "fn": 33,
+            "precision": 0.7143,
+            "recall": 0.2326,
+            "f1": 0.3509
+          },
+          "gold_positive_message_case_recall": 0.6,
+          "gold_context_message_case_recall": 0.2857,
+          "negative_messages_assigned_case": 1,
+          "cases_created": 9,
+          "cases_with_distinct_single_issue_gold": 2,
+          "cases_with_negative_message": 1,
+          "gold_incidents_split_across_cases": 2,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 1,
+          "actions": {
+            "ignored": 41,
+            "created_preliminary": 9,
+            "attached": 15,
+            "urgent_human_review": 1,
+            "closed_unverified": 1,
+            "unmatched_resolution": 2
+          }
+        },
+        "service_context_6h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 26,
+            "fp": 1,
+            "fn": 14,
+            "precision": 0.963,
+            "recall": 0.65,
+            "f1": 0.7761
+          },
+          "pair_all": {
+            "tp": 66,
+            "fp": 17,
+            "fn": 223,
+            "precision": 0.7952,
+            "recall": 0.2284,
+            "f1": 0.3548
+          },
+          "pair_explicit_single_issue": {
+            "tp": 18,
+            "fp": 9,
+            "fn": 25,
+            "precision": 0.6667,
+            "recall": 0.4186,
+            "f1": 0.5143
+          },
+          "gold_positive_message_case_recall": 0.6,
+          "gold_context_message_case_recall": 0.2857,
+          "negative_messages_assigned_case": 1,
+          "cases_created": 8,
+          "cases_with_distinct_single_issue_gold": 2,
+          "cases_with_negative_message": 1,
+          "gold_incidents_split_across_cases": 2,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 0,
+          "actions": {
+            "ignored": 41,
+            "created_preliminary": 8,
+            "attached": 16,
+            "urgent_human_review": 1,
+            "resolution_pending_human": 1,
+            "unmatched_resolution": 2
+          }
+        }
+      },
+      "oracle_labels": {
+        "conservative": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 40,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "pair_all": {
+            "tp": 13,
+            "fp": 0,
+            "fn": 276,
+            "precision": 1.0,
+            "recall": 0.045,
+            "f1": 0.0861
+          },
+          "pair_explicit_single_issue": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 42,
+            "precision": 1.0,
+            "recall": 0.0233,
+            "f1": 0.0455
+          },
+          "gold_positive_message_case_recall": 0.925,
+          "gold_context_message_case_recall": 1.0,
+          "negative_messages_assigned_case": 0,
+          "cases_created": 30,
+          "cases_with_distinct_single_issue_gold": 0,
+          "cases_with_negative_message": 0,
+          "gold_incidents_split_across_cases": 4,
+          "gold_incidents_without_case": 1,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 0,
+          "actions": {
+            "ignored": 29,
+            "created_preliminary": 30,
+            "attached": 7,
+            "unmatched_resolution": 3
+          }
+        },
+        "broad_6h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 40,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "pair_all": {
+            "tp": 154,
+            "fp": 0,
+            "fn": 135,
+            "precision": 1.0,
+            "recall": 0.5329,
+            "f1": 0.6953
+          },
+          "pair_explicit_single_issue": {
+            "tp": 20,
+            "fp": 0,
+            "fn": 23,
+            "precision": 1.0,
+            "recall": 0.4651,
+            "f1": 0.6349
+          },
+          "gold_positive_message_case_recall": 1.0,
+          "gold_context_message_case_recall": 1.0,
+          "negative_messages_assigned_case": 0,
+          "cases_created": 8,
+          "cases_with_distinct_single_issue_gold": 0,
+          "cases_with_negative_message": 0,
+          "gold_incidents_split_across_cases": 2,
+          "gold_incidents_without_case": 0,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 3,
+          "false_unverified_closures": 0,
+          "actions": {
+            "ignored": 29,
+            "created_preliminary": 8,
+            "attached": 29,
+            "closed_unverified": 3
+          }
+        },
+        "broad_24h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 40,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "pair_all": {
+            "tp": 154,
+            "fp": 0,
+            "fn": 135,
+            "precision": 1.0,
+            "recall": 0.5329,
+            "f1": 0.6953
+          },
+          "pair_explicit_single_issue": {
+            "tp": 20,
+            "fp": 0,
+            "fn": 23,
+            "precision": 1.0,
+            "recall": 0.4651,
+            "f1": 0.6349
+          },
+          "gold_positive_message_case_recall": 1.0,
+          "gold_context_message_case_recall": 1.0,
+          "negative_messages_assigned_case": 0,
+          "cases_created": 8,
+          "cases_with_distinct_single_issue_gold": 0,
+          "cases_with_negative_message": 0,
+          "gold_incidents_split_across_cases": 2,
+          "gold_incidents_without_case": 0,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 3,
+          "false_unverified_closures": 0,
+          "actions": {
+            "ignored": 29,
+            "created_preliminary": 8,
+            "attached": 29,
+            "closed_unverified": 3
+          }
+        },
+        "service_context_6h": {
+          "messages": 69,
+          "scorable_messages": 60,
+          "uncertain_messages": 9,
+          "gold_incidents": 10,
+          "gold_multi_issue_messages": 6,
+          "gate_on_manual_labels": {
+            "tp": 40,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "pair_all": {
+            "tp": 243,
+            "fp": 0,
+            "fn": 46,
+            "precision": 1.0,
+            "recall": 0.8408,
+            "f1": 0.9135
+          },
+          "pair_explicit_single_issue": {
+            "tp": 42,
+            "fp": 0,
+            "fn": 1,
+            "precision": 1.0,
+            "recall": 0.9767,
+            "f1": 0.9882
+          },
+          "gold_positive_message_case_recall": 1.0,
+          "gold_context_message_case_recall": 1.0,
+          "negative_messages_assigned_case": 0,
+          "cases_created": 8,
+          "cases_with_distinct_single_issue_gold": 0,
+          "cases_with_negative_message": 0,
+          "gold_incidents_split_across_cases": 4,
+          "gold_incidents_without_case": 0,
+          "gold_resolutions": 3,
+          "correct_unverified_closures": 0,
+          "false_unverified_closures": 0,
+          "actions": {
+            "ignored": 29,
+            "created_preliminary": 8,
+            "attached": 29,
+            "resolution_pending_human": 3
+          }
+        }
+      }
+    }
+  },
+  "pooled": {
+    "light": {
+      "conservative": {
+        "pair_all": {
+          "tp": 6,
+          "fp": 1,
+          "fn": 283,
+          "precision": 0.8571,
+          "recall": 0.0208,
+          "f1": 0.0405
+        },
+        "pair_explicit_single_issue": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 42,
+          "precision": 1.0,
+          "recall": 0.0233,
+          "f1": 0.0455
+        },
+        "gate_on_manual_labels": {
+          "tp": 26,
+          "fp": 2,
+          "fn": 14,
+          "precision": 0.9286,
+          "recall": 0.65,
+          "f1": 0.7647
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 20,
+        "negative_messages_assigned_case": 2,
+        "cases_with_distinct_single_issue_gold": 1,
+        "gold_incidents_split_across_cases": 2,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 0
+      },
+      "broad_6h": {
+        "pair_all": {
+          "tp": 35,
+          "fp": 4,
+          "fn": 254,
+          "precision": 0.8974,
+          "recall": 0.1211,
+          "f1": 0.2134
+        },
+        "pair_explicit_single_issue": {
+          "tp": 10,
+          "fp": 0,
+          "fn": 33,
+          "precision": 1.0,
+          "recall": 0.2326,
+          "f1": 0.3774
+        },
+        "gate_on_manual_labels": {
+          "tp": 26,
+          "fp": 2,
+          "fn": 14,
+          "precision": 0.9286,
+          "recall": 0.65,
+          "f1": 0.7647
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 12,
+        "negative_messages_assigned_case": 2,
+        "cases_with_distinct_single_issue_gold": 1,
+        "gold_incidents_split_across_cases": 3,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 3
+      },
+      "broad_24h": {
+        "pair_all": {
+          "tp": 35,
+          "fp": 4,
+          "fn": 254,
+          "precision": 0.8974,
+          "recall": 0.1211,
+          "f1": 0.2134
+        },
+        "pair_explicit_single_issue": {
+          "tp": 10,
+          "fp": 0,
+          "fn": 33,
+          "precision": 1.0,
+          "recall": 0.2326,
+          "f1": 0.3774
+        },
+        "gate_on_manual_labels": {
+          "tp": 26,
+          "fp": 2,
+          "fn": 14,
+          "precision": 0.9286,
+          "recall": 0.65,
+          "f1": 0.7647
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 12,
+        "negative_messages_assigned_case": 2,
+        "cases_with_distinct_single_issue_gold": 1,
+        "gold_incidents_split_across_cases": 3,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 3
+      },
+      "service_context_6h": {
+        "pair_all": {
+          "tp": 60,
+          "fp": 13,
+          "fn": 229,
+          "precision": 0.8219,
+          "recall": 0.2076,
+          "f1": 0.3315
+        },
+        "pair_explicit_single_issue": {
+          "tp": 18,
+          "fp": 3,
+          "fn": 25,
+          "precision": 0.8571,
+          "recall": 0.4186,
+          "f1": 0.5625
+        },
+        "gate_on_manual_labels": {
+          "tp": 26,
+          "fp": 2,
+          "fn": 14,
+          "precision": 0.9286,
+          "recall": 0.65,
+          "f1": 0.7647
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 11,
+        "negative_messages_assigned_case": 2,
+        "cases_with_distinct_single_issue_gold": 1,
+        "gold_incidents_split_across_cases": 3,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 0
+      }
+    },
+    "heavy": {
+      "conservative": {
+        "pair_all": {
+          "tp": 7,
+          "fp": 2,
+          "fn": 282,
+          "precision": 0.7778,
+          "recall": 0.0242,
+          "f1": 0.047
+        },
+        "pair_explicit_single_issue": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 42,
+          "precision": 1.0,
+          "recall": 0.0233,
+          "f1": 0.0455
+        },
+        "gate_on_manual_labels": {
+          "tp": 28,
+          "fp": 1,
+          "fn": 12,
+          "precision": 0.9655,
+          "recall": 0.7,
+          "f1": 0.8116
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 20,
+        "negative_messages_assigned_case": 1,
+        "cases_with_distinct_single_issue_gold": 1,
+        "gold_incidents_split_across_cases": 3,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 0
+      },
+      "broad_6h": {
+        "pair_all": {
+          "tp": 40,
+          "fp": 8,
+          "fn": 249,
+          "precision": 0.8333,
+          "recall": 0.1384,
+          "f1": 0.2374
+        },
+        "pair_explicit_single_issue": {
+          "tp": 10,
+          "fp": 4,
+          "fn": 33,
+          "precision": 0.7143,
+          "recall": 0.2326,
+          "f1": 0.3509
+        },
+        "gate_on_manual_labels": {
+          "tp": 28,
+          "fp": 1,
+          "fn": 12,
+          "precision": 0.9655,
+          "recall": 0.7,
+          "f1": 0.8116
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 11,
+        "negative_messages_assigned_case": 1,
+        "cases_with_distinct_single_issue_gold": 2,
+        "gold_incidents_split_across_cases": 3,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 1
+      },
+      "broad_24h": {
+        "pair_all": {
+          "tp": 40,
+          "fp": 8,
+          "fn": 249,
+          "precision": 0.8333,
+          "recall": 0.1384,
+          "f1": 0.2374
+        },
+        "pair_explicit_single_issue": {
+          "tp": 10,
+          "fp": 4,
+          "fn": 33,
+          "precision": 0.7143,
+          "recall": 0.2326,
+          "f1": 0.3509
+        },
+        "gate_on_manual_labels": {
+          "tp": 28,
+          "fp": 1,
+          "fn": 12,
+          "precision": 0.9655,
+          "recall": 0.7,
+          "f1": 0.8116
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 11,
+        "negative_messages_assigned_case": 1,
+        "cases_with_distinct_single_issue_gold": 2,
+        "gold_incidents_split_across_cases": 3,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 1
+      },
+      "service_context_6h": {
+        "pair_all": {
+          "tp": 66,
+          "fp": 17,
+          "fn": 223,
+          "precision": 0.7952,
+          "recall": 0.2284,
+          "f1": 0.3548
+        },
+        "pair_explicit_single_issue": {
+          "tp": 18,
+          "fp": 9,
+          "fn": 25,
+          "precision": 0.6667,
+          "recall": 0.4186,
+          "f1": 0.5143
+        },
+        "gate_on_manual_labels": {
+          "tp": 28,
+          "fp": 1,
+          "fn": 12,
+          "precision": 0.9655,
+          "recall": 0.7,
+          "f1": 0.8116
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 10,
+        "negative_messages_assigned_case": 1,
+        "cases_with_distinct_single_issue_gold": 2,
+        "gold_incidents_split_across_cases": 3,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 0
+      }
+    },
+    "gate_union": {
+      "conservative": {
+        "pair_all": {
+          "tp": 7,
+          "fp": 2,
+          "fn": 282,
+          "precision": 0.7778,
+          "recall": 0.0242,
+          "f1": 0.047
+        },
+        "pair_explicit_single_issue": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 42,
+          "precision": 1.0,
+          "recall": 0.0233,
+          "f1": 0.0455
+        },
+        "gate_on_manual_labels": {
+          "tp": 28,
+          "fp": 2,
+          "fn": 12,
+          "precision": 0.9333,
+          "recall": 0.7,
+          "f1": 0.8
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 21,
+        "negative_messages_assigned_case": 2,
+        "cases_with_distinct_single_issue_gold": 1,
+        "gold_incidents_split_across_cases": 3,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 0
+      },
+      "broad_6h": {
+        "pair_all": {
+          "tp": 40,
+          "fp": 8,
+          "fn": 249,
+          "precision": 0.8333,
+          "recall": 0.1384,
+          "f1": 0.2374
+        },
+        "pair_explicit_single_issue": {
+          "tp": 10,
+          "fp": 4,
+          "fn": 33,
+          "precision": 0.7143,
+          "recall": 0.2326,
+          "f1": 0.3509
+        },
+        "gate_on_manual_labels": {
+          "tp": 28,
+          "fp": 2,
+          "fn": 12,
+          "precision": 0.9333,
+          "recall": 0.7,
+          "f1": 0.8
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 12,
+        "negative_messages_assigned_case": 2,
+        "cases_with_distinct_single_issue_gold": 2,
+        "gold_incidents_split_across_cases": 3,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 1
+      },
+      "broad_24h": {
+        "pair_all": {
+          "tp": 40,
+          "fp": 8,
+          "fn": 249,
+          "precision": 0.8333,
+          "recall": 0.1384,
+          "f1": 0.2374
+        },
+        "pair_explicit_single_issue": {
+          "tp": 10,
+          "fp": 4,
+          "fn": 33,
+          "precision": 0.7143,
+          "recall": 0.2326,
+          "f1": 0.3509
+        },
+        "gate_on_manual_labels": {
+          "tp": 28,
+          "fp": 2,
+          "fn": 12,
+          "precision": 0.9333,
+          "recall": 0.7,
+          "f1": 0.8
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 12,
+        "negative_messages_assigned_case": 2,
+        "cases_with_distinct_single_issue_gold": 2,
+        "gold_incidents_split_across_cases": 3,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 1
+      },
+      "service_context_6h": {
+        "pair_all": {
+          "tp": 66,
+          "fp": 17,
+          "fn": 223,
+          "precision": 0.7952,
+          "recall": 0.2284,
+          "f1": 0.3548
+        },
+        "pair_explicit_single_issue": {
+          "tp": 18,
+          "fp": 9,
+          "fn": 25,
+          "precision": 0.6667,
+          "recall": 0.4186,
+          "f1": 0.5143
+        },
+        "gate_on_manual_labels": {
+          "tp": 28,
+          "fp": 2,
+          "fn": 12,
+          "precision": 0.9333,
+          "recall": 0.7,
+          "f1": 0.8
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 11,
+        "negative_messages_assigned_case": 2,
+        "cases_with_distinct_single_issue_gold": 2,
+        "gold_incidents_split_across_cases": 3,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 0
+      }
+    },
+    "gate_intersection": {
+      "conservative": {
+        "pair_all": {
+          "tp": 7,
+          "fp": 2,
+          "fn": 282,
+          "precision": 0.7778,
+          "recall": 0.0242,
+          "f1": 0.047
+        },
+        "pair_explicit_single_issue": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 42,
+          "precision": 1.0,
+          "recall": 0.0233,
+          "f1": 0.0455
+        },
+        "gate_on_manual_labels": {
+          "tp": 26,
+          "fp": 1,
+          "fn": 14,
+          "precision": 0.963,
+          "recall": 0.65,
+          "f1": 0.7761
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 18,
+        "negative_messages_assigned_case": 1,
+        "cases_with_distinct_single_issue_gold": 1,
+        "gold_incidents_split_across_cases": 2,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 0
+      },
+      "broad_6h": {
+        "pair_all": {
+          "tp": 40,
+          "fp": 8,
+          "fn": 249,
+          "precision": 0.8333,
+          "recall": 0.1384,
+          "f1": 0.2374
+        },
+        "pair_explicit_single_issue": {
+          "tp": 10,
+          "fp": 4,
+          "fn": 33,
+          "precision": 0.7143,
+          "recall": 0.2326,
+          "f1": 0.3509
+        },
+        "gate_on_manual_labels": {
+          "tp": 26,
+          "fp": 1,
+          "fn": 14,
+          "precision": 0.963,
+          "recall": 0.65,
+          "f1": 0.7761
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 9,
+        "negative_messages_assigned_case": 1,
+        "cases_with_distinct_single_issue_gold": 2,
+        "gold_incidents_split_across_cases": 2,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 1
+      },
+      "broad_24h": {
+        "pair_all": {
+          "tp": 40,
+          "fp": 8,
+          "fn": 249,
+          "precision": 0.8333,
+          "recall": 0.1384,
+          "f1": 0.2374
+        },
+        "pair_explicit_single_issue": {
+          "tp": 10,
+          "fp": 4,
+          "fn": 33,
+          "precision": 0.7143,
+          "recall": 0.2326,
+          "f1": 0.3509
+        },
+        "gate_on_manual_labels": {
+          "tp": 26,
+          "fp": 1,
+          "fn": 14,
+          "precision": 0.963,
+          "recall": 0.65,
+          "f1": 0.7761
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 9,
+        "negative_messages_assigned_case": 1,
+        "cases_with_distinct_single_issue_gold": 2,
+        "gold_incidents_split_across_cases": 2,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 1
+      },
+      "service_context_6h": {
+        "pair_all": {
+          "tp": 66,
+          "fp": 17,
+          "fn": 223,
+          "precision": 0.7952,
+          "recall": 0.2284,
+          "f1": 0.3548
+        },
+        "pair_explicit_single_issue": {
+          "tp": 18,
+          "fp": 9,
+          "fn": 25,
+          "precision": 0.6667,
+          "recall": 0.4186,
+          "f1": 0.5143
+        },
+        "gate_on_manual_labels": {
+          "tp": 26,
+          "fp": 1,
+          "fn": 14,
+          "precision": 0.963,
+          "recall": 0.65,
+          "f1": 0.7761
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 8,
+        "negative_messages_assigned_case": 1,
+        "cases_with_distinct_single_issue_gold": 2,
+        "gold_incidents_split_across_cases": 2,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 0
+      }
+    },
+    "oracle_labels": {
+      "conservative": {
+        "pair_all": {
+          "tp": 13,
+          "fp": 0,
+          "fn": 276,
+          "precision": 1.0,
+          "recall": 0.045,
+          "f1": 0.0861
+        },
+        "pair_explicit_single_issue": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 42,
+          "precision": 1.0,
+          "recall": 0.0233,
+          "f1": 0.0455
+        },
+        "gate_on_manual_labels": {
+          "tp": 40,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 30,
+        "negative_messages_assigned_case": 0,
+        "cases_with_distinct_single_issue_gold": 0,
+        "gold_incidents_split_across_cases": 4,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 0
+      },
+      "broad_6h": {
+        "pair_all": {
+          "tp": 154,
+          "fp": 0,
+          "fn": 135,
+          "precision": 1.0,
+          "recall": 0.5329,
+          "f1": 0.6953
+        },
+        "pair_explicit_single_issue": {
+          "tp": 20,
+          "fp": 0,
+          "fn": 23,
+          "precision": 1.0,
+          "recall": 0.4651,
+          "f1": 0.6349
+        },
+        "gate_on_manual_labels": {
+          "tp": 40,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 8,
+        "negative_messages_assigned_case": 0,
+        "cases_with_distinct_single_issue_gold": 0,
+        "gold_incidents_split_across_cases": 2,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 3,
+        "false_unverified_closures": 0
+      },
+      "broad_24h": {
+        "pair_all": {
+          "tp": 154,
+          "fp": 0,
+          "fn": 135,
+          "precision": 1.0,
+          "recall": 0.5329,
+          "f1": 0.6953
+        },
+        "pair_explicit_single_issue": {
+          "tp": 20,
+          "fp": 0,
+          "fn": 23,
+          "precision": 1.0,
+          "recall": 0.4651,
+          "f1": 0.6349
+        },
+        "gate_on_manual_labels": {
+          "tp": 40,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 8,
+        "negative_messages_assigned_case": 0,
+        "cases_with_distinct_single_issue_gold": 0,
+        "gold_incidents_split_across_cases": 2,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 3,
+        "false_unverified_closures": 0
+      },
+      "service_context_6h": {
+        "pair_all": {
+          "tp": 243,
+          "fp": 0,
+          "fn": 46,
+          "precision": 1.0,
+          "recall": 0.8408,
+          "f1": 0.9135
+        },
+        "pair_explicit_single_issue": {
+          "tp": 42,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.9767,
+          "f1": 0.9882
+        },
+        "gate_on_manual_labels": {
+          "tp": 40,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "messages": 69,
+        "scorable_messages": 60,
+        "uncertain_messages": 9,
+        "gold_incidents": 10,
+        "cases_created": 8,
+        "negative_messages_assigned_case": 0,
+        "cases_with_distinct_single_issue_gold": 0,
+        "gold_incidents_split_across_cases": 4,
+        "gold_resolutions": 3,
+        "correct_unverified_closures": 0,
+        "false_unverified_closures": 0
+      }
+    }
+  }
+}

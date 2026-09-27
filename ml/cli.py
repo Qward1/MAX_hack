@@ -62,6 +62,9 @@ def build_parser() -> argparse.ArgumentParser:
         add_model(stream)
         stream.add_argument("--file", type=Path, help="input JSONL; default stdin")
         stream.add_argument("--limit", type=int, default=0)
+        stream.add_argument("--merge-policy", choices=["conservative", "broad_6h",
+                                                       "broad_24h", "service_context_6h"],
+                            default="conservative")
     ev = sub.add_parser("eval", help="aggregate metrics on val/test; no raw text output")
     add_model(ev)
     ev.add_argument("--data-root")
@@ -73,7 +76,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def run_stream(args: argparse.Namespace,
                predict: Callable[[str], dict[str, Any]]) -> None:
-    tracker = ChatTracker()
+    tracker = ChatTracker(merge_policy=args.merge_policy)
     stream = args.file.open(encoding="utf-8") if args.file else sys.stdin
     try:
         for index, line in enumerate(stream):
