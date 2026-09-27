@@ -46,25 +46,25 @@ async def seed(settings: Settings | None = None) -> None:
                     [
                         {
                             "id": DEMO_USER_ID,
-                            "display_name": "Тестовый житель",
+                            "display_name": "Анна Соколова",
                             "demo_alias": "demo",
                             "max_user_id": "demo-max-user",
                         },
                         {
                             "id": OUTSIDER_USER_ID,
-                            "display_name": "Житель другого дома",
+                            "display_name": "Олег Васильев",
                             "demo_alias": "outsider",
                             "max_user_id": "outsider-max-user",
                         },
                         {
                             "id": NEIGHBOUR_USER_ID,
-                            "display_name": "Сосед по демо-дому",
+                            "display_name": "Игорь Петров",
                             "demo_alias": "demo-neighbour",
                             "max_user_id": "demo-neighbour-max-user",
                         },
                         {
                             "id": THIRD_USER_ID,
-                            "display_name": "Ещё один житель демо-дома",
+                            "display_name": "Мария Ильина",
                             "demo_alias": "demo-third",
                             "max_user_id": "demo-third-max-user",
                         },
@@ -78,20 +78,20 @@ async def seed(settings: Settings | None = None) -> None:
                     [
                         {
                             "id": DEMO_HOUSE_ID,
-                            "name": "Демо-дом на Чистопольской",
-                            "address": "Казань, Чистопольская улица, 1 (демо)",
+                            "name": "Пилотная, 7",
+                            "address": "Казань, ул. Пилотная, 7",
                             "is_demo": True,
                         },
                         {
                             "id": OTHER_HOUSE_ID,
-                            "name": "Другой тестовый дом",
-                            "address": "Казань, Другая улица, 2 (демо)",
+                            "name": "Садовая, 2",
+                            "address": "Казань, ул. Садовая, 2",
                             "is_demo": True,
                         },
                         {
                             "id": MOSCOW_HOUSE_ID,
-                            "name": "Демо-дом в Москве",
-                            "address": "Москва, Садовая улица, 3 (демо)",
+                            "name": "Лесная, 3",
+                            "address": "Москва, ул. Лесная, 3",
                             "is_demo": True,
                         },
                     ]
@@ -102,7 +102,7 @@ async def seed(settings: Settings | None = None) -> None:
                 insert(ManagementCompany)
                 .values(
                     id=DEMO_TENANT_ID,
-                    name="Demo ManagementCompany",
+                    name="УК «Пилотная, 7»",
                     is_demo=True,
                 )
                 .on_conflict_do_nothing(index_elements=[ManagementCompany.id])

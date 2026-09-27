@@ -11,7 +11,6 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from domsignal.core.display_time import display_zone
 
-
 #: B-01: ключ шифрования секретов TOTP локального стенда (`compose.yaml`).
 #: Он общеизвестен, поэтому production-конфигурация его отвергает.
 LOCAL_MFA_ENCRYPTION_KEY = "bG9jYWwtb25seS1tZmEta2V5LWRvLW5vdC11c2UtISE="

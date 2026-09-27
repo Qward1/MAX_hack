@@ -509,6 +509,26 @@ class PassiveWindowAnalysis:
                             reason="danger_line",
                         )
                     return signal
+        # 1a. D-06: все реплики сигнала уже легли при приёме в сигнал, который
+        # в этом окне занят другим сигналом модели, — это второе прочтение тех же
+        # реплик (например, с темой из контекста прошлой ветки), а не новая
+        # проблема: второй критический сигнал и второе оповещение не создаются.
+        drafted = index.lines(draft.line_ids)
+        taken = [ingest.get(line.mid) for line in drafted]
+        if drafted and all(item is not None and item in used for item in taken):
+            signal = await repo.signal_for_update(taken[0])
+            if signal is not None and signal.status in OPEN_SIGNAL_STATUSES:
+                await engine.group(
+                    session,
+                    signal,
+                    window_id=claimed.id,
+                    draft=draft,
+                    analysis=analysis,
+                    index=index,
+                    now=now,
+                    reason="danger_line_repeat",
+                )
+                return signal
         # 2. Ядро привязало окно к открытому сигналу дома.
         if draft.ref.startswith("signal:"):
             try:

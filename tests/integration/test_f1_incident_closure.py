@@ -64,7 +64,9 @@ async def test_confirmed_ticket_resolves_the_incident(tickets: dict) -> None:  #
     assert (row.status, row.closure) == ("resolved", "residents_confirmed")
     assert row.resolved_at is not None and row.status_changed_at is not None
     assert await events(d) == ["resolved"]
-    detail = await d["client"].get(f"/api/v1/incidents/{d['incident']}", headers=d["headers"]["eve"])
+    detail = await d["client"].get(
+        f"/api/v1/incidents/{d['incident']}", headers=d["headers"]["eve"]
+    )
     body = detail.json()
     assert body["status"] == "resolved" and body["closure"] == "residents_confirmed"
     assert body["resolved_at"] is not None
