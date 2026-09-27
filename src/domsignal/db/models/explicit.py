@@ -281,3 +281,17 @@ class AiCallBudget(Base):
 
 #: Значение `scope_key` для общего дневного счёта.
 GLOBAL_BUDGET_SCOPE = ""
+
+
+class AiTokenMinute(Base):
+    """Токены модели за минуту, общий счёт всех процессов (F1, LLM-RATE-2026-09-29).
+
+    Ограничитель `LLM_TOKENS_PER_MINUTE` резервирует оценку токенов окна до
+    вызова атомарным обновлением строки минуты; старые строки удаляет очистка.
+    """
+
+    __tablename__ = "ai_token_minutes"
+    __table_args__ = (CheckConstraint("tokens >= 0", name="tokens"),)
+
+    minute: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    tokens: Mapped[int] = mapped_column(Integer, default=0, server_default="0")

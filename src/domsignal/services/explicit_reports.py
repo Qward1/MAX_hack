@@ -310,12 +310,18 @@ class ExplicitReportService:
                 location_scope=decision.location_scope,
                 danger_kinds=danger,
             )
-            duplicates = await self._duplicates(
-                session,
-                context,
-                category=decision.product_category,
-                entrance=decision.entrance.value if decision.entrance else None,
-                now=datetime.now(UTC),
+            # B-06: при опасности дубли не предлагаются — как в личке бота:
+            # сначала блок безопасности, а не «присоединиться» к чужой проблеме.
+            duplicates = (
+                []
+                if danger
+                else await self._duplicates(
+                    session,
+                    context,
+                    category=decision.product_category,
+                    entrance=decision.entrance.value if decision.entrance else None,
+                    now=datetime.now(UTC),
+                )
             )
             card = self.action_cards.build(
                 route,
@@ -392,7 +398,10 @@ class ExplicitReportService:
 
         Продукт ничего не сливает сам: список нужен только для того, чтобы
         житель сам сказал «это та же проблема» или «нет, это другое».
+        «Другое» — не категория, а её отсутствие: совпадением не считается (B-06).
         """
+        if category == ReportCategory.OTHER:
+            return []
         repo = IncidentRepository(session)
         incidents = await repo.open_candidates(
             context,

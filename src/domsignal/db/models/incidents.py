@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
@@ -33,6 +34,16 @@ class Incident(Base):
         ),
         Index("ix_incident_house_status", "house_id", "status"),
         Index("ix_incident_management_status", "management_id", "status"),
+        Index(
+            "ix_incident_house_resolved",
+            "house_id",
+            "resolved_at",
+            postgresql_where="resolved_at IS NOT NULL",
+        ),
+        CheckConstraint(
+            "closure IS NULL OR closure IN ('residents_confirmed', 'ticket_cancelled')",
+            name="closure",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -50,6 +61,39 @@ class Incident(Base):
     location_floor: Mapped[str | None] = mapped_column(String(50))
     location_label: Mapped[str | None] = mapped_column(String(200))
     observed_since: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    # F1 (INCIDENT-CLOSE-WITH-TICKET-2026-09-28): проблема закрывается вместе
+    # с заявкой. `closure` — как: жители подтвердили работу или заявку
+    # отменили с причиной; причина служебная, жителю не показывается.
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    closure: Mapped[str | None] = mapped_column(String(30))
+    closure_reason: Mapped[str | None] = mapped_column(Text)
+    status_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class IncidentEvent(Base):
+    """Событие проблемы: закрыта вместе с заявкой или снова открыта."""
+
+    __tablename__ = "incident_events"
+    __table_args__ = (
+        CheckConstraint("kind IN ('resolved', 'closed_cancelled', 'reopened')", name="kind"),
+        Index("ix_incident_events_incident", "incident_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    incident_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(40))
+    from_status: Mapped[str | None] = mapped_column(String(30))
+    to_status: Mapped[str] = mapped_column(String(30))
+    ticket_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("tickets.id", ondelete="SET NULL")
+    )
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

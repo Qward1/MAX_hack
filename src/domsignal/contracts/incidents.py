@@ -83,6 +83,10 @@ class ReportSummary(ContractModel):
     id: UUID
     description: str
     created_at: datetime
+    #: «Меня тоже касается»: сосед присоединился, а не описал проблему сам
+    #: (O-2 — текст проблемы в таком сообщении повторён, показывать его второй
+    #: раз не нужно).
+    joined: bool = False
 
 
 class ActionDescriptor(ContractModel):
@@ -137,6 +141,11 @@ class IncidentSummary(ContractModel):
     is_demo: bool
     provenance: Provenance | None
     allowed_actions: list[ActionDescriptor] = Field(default_factory=list)
+    #: F1: проблема закрыта вместе с заявкой — когда и как. `residents_confirmed`
+    #: — жители подтвердили работу («Решена»), `ticket_cancelled` — заявку
+    #: отменила управляющая компания. Служебная причина отмены не отдаётся.
+    resolved_at: datetime | None = None
+    closure: Literal["residents_confirmed", "ticket_cancelled"] | None = None
 
 
 class RuleProvenance(ContractModel):
@@ -151,7 +160,9 @@ class RuleProvenance(ContractModel):
 
 class IncidentDetail(IncidentSummary):
     reports: list[ReportSummary]
-    rule: RuleProvenance
+    #: Основание демонстрационного правила — только у демонстрационного дома
+    #: (D-03: у настоящей проблемы «Демонстрационные данные» не показываются).
+    rule: RuleProvenance | None = None
 
 
 class ReportCreated(ContractModel):
@@ -175,6 +186,13 @@ class ReportSubmitted(ContractModel):
     report: ReportCreated | None = None
 
 
+IncidentListState = Literal["all", "open", "resolved_recent"]
+
+
 class IncidentList(ContractModel):
     items: list[IncidentSummary]
     page: PageMeta
+    #: F1: счёт доски по всему дому, а не по странице: открытые проблемы и
+    #: решённые за последние 30 дней.
+    open_total: int | None = Field(default=None, ge=0)
+    resolved_recent_total: int | None = Field(default=None, ge=0)

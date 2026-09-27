@@ -13,3 +13,14 @@ tests
 **/.env
 **/.env.*
 *.log
+# Реальные данные, рабочие материалы и результаты прогонов в образ не попадают.
+data
+Claude outputs
+output
+.worktrees
+worktrees
+miniapp/test-results
+miniapp/playwright-report
+.agent-scratch
+.codex
+.playwright-cli

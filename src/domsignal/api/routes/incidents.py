@@ -7,6 +7,7 @@ from domsignal.api.dependencies import ContainerDep, CurrentUserDep, DbDep
 from domsignal.contracts.incidents import (
     IncidentDetail,
     IncidentList,
+    IncidentListState,
     ReportCreate,
     ReportCreated,
     ReportPreview,
@@ -117,13 +118,16 @@ async def list_incidents(
     container: ContainerDep,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
+    state: IncidentListState = "all",
 ) -> IncidentList:
+    """Проблемы дома. `state=open` — открытые, `resolved_recent` — решённые за 30 дней."""
     return await container.report_service.list_for_house(
         session,
         actor_id=current_user.id,
         house_id=house_id,
         limit=limit,
         offset=offset,
+        state=state,
     )
 
 

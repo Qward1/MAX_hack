@@ -69,6 +69,7 @@ from domsignal.services.errors import (
     ResourceNotFound,
     ServiceError,
 )
+from domsignal.services.incident_lifecycle import close_with_ticket, reopen_with_ticket
 from domsignal.services.membership import MembershipService
 from domsignal.services.ticket_chat import enqueue_ticket_post
 
@@ -89,8 +90,14 @@ class TicketService:
         *,
         context: OperationContext,
         incident_id: UUID,
+        responsibility_known: bool = False,
     ) -> Ticket | None:
-        """Caller owns transaction. Requires an already accepted Report, never a GET side effect."""
+        """Caller owns transaction. Requires an already accepted Report, never a GET side effect.
+
+        `responsibility_known` — ответственность уже определена человеком по
+        маршруту «зона УК» (оператор создаёт заявку из сигнала, D-05): тогда
+        категория «Другое» не отправляет заявку в «Нужно уточнение».
+        """
         # Diagnostic replay is not a production intake or an instruction to an organization.
         if context.source == "max_replay":
             return None
@@ -130,7 +137,7 @@ class TicketService:
         if existing is not None:
             return existing  # Including closed/cancelled: no invented next episode.
         candidates = list(await session.scalars(repo.employees(fresh, responsible_only=True)))
-        unknown = incident.category == "other"
+        unknown = incident.category == "other" and not responsibility_known
         assignee_id = candidates[0].id if len(candidates) == 1 and not unknown else None
         reason = (
             "responsibility_unknown"
@@ -415,6 +422,14 @@ class TicketService:
                 case TicketAction.CANCEL:
                     ticket.status = "cancelled"
                     kind = TicketEventKind.CANCELLED
+                    # Заявка отменена с причиной — проблема закрыта с ней же (F1).
+                    await close_with_ticket(
+                        session,
+                        ticket,
+                        closure="ticket_cancelled",
+                        actor_id=actor_id,
+                        reason=reason,
+                    )
                 case TicketAction.DEADLINE:
                     kind = TicketEventKind.DEADLINE_RECORDED
             repo.changed(ticket)
@@ -529,8 +544,15 @@ class TicketService:
                 )
                 if payload.outcome == "unresolved":
                     kind = TicketEventKind.RESULT_OBJECTED
+                    if previous == "closed" and ticket.status != "closed":
+                        # Поздний отказ: та же заявка в работу, проблема снова открыта.
+                        await reopen_with_ticket(session, ticket, actor_id=actor_id)
                 elif ticket.status == "closed" and previous != "closed":
                     kind = TicketEventKind.RESULT_CONFIRMED
+                    # Жители подтвердили работу — проблема «Решена» (F1).
+                    await close_with_ticket(
+                        session, ticket, closure="residents_confirmed", actor_id=actor_id
+                    )
                 if ticket.status == "in_progress" and not await repo.available(
                     context, ticket.assignee_id
                 ):

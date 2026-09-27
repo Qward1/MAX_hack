@@ -6449,6 +6449,21 @@
           "category": {
             "$ref": "#/components/schemas/ReportCategory"
           },
+          "closure": {
+            "anyOf": [
+              {
+                "enum": [
+                  "residents_confirmed",
+                  "ticket_cancelled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closure"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -6528,8 +6543,27 @@
             "title": "Reports",
             "type": "array"
           },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
           "rule": {
-            "$ref": "#/components/schemas/RuleProvenance"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuleProvenance"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "status": {
             "$ref": "#/components/schemas/IncidentStatus"
@@ -6566,8 +6600,7 @@
           "participant_count",
           "is_demo",
           "provenance",
-          "reports",
-          "rule"
+          "reports"
         ],
         "title": "IncidentDetail",
         "type": "object"
@@ -6582,8 +6615,32 @@
             "title": "Items",
             "type": "array"
           },
+          "open_total": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Total"
+          },
           "page": {
             "$ref": "#/components/schemas/PageMeta"
+          },
+          "resolved_recent_total": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Recent Total"
           }
         },
         "required": [
@@ -6667,6 +6724,21 @@
           "category": {
             "$ref": "#/components/schemas/ReportCategory"
           },
+          "closure": {
+            "anyOf": [
+              {
+                "enum": [
+                  "residents_confirmed",
+                  "ticket_cancelled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closure"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -6738,6 +6810,18 @@
             "minimum": 0.0,
             "title": "Report Count",
             "type": "integer"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
           },
           "status": {
             "$ref": "#/components/schemas/IncidentStatus"
@@ -9961,6 +10045,11 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "joined": {
+            "default": false,
+            "title": "Joined",
+            "type": "boolean"
           }
         },
         "required": [
@@ -30680,6 +30769,7 @@
     },
     "/api/v1/houses/{house_id}/incidents": {
       "get": {
+        "description": "Проблемы дома. `state=open` — открытые, `resolved_recent` — решённые за 30 дней.",
         "operationId": "list_incidents_api_v1_houses__house_id__incidents_get",
         "parameters": [
           {
@@ -30713,6 +30803,21 @@
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "open",
+                "resolved_recent"
+              ],
+              "title": "State",
+              "type": "string"
             }
           }
         ],

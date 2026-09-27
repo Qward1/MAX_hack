@@ -12,6 +12,11 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from domsignal.core.display_time import display_zone
 
 
+#: B-01: ключ шифрования секретов TOTP локального стенда (`compose.yaml`).
+#: Он общеизвестен, поэтому production-конфигурация его отвергает.
+LOCAL_MFA_ENCRYPTION_KEY = "bG9jYWwtb25seS1tZmEta2V5LWRvLW5vdC11c2UtISE="
+
+
 class AppEnvironment(StrEnum):
     LOCAL = "local"
     TEST = "test"
@@ -188,6 +193,9 @@ class Settings(BaseSettings):
     @field_validator("auth_mfa_encryption_key")
     @classmethod
     def validate_mfa_key(cls, value: str | None) -> str | None:
+        if not value:
+            # Пустая строка из скопированного `.env.example` — «не задан».
+            return None
         if value is not None:
             from cryptography.fernet import Fernet
 
@@ -344,6 +352,9 @@ class Settings(BaseSettings):
         problems: list[str] = []
         if not self.auth_mfa_encryption_key:
             problems.append("AUTH_MFA_ENCRYPTION_KEY is required")
+        elif self.auth_mfa_encryption_key == LOCAL_MFA_ENCRYPTION_KEY:
+            # B-01: общеизвестный ключ локального стенда из compose.yaml.
+            problems.append("AUTH_MFA_ENCRYPTION_KEY must not be the local stand key")
         database = urlparse(self.database_url)
         session_secret_lower = self.session_secret.lower()
         if self.allow_test_session:

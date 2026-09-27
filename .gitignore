@@ -46,6 +46,10 @@ uploads/
 .agent-scratch/
 .codex/
 .playwright-cli/
-output/playwright/
+# Результаты прогонов (приёмка, снимки) и рабочие материалы вне репозитория.
+output/
+Claude outputs/
+miniapp/test-results/
+miniapp/playwright-report/
 .worktrees/
 worktrees/

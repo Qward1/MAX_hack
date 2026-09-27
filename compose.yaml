@@ -43,6 +43,9 @@ services:
       DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-10}
       PUBLIC_BASE_URL: http://localhost:${API_PORT:-8000}
       CORS_ORIGINS: http://localhost:5173,http://localhost:${API_PORT:-8000}
+      # B-01: ключ шифрования секретов TOTP сотрудников. Значение по умолчанию —
+      # общеизвестный ключ только для локального стенда: production его отвергает.
+      AUTH_MFA_ENCRYPTION_KEY: ${AUTH_MFA_ENCRYPTION_KEY:-bG9jYWwtb25seS1tZmEta2V5LWRvLW5vdC11c2UtISE=}
     depends_on:
       db:
         condition: service_healthy

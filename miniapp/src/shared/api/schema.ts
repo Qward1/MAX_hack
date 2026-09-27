@@ -1394,7 +1394,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Incidents */
+        /**
+         * List Incidents
+         * @description Проблемы дома. `state=open` — открытые, `resolved_recent` — решённые за 30 дней.
+         */
         get: operations["list_incidents_api_v1_houses__house_id__incidents_get"];
         put?: never;
         post?: never;
@@ -5239,6 +5242,8 @@ export interface components {
             /** Allowed Actions */
             allowed_actions?: components["schemas"]["ActionDescriptor"][];
             category: components["schemas"]["ReportCategory"];
+            /** Closure */
+            closure?: ("residents_confirmed" | "ticket_cancelled") | null;
             /**
              * Created At
              * Format: date-time
@@ -5268,7 +5273,9 @@ export interface components {
             report_count: number;
             /** Reports */
             reports: components["schemas"]["ReportSummary"][];
-            rule: components["schemas"]["RuleProvenance"];
+            /** Resolved At */
+            resolved_at?: string | null;
+            rule?: components["schemas"]["RuleProvenance"] | null;
             status: components["schemas"]["IncidentStatus"];
             /** Title */
             title: string;
@@ -5279,7 +5286,11 @@ export interface components {
         IncidentList: {
             /** Items */
             items: components["schemas"]["IncidentSummary"][];
+            /** Open Total */
+            open_total?: number | null;
             page: components["schemas"]["PageMeta"];
+            /** Resolved Recent Total */
+            resolved_recent_total?: number | null;
         };
         /**
          * IncidentLocation
@@ -5305,6 +5316,8 @@ export interface components {
             /** Allowed Actions */
             allowed_actions?: components["schemas"]["ActionDescriptor"][];
             category: components["schemas"]["ReportCategory"];
+            /** Closure */
+            closure?: ("residents_confirmed" | "ticket_cancelled") | null;
             /**
              * Created At
              * Format: date-time
@@ -5332,6 +5345,8 @@ export interface components {
             provenance: components["schemas"]["Provenance"] | null;
             /** Report Count */
             report_count: number;
+            /** Resolved At */
+            resolved_at?: string | null;
             status: components["schemas"]["IncidentStatus"];
             /** Title */
             title: string;
@@ -6585,6 +6600,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Joined
+             * @default false
+             */
+            joined: boolean;
         };
         /** ResidentBookingView */
         ResidentBookingView: {
@@ -18124,6 +18144,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 offset?: number;
+                state?: "all" | "open" | "resolved_recent";
             };
             header?: never;
             path: {
