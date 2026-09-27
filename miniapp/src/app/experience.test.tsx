@@ -186,11 +186,18 @@ describe("board/detail experience", () => {
     );
     await waitFor(() => expect(client.incident).toHaveBeenCalledTimes(2));
   });
-  it("marks backgrounded data stale", async () => {
-    render(<App client={apiWith()} />);
+  it("re-reads the board quietly on return to the tab (F1 §2.3)", async () => {
+    const client = apiWith();
+    render(<App client={client} />);
     await screen.findByText(house.address);
+    const before = vi.mocked(client.incidents).mock.calls.length;
+    const now = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now + 10000);
     fireEvent(document, new Event("visibilitychange"));
-    expect(await screen.findByText("Данные могли измениться.")).toBeTruthy();
+    await waitFor(() => expect(vi.mocked(client.incidents).mock.calls.length).toBeGreaterThan(before));
+    expect(screen.queryByText("Данные могли измениться.")).toBeNull();
+    expect(screen.getByText(house.address)).toBeTruthy();
+    clock.mockRestore();
   });
   it.each(["foreign", ""])("invalid house selector %s does not show the default house", async (selector) => {
     window.history.replaceState(null, "", `/?house=${selector}`);
@@ -333,10 +340,13 @@ describe("route card and appeal draft navigation", () => {
     window.history.replaceState(null, "", `/?draft=${draft.id}`);
     render(<App client={apiWith()} />);
     const area = await screen.findByRole("textbox", { name: "Обращение" });
-    // Возврат из официального сервиса или минута на экране — «данные могли измениться».
+    // Возврат из официального сервиса: экран перечитывается тихо, текст не теряется.
+    fireEvent.change(area, { target: { value: "Здравствуйте! Черновик" } });
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 10000);
     fireEvent(document, new Event("visibilitychange"));
-    expect(await screen.findByText("Данные могли измениться.")).toBeTruthy();
+    clock.mockRestore();
     expect((area as HTMLTextAreaElement).disabled).toBe(false);
+    expect((screen.getByRole("textbox", { name: "Обращение" }) as HTMLTextAreaElement).value).toBe("Здравствуйте! Черновик");
     expect(
       (screen.getByRole("button", { name: "Скопировать текст" }) as HTMLButtonElement).disabled,
     ).toBe(false);

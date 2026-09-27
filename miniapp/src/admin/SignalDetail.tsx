@@ -13,7 +13,7 @@ import type {
   SignalMutation,
   SignalView,
 } from "../shared/api/signals";
-import { useResource } from "../shared/api/useResource";
+import { useResource, POLL_LIST_MS } from "../shared/api/useResource";
 import { formatStaffTime } from "../shared/ui/format";
 import { StatusTag } from "../shared/ui/semantic";
 import { signalStatus, signalStrength, statusOf } from "../shared/ui/status";
@@ -76,7 +76,7 @@ export function SignalDetail({
   openTicket: (ticketId: string) => void;
 }) {
   const load = useCallback((signal: AbortSignal) => client.signalDetail(id, signal), [client, id]);
-  const resource = useResource(id, load);
+  const resource = useResource(id, load, { poll: POLL_LIST_MS });
   const mutation = useTicketMutation<SignalMutation, SignalView>();
   const [form, setForm] = useState<SignalActionCode | null>(null);
   const [decided, setDecided] = useState(false);

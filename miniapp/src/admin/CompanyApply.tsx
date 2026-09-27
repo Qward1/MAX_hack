@@ -1,7 +1,7 @@
 import { formatStaffTime, formatDay } from "../shared/ui/format";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { ApiClient, ApiProblem } from "../shared/api/client";
-import { useResource } from "../shared/api/useResource";
+import { useResource, POLL_WAITING_MS } from "../shared/api/useResource";
 import { Feedback, formValue, problemText, submitted, type Schema } from "./administration";
 
 const client = new ApiClient();
@@ -183,7 +183,7 @@ export function CompanyApply() {
 export function ApplicationStatus({ token }: { token: string }) {
   const load = useCallback((signal: AbortSignal) => client.request<Schema["ApplicationStatusView"]>(
     "/api/v1/onboarding/application-status", { method: "POST", body: JSON.stringify({ token }), signal }), [token]);
-  const r = useResource(`application-status:${token}`, load);
+  const r = useResource(`application-status:${token}`, load, { poll: POLL_WAITING_MS });
   const [view, setView] = useState<Schema["ApplicationStatusView"] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");

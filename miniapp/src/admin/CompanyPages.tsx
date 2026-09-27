@@ -1,6 +1,7 @@
 import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
 import { AddressListForm } from "./HouseBatch";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { POLL_LIST_MS, POLL_WAITING_MS } from "../shared/api/useResource";
 import { Feedback, History, OneTimeLink, Status, Title, connectionErrors, dateInput, formValue, submitted, useAction, useRead, type Schema } from "./administration";
 import { QuotaMeter } from "./charts";
 import { ChatSettingsPanel, CompanyProfileForm, HouseFactsForm } from "./CommunityPages";
@@ -137,7 +138,7 @@ function CredentialReset({ base, user }: { base: string; user: string }) {
   </section>;
 }
 export function MyHouses({ base }: { base: string }) {
-  const r = useRead<House[]>(`${base}/houses`);
+  const r = useRead<House[]>(`${base}/houses`, 0, { poll: POLL_LIST_MS });
   return <><Title description="Дома, на которые вы назначены">Мои дома</Title><Feedback loading={r.loading} error={r.error} />
     {!r.error && <HouseList houses={r.data ?? []} base={base} />}</>;
 }
@@ -275,8 +276,13 @@ export function OpenAccessSwitch({ base, house, refresh }: { base: string; house
   </div>;
 }
 export function CompanyHouses({ base }: { base: string }) {
-  const houses = useRead<House[]>(`${base}/houses`);
-  const requests = useRead<Schema["HouseRequestView"][]>(`${base}/house-management-requests`);
+  // U-06: дом появляется у администратора сам, как только платформа одобрила заявку.
+  const [waiting, setWaiting] = useState(false);
+  const poll = { poll: waiting ? POLL_WAITING_MS : POLL_LIST_MS };
+  const houses = useRead<House[]>(`${base}/houses`, 0, poll);
+  const requests = useRead<Schema["HouseRequestView"][]>(`${base}/house-management-requests`, 0, poll);
+  const pending = (requests.data ?? []).some(r => ["submitted", "under_review", "needs_info"].includes(r.status));
+  useEffect(() => { setWaiting(pending); }, [pending]);
   const [show, setShow] = useState(false);
   const [list, setList] = useState(false);
   const [key, setKey] = useState(() => crypto.randomUUID());
@@ -303,7 +309,11 @@ export function CompanyHouses({ base }: { base: string }) {
   </>;
 }
 export function ChatConnections({ base, canRequest = true }: { base: string; canRequest?: boolean }) {
-  const houses = useRead<House[]>(`${base}/houses`);
+  // U-05: пока идёт подключение, страница сама проверяет статус раз в 5 с.
+  const [waiting, setWaiting] = useState(false);
+  const houses = useRead<House[]>(`${base}/houses`, 0, { poll: waiting ? POLL_WAITING_MS : POLL_LIST_MS });
+  const active = (houses.data ?? []).some(h => h.connection_requests.some(r => !["completed", "rejected", "cancelled", "expired"].includes(r.status)));
+  useEffect(() => { setWaiting(active); }, [active]);
   const quota = useRead<Schema["CompanyQuotaView"]>(`${base}/chat-quota`);
   const capabilities = useRead<Schema["CapabilitiesResponse"]>("/api/v1/capabilities");
   const action = useAction(() => { houses.refresh(); quota.refresh(); });

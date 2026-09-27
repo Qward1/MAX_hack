@@ -3,13 +3,13 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { ApiProblem } from "../shared/api/client";
 import { ticketClient } from "../shared/api/tickets";
 import type { components } from "../shared/api/schema";
-import { useResource } from "../shared/api/useResource";
+import { type ResourceOptions, useResource } from "../shared/api/useResource";
 
 export type Schema = components["schemas"];
 export const adminClient = ticketClient;
-export function useRead<T>(path: string, revision = 0) {
+export function useRead<T>(path: string, revision = 0, options: ResourceOptions = {}) {
   const load = useCallback((signal: AbortSignal) => adminClient.request<T>(path, { signal }), [path]);
-  const resource = useResource(`${path}:${revision}`, load);
+  const resource = useResource(`${path}:${revision}`, load, options);
   useEffect(() => { const refresh = () => resource.refresh(); window.addEventListener("administration-refresh", refresh);
     return () => window.removeEventListener("administration-refresh", refresh); }, [resource.refresh]);
   return resource;

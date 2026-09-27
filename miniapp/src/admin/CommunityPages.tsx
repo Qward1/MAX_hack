@@ -1,3 +1,4 @@
+import { POLL_LIST_MS } from "../shared/api/useResource";
 import { formatStaffTime, sentence } from "../shared/ui/format";
 import { useEffect, useState } from "react";
 import { adminClient, Feedback, Title, useAction, useRead, type Schema } from "./administration";
@@ -46,7 +47,7 @@ function Skipped({ skipped }: { skipped?: Record<string, number> }) {
 export function Mailings({ base, platform = false }: { base: string; platform?: boolean }) {
   const listPath = platform ? "/api/v1/platform/broadcasts" : `${base}/broadcasts`;
   const [offset, setOffset] = useState(0);
-  const list = useRead<Schema["BroadcastList"]>(`${listPath}?limit=20&offset=${offset}`);
+  const list = useRead<Schema["BroadcastList"]>(`${listPath}?limit=20&offset=${offset}`, 0, { poll: POLL_LIST_MS });
   const [selected, select] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const refresh = () => list.refresh();

@@ -10,7 +10,7 @@ import type {
   VerifiedSource,
 } from "../../shared/api/community";
 import { PAGE_SIZE } from "../../shared/api/community";
-import { useResource } from "../../shared/api/useResource";
+import { useResource, POLL_LIST_MS } from "../../shared/api/useResource";
 import { maxBridge, safeUrl } from "../../shared/max/bridge";
 import { Button } from "../../shared/ui/Button";
 import { countLabel, formatDay, formatWhen, sentence } from "../../shared/ui/format";
@@ -1270,7 +1270,7 @@ function ActivityRow({ item, links, showAddress }: { item: ActivityItem; links: 
 export function MyActivityScreen({ api, houseId, links }: { api: CommunityApi; houseId?: string; links: CommunityLinks }) {
   const [offset, setOffset] = useState(0);
   const load = useCallback((signal: AbortSignal) => api.myActivity(offset, signal), [api, offset]);
-  const resource = useResource(`mine:${offset}`, load);
+  const resource = useResource(`mine:${offset}`, load, { poll: POLL_LIST_MS });
   if (resource.error && !resource.data)
     return <Failure error={resource.error} subject="ваши обращения" onRetry={resource.refresh} />;
   if (!resource.data) return <StatePanel title="Загружаем ваши обращения" loading />;

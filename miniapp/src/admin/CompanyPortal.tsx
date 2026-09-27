@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AdminApp } from "./AdminApp";
+import { TICKETS_CHANGED_EVENT } from "./TicketDetail";
 import { SignalsApp } from "./SignalsApp";
 import { adminClient, Feedback, Title, useRoute, type Schema } from "./administration";
 import { useResource } from "../shared/api/useResource";
@@ -20,7 +21,7 @@ const paths: Record<string, string> = { overview: "", tickets: "tickets", signal
   mailings: "mailings", notices: "notices", reception: "reception" };
 // Очередь сигналов живёт в query-навигации, как заявки: ?section=signals&signal=<id>.
 const isSignalsRoute = (url: URL) => url.searchParams.get("section") === "signals" || url.searchParams.has("signal");
-const COUNTS_MS = 60000;
+const COUNTS_MS = 15000;
 /** Рабочие разделы, которые на телефоне стоят в первом ряду; остальные — в меню «Разделы». */
 const PRIORITY = ["tickets", "signals"];
 
@@ -73,7 +74,9 @@ function useQueueCounts(company: Context | undefined): Counts {
     const timer = window.setInterval(() => { if (document.visibilityState === "visible") void read(); }, COUNTS_MS);
     const refresh = () => void read();
     window.addEventListener("administration-refresh", refresh);
-    return () => { active = false; controller.abort(); window.clearInterval(timer); window.removeEventListener("administration-refresh", refresh); };
+    window.addEventListener(TICKETS_CHANGED_EVENT, refresh);
+    return () => { active = false; controller.abort(); window.clearInterval(timer); window.removeEventListener("administration-refresh", refresh);
+      window.removeEventListener(TICKETS_CHANGED_EVENT, refresh); };
   }, [company?.company_id, surfaces]);
   return counts;
 }

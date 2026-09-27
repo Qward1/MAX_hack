@@ -14,7 +14,7 @@ import {
   problemStatus,
   retryable,
 } from "../shared/api/client";
-import { useResource } from "../shared/api/useResource";
+import { useResource, POLL_LIST_MS } from "../shared/api/useResource";
 import { lastHouse, rememberHouse } from "../shared/lastHouse";
 import { LAUNCH_REF, maxBridge } from "../shared/max/bridge";
 import { Button } from "../shared/ui/Button";
@@ -291,7 +291,10 @@ export function App({
     },
     [client, houseId, incidentId, cardId, draftId, detail, offset, launchPending, view, reportParam],
   );
-  const resource = useResource(key, load);
+  // Доска и карточка проблемы обновляются сами (F1 §2.3); форма и черновик — нет.
+  const resource = useResource(key, load, {
+    poll: !reportParam && !draftId && !cardId && !view ? POLL_LIST_MS : false,
+  });
   const data = resource.data;
   useEffect(() => {
     const target = data?.notificationLaunch;

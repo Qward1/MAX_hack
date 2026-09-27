@@ -13,7 +13,7 @@ import {
   type TicketAction,
   type TicketCommand,
 } from "../shared/api/tickets";
-import { useResource } from "../shared/api/useResource";
+import { useResource, POLL_LIST_MS } from "../shared/api/useResource";
 import { categoryLabel } from "../features/incidents/presentation";
 import { placeText } from "../features/incidents/IncidentCard";
 import { countLabel, formatStaffTime } from "../shared/ui/format";
@@ -31,6 +31,9 @@ import {
   safeError,
   useTicketMutation,
 } from "../features/tickets/useTicketMutation";
+
+/** Заявка изменилась действием сотрудника: очередь и счётчики перечитываются (F-06). */
+export const TICKETS_CHANGED_EVENT = "ds-tickets-changed";
 import { adminUrl } from "./AdminApp";
 
 type DetailData = { ticket: Ticket; incident: IncidentDetail };
@@ -86,7 +89,7 @@ export function TicketDetail({
     },
     [client, id],
   );
-  const resource = useResource(`${id}:${revision}`, load);
+  const resource = useResource(`${id}:${revision}`, load, { poll: POLL_LIST_MS });
   const mutation = useTicketMutation<Mutation, DetailData>();
   const [form, setForm] = useState<FormAction | null>(null);
   const [historyRevision, setHistoryRevision] = useState(0);
@@ -133,6 +136,8 @@ export function TicketDetail({
       read: async () => {
         const current = await resource.reload();
         setHistoryRevision((v) => v + 1);
+        // F-06: строка очереди и счётчики — из того же сервера сразу после действия.
+        window.dispatchEvent(new Event(TICKETS_CHANGED_EVENT));
         return current;
       },
       success: (_result, current) => {

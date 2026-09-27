@@ -1,3 +1,4 @@
+import { POLL_LIST_MS } from "../shared/api/useResource";
 import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
 import { useState } from "react";
 import { Feedback, History, OneTimeLink, Status, Title, dateInput, formValue, submitted, useAction, useRead, useRoute, type Schema } from "./administration";
@@ -40,7 +41,7 @@ function PlatformPage({ page, open }: { page: string; open: (page: string) => vo
 }
 function ApplicationReview() {
   const [offset, setOffset] = useState(0);
-  const r = useRead<Schema["ApplicationView"][]>(`/api/v1/platform/company-applications?offset=${offset}`);
+  const r = useRead<Schema["ApplicationView"][]>(`/api/v1/platform/company-applications?offset=${offset}`, 0, { poll: POLL_LIST_MS });
   const [selected, select] = useState<string | null>(null);
   return <><Title description="Заявка не выдаёт аккаунт или доступ. При одобрении создаётся приглашение первого администратора.">Заявки УК</Title>
     <Feedback loading={r.loading} error={r.error} />
@@ -98,7 +99,7 @@ function ApplicationDetail({ id, refresh }: { id: string; refresh: () => void })
 }
 function HouseReview() {
   const [offset, setOffset] = useState(0);
-  const r = useRead<Schema["HouseRequestView"][]>(`/api/v1/platform/house-management-requests?offset=${offset}`);
+  const r = useRead<Schema["HouseRequestView"][]>(`/api/v1/platform/house-management-requests?offset=${offset}`, 0, { poll: POLL_LIST_MS });
   const [selected, select] = useState<string | null>(null);
   const packs = useRead<Schema["RegionPackView"][]>("/api/v1/platform/region-packs");
   return <><Title description="Выберите физический дом явно. Пересекающиеся периоды управления недопустимы.">Заявки на дома</Title>
