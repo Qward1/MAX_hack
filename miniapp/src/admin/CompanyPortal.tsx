@@ -3,6 +3,7 @@ import { AdminApp } from "./AdminApp";
 import { SignalsApp } from "./SignalsApp";
 import { adminClient, Feedback, Title, useRoute, type Schema } from "./administration";
 import { useResource } from "../shared/api/useResource";
+import { problemStatus } from "../shared/api/client";
 import type { SignalList } from "../shared/api/signals";
 import { ChatConnections, CompanyHouses, MyHouses, Organization, Staff } from "./CompanyPages";
 import { CompanyOverview } from "./Dashboards";
@@ -123,6 +124,9 @@ export function CompanyPortal() {
     : isSignalsRoute(url) ? "signals"
     : url.searchParams.has("ticket") || url.searchParams.has("house") || url.searchParams.has("filter") ? "tickets"
     : selected?.surfaces[0] ?? "tickets";
+  // D-04: вход истёк — шлюз входа уже показывает форму; «нет доступа» не пишем.
+  if (!selected && problemStatus(bootstrap.error) === 401) return <main className="admin-main auth-layout">
+    <section className="auth-card"><Title>Вход истёк</Title><p>Войдите снова — откроется форма входа.</p></section></main>;
   if (!selected) return <main className="admin-main auth-layout"><section className="auth-card">
     <Title description={companies.length > 1 ? "Вы сотрудник нескольких управляющих компаний. Сменить компанию можно в меню кабинета." : undefined}>
       {companies.length ? "Выберите управляющую компанию" : "Нет доступной рабочей очереди"}</Title>
@@ -225,7 +229,7 @@ function CompanyWorkspace({ company, surface, href, navigate, visit }: Workspace
     case "mailings": return <Mailings key={visit} base={base} />;
     case "notices": return <Notices base={base} />;
     case "reception": return <ReceptionAdmin base={base} admin />;
-    default: return <DeniedRoute base={base} surface={surface} />;
+    default: return <DeniedRoute company={company} href={href} navigate={navigate} />;
   }
 }
 function OperatorWorkspace({ company, surface, href, navigate, visit }: Workspace) {
@@ -239,7 +243,7 @@ function OperatorWorkspace({ company, surface, href, navigate, visit }: Workspac
   if (surface === "mailings" && company.surfaces.includes("mailings")) return <Mailings key={visit} base={base} />;
   if (surface === "notices") return <Notices base={base} />;
   if (surface === "reception") return <ReceptionAdmin base={base} admin={false} />;
-  return <DeniedRoute base={base} surface={surface} />;
+  return <DeniedRoute company={company} href={href} navigate={navigate} />;
 }
 /** Переходы из пустого обзора — только в разделы, доступные этой роли. */
 function overviewLinks(company: Context, href: (surface: string) => string, navigate: (url: string) => void) {
@@ -249,10 +253,18 @@ function overviewLinks(company: Context, href: (surface: string) => string, navi
     navigate,
   };
 }
-function DeniedRoute({ base, surface }: { base: string; surface: string }) {
-  // A typed URL is still checked by the endpoint; navigation isn't the access boundary.
-  const load = useCallback((signal: AbortSignal) => adminClient.request(`${base}/${surface === "staff" ? "staff" : "organization"}`, { signal }), [base, surface]);
-  const result = useResource(`${base}:${surface}`, load);
-  return <><Title description="Раздел доступен другой роли. Доступ выдаёт администратор управляющей компании.">Раздел недоступен</Title>
-    <Feedback loading={result.loading} error={result.error} /></>;
+/**
+ * B-08: адрес раздела, которого нет у роли, — «Раздел недоступен» и переходы в
+ * доступные разделы; вход и меню не теряются. Данные раздела защищает API
+ * (403), навигация границей доступа не является.
+ */
+function DeniedRoute({ company, href, navigate }: { company: Context; href: (surface: string) => string; navigate: (url: string) => void }) {
+  return <><Title description="Этот раздел доступен другой роли. Доступ выдаёт администратор управляющей компании.">Раздел недоступен</Title>
+    <section className="admin-detail" aria-labelledby="denied-available">
+      <h2 id="denied-available">Вам доступны</h2>
+      <ul className="ds-row-list">{company.surfaces.map(s => <li key={s}>
+        <a className="ds-row" href={href(s)} onClick={e => { e.preventDefault(); navigate(href(s)); }}>
+          <span className="ds-row-title">{names[s]}</span><span className="ds-row-chevron" aria-hidden="true">›</span>
+        </a></li>)}</ul>
+    </section></>;
 }
