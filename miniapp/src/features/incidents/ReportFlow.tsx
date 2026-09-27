@@ -27,6 +27,8 @@ export type FlowTarget = { incident?: string; card?: string; draft?: string };
 export type ReportDraft = { text: string; category: ReportCreate["category"] | "" };
 
 export const MIN_LENGTH = 5;
+/** С какой длины описание на шаге проверки свёрнуто. */
+const LONG_TEXT = 280;
 export const MAX_LENGTH = 2000;
 const UNSURE_NOTE = "Мы не уверены, что поняли всё правильно.";
 const DISPATCHER_NOTE = "Ответственный пока не определён — разберёт диспетчер управляющей компании.";
@@ -116,6 +118,7 @@ export function ReportFlow({
   const [alsoUk, setAlsoUk] = useState<{ incident: IncidentDetail; number: string | null } | null>(null);
   const [error, setError] = useState<{ reason: unknown; action: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [fullText, setFullText] = useState(false);
   const pending = useRef(false);
   const attempt = useRef<{ body: string; key: string } | null>(null);
 
@@ -386,13 +389,21 @@ export function ReportFlow({
             <dl className="ds-summary" aria-label="Что мы поняли">
               <div className="ds-summary-row ds-summary-main">
                 <dt>Проблема</dt>
-                <dd className="ds-prose">{text}</dd>
-                <div className="ds-summary-change">
+                <dd>
+                  {/* Длинное описание свёрнуто до нескольких строк: следующий шаг остаётся рядом. */}
+                  <p className={text.length > LONG_TEXT && !fullText ? "ds-prose ds-clamp" : "ds-prose"}>{text}</p>
+                  {text.length > LONG_TEXT && (
+                    <button type="button" className="ds-link-button ds-more" aria-expanded={fullText} onClick={() => setFullText(!fullText)}>
+                      {fullText ? "Свернуть" : "Показать полностью"}
+                    </button>
+                  )}
+                </dd>
+                <dd className="ds-summary-change">
                   <button type="button" className="ds-edit" onClick={change(false)}>
                     Изменить{" "}
                     <span className="ds-visually-hidden">описание</span>
                   </button>
-                </div>
+                </dd>
               </div>
               <div className="ds-summary-row">
                 <dt>Где</dt>
@@ -407,12 +418,12 @@ export function ReportFlow({
               <div className="ds-summary-row">
                 <dt>Категория</dt>
                 <dd>{categoryLabel(analysis.category)}</dd>
-                <div className="ds-summary-change">
+                <dd className="ds-summary-change">
                   <button type="button" className="ds-edit" onClick={change(true)}>
                     Изменить{" "}
                     <span className="ds-visually-hidden">категорию</span>
                   </button>
-                </div>
+                </dd>
               </div>
               {dangers.length > 0 && (
                 <div className="ds-summary-row ds-summary-danger">
@@ -498,6 +509,19 @@ export function ReportFlow({
             )}
           </div>
           <div className="ds-main-more">
+            {duplicates.length > 0 && (
+              // При выборе «та же или другая» кто отвечает — рядом, а не только в «Что дальше».
+              <section className="ds-section" aria-labelledby={`${id}-route`}>
+                <h2 id={`${id}-route`}>{card.title}</h2>
+                <p className="ds-prose">{card.explanation}</p>
+                {card.route.organization_name && <p className="ds-meta">Вероятный адресат: {card.route.organization_name}</p>}
+                {needsCheck && (
+                  <Notice tone="warning" role="note">
+                    <p>{UNVERIFIED_NOTE}</p>
+                  </Notice>
+                )}
+              </section>
+            )}
             <div className="ds-details-list">
               {basis && (
                 <details className="ds-disclosure">

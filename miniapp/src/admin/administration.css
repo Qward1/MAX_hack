@@ -363,9 +363,11 @@
   font-size: var(--ds-text-small);
 }
 /* Планшет: таблица читаемая — заголовки не рвутся по буквам, «Дом» закреплён при прокрутке вбок. */
-.house-stats-table th,
-.house-stats-table td {
-  white-space: nowrap;
+@media (max-width: 1199px) {
+  .house-stats-table th,
+  .house-stats-table td {
+    white-space: nowrap;
+  }
 }
 .house-stats-table tbody th {
   position: sticky;
@@ -448,6 +450,10 @@
   font-weight: var(--ds-weight-strong);
 }
 .staff-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2) var(--ds-space-4);
   color: var(--ds-ink-2);
 }
 .staff-detail {
@@ -576,5 +582,34 @@
   }
   .stat-tile dd {
     font-size: 1.5rem;
+  }
+}
+.admin-drawer {
+  max-height: min(90dvh, 760px);
+}
+.admin-drawer .admin-drawer-nav .admin-nav-link {
+  min-height: 44px;
+}
+.table-hint {
+  display: none;
+  margin: 0;
+  font-size: var(--ds-text-small);
+}
+@media (min-width: 768px) and (max-width: 1199px) {
+  .table-hint {
+    display: block;
+  }
+}
+/* Фильтры очереди на телефоне — сетка 3 × 2: у каждого фильтра постоянное место. */
+@media (max-width: 767px) {
+  .queue-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .queue-filters a {
+    justify-content: center;
+    padding: 4px 6px;
+    text-align: center;
+    line-height: 1.25;
   }
 }

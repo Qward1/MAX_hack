@@ -194,7 +194,7 @@ function MobileNavigation({ company, companies, surface, counts, href, navigate,
         aria-expanded={open} onClick={() => setOpen(true)}><IconMenu />Разделы</button>
     </header>
     <nav className="admin-quick-nav" aria-label="Рабочие разделы">{quick.map(s => link(s))}</nav>
-    {open && <Sheet title="Разделы кабинета" anchor={button.current} className="admin-drawer" focus="[aria-current=page], a"
+    {open && <Sheet title="Разделы кабинета" anchor={button.current} className="admin-drawer" focus="[aria-current=page]"
       onClose={() => setOpen(false)}>
       {displayName && <p className="ds-meta">{displayName} · {company.name}</p>}
       {companies.length > 1 && <label className="ds-field">Управляющая компания<select value={company.company_id}

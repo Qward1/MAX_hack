@@ -21,7 +21,7 @@ export function Sheet({
   anchor?: HTMLElement | null;
   popover?: boolean;
   className?: string;
-  /** Что получает фокус при открытии. */
+  /** Что получает фокус при открытии; если такого нет — первый интерактивный элемент. */
   focus?: string;
   onClose: () => void;
   children: ReactNode;
@@ -35,9 +35,18 @@ export function Sheet({
     const wide = typeof window.matchMedia === "function" && window.matchMedia("(min-width: 768px)").matches;
     if (popover && wide && anchor) {
       const box = anchor.getBoundingClientRect();
-      const width = Math.max(box.width, 280);
+      const width = Math.min(Math.max(box.width, 280), 480);
       const left = Math.min(box.left, window.innerWidth - width - 16);
-      dialog.style.setProperty("--sheet-top", `${Math.round(box.bottom + 6)}px`);
+      // Под полем, если там хватает места; иначе — над ним. Высота — по свободному месту.
+      const below = window.innerHeight - box.bottom - 16;
+      const above = box.top - 16;
+      if (below >= 240 || below >= above) {
+        dialog.style.setProperty("--sheet-top", `${Math.round(box.bottom + 6)}px`);
+        dialog.style.setProperty("--sheet-max", `${Math.round(below)}px`);
+      } else {
+        dialog.style.setProperty("--sheet-bottom", `${Math.round(window.innerHeight - box.top + 6)}px`);
+        dialog.style.setProperty("--sheet-max", `${Math.round(above)}px`);
+      }
       dialog.style.setProperty("--sheet-left", `${Math.round(Math.max(16, left))}px`);
       dialog.style.setProperty("--sheet-width", `${Math.round(width)}px`);
       setAnchored(true);
@@ -46,7 +55,10 @@ export function Sheet({
       if (typeof dialog.showModal === "function") dialog.showModal();
       else dialog.setAttribute("open", "");
     }
-    dialog.querySelector<HTMLElement>(focus)?.focus();
+    (
+      dialog.querySelector<HTMLElement>(focus) ??
+      dialog.querySelector<HTMLElement>("a[href], button, input, select, textarea")
+    )?.focus();
   }, [anchor, popover, focus]);
   useEffect(() => {
     const dialog = ref.current;

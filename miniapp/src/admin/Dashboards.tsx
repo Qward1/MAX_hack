@@ -86,7 +86,9 @@ export function CompanyOverview({ base, links }: { base: string; links?: Links }
             </div>}
             <h2>По домам</h2>
             <HouseStatsCards houses={houses} />
-            <div className="table-scroll house-stats-table"><table className="data-table">
+            <p className="muted table-hint">Остальные показатели — прокруткой таблицы вбок; адрес дома остаётся на месте.</p>
+            {/* Область прокрутки доступна с клавиатуры: на планшете таблица шире экрана. */}
+            <div className="table-scroll house-stats-table" tabIndex={0} role="region" aria-label="Показатели по домам, таблица"><table className="data-table">
               <thead><tr><th scope="col">Дом</th><th scope="col">Сигналы</th><th scope="col">Заявки открыто</th>
                 <th scope="col">Закрыто</th><th scope="col">Медиана до принятия</th><th scope="col">Подтверждено</th>
                 <th scope="col">Возвращено</th><th scope="col">Частые категории</th></tr></thead>

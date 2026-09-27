@@ -248,17 +248,23 @@ h1:focus-visible {
   text-underline-offset: 3px;
   cursor: pointer;
 }
+/* «Назад» — навигация шапки: цвет текста и стрелка, а не синяя ссылка. */
 .ds-back {
   display: inline-flex;
   align-items: center;
   gap: var(--ds-space-2);
   min-height: var(--ds-target);
-  padding: 0 var(--ds-space-2) 0 0;
+  padding: 0 var(--ds-space-3) 0 var(--ds-space-2);
+  margin-inline-start: calc(-1 * var(--ds-space-2));
   border: 0;
+  border-radius: var(--ds-radius-s);
   background: none;
-  color: var(--ds-accent);
+  color: var(--ds-ink);
   font-weight: var(--ds-weight-strong);
   cursor: pointer;
+}
+.ds-back:hover {
+  background: var(--ds-surface-2);
 }
 .ds-actions,
 .ticket-buttons,
@@ -1324,9 +1330,9 @@ details > summary {
   font-size: var(--ds-text-subtitle);
 }
 .ds-sheet.is-popover {
-  inset: var(--sheet-top) auto auto var(--sheet-left);
+  inset: var(--sheet-top, auto) auto var(--sheet-bottom, auto) var(--sheet-left);
   width: var(--sheet-width);
-  max-height: min(60dvh, 480px);
+  max-height: min(var(--sheet-max, 60dvh), 480px);
   border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-m);
 }
@@ -1850,18 +1856,6 @@ a.ds-service-name {
   html:has(.ds-bottom-bar) {
     scroll-padding-bottom: 24px;
   }
-  .ds-split {
-    grid-template-columns: minmax(0, 1fr) var(--ds-aside);
-    align-items: start;
-  }
-  .ds-split > .ds-aside {
-    position: sticky;
-    top: var(--ds-space-4);
-  }
-  .ds-columns {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: start;
-  }
   .ds-resident .ds-page-header h1 {
     font-size: 1.75rem;
   }
@@ -1907,6 +1901,60 @@ a.ds-service-name {
   .ds-reading {
     max-width: 720px;
   }
+  .ds-board-head {
+    align-items: center;
+  }
+}
+
+/* Сетка не растягивается по неразрывной строке (обрезанный источник). */
+:where(.ds-safety, .ds-section, .ds-house-group, .ds-next-step, .ds-status-block, .ds-disclosure-body, .ds-bullets li) > * {
+  min-width: 0;
+}
+/* Раскрытия в списке оснований — строками с разделителем, без рамки блока. */
+.ds-details-list > .ds-disclosure {
+  border: 0;
+  border-bottom: 1px solid var(--ds-line);
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Форма сообщения на компьютере — по мере строки, а не на всю колонку. */
+@media (min-width: 1024px) {
+  .ds-resident .report-flow.ds-form {
+    max-width: 720px;
+  }
+}
+.ds-summary-main .ds-clamp {
+  -webkit-line-clamp: 5;
+}
+.ds-more {
+  margin-top: var(--ds-space-1);
+  font-size: var(--ds-text-small);
+  color: var(--ds-ink);
+}
+/* Ссылка источника внутри раскрытия — цель не меньше 24 px. */
+.ds-disclosure-body > a,
+.ds-source-body > a {
+  padding-block: 2px;
+}
+
+/*
+ * Колонка контекста справа — с 1200 px: между 1024 и 1199 рядом с меню
+ * остаётся одна колонка содержания, чтобы список не сжимался до 340 px.
+ */
+@media (min-width: 1200px) {
+  .ds-split {
+    grid-template-columns: minmax(0, 1fr) var(--ds-aside);
+    align-items: start;
+  }
+  .ds-split > .ds-aside {
+    position: sticky;
+    top: var(--ds-space-4);
+  }
+  .ds-columns {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
   /* Ход решения идёт первым в разметке (телефон, клавиатура), справа — на компьютере. */
   .ds-split-aside-first > .ds-aside {
     grid-column: 2;
@@ -1925,19 +1973,4 @@ a.ds-service-name {
     grid-column: 2;
     grid-row: 1 / span 2;
   }
-  .ds-board-head {
-    align-items: center;
-  }
-}
-
-/* Сетка не растягивается по неразрывной строке (обрезанный источник). */
-:where(.ds-safety, .ds-section, .ds-house-group, .ds-next-step, .ds-status-block, .ds-disclosure-body, .ds-bullets li) > * {
-  min-width: 0;
-}
-/* Раскрытия в списке оснований — строками с разделителем, без рамки блока. */
-.ds-details-list > .ds-disclosure {
-  border: 0;
-  border-bottom: 1px solid var(--ds-line);
-  border-radius: 0;
-  background: transparent;
 }

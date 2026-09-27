@@ -43,12 +43,16 @@ export function Staff({ base }: { base: string }) {
       <div><button className="ticket-button" disabled={action.busy}>Пригласить сотрудника</button></div></form>
       {link && <OneTimeLink url={link} />}
       <ul className="admin-records staff-list" aria-label="Сотрудники">{people.data?.map(p => <li key={p.user_id}>
+        {/* Имя — название кнопки; роль и статус — её описание. Раскрывает карточку на месте, а не ведёт на другую страницу. */}
         <button type="button" className={`staff-row${selected === p.user_id ? " is-selected" : ""}`} aria-expanded={selected === p.user_id}
-          aria-controls={selected === p.user_id ? "staff-detail" : undefined} onClick={() => setSelected(selected === p.user_id ? null : p.user_id)}>
+          aria-controls={selected === p.user_id ? "staff-detail" : undefined} aria-label={p.display_name} aria-describedby={`staff-meta-${p.user_id}`}
+          onClick={() => setSelected(selected === p.user_id ? null : p.user_id)}>
           <span className="staff-name">{p.display_name}</span>
-          <span className="staff-meta">{p.role === "company_admin" ? "Администратор УК" : "Оператор"}</span>
-          <Status value={p.status} />
-          {p.open_registration && <span className="admin-status">По открытой ссылке</span>}
+          <span className="staff-meta" id={`staff-meta-${p.user_id}`}>
+            <span>{p.role === "company_admin" ? "Администратор УК" : "Оператор"}</span>
+            <Status value={p.status} />
+            {p.open_registration && <span className="admin-status">По открытой ссылке</span>}
+          </span>
         </button>
       </li>)}</ul>
       {selected && <StaffAssignments key={selected} user={selected} base={base} houses={houses.data ?? []} refresh={people.refresh} />}
