@@ -38,7 +38,7 @@ class HeavyEngine:
         base_dir = ml_root / "artifacts/models/rubert-base"
         self.tokenizer = AutoTokenizer.from_pretrained(str(base_dir), local_files_only=True)
         self.bert = MultiHead(str(base_dir), len(checkpoint["classes"]),
-                              len(checkpoint["utterances"]))
+                              len(checkpoint["utterances"]), local_files_only=True)
         self.bert.load_state_dict(checkpoint["model"])
         self.bert.to(self.device).eval()
         self.class_names = np.array(list(checkpoint["classes"]))

@@ -7,9 +7,11 @@ from transformers import AutoModel
 
 
 class MultiHead(nn.Module):
-    def __init__(self, pretrained: str, class_count: int, utt_count: int):
+    def __init__(self, pretrained: str, class_count: int, utt_count: int,
+                 local_files_only: bool = False):
         super().__init__()
-        self.encoder = AutoModel.from_pretrained(pretrained)
+        self.encoder = AutoModel.from_pretrained(pretrained,
+                                                 local_files_only=local_files_only)
         hidden = self.encoder.config.hidden_size
         self.dropout = nn.Dropout(0.1)
         self.classifier = nn.Linear(hidden, class_count)
