@@ -122,9 +122,13 @@ test.describe.serial("UX-1 quality", () => {
         await audit(page, `board-${width}`, { mini: true });
         // Несколько домов: переключатель в шапке, а не отдельный экран.
         await page.goto(`/?test_actor=a16-admin`);
-        const switcher = page.getByRole("combobox", { name: "Дом" });
+        const switcher = page.getByRole("button", { name: /^Дом / });
         await expect(switcher).toBeVisible();
-        await switcher.selectOption(ids.other_house);
+        await switcher.click();
+        const options = page.getByRole("listbox", { name: "Дом" });
+        await expect(options).toBeFocused();
+        await expect(options.getByRole("option", { selected: true })).toHaveCount(1);
+        await options.locator(`[role=option]:not([aria-selected=true])`).first().click();
         await expect(page).toHaveURL(new RegExp(`house=${ids.other_house}`));
         await expect(page.getByRole("heading", { level: 1, name: "Проблемы дома" })).toBeVisible();
       } finally {
