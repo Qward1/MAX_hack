@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { DomSignalApi, IncidentDetail } from '../shared/api/client';
-import { apiWith } from '../test/fixtures';
+import type { ActivityItem, CommunityApi } from '../shared/api/community';
+import { apiWith, incident } from '../test/fixtures';
 import { App } from './App';
 
 const house = {
@@ -69,6 +70,60 @@ describe('house board', () => {
     expect(await screen.findByText('Не удалось загрузить проблемы дома')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }));
     await waitFor(() => expect(screen.getByText('О проблемах пока не сообщали')).toBeTruthy());
+  });
+});
+
+describe('board: own requests (RA-06)', () => {
+  const lift: IncidentDetail = { ...incident, id: 'incident-lift', house_id: house.id, title: 'Проблема с лифтом' };
+  const light: IncidentDetail = { ...incident, id: 'incident-light', house_id: house.id, title: 'Не горит свет на лестнице' };
+  const mine = (patch: Partial<ActivityItem>): ActivityItem => ({
+    id: 'activity-lift',
+    kind: 'report',
+    house_id: house.id,
+    house_address: house.address,
+    incident_id: lift.id,
+    occurred_at: '2026-09-27T10:00:00Z',
+    status_label: 'Заявка у УК: ждёт принятия в работу',
+    ticket_number: 'T-1',
+    title: 'Проблема с лифтом',
+    ...patch,
+  });
+  function show(board: IncidentDetail[], items: ActivityItem[]) {
+    const myActivity = vi.fn().mockResolvedValue({ items, page: { limit: 20, offset: 0, total: items.length } });
+    render(<App client={clientWith(board)} community={{ myActivity } as unknown as CommunityApi} />);
+    return myActivity;
+  }
+
+  it('shows neither a block nor a link without own requests', async () => {
+    const myActivity = show([lift], []);
+    expect(await screen.findByText('Проблема с лифтом')).toBeTruthy();
+    await waitFor(() => expect(myActivity).toHaveBeenCalled());
+    expect(screen.queryByRole('heading', { name: /ваши обращения/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Все мои обращения' })).toBeNull();
+  });
+
+  it('one request already marked on the board — a compact link instead of a block', async () => {
+    show([lift], [mine({})]);
+    expect(await screen.findByText(/Вы сообщили · T-1/)).toBeTruthy();
+    const link = await screen.findByRole('link', { name: 'Все мои обращения' });
+    expect(link.getAttribute('href')).toContain('view=mine');
+    expect(screen.queryByRole('heading', { name: /ваши обращения/i })).toBeNull();
+    expect(screen.queryByText(/отмечены в списке проблем/)).toBeNull();
+  });
+
+  it('several requests — the block lists only those not on the board', async () => {
+    show([lift, light], [
+      mine({}),
+      mine({ id: 'activity-light', kind: 'joined', incident_id: light.id, ticket_number: 'T-2', title: light.title }),
+      mine({ id: 'activity-route', kind: 'route_card', incident_id: null, ticket_number: null, title: 'Не горят фонари у остановки',
+        status_label: 'Куда обратиться', route_outcome_id: 'outcome-1' }),
+    ]);
+    const heading = await screen.findByRole('heading', { name: 'Другие ваши обращения' });
+    const block = within(heading.closest('section')!);
+    expect(block.getByText('Не горят фонари у остановки')).toBeTruthy();
+    expect(block.queryByText(/Проблема с лифтом/)).toBeNull();
+    expect(block.getByRole('link', { name: 'Все обращения' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Все мои обращения' })).toBeNull();
   });
 });
 

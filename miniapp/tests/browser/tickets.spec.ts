@@ -358,7 +358,9 @@ test("UI-TK-10/27 assignment uses scoped candidates, native focus trap and Escap
 }) => {
   const { ticket } = await createTicket(request);
   await openEmployee(page, ticket.id, "a16-admin");
-  const trigger = page.getByRole("button", { name: "Назначить исполнителя", exact: true });
+  // RA-04: при указанном исполнителе действие называется заменой, а не первым назначением.
+  const label = ticket.assignee_id ? "Изменить исполнителя" : "Назначить исполнителя";
+  const trigger = page.getByRole("button", { name: label, exact: true });
   await trigger.click();
   const dialog = page.getByRole("dialog");
   // Исполнитель — список переключателей (UX-2), только сотрудники этой УК.
@@ -382,14 +384,16 @@ test("UI-TK-10/27 assignment uses scoped candidates, native focus trap and Escap
   await dialog
     .getByRole("textbox", { name: "Причина" })
     .fill("Передача дежурному исполнителю");
-  await dialog.getByRole("button", { name: "Назначить исполнителя", exact: true }).click();
+  await dialog.getByRole("button", { name: label, exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator("dl").getByText("A16 operator", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Изменить исполнителя", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Назначить исполнителя", exact: true })).toHaveCount(0);
   await page.reload();
   expect((await detail(request, ticket.id)).assignee_name).toBe("A16 operator");
   await openEmployee(page, ticket.id, "a16-operator");
   await expect(
-    page.getByRole("button", { name: "Назначить исполнителя", exact: true }),
+    page.getByRole("button", { name: /^(Назначить|Изменить) исполнителя$/ }),
   ).toHaveCount(0);
 });
 
