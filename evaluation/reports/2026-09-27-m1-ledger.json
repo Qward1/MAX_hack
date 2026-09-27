@@ -1,0 +1,45 @@
+{
+  "calls": 242,
+  "max_calls": 400,
+  "max_rub": 30.0,
+  "rub": 21.63992,
+  "runs": {
+    "d3dev40-qwen3-30b": {
+      "calls": 40,
+      "rub": 4.438313
+    },
+    "d5-provider-c8": {
+      "calls": 16,
+      "rub": 1.740557
+    },
+    "d5dev-qwen3-30b": {
+      "calls": 100,
+      "rub": 6.794163
+    },
+    "d5dev-qwen3-30b-rerun": {
+      "calls": 29,
+      "rub": 2.541451
+    },
+    "od-giga10b": {
+      "calls": 20,
+      "rub": 1.679512
+    },
+    "od-giga10b-rep-diag": {
+      "calls": 8,
+      "rub": 0.669573
+    },
+    "od-qwen3-30b": {
+      "calls": 20,
+      "rub": 1.852011
+    },
+    "od-qwen3-30b-retry-diag": {
+      "calls": 2,
+      "rub": 0.0
+    },
+    "probes-manual": {
+      "calls": 7,
+      "rub": 1.92434
+    }
+  },
+  "unknown_cost_calls": 33
+}

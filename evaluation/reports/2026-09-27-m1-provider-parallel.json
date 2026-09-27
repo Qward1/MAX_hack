@@ -1,0 +1,37 @@
+{
+  "label": "измерено: настоящий провайдер, синтетические окна набора настройки",
+  "model": "Qwen/Qwen3-30B-A3B",
+  "provider": "Cloud.ru Evolution Foundation Models",
+  "dataset": "datasets/synthetic/d3_dialogs.v1.dev.jsonl (не контроль)",
+  "windows": 16,
+  "levels": [
+    {
+      "concurrency": 8,
+      "calls": 16,
+      "outcomes": {
+        "ok": 15,
+        "invalid_json": 1,
+        "timeout": 0,
+        "http_429": 0,
+        "http_other": 0,
+        "error": 0
+      },
+      "latency_s": {
+        "p50": 7.086,
+        "p95": 14.554,
+        "max": 14.554
+      },
+      "wall_s": 25.1,
+      "windows_per_hour": 2154,
+      "valid_json_share": 0.9375,
+      "rub_per_window_mean": 0.1088,
+      "rub_total": 1.741,
+      "stopped_by_budget": false
+    }
+  ],
+  "slice_budget": {
+    "calls": 240,
+    "rub": 21.362,
+    "max_rub": 30.0
+  }
+}

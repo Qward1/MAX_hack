@@ -1,0 +1,68 @@
+{
+  "dataset": "open_danger_dev",
+  "config": "rules",
+  "calls": {
+    "windows": 20,
+    "calls": 0,
+    "states": {
+      "disabled": 20
+    },
+    "valid_json": {
+      "k": 0,
+      "n": 0,
+      "value": null,
+      "ci95": null
+    },
+    "timeouts": 0,
+    "provider_errors": 0,
+    "p50_ms": null,
+    "p95_ms": null,
+    "p99_ms": null,
+    "max_ms": null,
+    "rub_total": 0,
+    "rub_per_window": null,
+    "tokens_in_mean": null,
+    "tokens_out_mean": null,
+    "reasoning_tokens_mean": null,
+    "quotes": {
+      "k": 0,
+      "n": 0,
+      "value": null,
+      "ci95": null
+    },
+    "dropped_fields": 0,
+    "audit": {},
+    "upstreams": {}
+  },
+  "open_danger": {
+    "new_kind_separate_signal": {
+      "k": 2,
+      "n": 10,
+      "value": 0.2,
+      "ci95": [
+        0.0567,
+        0.5098
+      ]
+    },
+    "continuation_without_foreign_kind": {
+      "k": 10,
+      "n": 10,
+      "value": 1.0,
+      "ci95": [
+        0.7225,
+        1.0
+      ]
+    },
+    "new_kind_missed": [
+      "od-01",
+      "od-02",
+      "od-03",
+      "od-05",
+      "od-06",
+      "od-08",
+      "od-09",
+      "od-10"
+    ],
+    "continuation_foreign_kind": []
+  }
+}

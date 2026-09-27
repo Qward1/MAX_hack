@@ -56,6 +56,7 @@ from domsignal.ai.providers.openai_compatible import (  # noqa: E402
     DEFAULT_BASE_URL,
     OpenAICompatibleProvider,
 )
+from domsignal.ai.schema_modes import SchemaMode  # noqa: E402
 from domsignal.ai.taxonomy import load_taxonomy  # noqa: E402
 from domsignal.ai.windowing import build_windows  # noqa: E402
 from domsignal.core.routing import (  # noqa: E402
@@ -115,6 +116,14 @@ SLICES = {
         200,
         30.0,
     ),
+    # M1: смена модели на открытую неамериканскую в Cloud.ru — только наборы
+    # настройки (d5_dev, open_danger_dev, подвыборка dev D3); контроль — D6.
+    "m1": Slice(
+        pathlib.Path("evaluation/reports/m1-runs"),
+        pathlib.Path("evaluation/reports/2026-09-27-m1-ledger.json"),
+        400,
+        30.0,
+    ),
 }
 RUNS_DIR = SLICES["p6"].runs
 LEDGER = SLICES["p6"].ledger
@@ -150,6 +159,10 @@ class ModelConfig:
     open_danger_effort: str | None = None
     #: P6c: лимит ответа тех же окон (рассуждения low упирались в 1600).
     open_danger_max_tokens: int | None = None
+    #: M1: режим схемы, цена (₽ за млн токенов входа/выхода) и параметры семейства.
+    schema_mode: SchemaMode = "json_schema_strict"
+    price_rub_per_million: tuple[float, float] | None = None
+    extra: tuple[tuple[str, Any], ...] = ()
 
     def for_window(self, rules_danger: bool, open_danger: bool = False) -> ModelConfig:
         """Конфигурация вызова окна: другие рассуждения только в особых окнах."""
@@ -171,6 +184,7 @@ class ModelConfig:
             body["provider"] = {"only": list(self.provider_only), "allow_fallbacks": False}
         elif self.provider_order:
             body["provider"] = {"order": list(self.provider_order), "allow_fallbacks": True}
+        body.update(dict(self.extra))
         return body
 
 
@@ -271,6 +285,59 @@ CONFIGS: dict[str, ModelConfig] = {
         prompt="window.v2",
         effort=None,
         temperature=0.0,
+    ),
+    # M1 (27.09): открытые неамериканские модели внутри Cloud.ru, промпт
+    # production `window.v3`; рассуждений у GigaChat3-10B нет.
+    "gigachat3_10b_v3": ModelConfig(
+        name="gigachat3_10b_v3",
+        model="ai-sage/GigaChat3-10B-A1.8B",
+        prompt="window.v3",
+        effort=None,
+        temperature=0.0,
+        timeout_seconds=30.0,
+        price_rub_per_million=(12.2, 12.2),
+    ),
+    # Диагностика петли: ответы до лимита 1600 повторяли одно и то же.
+    "gigachat3_10b_v3_rep": ModelConfig(
+        name="gigachat3_10b_v3_rep",
+        model="ai-sage/GigaChat3-10B-A1.8B",
+        prompt="window.v3",
+        effort=None,
+        temperature=0.0,
+        timeout_seconds=30.0,
+        price_rub_per_million=(12.2, 12.2),
+        extra=(("repetition_penalty", 1.1),),
+    ),
+    "gigachat35_v3": ModelConfig(
+        name="gigachat35_v3",
+        model="ai-sage/GigaChat3.5-432B-A28B",
+        prompt="window.v3",
+        effort=None,
+        temperature=0.0,
+        timeout_seconds=30.0,
+        price_rub_per_million=(96.22, 288.6),
+    ),
+    # Qwen3-30B-A3B в каталоге Cloud.ru — «внешняя» модель (данные вне
+    # инфраструктуры Cloud.ru); рассуждения выключаются шаблоном чата.
+    "qwen3_30b_v3": ModelConfig(
+        name="qwen3_30b_v3",
+        model="Qwen/Qwen3-30B-A3B",
+        prompt="window.v3",
+        effort=None,
+        temperature=0.0,
+        timeout_seconds=30.0,
+        price_rub_per_million=(13.908, 55.6076),
+        extra=(("chat_template_kwargs", {"enable_thinking": False}),),
+    ),
+    "qwen36_v3": ModelConfig(
+        name="qwen36_v3",
+        model="Qwen/Qwen3.6-35B-A3B",
+        prompt="window.v3",
+        effort=None,
+        temperature=0.0,
+        timeout_seconds=30.0,
+        price_rub_per_million=(219.6, 329.4),
+        extra=(("chat_template_kwargs", {"enable_thinking": False}),),
     ),
 }
 
@@ -373,6 +440,7 @@ class UsageTap:
 
     async def __call__(self, response: httpx.Response) -> None:
         await response.aread()
+        self.last = {"status": response.status_code}
         try:
             body = response.json()
         except ValueError:
@@ -383,6 +451,13 @@ class UsageTap:
                 "provider": body.get("provider"),
                 "status": response.status_code,
             }
+            if response.status_code != 200:
+                # M1: причина отказа провайдера (тип и код, без текста окна).
+                error = body.get("error")
+                if isinstance(error, dict):
+                    self.last["error"] = {
+                        key: str(error.get(key))[:200] for key in ("type", "code", "message")
+                    }
 
 
 def build_provider(config: ModelConfig, api_key: str, tap: UsageTap) -> OpenAICompatibleProvider:
@@ -392,7 +467,7 @@ def build_provider(config: ModelConfig, api_key: str, tap: UsageTap) -> OpenAICo
         base_url=os.environ.get("LLM_BASE_URL", DEFAULT_BASE_URL),
         api_key=api_key,
         model=config.model,
-        schema_mode="json_schema_strict",
+        schema_mode=config.schema_mode,
         timeout_seconds=config.timeout_seconds,
         max_tokens=config.max_tokens,
         temperature=config.temperature,
@@ -400,6 +475,7 @@ def build_provider(config: ModelConfig, api_key: str, tap: UsageTap) -> OpenAICo
         client=client,
         prompt_version=config.prompt,
         few_shot=config.few_shot,
+        price_rub_per_million=config.price_rub_per_million,
     )
 
 
@@ -506,6 +582,7 @@ async def run_unit(
     api_key: str | None,
     budget: SliceBudget | None,
     run: str,
+    pace_seconds: float = 0.0,
 ) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     open_items: list[OpenItem] = list(unit.open_items)
@@ -525,6 +602,9 @@ async def run_unit(
             assert api_key is not None and budget is not None
             recorder = CallRecorder(build_provider(call, api_key, tap), budget, run)
             analyzer = WindowAnalyzer(recorder, timeout_s=call.timeout_seconds + 2)
+        if pace_seconds and recorder is not None:
+            # M1: лимит Cloud.ru — 100 тыс. токенов в минуту на ключ.
+            await asyncio.sleep(pace_seconds)
         started = time.perf_counter()
         try:
             analysis = await analyzer.analyze(window)
@@ -555,6 +635,8 @@ async def run_unit(
                 "cost_rub": analysis.execution.cost_rub,
                 "usage": tap.last.get("usage"),
                 "upstream": tap.last.get("provider"),
+                "http_status": tap.last.get("status"),
+                "provider_error": tap.last.get("error"),
                 "prompt": analysis.versions.prompt,
                 "model": analysis.versions.model,
                 "quotes_total": quotes_total,
@@ -582,6 +664,7 @@ async def run_dataset(
     api_key: str | None,
     budget: SliceBudget | None,
     concurrency: int,
+    pace_seconds: float = 0.0,
 ) -> list[dict[str, Any]]:
     semaphore = asyncio.Semaphore(concurrency)
     stopped: list[str] = []
@@ -592,7 +675,13 @@ async def run_dataset(
                 return []
             try:
                 return await run_unit(
-                    unit, dataset, config, api_key=api_key, budget=budget, run=run
+                    unit,
+                    dataset,
+                    config,
+                    api_key=api_key,
+                    budget=budget,
+                    run=run,
+                    pace_seconds=pace_seconds,
                 )
             except SliceBudgetExceeded as exc:
                 stopped.append(str(exc))
@@ -978,6 +1067,9 @@ def main() -> None:
         help="only units with at least one window where rules found danger (A2)",
     )
     parser.add_argument("--concurrency", type=int, default=4)
+    parser.add_argument(
+        "--pace-seconds", type=float, default=0.0, help="pause before each model call (M1)"
+    )
     parser.add_argument("--summarize", help="summarize an existing raw records file")
     parser.add_argument("--routes", action="store_true", help="router on the routing reference")
     parser.add_argument(
@@ -1025,6 +1117,7 @@ def main() -> None:
             api_key=api_key,
             budget=budget,
             concurrency=args.concurrency if config.model else 8,
+            pace_seconds=args.pace_seconds,
         )
     )
     current.runs.mkdir(parents=True, exist_ok=True)
