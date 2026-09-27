@@ -1,0 +1,108 @@
+{
+  "threshold_selected_on": "development_day_pair_f1",
+  "independent_human_gold": false,
+  "caveat": "Assistant annotations and previously viewed audit days.",
+  "threshold": 0.675,
+  "strict_cluster_threshold_precision_090_on_development": null,
+  "constrained_selected_on_development": {
+    "threshold": 0.7250000000000003,
+    "top_k": 2,
+    "class_guard": true,
+    "development_f1": 0.1646
+  },
+  "days": {
+    "2024-10-25": {
+      "purpose": "development",
+      "messages": 69,
+      "all_positive_pairs": 289,
+      "candidate_pairs": 1770,
+      "candidate_positive_pairs": 289,
+      "candidate_pair_score": {
+        "precision": 0.5259,
+        "recall": 0.4913,
+        "f1": 0.5081,
+        "tp": 142,
+        "fp": 128,
+        "fn": 147
+      },
+      "cluster_all_pair_score": {
+        "precision": 0.2345,
+        "recall": 0.955,
+        "f1": 0.3765,
+        "tp": 276,
+        "fp": 901,
+        "fn": 13
+      },
+      "constrained_cluster_all_pair_score": {
+        "precision": 0.963,
+        "recall": 0.09,
+        "f1": 0.1646,
+        "tp": 26,
+        "fp": 1,
+        "fn": 263
+      }
+    },
+    "2025-05-02": {
+      "purpose": "heldout",
+      "messages": 76,
+      "all_positive_pairs": 756,
+      "candidate_pairs": 2145,
+      "candidate_positive_pairs": 756,
+      "candidate_pair_score": {
+        "precision": 0.74,
+        "recall": 0.418,
+        "f1": 0.5342,
+        "tp": 316,
+        "fp": 111,
+        "fn": 440
+      },
+      "cluster_all_pair_score": {
+        "precision": 0.3978,
+        "recall": 0.9008,
+        "f1": 0.5519,
+        "tp": 681,
+        "fp": 1031,
+        "fn": 75
+      },
+      "constrained_cluster_all_pair_score": {
+        "precision": 0.7576,
+        "recall": 0.0331,
+        "f1": 0.0634,
+        "tp": 25,
+        "fp": 8,
+        "fn": 731
+      }
+    },
+    "2026-01-24": {
+      "purpose": "heldout",
+      "messages": 60,
+      "all_positive_pairs": 661,
+      "candidate_pairs": 1485,
+      "candidate_positive_pairs": 661,
+      "candidate_pair_score": {
+        "precision": 0.6436,
+        "recall": 0.3797,
+        "f1": 0.4776,
+        "tp": 251,
+        "fp": 139,
+        "fn": 410
+      },
+      "cluster_all_pair_score": {
+        "precision": 0.5477,
+        "recall": 0.947,
+        "f1": 0.694,
+        "tp": 626,
+        "fp": 517,
+        "fn": 35
+      },
+      "constrained_cluster_all_pair_score": {
+        "precision": 0.7931,
+        "recall": 0.0348,
+        "f1": 0.0667,
+        "tp": 23,
+        "fp": 6,
+        "fn": 638
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "split": "reused_val_group_5fold",
+  "results": {
+    "existing_hybrid": {
+      "thresholds": [
+        0.5043,
+        0.578,
+        0.5054,
+        0.6279,
+        0.5499
+      ],
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.7482,
+          "gate_precision": 0.887,
+          "gate_recall": 0.7727
+        },
+        "real_telegram": {
+          "macro_f1": 0.6275,
+          "gate_precision": 0.7656,
+          "gate_recall": 0.8059
+        }
+      },
+      "mean_macro_f1": 0.6878
+    },
+    "hybrid_plus_frozen_rubert_c10_w025": {
+      "thresholds": [
+        0.4748,
+        0.5288,
+        0.481,
+        0.5653,
+        0.5046
+      ],
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.7742,
+          "gate_precision": 0.8525,
+          "gate_recall": 0.7879
+        },
+        "real_telegram": {
+          "macro_f1": 0.6381,
+          "gate_precision": 0.7774,
+          "gate_recall": 0.8388
+        }
+      },
+      "mean_macro_f1": 0.7062
+    }
+  }
+}

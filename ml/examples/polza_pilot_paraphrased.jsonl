@@ -1,0 +1,24 @@
+{"id":"paraphrase-class-a","task":"classify","message":"в подъезде дверь постоянно открыта и не закрывается","allowed_classes":["door_defect","intercom","security_incident"],"gold":"door_defect","privacy_reviewed":true}
+{"id":"paraphrase-class-b","task":"classify","message":"в котельной периодически громко стучит оборудование","allowed_classes":["other_problem","heating_none","noise_neighbors"],"gold":"other_problem","privacy_reviewed":true}
+{"id":"paraphrase-class-c","task":"classify","message":"из крана с горячей водой идет ржавая вода","allowed_classes":["water_quality","no_hot_water","no_cold_water"],"gold":"water_quality","privacy_reviewed":true}
+{"id":"paraphrase-class-d","task":"classify","message":"после дождя протекает крыша на верхних этажах","allowed_classes":["roof_leak","water_leak","heating_none"],"gold":"roof_leak","privacy_reviewed":true}
+{"id":"paraphrase-class-e","task":"classify","message":"нет холодной воды во всем доме","allowed_classes":["no_hot_water","no_cold_water","heating_none"],"gold":"no_cold_water","privacy_reviewed":true}
+{"id":"paraphrase-class-f","task":"classify","message":"на крыше здания виден дым от котельной","allowed_classes":["fire_smoke","roof_leak","fire_alarm"],"gold":"fire_smoke","privacy_reviewed":true}
+{"id":"paraphrase-class-g","task":"classify","message":"лифт испачкали и оставили мусор в кабине","allowed_classes":["elevator_vandal","elevator_out","cleaning_entrance"],"gold":"elevator_vandal","privacy_reviewed":true}
+{"id":"paraphrase-class-h","task":"classify","message":"в подъезде кто то снял пожарные рукава из шкафа","allowed_classes":["neighbor_conduct","fire_alarm","security_incident"],"gold":"neighbor_conduct","privacy_reviewed":true}
+{"id":"paraphrase-class-i","task":"classify","message":"пожарный шкаф снова заблокировали велосипедами","allowed_classes":["neighbor_conduct","fire_alarm","fire_smoke"],"gold":"neighbor_conduct","privacy_reviewed":true}
+{"id":"paraphrase-class-j","task":"classify","message":"подскажите куда обращаться если лифт когда нибудь сломается","allowed_classes":["elevator_out","other_problem"],"gold":"not_a_problem","privacy_reviewed":true}
+{"id":"paraphrase-class-k","task":"classify","message":"запаха в подъезде сегодня нет","allowed_classes":["sewer_blockage","cleaning_entrance","gas_smell"],"gold":"not_a_problem","privacy_reviewed":true}
+{"id":"paraphrase-class-l","task":"classify","message":"спасибо за уборку подъезда","allowed_classes":["cleaning_entrance","neighbor_conduct"],"gold":"not_a_problem","privacy_reviewed":true}
+{"id":"paraphrase-class-m","task":"classify","message":"кто знает когда снова дадут горячую воду","allowed_classes":["no_hot_water","water_quality","water_pressure"],"gold":"no_hot_water","privacy_reviewed":true}
+{"id":"paraphrase-class-n","task":"classify","message":"лифт починили и он снова работает","allowed_classes":["elevator_out","elevator_vandal"],"gold":"elevator_out","privacy_reviewed":true}
+{"id":"paraphrase-class-o","task":"classify","message":"в подъезде появился запах дыма прямо сейчас","allowed_classes":["fire_smoke","fire_alarm","security_incident"],"gold":"fire_smoke","privacy_reviewed":true}
+{"id":"paraphrase-class-p","task":"classify","message":"можно ли поставить камеру на площадке","allowed_classes":["security_incident","neighbor_conduct"],"gold":"not_a_problem","privacy_reviewed":true}
+{"id":"paraphrase-link-a","task":"link","message":"у нас тоже нет холодной воды","case_summary":"в доме ранее сообщили об отсутствии холодной воды","gold":"same_case","privacy_reviewed":true}
+{"id":"paraphrase-link-b","task":"link","message":"лифт снова остановился","case_summary":"в доме ранее сообщили об отсутствии горячей воды","gold":"new_case","privacy_reviewed":true}
+{"id":"paraphrase-link-c","task":"link","message":"вода тоже идет ржавая","case_summary":"в доме ранее пожаловались на ржавую горячую воду","gold":"same_case","privacy_reviewed":true}
+{"id":"paraphrase-link-d","task":"link","message":"из крана больше не течет вода","case_summary":"в доме ранее пожаловались на ржавую горячую воду","gold":"unclear","privacy_reviewed":true}
+{"id":"paraphrase-link-e","task":"link","message":"лифт починили и он снова работает","case_summary":"в доме ранее сообщили об остановке лифта","gold":"same_case","privacy_reviewed":true}
+{"id":"paraphrase-link-f","task":"link","message":"теперь лифт испачкали","case_summary":"в доме ранее сообщили об остановке лифта","gold":"new_case","privacy_reviewed":true}
+{"id":"paraphrase-link-g","task":"link","message":"у нас тоже шумит за стеной","case_summary":"в доме ранее пожаловались на шум соседей","gold":"unclear","privacy_reviewed":true}
+{"id":"paraphrase-link-h","task":"link","message":"после дождя течет с потолка","case_summary":"в доме ранее сообщили о протечке крыши","gold":"same_case","privacy_reviewed":true}

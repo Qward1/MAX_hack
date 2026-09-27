@@ -1,0 +1,47 @@
+{
+  "split": "reused_test",
+  "tuning_on_test": false,
+  "warning": "Test was viewed in earlier rounds; this is retrospective exploratory evidence.",
+  "models": {
+    "existing_heavy": {
+      "threshold": 0.546176,
+      "sources": {
+        "real_whatsapp": {
+          "n": 1765,
+          "gate_ap": 0.8999,
+          "gate_precision": 0.8185,
+          "gate_recall": 0.8244,
+          "end_macro_f1": 0.6688
+        },
+        "real_telegram": {
+          "n": 6147,
+          "gate_ap": 0.8286,
+          "gate_precision": 0.7388,
+          "gate_recall": 0.7828,
+          "end_macro_f1": 0.5711
+        }
+      },
+      "mean_f1": 0.62
+    },
+    "val_selected_new_gate": {
+      "threshold": 0.50343,
+      "sources": {
+        "real_whatsapp": {
+          "n": 1765,
+          "gate_ap": 0.9089,
+          "gate_precision": 0.8157,
+          "gate_recall": 0.8566,
+          "end_macro_f1": 0.6639
+        },
+        "real_telegram": {
+          "n": 6147,
+          "gate_ap": 0.8512,
+          "gate_precision": 0.7226,
+          "gate_recall": 0.8074,
+          "end_macro_f1": 0.576
+        }
+      },
+      "mean_f1": 0.62
+    }
+  }
+}
