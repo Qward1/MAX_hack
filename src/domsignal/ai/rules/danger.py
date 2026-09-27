@@ -47,6 +47,19 @@ _DISPLACED = (
     "месяц назад",
     "год назад",
     "в другом районе",
+    # D6 (MEMO-PRECISION-2026-09-28): чужое место на реальных окнах D5.
+    # «Соседний подъезд» и «соседняя квартира» — наш дом, их здесь нет.
+    "через дорогу",
+    "через улицу",
+    "соседнем дворе",
+    "соседнего двора",
+    "соседний двор",
+    "соседних домах",
+    "соседних домов",
+    "соседнему дому",
+    "в квартале",
+    "по соседству",
+    "на другой стороне",
 )
 
 _RULES: tuple[tuple[DangerKind, tuple[tuple[str, ...], ...]], ...] = (
@@ -134,6 +147,12 @@ _COMPILED: tuple[tuple[DangerKind, tuple[StemSet, ...]], ...] = tuple(
     (kind, tuple(StemSet(group) for group in groups)) for kind, groups in _RULES
 )
 _DISPLACED_SET = StemSet(_DISPLACED)
+
+#: D6: «в доме напротив», «дом напротив» — чужой дом. Форма слова «дом»
+#: сравнивается целиком: основа «дом» нашла бы и «домофон напротив лифта»;
+#: «напротив нашего дома» — это у нас.
+_HOUSE_FORMS = frozenset({"дом", "доме", "дома", "дому", "домом", "домах", "домов"})
+_ACROSS = "напротив"
 
 #: «Свет горит», «лампочка горит» — не пожар (найдено на dev D3 в P6: без этого
 #: правила давали критический сигнал и памятку в чат). Глагол горения
@@ -230,6 +249,8 @@ _FIGURATIVE_OBJECTS = StemSet(
     )
 )
 _PRAISE = frozenset({"просто", "прям", "прямо", "реально", "вообще", "ваще", "чисто"})
+#: D6: «горит желание», «горят все от этой новости», «нервы горят».
+_FIGURATIVE_EXTRA = StemSet(("желани", "новост", "нерв", "сердц", "азарт", "терпени"))
 _DIMINUTIVE_LIGHT = ("огоньк", "огонек")
 
 #: P6b: учения и проверки оповещения — «учебная пожарная тревога»,
@@ -271,9 +292,7 @@ _RESOLVED = StemSet(
     )
 )
 _THANKS = StemSet(("спасибо", "благодар"))
-_RESPONDERS = StemSet(
-    ("пожарн", "мчс", "газовик", "газовщик", "аварийк", "аварийн", "спасател")
-)
+_RESPONDERS = StemSet(("пожарн", "мчс", "газовик", "газовщик", "аварийк", "аварийн", "спасател"))
 _STILL_WORDS = frozenset({"но", "опять", "снова"})
 _STILL_PHRASES = StemSet(("до сих пор", "по прежнему", "все еще", "продолжа"))
 _MARKER_RADIUS = 4
@@ -390,6 +409,190 @@ _AGO = "назад"
 _PAST_ENDINGS = ("л", "ла", "ло", "ли", "лся", "лась", "лось", "лись")
 
 
+#: D6: табачный дым — «курят в подъезде, дым на весь этаж», «сигаретный дым с
+#: балкона». Слово дыма рядом с табаком снимает срабатывание, если в реплике
+#: нет признака настоящего горения: глагола огня, «пожара» или объекта, где
+#: дым означает возгорание («уснул с сигаретой — горит диван», «окурок в
+#: мусоропроводе, горит», «дым из подвала»).
+_TOBACCO = StemSet(
+    (
+        "курит",
+        "курят",
+        "курил",
+        "курить",
+        "курите",
+        "курени",
+        "накур",
+        "покур",
+        "перекур",
+        "курильщ",
+        "сигарет",
+        "табак",
+        "табачн",
+        "кальян",
+        "вейп",
+        "окурк",
+        "окурок",
+        "бычк",
+    )
+)
+_REAL_FIRE = StemSet(
+    (
+        "горит",
+        "горят",
+        "горел",
+        "загорел",
+        "возгоран",
+        "полыха",
+        "тлеет",
+        "пламя",
+        "пламен",
+        "огон",
+        "проводк",
+        "щит",
+        "кабел",
+        "розетк",
+        "матрас",
+        "постел",
+        "диван",
+        "мусоропровод",
+        "подвал",
+        "чердак",
+    )
+)
+_SMOKE_VERBS = ("дымит", "дымят", "дымил")
+#: D6: названия систем дома — «система дымоудаления», «дымоход», «дымовой
+#: извещатель» — не дым. Основа «дым» находила их как начало слова.
+_SMOKE_SYSTEMS = ("дымоуд", "дымоход", "дымосос", "дымов")
+#: D6: «пожарный проезд», «пожарная лестница», «пожарные краны», «правила
+#: пожарной безопасности» — не сообщение о пожаре: прилагательное перед
+#: названием оборудования или правил срабатывания не даёт. «Пожарные
+#: приехали» остаётся оповещением оператора (памятки на него и раньше не было).
+_FIRE_ADJECTIVE = "пожарн"
+_FIRE_EQUIPMENT = StemSet(
+    (
+        "проезд",
+        "лестниц",
+        "кран",
+        "выход",
+        "безопасност",
+        "щит",
+        "шкаф",
+        "рукав",
+        "гидрант",
+        "машин",
+        "двер",
+        "норм",
+        "инспек",
+        "надзор",
+        "водоем",
+    )
+)
+#: D6: «бьёт током» от ошейника, свитера, пледа, «статическое электричество» —
+#: не авария электрики, если рядом нет её объекта (щиток, провод, розетка).
+_SHOCK_BENIGN = StemSet(
+    (
+        "ошейник",
+        "электроошейник",
+        "шокер",
+        "электрошокер",
+        "свитер",
+        "кофт",
+        "одежд",
+        "синтетик",
+        "статическ",
+        "статик",
+        "плед",
+        "волос",
+        "шерст",
+    )
+)
+_PETS = frozenset(
+    {"кот", "кота", "коту", "котом", "котик", "котенок", "кошка", "кошку", "кошки", "кошкой"}
+)
+_ELECTRIC_HAZARD = StemSet(
+    (
+        "щит",
+        "провод",
+        "кабел",
+        "розетк",
+        "счетчик",
+        "выключател",
+        "стиральн",
+        "плит",
+        "бойлер",
+        "водонагрев",
+        "искр",
+        "коротит",
+        "замыкан",
+    )
+)
+#: D6: условие и общая фраза в пределах одной фразы: «когда квартиры горят,
+#: никто не думает о правилах», «при пожаре звоните 112», «в случае пожара
+#: выход закрыт». Граница фразы («когда уже приедут? горит подвал») их
+#: действие обрывает. Снимают право на памятку, не оповещение.
+_CLAUSE_HYPOTHETICAL_WORDS = frozenset({"когда", "если"})
+_CLAUSE_HYPOTHETICAL_PHRASES = StemSet(("в случае", "при пожар", "во время пожар"))
+_CLAUSE_LOOKBACK = 6
+
+
+def _house_across(tokens: Sequence[Token]) -> bool:
+    """«В доме напротив», «дом напротив»; «квартира напротив лифта» — нет."""
+    for index, token in enumerate(tokens):
+        if token.text != _ACROSS:
+            continue
+        around = [*tokens[max(0, index - 2) : index], *tokens[index + 1 : index + 3]]
+        if any(item.text.startswith("наш") for item in around):
+            continue
+        if any(item.text in _HOUSE_FORMS for item in around):
+            return True
+    return False
+
+
+def _tobacco_smoke(tokens: Sequence[Token], match: StemMatch) -> bool:
+    """Слово дыма в реплике о курении без признака настоящего горения."""
+    token = tokens[match.first_token].text
+    smoke_word = (token.startswith("дым") and not token.startswith(_SMOKE_VERBS)) or (
+        token.startswith("задымл")
+    )
+    if not smoke_word or not _TOBACCO.find_all(tokens):
+        return False
+    if any(item.text in _FIRE_NOUNS for item in tokens):
+        return False
+    return not _REAL_FIRE.find_all(tokens)
+
+
+def _fire_equipment(tokens: Sequence[Token], match: StemMatch) -> bool:
+    """«Пожарный проезд», «пожарные краны» — прилагательное перед оборудованием."""
+    if not tokens[match.first_token].text.startswith(_FIRE_ADJECTIVE):
+        return False
+    following = tokens[match.last_token + 1 : match.last_token + 2]
+    return bool(following and _FIRE_EQUIPMENT.find_all(following))
+
+
+def _benign_shock(tokens: Sequence[Token]) -> bool:
+    """«Бьёт током» от ошейника, свитера или кота, без объекта электрики."""
+    benign = bool(_SHOCK_BENIGN.find_all(tokens)) or any(item.text in _PETS for item in tokens)
+    return benign and not _ELECTRIC_HAZARD.find_all(tokens)
+
+
+def _clause_hypothetical(text: str, tokens: Sequence[Token], matches: Sequence[StemMatch]) -> bool:
+    """Условие или общая фраза перед срабатыванием в той же фразе."""
+    for match in matches:
+        first = tokens[match.first_token]
+        low = max(0, match.first_token - _CLAUSE_LOOKBACK)
+        for index in range(low, match.first_token):
+            if tokens[index].text in _CLAUSE_HYPOTHETICAL_WORDS and _same_clause(
+                text, tokens[index], first
+            ):
+                return True
+        window = tokens[low : match.first_token + 2]
+        for item in _CLAUSE_HYPOTHETICAL_PHRASES.find_all(window):
+            if _same_clause(text, window[item.first_token], first):
+                return True
+    return False
+
+
 def _near(tokens: Sequence[Token], match: StemMatch, radius: int) -> Sequence[Token]:
     low = max(0, match.first_token - radius)
     return tokens[low : match.last_token + radius + 1]
@@ -430,7 +633,8 @@ def _is_figurative(tokens: Sequence[Token], match: StemMatch) -> bool:
     if match.stem == "огон" and match.first_token > 0:
         if tokens[match.first_token - 1].text in _PRAISE:
             return True
-    return bool(_FIGURATIVE_OBJECTS.find_all(_near(tokens, match, _LIGHT_RADIUS)))
+    near = _near(tokens, match, _LIGHT_RADIUS)
+    return bool(_FIGURATIVE_OBJECTS.find_all(near) or _FIGURATIVE_EXTRA.find_all(near))
 
 
 def _same_clause(text: str, left: Token, right: Token) -> bool:
@@ -466,9 +670,7 @@ def _negated(tokens: Sequence[Token], matches: Sequence[StemMatch], text: str = 
 
 def _close(left: Sequence[StemMatch], right: Sequence[StemMatch], radius: int) -> bool:
     return any(
-        abs(first.first_token - second.first_token) <= radius
-        for first in left
-        for second in right
+        abs(first.first_token - second.first_token) <= radius for first in left for second in right
     )
 
 
@@ -601,7 +803,7 @@ def _combine(groups: Sequence[list[StemMatch]]) -> list[StemMatch] | None:
 
 
 def _hits(normalized: NormalizedText, tokens: Sequence[Token], line_id: str) -> list[DangerHit]:
-    displaced = bool(_DISPLACED_SET.find_all(tokens))
+    displaced = bool(_DISPLACED_SET.find_all(tokens)) or _house_across(tokens)
     # Учения и отчёт после устранения отменяют срабатывания всей реплики:
     # они остаются в журнале как отменённые, как «газом не пахнет».
     text = normalized.text
@@ -621,9 +823,14 @@ def _hits(normalized: NormalizedText, tokens: Sequence[Token], line_id: str) -> 
                     for match in group
                     if not (_is_light_on(tokens, match) and not _negated(tokens, [match], text))
                     and not _is_figurative(tokens, match)
+                    and not _tobacco_smoke(tokens, match)
+                    and not _fire_equipment(tokens, match)
+                    and not tokens[match.first_token].text.startswith(_SMOKE_SYSTEMS)
                 ]
                 for group in found
             ]
+        elif kind == "electric" and _benign_shock(tokens):
+            continue
         if any(not item for item in found):
             continue
         combined = _combine(found)
@@ -645,12 +852,14 @@ def _hits(normalized: NormalizedText, tokens: Sequence[Token], line_id: str) -> 
                 negated=negated,
                 displaced=displaced,
                 chat_memo_eligible=(
-                    not negated and not memo_blocked and _memo_pattern(kind, tokens, found)
+                    not negated
+                    and not memo_blocked
+                    and not _clause_hypothetical(text, tokens, combined)
+                    and _memo_pattern(kind, tokens, found)
                 ),
             )
         )
     return hits
-
 
 
 def screen_message_for_danger(text: str, *, line_id: str = "") -> list[DangerHit]:
@@ -689,8 +898,4 @@ def chat_memo_hits(hits: Sequence[DangerHit]) -> list[DangerHit]:
     Оповещение оператора от этого не зависит — оно идёт на любое срабатывание
     без отрицания.
     """
-    return [
-        hit
-        for hit in hits
-        if hit.chat_memo_eligible and not hit.negated and not hit.displaced
-    ]
+    return [hit for hit in hits if hit.chat_memo_eligible and not hit.negated and not hit.displaced]

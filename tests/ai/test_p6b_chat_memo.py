@@ -212,9 +212,10 @@ def test_d5_dev_shape() -> None:
     rows = load_allowed_jsonl(D5_DEV)
     groups = [row["group"] for row in rows]
     # P6c: +10 ловушек «прошлое время» и +10 пар настоящего времени к ним.
+    # D6: +41 ловушка (табак, чужой дом, предметы, общие фразы, системы дома) и +35 пар.
     assert (groups.count("danger"), groups.count("trap"), groups.count("contextual")) == (
-        40,
-        50,
+        75,
+        91,
         10,
     )
     assert {row["family"] for row in rows if row["group"] == "trap"} >= {

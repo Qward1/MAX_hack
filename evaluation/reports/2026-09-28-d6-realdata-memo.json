@@ -1,0 +1,76 @@
+{
+  "label": "разметка ИИ-агентом по маскированным текстам (D5), не людьми; окна — правилами до D6 (9932f80); тексты не выводятся",
+  "labelled_windows": 260,
+  "danger_now_windows": 22,
+  "before": {
+    "memo_windows": 46,
+    "memo_false_share": {
+      "k": 27,
+      "n": 46,
+      "share": 0.587,
+      "ci95": [
+        0.4434,
+        0.7171
+      ]
+    },
+    "memo_true": 19,
+    "alert_windows_excluding_displaced": 63,
+    "alert_false_share_excluding_displaced": {
+      "k": 41,
+      "n": 63,
+      "share": 0.6508,
+      "ci95": [
+        0.5275,
+        0.7567
+      ]
+    },
+    "alert_windows_product": 63,
+    "alert_false_share_product": {
+      "k": 41,
+      "n": 63,
+      "share": 0.6508,
+      "ci95": [
+        0.5275,
+        0.7567
+      ]
+    },
+    "alert_true_product": 22
+  },
+  "after": {
+    "memo_windows": 37,
+    "memo_false_share": {
+      "k": 18,
+      "n": 37,
+      "share": 0.4865,
+      "ci95": [
+        0.3345,
+        0.6411
+      ]
+    },
+    "memo_true": 19,
+    "alert_windows_excluding_displaced": 54,
+    "alert_false_share_excluding_displaced": {
+      "k": 32,
+      "n": 54,
+      "share": 0.5926,
+      "ci95": [
+        0.4597,
+        0.7132
+      ]
+    },
+    "alert_windows_product": 55,
+    "alert_false_share_product": {
+      "k": 33,
+      "n": 55,
+      "share": 0.6,
+      "ci95": [
+        0.4681,
+        0.7188
+      ]
+    },
+    "alert_true_product": 22
+  },
+  "true_memos_kept": 19,
+  "true_memos_lost": 0,
+  "true_danger_alerts_lost": 0
+}
