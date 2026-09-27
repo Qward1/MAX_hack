@@ -255,3 +255,11 @@ def test_local_stand_key_is_a_valid_fernet_key_for_local_use() -> None:
     compose = (Path(__file__).resolve().parents[2] / "compose.yaml").read_text(encoding="utf-8")
     expected = f"AUTH_MFA_ENCRYPTION_KEY: ${{AUTH_MFA_ENCRYPTION_KEY:-{LOCAL_MFA_ENCRYPTION_KEY}}}"
     assert expected in compose
+
+
+def test_token_limiter_must_fit_one_window() -> None:
+    """F1: ограничитель токенов в минуту, в который не помещается окно, — ошибка старта."""
+    with pytest.raises(ValidationError, match="LLM_TOKENS_PER_MINUTE"):
+        Settings(app_env="local", llm_tokens_per_minute=5000)
+    assert Settings(app_env="local", llm_tokens_per_minute=0).llm_tokens_per_minute == 0
+    assert Settings(app_env="local").llm_tokens_per_minute == 80000

@@ -67,6 +67,8 @@ ExecutionState = Literal[
     "fallback_budget",
     "fallback_circuit_open",
     "fallback_overloaded",
+    # F1: лимит запросов провайдера (429) или ограничитель токенов в минуту.
+    "fallback_rate_limited",
     "error_rules",
 ]
 AuditEventKind = Literal[
@@ -319,6 +321,8 @@ class ExecutionInfo(Frozen):
     tokens_in: int | None = None
     tokens_out: int | None = None
     cost_rub: float | None = None
+    #: F1: через сколько секунд провайдер разрешил повтор после 429, если сообщил.
+    retry_after_s: float | None = None
 
 
 class Versions(Frozen):

@@ -28,7 +28,7 @@ from datetime import UTC, date, datetime
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from domsignal.ai import BudgetOutcome, budget_scope
+from domsignal.ai import BudgetOutcome, ProviderRateLimited, budget_scope
 from domsignal.db.models import GLOBAL_BUDGET_SCOPE
 
 logger = logging.getLogger(__name__)
@@ -45,6 +45,30 @@ _CHARGE = text(
     RETURNING b.calls
     """
 )
+#: F1: токены модели в минуту — общий счёт процессов, та же атомарная схема.
+_TOKENS = text(
+    """
+    INSERT INTO ai_token_minutes AS t (minute, tokens)
+    VALUES (:minute, :tokens)
+    ON CONFLICT (minute) DO UPDATE SET tokens = t.tokens + :tokens
+    WHERE t.tokens + :tokens <= :limit
+    RETURNING t.tokens
+    """
+)
+_TOKENS_ADJUST = text(
+    """
+    UPDATE ai_token_minutes SET tokens = GREATEST(0, tokens + :delta) WHERE minute = :minute
+    """
+)
+#: Промпт window.v3 и схема — около 6,8 тыс. токенов входа (M1, 27.09),
+#: ответ — до нескольких сотен. Оценка до вызова, после — фактические токены.
+PROMPT_TOKENS = 6800
+ANSWER_TOKENS = 600
+
+
+def estimate_tokens(texts: list[str]) -> int:
+    """Оценка токенов одного вызова окна до ответа провайдера."""
+    return PROMPT_TOKENS + ANSWER_TOKENS + sum(len(value) for value in texts) // 2
 
 
 @dataclass
@@ -61,6 +85,11 @@ class BudgetReservation:
     scope_calls: int | None = None
     outcome: BudgetOutcome | None = None
     consumed: bool = field(default=False, repr=False)
+    #: F1: отказ ограничителя токенов в минуту — не бюджет дня, а временный лимит.
+    rate_limited: bool = False
+    retry_after: float | None = None
+    minute: datetime | None = None
+    tokens_reserved: int = 0
 
 
 _reservation: ContextVar[BudgetReservation | None] = ContextVar(
@@ -78,6 +107,7 @@ class PostgresBudgetGuard:
         daily_calls: int = DEFAULT_DAILY_CALLS,
         chat_share: float = DEFAULT_CHAT_SHARE,
         clock: Callable[[], datetime] | None = None,
+        tokens_per_minute: int = 0,
     ) -> None:
         if daily_calls < 0:
             raise ValueError("daily call budget must not be negative")
@@ -86,6 +116,7 @@ class PostgresBudgetGuard:
         self.sessions = session_factory
         self.daily_calls = daily_calls
         self.chat_share = chat_share
+        self.tokens_per_minute = tokens_per_minute
         self._clock = clock or (lambda: datetime.now(UTC))
 
     @property
@@ -94,20 +125,23 @@ class PostgresBudgetGuard:
         return max(1, int(self.daily_calls * self.chat_share)) if self.daily_calls else 0
 
     @asynccontextmanager
-    async def reserve(self, scope_key: str | None) -> AsyncIterator[BudgetReservation]:
-        """Проверить и списать единицу дня до вызова модели.
+    async def reserve(
+        self, scope_key: str | None, *, tokens: int = 0
+    ) -> AsyncIterator[BudgetReservation]:
+        """Проверить и списать единицу дня (и токены минуты) до вызова модели.
 
-        Списание общего счёта и доли области идёт одной транзакцией: отказ
-        доли откатывает и общий счёт, иначе отказы дренировали бы дневной
-        лимит дома.
+        Списание общего счёта, доли области и токенов минуты идёт одной
+        транзакцией: отказ любого откатывает остальные, иначе отказы
+        дренировали бы дневной лимит дома.
         """
-        reservation = await self._charge_all(scope_key)
+        reservation = await self._charge_all(scope_key, tokens)
         token = _reservation.set(reservation)
         try:
             with budget_scope(scope_key):
                 yield reservation
         finally:
             _reservation.reset(token)
+            await self._settle_tokens(reservation)
             self._log(reservation)
 
     # ------------------------------------------------- протокол BudgetGuard
@@ -119,6 +153,14 @@ class PostgresBudgetGuard:
         отказ в безопасную сторону, а не молчаливый пропуск лимита.
         """
         reservation = _reservation.get()
+        if reservation is not None and reservation.rate_limited and not reservation.consumed:
+            reservation.consumed = True
+            # Ограничитель токенов — как 429: окно подождёт, предохранитель цел.
+            raise ProviderRateLimited(
+                "llm tokens per minute are spent",
+                retry_after=reservation.retry_after,
+                local=True,
+            )
         if reservation is None or reservation.consumed or not reservation.allowed:
             return False
         reservation.consumed = True
@@ -132,8 +174,11 @@ class PostgresBudgetGuard:
 
     # --------------------------------------------------------------- детали
 
-    async def _charge_all(self, scope_key: str | None) -> BudgetReservation:
-        day = self._clock().astimezone(UTC).date()
+    async def _charge_all(self, scope_key: str | None, tokens: int = 0) -> BudgetReservation:
+        now = self._clock().astimezone(UTC)
+        day = now.date()
+        minute = now.replace(second=0, microsecond=0)
+        rate_limited = False
         try:
             async with self.sessions() as session:
                 try:
@@ -145,6 +190,19 @@ class PostgresBudgetGuard:
                             session, day, scope_key, self.per_scope_limit
                         )
                         allowed = scoped is not None
+                    if allowed and self.tokens_per_minute > 0 and tokens > 0:
+                        spent = (
+                            await session.execute(
+                                _TOKENS,
+                                {
+                                    "minute": minute,
+                                    "tokens": tokens,
+                                    "limit": self.tokens_per_minute,
+                                },
+                            )
+                        ).scalar_one_or_none()
+                        allowed = spent is not None
+                        rate_limited = spent is None
                     if allowed:
                         await session.commit()
                     else:
@@ -160,7 +218,30 @@ class PostgresBudgetGuard:
             allowed=allowed,
             daily_calls=daily,
             scope_calls=scoped,
+            rate_limited=rate_limited,
+            retry_after=(60 - now.second) if rate_limited else None,
+            minute=minute if allowed and tokens else None,
+            tokens_reserved=tokens if allowed and self.tokens_per_minute > 0 else 0,
         )
+
+    async def _settle_tokens(self, reservation: BudgetReservation) -> None:
+        """После ответа — поправка оценки фактическими токенами провайдера."""
+        outcome = reservation.outcome
+        if not reservation.tokens_reserved or reservation.minute is None or outcome is None:
+            return
+        if outcome.tokens_in is None and outcome.tokens_out is None:
+            return
+        actual = (outcome.tokens_in or 0) + (outcome.tokens_out or 0)
+        delta = actual - reservation.tokens_reserved
+        if not delta:
+            return
+        try:
+            async with self.sessions() as session, session.begin():
+                await session.execute(
+                    _TOKENS_ADJUST, {"minute": reservation.minute, "delta": delta}
+                )
+        except Exception as exc:  # noqa: BLE001 - учёт не должен ронять разбор
+            logger.warning("ai_tokens_adjust_failed", extra={"error_type": type(exc).__name__})
 
     async def _charge(
         self, session: AsyncSession, day: date, scope_key: str, limit: int
@@ -188,6 +269,8 @@ class PostgresBudgetGuard:
                 "ai_budget_scope_calls": reservation.scope_calls,
                 "ai_budget_scope_limit": self.per_scope_limit,
                 "ai_budget_used": reservation.consumed,
+                "ai_rate_limited": reservation.rate_limited,
+                "ai_tokens_reserved": reservation.tokens_reserved,
                 "ai_cost_rub": outcome.cost_rub if outcome else None,
                 "ai_tokens_in": outcome.tokens_in if outcome else None,
                 "ai_tokens_out": outcome.tokens_out if outcome else None,
@@ -195,4 +278,4 @@ class PostgresBudgetGuard:
         )
 
 
-__all__ = ["GLOBAL_BUDGET_SCOPE", "BudgetReservation", "PostgresBudgetGuard"]
+__all__ = ["GLOBAL_BUDGET_SCOPE", "BudgetReservation", "PostgresBudgetGuard", "estimate_tokens"]

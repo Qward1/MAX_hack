@@ -48,6 +48,9 @@ class LlmSchemaMode(StrEnum):
 MAX_API_ORIGIN = "https://platform-api2.max.ru"
 # M1 (27.09.2026): Cloud.ru Evolution Foundation Models (LLM-PROVIDER-2026-09-27).
 LLM_BASE_URL = "https://foundation-models.api.cloud.ru/v1"
+#: Одно окно с промптом window.v3 — около 7 тыс. токенов (M1): меньше ограничитель
+#: не пропустит ни одного вызова.
+MIN_TOKENS_PER_MINUTE = 10000
 PRODUCTION_MAX_BOT_USERNAME = "t480_hakaton_max_bot"
 WEBHOOK_SECRET_PATTERN = re.compile(r"^[A-Za-z0-9_-]{5,256}$")
 
@@ -88,6 +91,9 @@ class Settings(BaseSettings):
     llm_max_concurrency: int = Field(default=4, ge=1, le=64)
     llm_daily_call_budget: int = Field(default=1000, ge=0)
     llm_chat_daily_share: float = Field(default=0.2, gt=0, le=1)
+    # F1 (LLM-RATE-2026-09-29): токенов модели в минуту на все процессы —
+    # 80 % лимита ключа Cloud.ru (100 тыс./мин). 0 — ограничитель выключен.
+    llm_tokens_per_minute: int = Field(default=80000, ge=0)
     # Провайдер AI-пула для процессов, которые модель не вызывают (api): они
     # объявляют возможность разбора, не получая ключа. Не задан — возможность
     # следует собственному `LLM_PROVIDER`, как в однопроцессном стенде.
@@ -340,6 +346,12 @@ class Settings(BaseSettings):
             and self.ai_worker_concurrency > self.llm_max_concurrency
         ):
             problems.append("AI_WORKER_CONCURRENCY must not exceed LLM_MAX_CONCURRENCY")
+        if 0 < self.llm_tokens_per_minute < MIN_TOKENS_PER_MINUTE:
+            # Как у LLM_MAX_CONCURRENCY: ограничитель, в который не помещается
+            # ни одно окно, молча отдал бы всё правилам.
+            problems.append(
+                f"LLM_TOKENS_PER_MINUTE must be 0 or at least {MIN_TOKENS_PER_MINUTE}"
+            )
         if problems:
             raise ValueError("worker concurrency: " + "; ".join(problems))
         return self

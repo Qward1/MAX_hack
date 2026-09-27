@@ -216,6 +216,7 @@ def build_ai(
         session_factory,
         daily_calls=settings.llm_daily_call_budget,
         chat_share=settings.llm_chat_daily_share,
+        tokens_per_minute=settings.llm_tokens_per_minute,
     )
     analyzer = WindowAnalyzer(
         ResilientProvider(

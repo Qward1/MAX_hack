@@ -54,7 +54,8 @@ _WINDOWS = text(
            count(*) FILTER (WHERE analyzed_by = 'fallback') AS watchdog,
            count(*) FILTER (WHERE execution_state = 'fallback_budget') AS budget,
            count(*) FILTER (WHERE execution_state IN ('fallback_overloaded',
-                                                      'fallback_circuit_open')) AS overload
+                                                      'fallback_circuit_open',
+                                                      'fallback_rate_limited')) AS overload
     FROM conversation_windows
     WHERE state = 'done' AND completed_at >= :since
     """

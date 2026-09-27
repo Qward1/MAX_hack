@@ -48,6 +48,10 @@ _DELETE = text(
     """
 )
 
+#: F1: счётчики токенов модели по минутам нужны только текущей минуте.
+_DELETE_TOKEN_MINUTES = text("DELETE FROM ai_token_minutes WHERE minute < :cutoff")
+TOKEN_MINUTES_RETENTION = timedelta(hours=1)
+
 
 @dataclass(frozen=True)
 class CleanupResult:
@@ -90,6 +94,10 @@ class JobCleanup:
                 removed[status] += count
                 if count < self.batch_size:
                     break
+        async with self.sessions() as session, session.begin():
+            await session.execute(
+                _DELETE_TOKEN_MINUTES, {"cutoff": at - TOKEN_MINUTES_RETENTION}
+            )
         outcome = CleanupResult(
             succeeded=removed["succeeded"], failed=removed["failed"], batches=batches
         )
