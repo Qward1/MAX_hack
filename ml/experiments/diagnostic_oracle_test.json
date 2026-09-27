@@ -1,0 +1,31 @@
+{
+  "split": "reused_test",
+  "kind": "diagnostic_oracle_ceilings",
+  "warning": "Oracle labels are used to correct predictions; these are not achievable model metrics or forecasts.",
+  "sources": {
+    "real_whatsapp": {
+      "n": 1765,
+      "positive": 279,
+      "missed_positive_by_gate": 49,
+      "false_positive_by_gate": 51,
+      "macro_f1": {
+        "working_pipeline": 0.6688,
+        "oracle_gate_same_class_head": 0.8172,
+        "same_gate_oracle_class_on_accepted_true_problems": 0.8018,
+        "oracle_both": 1.0
+      }
+    },
+    "real_telegram": {
+      "n": 6147,
+      "positive": 571,
+      "missed_positive_by_gate": 124,
+      "false_positive_by_gate": 158,
+      "macro_f1": {
+        "working_pipeline": 0.5711,
+        "oracle_gate_same_class_head": 0.7963,
+        "same_gate_oracle_class_on_accepted_true_problems": 0.7205,
+        "oracle_both": 1.0
+      }
+    }
+  }
+}
