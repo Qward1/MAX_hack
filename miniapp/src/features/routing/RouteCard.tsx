@@ -4,18 +4,40 @@ import { maxBridge, safeUrl } from "../../shared/max/bridge";
 import { Button, LinkButton } from "../../shared/ui/Button";
 import { countLabel, formatDay } from "../../shared/ui/format";
 import { DemoBadge, Notice } from "../../shared/ui/semantic";
-import { SourceLink } from "../../shared/ui/SourceLink";
-import { type CardActionType, cardActionLabel, knownCardActions, linkActions } from "./presentation";
+import { SourceDisclosure } from "../../shared/ui/SourceLink";
+import { type CardActionType, cardActionLabel, knownCardActions, linkActions, verificationNotes } from "./presentation";
 
-export const UNVERIFIED_NOTE = "Сведения требуют сверки.";
+/**
+ * «Требует сверки» с названием того, что именно не сверено: основание,
+ * кто отвечает, или сведения об официальном сервисе. Не прячется в раскрытие.
+ */
+export function VerificationNote({ route }: { route: ActionCard["route"] }) {
+  const notes = verificationNotes(route);
+  if (!notes.length) return null;
+  return (
+    <Notice tone="warning" role="note">
+      {notes.map((note) => (
+        <p key={note}>{note}</p>
+      ))}
+    </Notice>
+  );
+}
 
 /**
  * Памятка безопасности. При любом ответе она стоит первой на экране:
- * телефон — настоящая ссылка `tel:`, у каждой строки — источник.
+ * телефон — настоящая ссылка `tel:`, у каждой строки — источник. Одинаковый
+ * источник нескольких строк показан один раз — одной строкой с раскрытием.
  */
 export function SafetyPanel({ safety }: { safety: SafetyBlock }) {
   const verified = formatDay(safety.verified_at);
   const titleId = useId();
+  const sources: { url?: string | null; title?: string | null }[] = [];
+  for (const source of [
+    ...(safety.steps ?? []).map((step) => ({ url: step.source_url, title: step.source_title })),
+    { url: safety.source_url, title: safety.source_title },
+  ])
+    if ((source.title || source.url) && !sources.some((known) => known.title === source.title && known.url === source.url))
+      sources.push(source);
   return (
     <section className="ds-safety" role="alert" aria-labelledby={titleId}>
       <h2 id={titleId}>{safety.title}</h2>
@@ -34,18 +56,27 @@ export function SafetyPanel({ safety }: { safety: SafetyBlock }) {
           {(safety.steps ?? []).map((step) => (
             <li key={step.text}>
               <span className="ds-prose">{step.text}</span>
-              <SourceLink url={step.source_url} title={step.source_title} />
             </li>
           ))}
         </ul>
       )}
-      <SourceLink url={safety.source_url} title={safety.source_title} />
-      {verified && <p className="ds-meta">Проверено: {verified}</p>}
+      {sources.length > 0 && (
+        <div>
+          {sources.map((source) => (
+            <SourceDisclosure
+              key={`${source.title}-${source.url}`}
+              url={source.url}
+              title={source.title}
+              verified={source.url === safety.source_url && source.title === safety.source_title ? verified : null}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
 
-function CardAction({
+export function CardAction({
   action,
   primary,
   handler,
@@ -141,10 +172,6 @@ export function RouteCard({
   const group = useId();
   const basis = card.route.basis;
   const verified = formatDay(basis?.verified_at);
-  const needsCheck =
-    card.route.stale ||
-    (basis ? basis.verification_status !== "verified" : false) ||
-    (card.route.channels ?? []).some((channel) => channel.stale || channel.verification_status !== "verified");
   const actions = knownCardActions(card.actions).filter(
     (action) => linkActions.includes(action.type as CardActionType) || handlers[action.type as CardActionType],
   );
@@ -161,26 +188,21 @@ export function RouteCard({
         <section className="ds-section route-basis" aria-labelledby={`${group}-basis`}>
           <h2 id={`${group}-basis`}>Основание</h2>
           <p className="ds-prose">{basis.text}</p>
-          <SourceLink url={basis.source_url} title={basis.source_title} />
-          {verified && <p className="ds-meta">Проверено: {verified}</p>}
-          {needsCheck && (
-            <Notice tone="warning" role="note">
-              <p>{UNVERIFIED_NOTE}</p>
-            </Notice>
-          )}
+          <SourceDisclosure url={basis.source_url} title={basis.source_title} verified={verified} />
+          <VerificationNote route={card.route} />
         </section>
       )}
       {(card.facts ?? []).length > 0 && (
         <details className="ds-disclosure route-facts">
           <summary>
             <h2 className="ds-summary-title">Что известно об официальном сервисе</h2>
-            <span className="ds-meta">{countLabel((card.facts ?? []).length, ["факт", "факта", "фактов"])} с источниками</span>
+            <span className="ds-meta">{countLabel((card.facts ?? []).length, ["факт", "факта", "фактов"])}</span>
           </summary>
           <ul className="ds-bullets ds-disclosure-body">
             {(card.facts ?? []).map((fact) => (
               <li key={fact.text}>
                 <span className="ds-prose">{fact.text}</span>
-                <SourceLink url={fact.source_url} title={fact.source_title} />
+                <SourceDisclosure url={fact.source_url} title={fact.source_title} />
               </li>
             ))}
           </ul>

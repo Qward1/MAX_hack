@@ -89,7 +89,7 @@ test.describe.serial("D3 community", () => {
       await expect(page.getByRole("heading", { name: "Рассылки", level: 1 })).toBeVisible();
       await page.getByRole("button", { name: "Новое сообщение" }).click();
       await expect(page.getByText("Только сервисные сообщения для жителей. Реклама запрещена.")).toBeVisible();
-      await page.getByLabel("Тема объявления").selectOption("works");
+      await page.getByRole("group", { name: "Тема объявления" }).getByRole("radio", { name: "Работы" }).check();
       await page.getByLabel("Заголовок").fill(TITLE);
       await page.getByLabel(/^Текст/).fill(LONG_BODY);
       await page.getByLabel("Личные сообщения жителям").check();
@@ -219,7 +219,7 @@ test.describe.serial("D3 community", () => {
     try {
       await page.goto(`/?test_actor=a16-outsider&house=${ids.house}&view=home`);
       await expect(page.getByRole("heading", { name: "Нет доступа к этому дому" })).toBeVisible();
-      await expect(page.getByRole("button", { name: "К выбору дома" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Выбрать дом" })).toBeVisible();
       await axeCheck(page);
       await page.goto(`/?test_actor=a16-admin&house=${ids.house}&view=home`);
       await expect(page.getByText("Раздел доступен жителям дома")).toBeVisible();

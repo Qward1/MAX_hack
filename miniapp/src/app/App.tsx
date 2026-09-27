@@ -18,6 +18,7 @@ import { useResource } from "../shared/api/useResource";
 import { LAUNCH_REF, maxBridge } from "../shared/max/bridge";
 import { Button } from "../shared/ui/Button";
 import { countLabel, formatWhen } from "../shared/ui/format";
+import { IconHouse, IconNews, IconProblems, IconRequests } from "../shared/ui/icons";
 import {
   BackLink,
   DemoBadge,
@@ -38,6 +39,7 @@ import { ResidentWorkProgress } from "../features/tickets/ResidentWorkProgress";
 import { NoHouse } from "../features/houses/NoHouse";
 import {
   AnnouncementsScreen,
+  AppLink,
   type CommunityLinks,
   type CommunityView,
   MyActivityScreen,
@@ -47,7 +49,7 @@ import {
   RecentActivity,
   WorksScreen,
 } from "../features/community/CommunityScreens";
-import { type CommunityApi, communityApi } from "../shared/api/community";
+import { type ActivityItem, type CommunityApi, communityApi } from "../shared/api/community";
 import { categoryLabel } from "../features/incidents/presentation";
 
 type House = Me["houses"][number];
@@ -72,11 +74,12 @@ type Loaded = {
 const VIEWS: CommunityView[] = ["home", "news", "poll", "works", "mine", "reception"];
 /** Разделы верхнего уровня — вкладки; остальное — вложенные экраны с «Назад». */
 type Section = "board" | "mine" | "news" | "home";
-const SECTIONS: [Section, string][] = [
-  ["board", "Проблемы"],
-  ["mine", "Мои обращения"],
-  ["news", "Объявления"],
-  ["home", "Мой дом"],
+/** [раздел, подпись, короткая подпись на телефоне, значок]. */
+const SECTIONS: [Section, string, string, () => ReactNode][] = [
+  ["board", "Проблемы", "Проблемы", IconProblems],
+  ["mine", "Мои обращения", "Обращения", IconRequests],
+  ["news", "Объявления", "Объявления", IconNews],
+  ["home", "Мой дом", "Мой дом", IconHouse],
 ];
 const VIEW_TITLES: Record<CommunityView, string> = {
   home: "Мой дом",
@@ -85,6 +88,15 @@ const VIEW_TITLES: Record<CommunityView, string> = {
   works: "Что сделано в доме",
   mine: "Мои обращения",
   reception: "Запись на приём",
+};
+/** Раздел, к которому относится вложенный экран, — он отмечен в меню. */
+const VIEW_SECTION: Record<CommunityView, Section> = {
+  home: "home",
+  news: "news",
+  poll: "news",
+  works: "home",
+  mine: "mine",
+  reception: "home",
 };
 const PROBLEMS = ["проблема", "проблемы", "проблем"] as const;
 
@@ -348,6 +360,29 @@ export function App({
     </div>
   );
 
+  /**
+   * Оболочка экрана. Телефон: шапка, разделы (на главных экранах) и содержание.
+   * Компьютер: шапка сверху, меню разделов слева — на всех экранах, с отметкой
+   * раздела, к которому относится вложенный экран.
+   */
+  const frame = (
+    content: ReactNode,
+    options: { back?: boolean; house?: string; section?: Section; nested?: boolean; refreshable?: boolean; bar?: boolean } = {},
+  ) => (
+    <div className={`app-shell ds-resident${options.bar ? " has-bottom-bar" : ""}`}>
+      {topbar(Boolean(options.back), options.house, options.refreshable ?? true)}
+      {options.section && (
+        <SectionTabs
+          house={options.house}
+          current={options.section}
+          nested={Boolean(options.nested)}
+          navigate={navigate}
+        />
+      )}
+      <main className="ds-app-main">{content}</main>
+    </div>
+  );
+
   // Что грузим — одними словами для заголовка, загрузки и ошибки.
   const subject = view
     ? `раздел «${VIEW_TITLES[view]}»`
@@ -371,44 +406,49 @@ export function App({
           : reportParam
             ? "Что случилось?"
             : "Проблемы дома";
-  if (!data)
-    return (
-      <main className="app-shell">
-        {topbar(detail, houseId ?? undefined)}
-        {resource.error ? (
-          <ErrorPanel
-            error={resource.error}
-            subject={subject}
-            missing={
-              view
-                ? "Раздел не найден"
-                : cardId
-                  ? "Карточка «Куда обратиться» не найдена"
-                  : draftId
-                    ? "Черновик не найден"
-                    : incidentId
-                      ? "Проблема не найдена"
-                      : "Дом не найден"
-            }
-            onRetry={resource.refresh}
-            back={
-              detail || problemStatus(resource.error) === 403 ? (
-                <Button onClick={() => navigate(routeUrl(), { replace: true })}>К выбору дома</Button>
-              ) : undefined
-            }
-          />
-        ) : (
-          <>
-            <PageHeader title={headerTitle} />
-            <StatePanel title={`Загружаем ${subject}`} detail="Это займёт несколько секунд." loading />
-          </>
-        )}
-      </main>
+  if (!data) {
+    const status = resource.error ? problemStatus(resource.error) : null;
+    return frame(
+      resource.error ? (
+        <ErrorPanel
+          error={resource.error}
+          subject={subject}
+          missing={
+            view
+              ? "Раздел не найден"
+              : cardId
+                ? "Карточка «Куда обратиться» не найдена"
+                : draftId
+                  ? "Черновик не найден"
+                  : incidentId
+                    ? "Проблема не найдена"
+                    : "Дом не найден"
+          }
+          onRetry={resource.refresh}
+          back={
+            status === 403 ? (
+              // Текст предлагает выбрать другой дом — кнопка ведёт к выбору.
+              <Button onClick={() => navigate(routeUrl(), { replace: true })}>Выбрать дом</Button>
+            ) : detail ? (
+              // Текст предлагает вернуться к проблемам дома — кнопка ведёт на доску этого дома.
+              <Button onClick={() => navigate(routeUrl({ house: houseId ?? undefined }), { replace: true })}>
+                К проблемам дома
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : (
+        <>
+          <PageHeader title={headerTitle} />
+          <StatePanel title={`Загружаем ${subject}`} detail="Это займёт несколько секунд." loading />
+        </>
+      ),
+      { back: detail, house: houseId ?? undefined },
     );
+  }
   if (data.unavailable)
-    return (
-      <main className="app-shell">
-        {topbar(detail, currentHouse)}
+    return frame(
+      <>
         <PageHeader title="Раздел пока недоступен" />
         <StatePanel
           title="Этот раздел сейчас выключен"
@@ -417,7 +457,8 @@ export function App({
           onAction={resource.refresh}
           back={detail ? <Button onClick={() => navigate(routeUrl())}>К проблемам дома</Button> : undefined}
         />
-      </main>
+      </>,
+      { back: detail, house: currentHouse },
     );
 
   const houses = data.me.houses;
@@ -445,13 +486,11 @@ export function App({
   if (data.view && (data.house || ["mine", "poll"].includes(data.view))) {
     const home = data.house;
     const topLevel = ["mine", "news", "home"].includes(data.view);
-    return (
-      <main className="app-shell">
-        {topbar(!topLevel, home?.id)}
+    return frame(
+      <>
         <PageHeader title={VIEW_TITLES[data.view]} subtitle={home && data.view !== "mine" ? switcher(home) : undefined}>
           {home?.is_demo && <DemoBadge />}
         </PageHeader>
-        {topLevel && <SectionTabs house={home?.id} current={data.view as Section} navigate={navigate} />}
         {data.view === "home" && home && <MyHouseScreen api={communityClient} houseId={home.id} links={links} />}
         {data.view === "news" && home && <AnnouncementsScreen api={communityClient} houseId={home.id} links={links} />}
         {data.view === "works" && home && <WorksScreen api={communityClient} houseId={home.id} links={links} />}
@@ -464,15 +503,15 @@ export function App({
           <StatePanel title="Опрос не найден" detail="Вернитесь к объявлениям дома." />
         )}
         {import.meta.env.DEV && <Diagnostics />}
-      </main>
+      </>,
+      { back: !topLevel, house: home?.id, section: VIEW_SECTION[data.view], nested: !topLevel },
     );
   }
 
   // --------------------------------------------------------------- нет дома
   if (!data.house && !data.incident && !data.card && !data.draft)
-    return (
-      <main className="app-shell">
-        {topbar(false)}
+    return frame(
+      <>
         <PageHeader title="Как открыть свой дом" subtitle="ДомСигнал показывает проблемы вашего дома и помогает сообщить о новой." />
         <NoHouse
           client={client}
@@ -482,38 +521,36 @@ export function App({
           onRefresh={resource.refresh}
           onJoined={(id) => navigate(routeUrl({ house: id }))}
         />
-      </main>
+      </>,
     );
 
   // --------------------------------------------------------- сообщить о проблеме
   if (data.report && data.house) {
     const house = data.house;
-    return (
-      <main className="app-shell">
-        {topbar(true, house.id, false)}
-        <ReportFlow
-          key={house.id}
-          houseId={house.id}
-          houseAddress={house.address}
-          client={client}
-          draft={reportDrafts.current.get(house.id)}
-          onDraft={onDraft}
-          // Форма — промежуточный шаг: переход из неё заменяет запись истории,
-          // и «Назад» из проблемы ведёт к списку, а не к пустой форме.
-          onOpen={(target) => {
-            // Черновик открывается поверх своей карточки «Куда обратиться»:
-            // «Назад» из черновика ведёт к ней, а не к пустой форме.
-            if (target.draft && target.card) {
-              navigate(routeUrl({ house: house.id, card: target.card }), { replace: true });
-              navigate(routeUrl({ house: house.id, draft: target.draft }));
-            } else navigate(routeUrl({ house: house.id, ...target }), { replace: true });
-          }}
-          onCreated={() => undefined}
-          onBoard={() =>
-            depth() > 0 ? window.history.back() : navigate(routeUrl({ house: house.id }), { replace: true })
-          }
-        />
-      </main>
+    return frame(
+      <ReportFlow
+        key={house.id}
+        houseId={house.id}
+        houseAddress={house.address}
+        client={client}
+        draft={reportDrafts.current.get(house.id)}
+        onDraft={onDraft}
+        // Форма — промежуточный шаг: переход из неё заменяет запись истории,
+        // и «Назад» из проблемы ведёт к списку, а не к пустой форме.
+        onOpen={(target) => {
+          // Черновик открывается поверх своей карточки «Куда обратиться»:
+          // «Назад» из черновика ведёт к ней, а не к пустой форме.
+          if (target.draft && target.card) {
+            navigate(routeUrl({ house: house.id, card: target.card }), { replace: true });
+            navigate(routeUrl({ house: house.id, draft: target.draft }));
+          } else navigate(routeUrl({ house: house.id, ...target }), { replace: true });
+        }}
+        onCreated={() => undefined}
+        onBoard={() =>
+          depth() > 0 ? window.history.back() : navigate(routeUrl({ house: house.id }), { replace: true })
+        }
+      />,
+      { back: true, house: house.id, refreshable: false, section: "board", nested: true },
     );
   }
 
@@ -522,9 +559,8 @@ export function App({
   // ------------------------------------------------------ куда обратиться
   if (data.card) {
     const outcome = data.card;
-    return (
-      <main className="app-shell">
-        {topbar(true, outcome.house_id)}
+    return frame(
+      <>
         <PageHeader title="Куда обратиться" subtitle={data.house?.address}>
           {data.house?.is_demo && <DemoBadge />}
         </PageHeader>
@@ -534,54 +570,59 @@ export function App({
             <p>Сведения обновились — показываем актуальные.</p>
           </Notice>
         )}
-        <RouteCard
-          card={outcome.action_card}
-          busy={busy}
-          demo={Boolean(data.house?.is_demo)}
-          handlers={{
-            prepare_appeal: () =>
-              void (async () => {
-                const created = outcome.appeal_draft_id
-                  ? { id: outcome.appeal_draft_id }
-                  : await client.createAppealDraft({ house_id: outcome.house_id, route_outcome_id: outcome.id });
-                navigate(routeUrl({ house: outcome.house_id, draft: created.id }));
-              })(),
-          }}
-          extra={
-            outcome.incident_id ? (
-              <Button stretched onClick={() => navigate(routeUrl({ house: outcome.house_id, incident: outcome.incident_id! }))}>
-                Открыть проблему дома
-              </Button>
-            ) : undefined
-          }
-        />
-        <p className="ds-meta">Карточка составлена по текущему справочнику ДомСигнала.</p>
+        <div className="ds-reading">
+          <RouteCard
+            card={outcome.action_card}
+            busy={busy}
+            demo={Boolean(data.house?.is_demo)}
+            handlers={{
+              prepare_appeal: () =>
+                void (async () => {
+                  const created = outcome.appeal_draft_id
+                    ? { id: outcome.appeal_draft_id }
+                    : await client.createAppealDraft({ house_id: outcome.house_id, route_outcome_id: outcome.id });
+                  navigate(routeUrl({ house: outcome.house_id, draft: created.id }));
+                })(),
+            }}
+            extra={
+              outcome.incident_id ? (
+                <Button stretched onClick={() => navigate(routeUrl({ house: outcome.house_id, incident: outcome.incident_id! }))}>
+                  Открыть проблему дома
+                </Button>
+              ) : undefined
+            }
+          />
+          <p className="ds-meta">Карточка составлена по текущему справочнику ДомСигнала.</p>
+        </div>
         {import.meta.env.DEV && <Diagnostics />}
-      </main>
+      </>,
+      { back: true, house: outcome.house_id, section: "board", nested: true },
     );
   }
 
   // --------------------------------------------------------- черновик обращения
   if (data.draft) {
     const draft = data.draft;
-    return (
-      <main className="app-shell">
-        {topbar(true, draft.house_id)}
+    return frame(
+      <>
         <PageHeader title="Черновик обращения" subtitle={data.house?.address}>
           {data.house?.is_demo && <DemoBadge />}
         </PageHeader>
         {refresh}
-        <AppealDraftScreen
-          key={draft.id}
-          draft={draft}
-          client={client}
-          // P6b: «данные могли измениться» не запирает редактор и копирование —
-          // черновик пишут дольше минуты, а устаревшую правку отсекает версия (409).
-          busy={resource.loading}
-          onLoaded={() => resource.refresh()}
-        />
+        <div className="ds-reading">
+          <AppealDraftScreen
+            key={draft.id}
+            draft={draft}
+            client={client}
+            // P6b: «данные могли измениться» не запирает редактор и копирование —
+            // черновик пишут дольше минуты, а устаревшую правку отсекает версия (409).
+            busy={resource.loading}
+            onLoaded={() => resource.refresh()}
+          />
+        </div>
         {import.meta.env.DEV && <Diagnostics />}
-      </main>
+      </>,
+      { back: true, house: draft.house_id, section: "mine", nested: true },
     );
   }
 
@@ -590,9 +631,8 @@ export function App({
     const incident = data.incident;
     const place = placeText(incident.location);
     const due = formatWhen(incident.due_at);
-    return (
-      <main className="app-shell">
-        {topbar(true, incident.house_id)}
+    return frame(
+      <>
         <PageHeader
           title={incident.title || "Проблема дома"}
           subtitle={[categoryLabel(incident.category), data.house?.address].filter(Boolean).join(" · ")}
@@ -613,68 +653,141 @@ export function App({
             <p>Житель отметил отправку. Регистрация во внешней системе ДомСигналом не подтверждена.</p>
           </Notice>
         )}
-        <ResidentWorkProgress
-          key={incident.id}
-          client={client}
-          incidentId={incident.id}
-          launchAttempt={launchAttempt}
-          revision={resource.updatedAt}
-          parentBusy={busy}
-        />
-        <NextAction actions={incident.allowed_actions} handlers={{ retry: resource.refresh }} busy={busy} />
-        <section className="ds-section" aria-labelledby="incident-known">
-          <h2 id="incident-known">Что известно</h2>
-          {incident.description && <p className="ds-prose">{incident.description}</p>}
-          <dl className="ds-kv">
-            {place && <InfoRow label="Место">{place}</InfoRow>}
-            <InfoRow label="Сообщили">
-              {incident.participant_count !== null
-                ? countLabel(incident.participant_count, ["житель", "жителя", "жителей"])
-                : "Нет данных"}
-              {`, ${countLabel(incident.report_count, ["сообщение", "сообщения", "сообщений"])}`}
-            </InfoRow>
-            <InfoRow label="Впервые">{formatWhen(incident.created_at) ?? "Дата не указана"}</InfoRow>
-            {incident.updated_at && <InfoRow label="Обновлена">{formatWhen(incident.updated_at)}</InfoRow>}
-            {due && <InfoRow label="Срок">{due}</InfoRow>}
-          </dl>
-          <SourceChip source={incident.provenance} label="Источник сведений" />
-          {incident.rule && <SourceChip source={incident.rule} label="Основание" />}
-        </section>
-        {incident.reports?.length > 0 && (
-          <section className="ds-section" aria-labelledby="incident-history">
-            <h2 id="incident-history">Сообщения жителей</h2>
-            <Timeline
-              label="сообщения"
-              events={incident.reports.map((report) => ({
-                id: report.id,
-                title: "Сообщение жителя",
-                detail: report.description,
-                occurred_at: report.created_at,
-              }))}
+        {/* Ход решения — первым: что сейчас происходит и что дальше. На компьютере — колонка справа. */}
+        <div className="ds-split ds-split-aside-first">
+          <div className="ds-aside">
+            <ResidentWorkProgress
+              key={incident.id}
+              client={client}
+              incidentId={incident.id}
+              launchAttempt={launchAttempt}
+              revision={resource.updatedAt}
+              parentBusy={busy}
+              reported={{
+                people: incident.participant_count,
+                messages: incident.report_count,
+              }}
             />
-          </section>
-        )}
+            <NextAction actions={incident.allowed_actions} handlers={{ retry: resource.refresh }} busy={busy} />
+          </div>
+          <div className="ds-main">
+            <section className="ds-section" aria-labelledby="incident-known">
+              <h2 id="incident-known">Что известно</h2>
+              {incident.description && <p className="ds-prose">{incident.description}</p>}
+              <dl className="ds-kv">
+                {place && <InfoRow label="Место">{place}</InfoRow>}
+                <InfoRow label="Сообщили">
+                  {incident.participant_count !== null
+                    ? countLabel(incident.participant_count, ["житель", "жителя", "жителей"])
+                    : "Нет данных"}
+                  {`, ${countLabel(incident.report_count, ["сообщение", "сообщения", "сообщений"])}`}
+                </InfoRow>
+                <InfoRow label="Впервые">{formatWhen(incident.created_at) ?? "Дата не указана"}</InfoRow>
+                {incident.updated_at && <InfoRow label="Обновлена">{formatWhen(incident.updated_at)}</InfoRow>}
+                {due && <InfoRow label="Срок">{due}</InfoRow>}
+              </dl>
+              <div>
+                <SourceChip source={incident.provenance} label="Источник сведений" />
+                {incident.rule && <SourceChip source={incident.rule} label="Основание" />}
+              </div>
+            </section>
+            {incident.reports?.length > 0 && (
+              <section className="ds-section" aria-labelledby="incident-history">
+                <h2 id="incident-history">Сообщения жителей</h2>
+                <Timeline
+                  label="сообщения"
+                  events={incident.reports.map((report) => ({
+                    id: report.id,
+                    title: "Сообщение жителя",
+                    detail: report.description,
+                    occurred_at: report.created_at,
+                  }))}
+                />
+              </section>
+            )}
+          </div>
+        </div>
         {import.meta.env.DEV && <Diagnostics />}
-      </main>
+      </>,
+      { back: true, house: incident.house_id, section: "board", nested: true },
     );
   }
 
   // ------------------------------------------------------------ главный экран
   const house = data.house!;
-  const list = data.incidents!;
+  const canReport = data.capabilities.features.report_create;
+  return frame(
+    <>
+      <div className="ds-header-row">
+        <PageHeader title="Проблемы дома" subtitle={switcher(house)}>
+          {house.is_demo && <DemoBadge />}
+        </PageHeader>
+        {canReport && (
+          // Телефон: липкая панель у большого пальца; компьютер — действие в шапке экрана.
+          <div className="ds-bottom-bar">
+            <Button variant="primary" stretched onClick={() => navigate(routeUrl({ house: house.id, report: true }))}>
+              Сообщить о проблеме
+            </Button>
+          </div>
+        )}
+      </div>
+      {refresh}
+      <Board
+        house={house}
+        list={data.incidents!}
+        offset={offset}
+        canReport={canReport}
+        detailAvailable={data.capabilities.features.incident_detail}
+        community={communityClient}
+        links={links}
+        navigate={navigate}
+      />
+      {import.meta.env.DEV && <Diagnostics />}
+    </>,
+    { house: house.id, section: "board", bar: canReport },
+  );
+}
+
+/**
+ * Доска дома. Свои сообщения жителя отмечены прямо в строке проблемы — со
+ * статусом заявки из «Мои обращения»; отдельным списком ниже остаются только
+ * обращения, которых на этой странице доски нет (черновики, «куда обратиться»).
+ * Если все обращения уже видны в списке, вместо блока — одна ссылка на полный
+ * список: блок без новых сведений только повторял бы доску.
+ */
+function Board({
+  house,
+  list,
+  offset,
+  canReport,
+  detailAvailable,
+  community,
+  links,
+  navigate,
+}: {
+  house: House;
+  list: IncidentList;
+  offset: number;
+  canReport: boolean;
+  detailAvailable: boolean;
+  community: CommunityApi;
+  links: CommunityLinks;
+  navigate: (href: string) => void;
+}) {
+  const load = useCallback((signal: AbortSignal) => community.myActivity(0, signal), [community]);
+  const activity = useResource(`recent:${house.id}`, load);
+  const mine = (activity.data?.items ?? []).filter((item) => item.house_id === house.id);
+  const byIncident = new Map<string, ActivityItem>();
+  for (const item of mine) if (item.incident_id && !byIncident.has(item.incident_id)) byIncident.set(item.incident_id, item);
+  const shown = new Set(list.items.map((item) => item.id));
+  const rest = mine.filter((item) => !(item.incident_id && shown.has(item.incident_id)));
+  const allOnBoard = mine.length > 0 && rest.length === 0;
   const openCount = list.items.filter((item) =>
     ["detected", "open", "reported", "overdue", "escalated"].includes(item.status),
   ).length;
-  const canReport = data.capabilities.features.report_create;
   return (
-    <main className={`app-shell${canReport ? " has-bottom-bar" : ""}`}>
-      {topbar(false, house.id)}
-      <PageHeader title="Проблемы дома" subtitle={switcher(house)}>
-        {house.is_demo && <DemoBadge />}
-      </PageHeader>
-      <SectionTabs house={house.id} current="board" navigate={navigate} />
-      {refresh}
-      <section className="ds-group" aria-labelledby="board-title">
+    <div className="ds-split">
+      <section className="ds-group ds-board" aria-labelledby="board-title">
         <div className="ds-group-head">
           <h2 id="board-title">
             {openCount
@@ -695,9 +808,10 @@ export function App({
               <li key={incident.id}>
                 <IncidentRow
                   incident={incident}
-                  detailAvailable={data.capabilities.features.incident_detail}
+                  detailAvailable={detailAvailable}
                   href={routeUrl({ house: house.id, incident: incident.id })}
                   onNavigate={navigate}
+                  mine={mineLabel(byIncident.get(incident.id))}
                 />
               </li>
             ))}
@@ -705,6 +819,13 @@ export function App({
         ) : (
           <p className="ds-subtle">
             Здесь появятся проблемы, о которых сообщили соседи.{canReport ? " Если что-то сломалось — сообщите первым." : ""}
+          </p>
+        )}
+        {allOnBoard && (
+          <p className="ds-board-mine">
+            <AppLink className="ds-action-link" href={links.view("mine", { house: house.id })} navigate={links.navigate}>
+              Все мои обращения
+            </AppLink>
           </p>
         )}
         {(list.page.total > list.page.limit || offset > 0) && (
@@ -727,17 +848,28 @@ export function App({
           </nav>
         )}
       </section>
-      <RecentActivity api={communityClient} houseId={house.id} links={links} />
-      {canReport && (
-        <div className="ds-bottom-bar">
-          <Button variant="primary" stretched onClick={() => navigate(routeUrl({ house: house.id, report: true }))}>
-            Сообщить о проблеме
-          </Button>
+      {!allOnBoard && (
+        <div className="ds-aside">
+          <RecentActivity
+            houseId={house.id}
+            links={links}
+            items={rest.slice(0, 3)}
+            onBoard={mine.length - rest.length}
+            error={activity.data ? undefined : activity.error}
+            onRetry={activity.refresh}
+          />
         </div>
       )}
-      {import.meta.env.DEV && <Diagnostics />}
-    </main>
+    </div>
   );
+}
+
+/** «Вы сообщили · T-2 · Заявка у УК: ждёт принятия в работу» — из «Мои обращения», без второй карточки. */
+function mineLabel(item: ActivityItem | undefined): string | undefined {
+  if (!item) return undefined;
+  return [item.kind === "joined" ? "Вас тоже касается" : "Вы сообщили", item.ticket_number, item.status_label]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 /** «Если авария» — всегда в одном месте шапки и одного вида. */
@@ -757,32 +889,48 @@ function EmergencyLink({ href, navigate }: { href: string; navigate: (href: stri
   );
 }
 
-/** Разделы верхнего уровня. Ссылки, а не вкладки-кнопки: у каждого раздела свой адрес. */
+/**
+ * Разделы верхнего уровня. Ссылки, а не вкладки-кнопки: у каждого раздела свой адрес.
+ * Телефон: четыре равные ячейки в одну строку при любой ширине, на вложенных
+ * экранах вместо них — «Назад». Компьютер: меню слева на всех экранах.
+ */
 function SectionTabs({
   house,
   current,
+  nested,
   navigate,
 }: {
   house?: string;
   current: Section;
+  nested: boolean;
   navigate: (href: string, options?: { replace?: boolean }) => void;
 }) {
   return (
-    <nav className="ds-tabs" aria-label="Разделы">
-      {SECTIONS.filter(([target]) => house || target === "mine").map(([target, label]) => {
+    <nav className={`ds-nav${nested ? " is-nested" : ""}`} aria-label="Разделы">
+      {SECTIONS.filter(([target]) => house || target === "mine").map(([target, label, short, Icon]) => {
         const href = target === "board" ? routeUrl({ house }) : routeUrl({ view: target, house });
         return (
           <a
             key={target}
             href={href}
-            aria-current={current === target ? "page" : undefined}
+            // Вложенный экран относится к разделу, но не является им: «true», а не «page».
+            aria-current={current === target ? (nested ? "true" : "page") : undefined}
+            aria-label={short !== label ? label : undefined}
             onClick={(event) => {
               if (event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
               event.preventDefault();
-              if (current !== target) navigate(href);
+              if (current !== target || nested) navigate(href);
             }}
           >
-            {label}
+            <Icon />
+            {short !== label ? (
+              <>
+                <span className="ds-nav-short">{short}</span>
+                <span className="ds-nav-long">{label}</span>
+              </>
+            ) : (
+              <span>{label}</span>
+            )}
           </a>
         );
       })}

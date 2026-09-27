@@ -347,7 +347,7 @@ test.describe.serial("UX-1 quality", () => {
           await expect(page.getByRole("region", { name: "Очередь заявок", exact: true })).toBeVisible();
         }
         await audit(page, `ticket-${width}`);
-        const assign = page.getByRole("button", { name: "Назначить исполнителя", exact: true });
+        const assign = page.getByRole("button", { name: /^(Назначить|Изменить) исполнителя$/ });
         if (await assign.count()) {
           await assign.focus();
           await page.keyboard.press("Enter");

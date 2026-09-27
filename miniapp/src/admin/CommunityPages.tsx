@@ -147,8 +147,10 @@ function MailingEditor({ base, platform, source, onDone }: {
         <label key={kind} className="checkbox-label"><input type="radio" name="kind" checked={draft.kind === kind}
           onChange={() => set({ kind: kind as Draft["kind"] })} />{kindLabels[kind]}</label>)}
     </fieldset>
-    {draft.kind === "announcement" && <label>Тема объявления<select value={draft.topic} onChange={e => set({ topic: e.target.value as Draft["topic"] })}>
-      {Object.entries(topicLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
+    {/* Четыре темы видны сразу: выбор — переключателями, а не скрытым списком. */}
+    {draft.kind === "announcement" && <fieldset><legend>Тема объявления</legend><div className="ds-segmented">
+      {Object.entries(topicLabels).map(([value, label]) => <label key={value}><input type="radio" name="topic" value={value}
+        checked={draft.topic === value} onChange={() => set({ topic: value as Draft["topic"] })} />{label}</label>)}</div></fieldset>}
     <label>Заголовок<input value={draft.title} required minLength={3} maxLength={200} onChange={e => set({ title: e.target.value })} /></label>
     <label>Текст{draft.kind === "poll" && " (необязательно)"}<textarea value={draft.body} maxLength={3000} rows={5}
       required={draft.kind !== "poll"} onChange={e => set({ body: e.target.value })} /></label>

@@ -212,35 +212,6 @@ export function AdminApp({ client = ticketClient, embedded = false, companyId }:
             </button>
           </div>
         )}
-        {session.data?.capabilities.environment !== "production" &&
-          route.searchParams.has("test_actor") &&
-          session.data?.capabilities.features.test_auth && (
-            <div className="demo-session">
-              <span className="demo-badge">Демонстрационные данные · локальная тестовая сессия</span>
-              <label>
-                Участник проверки
-                <select
-                  aria-label="Участник проверки"
-                  value={route.searchParams.get("test_actor") ?? "a16-admin"}
-                  onChange={(e) => {
-                    window.location.assign(`/admin/?test_actor=${encodeURIComponent(e.target.value)}`);
-                  }}
-                >
-                  {[
-                    ["a16-admin", "Администратор УК"],
-                    ["a16-responsible", "Ответственный"],
-                    ["a16-operator", "Оператор"],
-                    ["a16-revoked", "Отозванный сотрудник"],
-                    ["a16-beta-admin", "Другая УК"],
-                  ].map(([id, name]) => (
-                    <option key={id} value={id}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          )}
         {!me ? (
           <>
             <header className="page-header">
@@ -274,6 +245,36 @@ export function AdminApp({ client = ticketClient, embedded = false, companyId }:
             )}
           </div>
         )}
+        {/* Выбор участника — только для локального стенда; внизу, чтобы не определять рабочую компоновку. */}
+        {session.data?.capabilities.environment !== "production" &&
+          route.searchParams.has("test_actor") &&
+          session.data?.capabilities.features.test_auth && (
+            <div className="demo-session">
+              <span className="demo-badge">Демонстрационные данные · локальная тестовая сессия</span>
+              <label>
+                Участник проверки
+                <select
+                  aria-label="Участник проверки"
+                  value={route.searchParams.get("test_actor") ?? "a16-admin"}
+                  onChange={(e) => {
+                    window.location.assign(`/admin/?test_actor=${encodeURIComponent(e.target.value)}`);
+                  }}
+                >
+                  {[
+                    ["a16-admin", "Администратор УК"],
+                    ["a16-responsible", "Ответственный"],
+                    ["a16-operator", "Оператор"],
+                    ["a16-revoked", "Отозванный сотрудник"],
+                    ["a16-beta-admin", "Другая УК"],
+                  ].map(([id, name]) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
       </div>
     </div>
   );
@@ -390,7 +391,15 @@ function TicketRow({
   const href = adminUrl({ ticket: ticket.id });
   const nextUpdate = ticket.deadlines.find((d) => d.kind === "next_update" && d.due_at);
   return (
-    <tr aria-current={current || undefined}>
+    <tr
+      aria-current={current || undefined}
+      className="is-clickable"
+      onClick={(e) => {
+        // Мышь: вся строка открывает заявку. Клавиатура и экранный диктор — ссылка в названии.
+        if ((e.target as HTMLElement).closest("a, button") || window.getSelection()?.toString()) return;
+        open(ticket.id);
+      }}
+    >
       <td className="cell-id" data-label="Заявка">
         {ticket.internal_number}
       </td>

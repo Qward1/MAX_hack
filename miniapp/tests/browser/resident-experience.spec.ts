@@ -66,7 +66,8 @@ test("UK route: form → review → ticket → route card", async ({ page }) => 
   await describeProblem(page, "опять лифт во втором подъезде стоит");
 
   // Показано только то, что пришло с backend.
-  await expect(page.getByText("Подъезд").locator("xpath=following-sibling::dd")).toHaveText("2");
+  // Место, подъезд и этаж — одной строкой «Где» сводки (UX-2).
+  await expect(page.getByText("Где", { exact: true }).locator("xpath=following-sibling::dd[1]")).toContainText("подъезд 2");
   await expect(page.getByText("Наблюдается с")).toHaveCount(0);
   await expect(
     page.getByText("Это зона ответственности вашей управляющей компании"),

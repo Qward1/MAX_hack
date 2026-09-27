@@ -101,8 +101,14 @@ describe("«Мой дом»", () => {
     expect(screen.getByText(/4 подъезда, 9 этажей/)).toBeTruthy();
     expect(screen.getByText(/По данным управляющей компании, обновлено/)).toBeTruthy();
     expect(screen.getByText(/ДомСигнал эти сведения не проверяет/)).toBeTruthy();
-    expect(screen.getAllByRole("link", { name: "112" })[0].getAttribute("href")).toBe("tel:112");
-    expect(screen.getAllByText(/проверено/).length).toBeGreaterThan(0);
+    // RA-05: одна цель звонка на номер — кнопка; в тексте памятки номер без второй ссылки.
+    const emergency = within(document.getElementById("emergency")!);
+    const tel = (phone: string) => emergency.getAllByRole("link").filter((link) => link.getAttribute("href") === `tel:${phone}`);
+    expect(tel("112").map((link) => link.textContent)).toEqual(["Позвонить 112"]);
+    expect(tel("+7 843 000-00-02")).toHaveLength(1);
+    expect(emergency.queryByRole("link", { name: "112" })).toBeNull();
+    expect(emergency.getByText("При угрозе жизни и здоровью звоните по единому номеру 112.")).toBeTruthy();
+    expect(screen.getAllByText(/проверено/i).length).toBeGreaterThan(0);
     expect(screen.getByText("Подключён. Бот отвечает на команду /report")).toBeTruthy();
     // «Если авария» — первым блоком раздела.
     expect(document.querySelector("section")?.id).toBe("emergency");
@@ -127,7 +133,7 @@ describe("«Мой дом»", () => {
     expect(await screen.findByRole("heading", { name: "Где посмотреть тарифы и капремонт" })).toBeTruthy();
     const link = screen.getByRole("link", { name: /Государственный комитет Республики Татарстан по тарифам/ });
     expect(link.getAttribute("href")).toBe("https://kt.tatarstan.ru/ntarif.htm");
-    expect(screen.getAllByText(/проверено/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/проверено/i).length).toBeGreaterThan(0);
   });
 
   it("403 объясняет, как стать жителем, без тупика", async () => {

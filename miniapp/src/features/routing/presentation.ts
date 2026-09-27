@@ -1,4 +1,5 @@
-import type { ActionCardAction } from "../../shared/api/client";
+import type { ActionCard, ActionCardAction } from "../../shared/api/client";
+import { formatDay } from "../../shared/ui/format";
 import { warnUnknown } from "../incidents/presentation";
 
 // Одна дисциплина на все списки действий: интерфейс рисует только тот тип,
@@ -89,4 +90,41 @@ export function knownCardActions(raw: unknown): ActionCardAction[] {
 /** Подпись действия: сервер даёт свою, шаблон продукта — запасную. */
 export function cardActionLabel(action: ActionCardAction): string {
   return action.label || cardActionLabels[action.type as CardActionType];
+}
+
+export const UNVERIFIED_NOTE = "Сведения требуют сверки.";
+
+type RouteChecks = Pick<ActionCard["route"], "stale" | "basis" | "channels">;
+
+/**
+ * Что именно в маршруте требует сверки — по полям API, без своих порогов:
+ * основание (`basis.verification_status`), его давность (`route.stale` без
+ * устаревших каналов) и официальные сервисы (`channels[].stale`,
+ * `verification_status`). Пустой список — всё проверено. Ничего не
+ * объявляет проверенным и не толкует юридически.
+ */
+export function verificationNotes(route: RouteChecks): string[] {
+  const notes: string[] = [];
+  const basis = route.basis;
+  const channels = route.channels ?? [];
+  if (basis && basis.verification_status !== "verified")
+    notes.push("Кто отвечает — указано предварительно: основание в справочнике ДомСигнала ещё не сверено.");
+  else if (basis && route.stale && !channels.some((channel) => channel.stale))
+    notes.push(
+      basis.verified_at
+        ? `Основание, кто отвечает, сверяли ${formatDay(basis.verified_at)} — нужна повторная сверка.`
+        : "Основание, кто отвечает, нужно сверить заново.",
+    );
+  for (const channel of channels) {
+    if (channel.verification_status !== "verified")
+      notes.push(`Сведения о сервисе «${channel.label}» ещё не сверены.`);
+    else if (channel.stale)
+      notes.push(
+        channel.verified_at
+          ? `Сведения о сервисе «${channel.label}» сверяли ${formatDay(channel.verified_at)} — нужна повторная сверка.`
+          : `Сведения о сервисе «${channel.label}» нужно сверить заново.`,
+      );
+  }
+  if (!notes.length && route.stale) notes.push(UNVERIFIED_NOTE);
+  return notes;
 }

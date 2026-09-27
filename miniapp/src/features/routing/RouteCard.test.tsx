@@ -167,7 +167,29 @@ describe("route card", () => {
         },
       }),
     );
-    expect(screen.getByText("Сведения требуют сверки.")).toBeTruthy();
+    // RA-07: названо, что не сверено, — кто отвечает, по полю basis.verification_status.
+    expect(
+      screen.getByText("Кто отвечает — указано предварительно: основание в справочнике ДомСигнала ещё не сверено."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Сведения требуют сверки.")).toBeNull();
+  });
+
+  it("names the stale official service and stays silent when all is verified", () => {
+    const channel = { ...actionCard.route.channels![0], stale: true, verified_at: "2026-01-10" };
+    const view = show(card({ route: { ...actionCard.route, stale: true, channels: [channel] } }));
+    expect(
+      screen.getByText("Сведения о сервисе «Госуслуги. Решаем вместе» сверяли 10 января 2026 г. — нужна повторная сверка."),
+    ).toBeTruthy();
+    // Устарел только канал — основание не объявлено устаревшим.
+    expect(screen.queryByText(/Основание, кто отвечает/)).toBeNull();
+    view.unmount();
+    show(card());
+    expect(screen.queryByRole("note")).toBeNull();
+  });
+
+  it("names an old basis when the route is stale without stale services", () => {
+    show(card({ route: { ...actionCard.route, stale: true, basis: { ...actionCard.route.basis!, verified_at: "2026-01-10" } } }));
+    expect(screen.getByText("Основание, кто отвечает, сверяли 10 января 2026 г. — нужна повторная сверка.")).toBeTruthy();
   });
 
   it("opens a verified official channel as a real link", () => {

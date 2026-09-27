@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AdminApp } from "./AdminApp";
 import { SignalsApp } from "./SignalsApp";
 import { adminClient, Feedback, Title, useRoute, type Schema } from "./administration";
@@ -7,6 +7,8 @@ import type { SignalList } from "../shared/api/signals";
 import { ChatConnections, CompanyHouses, MyHouses, Organization, Staff } from "./CompanyPages";
 import { CompanyOverview } from "./Dashboards";
 import { Mailings, Notices, ReceptionAdmin } from "./CommunityPages";
+import { Sheet } from "../shared/ui/ChoicePicker";
+import { IconMenu } from "../shared/ui/icons";
 
 type Context = Schema["CompanyContext"];
 const names: Record<string, string> = { overview: "Обзор", tickets: "Заявки", signals: "Сигналы", houses: "Дома",
@@ -18,6 +20,8 @@ const paths: Record<string, string> = { overview: "", tickets: "tickets", signal
 // Очередь сигналов живёт в query-навигации, как заявки: ?section=signals&signal=<id>.
 const isSignalsRoute = (url: URL) => url.searchParams.get("section") === "signals" || url.searchParams.has("signal");
 const COUNTS_MS = 60000;
+/** Рабочие разделы, которые на телефоне стоят в первом ряду; остальные — в меню «Разделы». */
+const PRIORITY = ["tickets", "signals"];
 
 type Counts = { signals?: number; critical?: number; tickets?: number };
 
@@ -137,7 +141,11 @@ export function CompanyPortal() {
     ? <NavCount id={`count-${s}`} value={counts.signals} danger={counts.critical} label="новых сигналов" />
     : s === "tickets" ? <NavCount id={`count-${s}`} value={counts.tickets} label="новых заявок" /> : null;
   const described = (s: string) => (s === "signals" && counts.signals) || (s === "tickets" && counts.tickets) ? `count-${s}` : undefined;
-  return <div className={`admin-shell ${isOrganization ? "company-workspace" : "operator-workspace"}`}>
+  const refreshAll = () => { bootstrap.refresh(); window.dispatchEvent(new Event("administration-refresh")); };
+  return <div className={`admin-shell has-mobile-nav ${isOrganization ? "company-workspace" : "operator-workspace"}`}>
+    <MobileNavigation company={selected} companies={companies} surface={surface} counts={counts} href={href}
+      navigate={navigate} displayName={bootstrap.data?.display_name} refresh={refreshAll}
+      title={isOrganization ? "Управление компанией" : "Рабочее место оператора"} />
     <aside className="admin-sidebar"><a className="admin-brand" href={href(selected.surfaces[0])}>ДомСигнал
       <span>{isOrganization ? "Управление компанией" : "Рабочее место оператора"}</span></a>
       {companies.length > 1 && <label>Управляющая компания<select aria-label="Управляющая компания" value={selected.company_id}
@@ -148,10 +156,53 @@ export function CompanyPortal() {
         onClick={e => { e.preventDefault(); navigate(href(s)); }}><span>{names[s]}</span>{countFor(s)}</a>)}</nav>
       <p className="admin-sidebar-note">{selected.name}</p>
     </aside><main className="app-shell admin-main"><div className="admin-toolbar"><span>{bootstrap.data?.display_name}</span>
-      <button className="ds-btn ds-btn-secondary" onClick={() => { bootstrap.refresh(); window.dispatchEvent(new Event("administration-refresh")); }}>Обновить</button></div>
+      <button className="ds-btn ds-btn-secondary" onClick={refreshAll}>Обновить</button></div>
       {isOrganization ? <CompanyWorkspace key={selected.company_id} {...shared} /> : <OperatorWorkspace key={selected.company_id} {...shared} />}
     </main>
   </div>;
+}
+/**
+ * Телефон: короткая шапка вместо трёх рядов разделов. Рабочие разделы
+ * («Заявки», «Сигналы») и текущий раздел — в первом ряду, все остальные —
+ * в листе «Разделы». Названия и доступ те же, что в боковом меню компьютера.
+ */
+function MobileNavigation({ company, companies, surface, counts, href, navigate, displayName, refresh, title }: {
+  company: Context; companies: Context[]; surface: string; counts: Counts; href: (surface: string, company?: string) => string;
+  navigate: (href: string) => void; displayName?: string; refresh: () => void; title: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  const quick = company.surfaces.filter(s => PRIORITY.includes(s) || s === surface);
+  const count = (s: string) => s === "signals" ? counts.signals : s === "tickets" ? counts.tickets : undefined;
+  const link = (s: string, onPick?: () => void) => {
+    const value = count(s);
+    const danger = s === "signals" && counts.critical;
+    return <a key={s} className="admin-nav-link" aria-current={s === surface ? "page" : undefined} href={href(s)}
+      onClick={e => { e.preventDefault(); onPick?.(); navigate(href(s)); }}>
+      <span>{names[s]}</span>
+      {value ? <><span className={`nav-count${danger ? " is-danger" : ""}`} aria-hidden="true">{value}</span>
+        <span className="ds-visually-hidden">, новых: {value}{danger ? `, критических: ${danger}` : ""}</span></> : null}
+    </a>;
+  };
+  return <>
+    <header className="admin-mobile-bar">
+      <a className="admin-brand" href={href(company.surfaces[0])} onClick={e => { e.preventDefault(); navigate(href(company.surfaces[0])); }}>
+        ДомСигнал<span>{title}</span></a>
+      <button type="button" className="ds-icon-button" aria-label="Обновить" title="Обновить" onClick={refresh}>
+        <span aria-hidden="true">↻</span></button>
+      <button ref={button} type="button" className="ds-btn ds-btn-secondary admin-menu-button" aria-haspopup="dialog"
+        aria-expanded={open} onClick={() => setOpen(true)}><IconMenu />Разделы</button>
+    </header>
+    <nav className="admin-quick-nav" aria-label="Рабочие разделы">{quick.map(s => link(s))}</nav>
+    {open && <Sheet title="Разделы кабинета" anchor={button.current} className="admin-drawer" focus="[aria-current=page]"
+      closeLabel="Закрыть" onClose={() => setOpen(false)}>
+      {displayName && <p className="ds-meta">{displayName} · {company.name}</p>}
+      {companies.length > 1 && <label className="ds-field">Управляющая компания<select value={company.company_id}
+        onChange={e => { const next = companies.find(c => c.company_id === e.target.value); if (next) { setOpen(false); navigate(href(next.surfaces[0], next.company_id)); } }}>
+        {companies.map(c => <option key={c.company_id} value={c.company_id}>{c.name}</option>)}</select></label>}
+      <nav className="admin-drawer-nav" aria-label="Все разделы">{company.surfaces.map(s => link(s, () => setOpen(false)))}</nav>
+    </Sheet>}
+  </>;
 }
 type Workspace = { company: Context; surface: string; href: (surface: string) => string; navigate: (url: string) => void; visit: number };
 function openTicket(navigate: (url: string) => void, href: (surface: string) => string) {
@@ -164,7 +215,7 @@ function openTicket(navigate: (url: string) => void, href: (surface: string) => 
 function CompanyWorkspace({ company, surface, href, navigate, visit }: Workspace) {
   const base = `/api/v1/companies/${company.company_id}`;
   switch (surface) {
-    case "overview": return <CompanyOverview base={base} />;
+    case "overview": return <CompanyOverview base={base} links={overviewLinks(company, href, navigate)} />;
     case "tickets": return <AdminApp key={visit} embedded companyId={company.company_id} />;
     case "signals": return <SignalsApp key={visit} companyId={company.company_id} openTicket={openTicket(navigate, href)} />;
     case "houses": return <CompanyHouses base={base} />;
@@ -182,13 +233,21 @@ function OperatorWorkspace({ company, surface, href, navigate, visit }: Workspac
   if (surface === "tickets") return <AdminApp key={visit} embedded companyId={company.company_id} />;
   if (surface === "signals") return <SignalsApp key={visit} companyId={company.company_id} openTicket={openTicket(navigate, href)} />;
   if (surface === "assigned_houses") return <MyHouses base={base} />;
-  if (surface === "overview") return <CompanyOverview base={base} />;
+  if (surface === "overview") return <CompanyOverview base={base} links={overviewLinks(company, href, navigate)} />;
   if (surface === "chat_connections" && company.surfaces.includes("chat_connections"))
     return <ChatConnections base={base} canRequest={false} />;
   if (surface === "mailings" && company.surfaces.includes("mailings")) return <Mailings key={visit} base={base} />;
   if (surface === "notices") return <Notices base={base} />;
   if (surface === "reception") return <ReceptionAdmin base={base} admin={false} />;
   return <DeniedRoute base={base} surface={surface} />;
+}
+/** Переходы из пустого обзора — только в разделы, доступные этой роли. */
+function overviewLinks(company: Context, href: (surface: string) => string, navigate: (url: string) => void) {
+  return {
+    tickets: company.surfaces.includes("tickets") ? href("tickets") : undefined,
+    signals: company.surfaces.includes("signals") ? href("signals") : undefined,
+    navigate,
+  };
 }
 function DeniedRoute({ base, surface }: { base: string; surface: string }) {
   // A typed URL is still checked by the endpoint; navigation isn't the access boundary.

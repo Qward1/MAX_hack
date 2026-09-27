@@ -86,7 +86,7 @@ test("D1: открытый дом — выбрать, увидеть доску;
   await expect(
     page.getByText(/Откройте ДомСигнал кнопкой из вашего домового чата или выберите другой дом/),
   ).toBeVisible();
-  await page.getByRole("button", { name: "К выбору дома" }).click();
+  await page.getByRole("button", { name: "Выбрать дом" }).click();
   await expect(page.getByRole("heading", { name: "Как открыть свой дом" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Дома с открытым доступом" })).toHaveCount(0);
   await noOverflow(page);

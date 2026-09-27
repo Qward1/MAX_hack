@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { adminClient, Feedback, Title, useRead, type Schema } from "./administration";
-import { ColumnChart, Funnel, PeriodSwitch, QuotaMeter, SERIES, STRENGTH, StatTile, formatNumber } from "./charts";
+import { ColumnChart, Funnel, PeriodSwitch, QuotaMeter, SERIES, STRENGTH, StatTile, dayLabel, formatNumber } from "./charts";
 import { PollResultsView } from "./CommunityPages";
 
 type Days = 7 | 14 | 30;
@@ -14,8 +14,14 @@ function minutes(value?: number | null) {
   return `${formatNumber(Math.round(value / 6) / 10)} ч`;
 }
 
+type Links = { tickets?: string; signals?: string; navigate: (href: string) => void };
+
+function QueueLink({ href, navigate, children }: { href: string; navigate: (href: string) => void; children: string }) {
+  return <a className="ds-btn ds-btn-secondary" href={href} onClick={e => { e.preventDefault(); navigate(href); }}>{children}</a>;
+}
+
 /** Обзор УК: «Чаты: N из Q», дома, динамика и выгрузка CSV. */
-export function CompanyOverview({ base }: { base: string }) {
+export function CompanyOverview({ base, links }: { base: string; links?: Links }) {
   const [days, setDays] = useState<Days>(7);
   const r = useRead<Schema["CompanyDashboard"]>(`${base}/dashboard?days=${days}`);
   const [csvError, setCsvError] = useState("");
@@ -42,36 +48,61 @@ export function CompanyOverview({ base }: { base: string }) {
     <Feedback loading={r.loading && !data} error={r.error ?? (csvError || undefined)} />
     {data && <div className={r.loading ? "dashboard is-refreshing" : "dashboard"}>
       <QuotaMeter quota={data.quota} />
-      <dl className="stat-row">
-        <StatTile label={`Сигналы за ${days} дней`} value={formatNumber(sum("signals"))} />
-        <StatTile label="Открытые заявки сейчас" value={formatNumber(sum("tickets_open"))} />
-        <StatTile label="Заявки закрыты" value={formatNumber(sum("tickets_closed"))} note={`из ${formatNumber(sum("tickets_created"))} созданных за период`} />
-        <StatTile label="Проверка жителями" value={`${formatNumber(sum("verification_confirmed"))} / ${formatNumber(sum("verification_returned"))}`}
-          note="подтверждено / возвращено в работу" />
-      </dl>
-      {houses.length === 0 ? <p className="state-panel">{data.scope === "assigned"
-        ? "Вы пока не назначены ни на один дом. Назначение делает администратор УК."
-        : "Домов в управлении пока нет. Запросите управление домом в разделе «Дома»."}</p> : <>
-        <ColumnChart title="Сигналы из чатов по дням" days={data.activity.map(d => d.day)}
-          series={[{ key: "signals", label: "Сигналы", color: SERIES.primary, values: data.activity.map(d => d.signals) }]} />
-        <ColumnChart title="Заявки по дням" days={data.activity.map(d => d.day)} series={[
-          { key: "created", label: "Создано", color: SERIES.primary, values: data.activity.map(d => d.tickets_created) },
-          { key: "closed", label: "Закрыто", color: SERIES.secondary, values: data.activity.map(d => d.tickets_closed) },
-        ]} />
-        <h2>По домам</h2>
-        <div className="table-scroll"><table className="data-table">
-          <thead><tr><th scope="col">Дом</th><th scope="col">Сигналы</th><th scope="col">Заявки открыто</th>
-            <th scope="col">Закрыто</th><th scope="col">Медиана до принятия</th><th scope="col">Подтверждено</th>
-            <th scope="col">Возвращено</th><th scope="col">Частые категории</th></tr></thead>
-          <tbody>{houses.map(h => <tr key={h.house_id}>
-            <th scope="row">{h.address}</th><td>{formatNumber(h.signals)}</td><td>{formatNumber(h.tickets_open)}</td>
-            <td>{formatNumber(h.tickets_closed)}</td><td>{minutes(h.median_accept_minutes)}</td>
-            <td>{formatNumber(h.verification_confirmed)}</td><td>{formatNumber(h.verification_returned)}</td>
-            <td>{h.top_categories.length ? h.top_categories.map(c => `${categories[c.category] ?? c.category} (${c.count})`).join(", ") : "—"}</td>
-          </tr>)}</tbody></table></div>
-        <p className="muted">Сутки считаются по московскому времени. Медиана — от создания заявки до её принятия, по заявкам периода.
-          Тексты жителей в обзор не попадают.</p>
-      </>}
+      {(() => {
+        const activity = data.activity;
+        const signalsEmpty = activity.every(d => d.signals === 0);
+        const ticketsEmpty = activity.every(d => d.tickets_created === 0 && d.tickets_closed === 0);
+        const empty = houses.length > 0 && signalsEmpty && ticketsEmpty;
+        const period = activity.length ? `${dayLabel(activity[0].day)} – ${dayLabel(activity[activity.length - 1].day)}` : `${days} дней`;
+        return <>
+          <dl className="stat-row">
+            <StatTile label="Открытые заявки сейчас" value={formatNumber(sum("tickets_open"))} />
+            {!empty && <>
+              <StatTile label={`Сигналы за ${days} дней`} value={formatNumber(sum("signals"))} />
+              <StatTile label="Заявки закрыты" value={formatNumber(sum("tickets_closed"))} note={`из ${formatNumber(sum("tickets_created"))} созданных за период`} />
+              <StatTile label="Проверка жителями" value={`${formatNumber(sum("verification_confirmed"))} / ${formatNumber(sum("verification_returned"))}`}
+                note="подтверждено / возвращено в работу" />
+            </>}
+          </dl>
+          {houses.length === 0 ? <p className="state-panel">{data.scope === "assigned"
+            ? "Вы пока не назначены ни на один дом. Назначение делает администратор УК."
+            : "Домов в управлении пока нет. Запросите управление домом в разделе «Дома»."}</p> : <>
+            {empty ? <section className="dashboard-empty" aria-labelledby="dashboard-empty-title">
+              <h2 id="dashboard-empty-title">За {period} событий нет</h2>
+              <p>Сигналов из домовых чатов не было, заявки не создавались и не закрывались. Графики появятся, когда будут события.</p>
+              {links && (links.tickets || links.signals) && <div className="button-row">
+                {links.tickets && <QueueLink href={links.tickets} navigate={links.navigate}>Открыть заявки</QueueLink>}
+                {links.signals && <QueueLink href={links.signals} navigate={links.navigate}>Открыть сигналы</QueueLink>}
+              </div>}
+            </section> : <div className={`chart-grid-2${signalsEmpty ? " has-empty-first" : ticketsEmpty ? " has-empty-second" : ""}`}>
+              {signalsEmpty ? <EmptyChart title="Сигналы из чатов по дням" period={period} />
+                : <ColumnChart title="Сигналы из чатов по дням" days={activity.map(d => d.day)}
+                  series={[{ key: "signals", label: "Сигналы", color: SERIES.primary, values: activity.map(d => d.signals) }]} />}
+              {ticketsEmpty ? <EmptyChart title="Заявки по дням" period={period} />
+                : <ColumnChart title="Заявки по дням" days={activity.map(d => d.day)} series={[
+                  { key: "created", label: "Создано", color: SERIES.primary, values: activity.map(d => d.tickets_created) },
+                  { key: "closed", label: "Закрыто", color: SERIES.secondary, values: activity.map(d => d.tickets_closed) },
+                ]} />}
+            </div>}
+            <h2>По домам</h2>
+            <HouseStatsCards houses={houses} />
+            <p className="muted table-hint">Остальные показатели — прокруткой таблицы вбок; адрес дома остаётся на месте.</p>
+            {/* Область прокрутки доступна с клавиатуры: на планшете таблица шире экрана. */}
+            <div className="table-scroll house-stats-table" tabIndex={0} role="region" aria-label="Показатели по домам, таблица"><table className="data-table">
+              <thead><tr><th scope="col">Дом</th><th scope="col">Сигналы</th><th scope="col">Заявки открыто</th>
+                <th scope="col">Закрыто</th><th scope="col">Медиана до принятия</th><th scope="col">Подтверждено</th>
+                <th scope="col">Возвращено</th><th scope="col">Частые категории</th></tr></thead>
+              <tbody>{houses.map(h => <tr key={h.house_id}>
+                <th scope="row">{h.address}</th><td>{formatNumber(h.signals)}</td><td>{formatNumber(h.tickets_open)}</td>
+                <td>{formatNumber(h.tickets_closed)}</td><td>{minutes(h.median_accept_minutes)}</td>
+                <td>{formatNumber(h.verification_confirmed)}</td><td>{formatNumber(h.verification_returned)}</td>
+                <td>{topCategories(h)}</td>
+              </tr>)}</tbody></table></div>
+            <p className="muted">Сутки считаются по московскому времени. Медиана — от создания заявки до её принятия, по заявкам периода.
+              Тексты жителей в обзор не попадают.</p>
+          </>}
+        </>;
+      })()}
       {(data.polls ?? []).length > 0 && <section aria-label="Опросы жителей">
         <h2>Опросы жителей</h2>
         <div className="house-cards">{(data.polls ?? []).map(poll => <div className="admin-detail" key={poll.poll_id}>
@@ -79,6 +110,40 @@ export function CompanyOverview({ base }: { base: string }) {
       </section>}
     </div>}
   </>;
+}
+
+function topCategories(h: Schema["HouseStats"]) {
+  return h.top_categories.length ? h.top_categories.map(c => `${categories[c.category] ?? c.category} (${c.count})`).join(", ") : "—";
+}
+
+/** Пустой график — одной строкой с периодом, а не полем нулевых столбцов. */
+function EmptyChart({ title, period }: { title: string; period: string }) {
+  return <section className="chart chart-empty-row" aria-label={title}>
+    <h3>{title}</h3><p className="muted">За {period} событий нет</p>
+  </section>;
+}
+
+/**
+ * Телефон: дом — карточка с тремя главными показателями, остальные — по
+ * раскрытию. Таблица на всю ширину остаётся для планшета и компьютера.
+ */
+function HouseStatsCards({ houses }: { houses: Schema["HouseStats"][] }) {
+  return <ul className="house-stats-cards" aria-label="Показатели по домам">{houses.map(h => <li key={h.house_id}>
+    <h3>{h.address}</h3>
+    <dl className="house-stats-main">
+      <div><dt>Открыто</dt><dd>{formatNumber(h.tickets_open)}</dd></div>
+      <div><dt>Закрыто</dt><dd>{formatNumber(h.tickets_closed)}</dd></div>
+      <div><dt>Проверка</dt><dd>{formatNumber(h.verification_confirmed)} / {formatNumber(h.verification_returned)}</dd></div>
+    </dl>
+    <details className="house-stats-more"><summary>Ещё показатели</summary>
+      <dl className="ds-kv">
+        <div className="ds-kv-row"><dt>Сигналы</dt><dd>{formatNumber(h.signals)}</dd></div>
+        <div className="ds-kv-row"><dt>Проверка жителями</dt><dd>подтверждено {formatNumber(h.verification_confirmed)}, возвращено {formatNumber(h.verification_returned)}</dd></div>
+        <div className="ds-kv-row"><dt>Медиана до принятия</dt><dd>{minutes(h.median_accept_minutes)}</dd></div>
+        <div className="ds-kv-row"><dt>Частые категории</dt><dd>{topCategories(h)}</dd></div>
+      </dl>
+    </details>
+  </li>)}</ul>;
 }
 
 /** Обзор платформы: УК и квоты, воронка, активность, модель и доставка. */

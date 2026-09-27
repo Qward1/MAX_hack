@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useId } from "react";
+import { type ReactNode, useCallback, useEffect, useId } from "react";
 import type { Observation, ResidentTicketApi, WorkStatus } from "../../shared/api/tickets";
 import { useResource } from "../../shared/api/useResource";
 import { maxBridge } from "../../shared/max/bridge";
 import { Button } from "../../shared/ui/Button";
-import { formatWhen } from "../../shared/ui/format";
-import { Notice, StatusTag } from "../../shared/ui/semantic";
+import { countLabel, formatWhen } from "../../shared/ui/format";
+import { Notice, type ProgressStep, ProgressSteps, StatusTag } from "../../shared/ui/semantic";
 import { residentTicketStatus, statusOf } from "../../shared/ui/status";
 import { TicketDeadlines, TicketState } from "./components";
 import { ticketActions } from "./presentation";
@@ -13,10 +13,68 @@ import { safeError, useTicketMutation } from "./useTicketMutation";
 export const staleAttemptMessage = "Работа по этой проблеме уже обновилась. Показываем актуальный результат.";
 export const NO_TICKET_NOTE = "Заявки в управляющую компанию по этой проблеме пока нет.";
 
+/** Этап работы по статусу заявки: какой шаг процесса сейчас. */
+const WORK_STAGE: Record<string, 2 | 3 | 4 | 5> = {
+  new: 2,
+  accepted: 3,
+  in_progress: 3,
+  needs_clarification: 3,
+  waiting_external: 3,
+  verification_pending: 4,
+  closed: 5,
+};
+
 /**
- * «Что происходит» у проблемы дома: статус заявки простыми словами, одна
- * фраза «что дальше», последняя выполненная работа и проверка результата
- * жителем. Отчёт исполнителя не подтверждает результат — это делает житель.
+ * Шаги от сообщения к результату. «Готово» и «сейчас» — только по статусу
+ * заявки из API; «впереди» — порядок работы продукта, а не случившееся событие.
+ * Отменённая или незнакомая заявка — без будущих шагов.
+ */
+function progressSteps(
+  number: string | null,
+  status: string | null,
+  current: ReactNode,
+  reported?: { people: number | null; messages: number },
+): ProgressStep[] {
+  const stage = WORK_STAGE[status ?? ""];
+  const state = (step: number): ProgressStep["state"] =>
+    stage === undefined ? (step === 2 ? "current" : "done") : step < stage ? "done" : step === stage ? "current" : "upcoming";
+  const board: ProgressStep = {
+    title: "Проблема на доске дома",
+    state: "done",
+    detail: reported ? (
+      <p className="ds-meta">
+        {reported.people !== null
+          ? `Сообщили: ${countLabel(reported.people, ["житель", "жителя", "жителей"])}, `
+          : "Сообщений: "}
+        {reported.people !== null
+          ? countLabel(reported.messages, ["сообщение", "сообщения", "сообщений"])
+          : reported.messages}
+      </p>
+    ) : undefined,
+  };
+  const ticket: ProgressStep = {
+    title: number ? `Заявка ${number} в управляющей компании` : "Заявка в управляющей компании",
+    state: state(2),
+    detail: state(2) === "current" ? current : undefined,
+  };
+  if (stage === undefined) return [board, ticket];
+  return [
+    board,
+    ticket,
+    { title: "Работа исполнителя", state: state(3), detail: state(3) === "current" ? current : undefined },
+    {
+      title: "Проверка результата жителями",
+      state: state(4),
+      detail: stage >= 4 ? current : undefined,
+    },
+  ];
+}
+
+/**
+ * «Что происходит» у проблемы дома: путь от сообщения до проверки результата,
+ * статус заявки простыми словами у текущего шага, одна фраза «что дальше»,
+ * последняя выполненная работа и проверка результата жителем. Отчёт
+ * исполнителя не подтверждает результат — это делает житель.
  */
 export function ResidentWorkProgress({
   client,
@@ -24,12 +82,15 @@ export function ResidentWorkProgress({
   revision,
   parentBusy = false,
   launchAttempt = null,
+  reported,
 }: {
   client: ResidentTicketApi;
   incidentId: string;
   revision?: number;
   parentBusy?: boolean;
   launchAttempt?: string | null;
+  /** Сколько жителей и сообщений у проблемы — для первого шага. */
+  reported?: { people: number | null; messages: number };
 }) {
   const titleId = useId();
   const load = useCallback((signal: AbortSignal) => client.workStatus(incidentId, signal), [client, incidentId]);
@@ -80,15 +141,19 @@ export function ResidentWorkProgress({
     });
   }
   const updated = formatWhen(data.updated_at);
+  const now = (
+    <>
+      <div className="ds-status-line">
+        <StatusTag entry={entry} />
+      </div>
+      {entry.next && <p className="ds-next">{entry.next}</p>}
+    </>
+  );
   return (
     <section className="ds-status-block resident-work" aria-labelledby={titleId} aria-busy={mutation.saving}>
       <h2 id={titleId}>Что происходит</h2>
-      <div className="ds-status-line">
-        <StatusTag entry={entry} />
-        {data.internal_number && <span className="ds-strong">Заявка {data.internal_number}</span>}
-      </div>
-      {entry.next && <p className="ds-next">{entry.next}</p>}
-      {updated && <p className="ds-meta">Обновлено {updated}</p>}
+      <ProgressSteps label="Путь от сообщения до результата" steps={progressSteps(data.internal_number, data.status, now, reported)} />
+      {updated && <p className="ds-meta">Заявка обновлена {updated}</p>}
       {(resource.stale || Boolean(resource.error)) && (
         <div className="refresh-notice" role="status">
           <span>{resource.error ? "Не удалось обновить ход работ." : "Данные могли измениться."}</span>

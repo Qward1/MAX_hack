@@ -17,6 +17,15 @@ export const actionLabels: Record<string, string> = {
   deadlines: "Указать срок",
   observe_result: "Проверить результат",
 };
+/**
+ * Подпись действия с учётом заявки: при указанном исполнителе назначение —
+ * это замена, а принятие без исполнителя — «взять в работу» себе.
+ */
+export function actionLabel(code: string, ticket: { assignee_id?: string | null }): string {
+  if (code === "accept" && !ticket.assignee_id) return "Взять в работу";
+  if (code === "assign" && ticket.assignee_id) return "Изменить исполнителя";
+  return actionLabels[code] ?? code;
+}
 export type PresentedAction = {
   code: string;
   enabled: boolean;

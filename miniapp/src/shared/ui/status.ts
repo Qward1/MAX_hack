@@ -88,6 +88,15 @@ export const staffTicketStatus: Record<string, StatusEntry> = {
   cancelled: { label: "Отменена", tone: "neutral" },
 };
 
+/**
+ * «Что дальше» у новой заявки зависит от исполнителя: пока его нет — назначить
+ * или взять себе, после назначения — исполнитель принимает заявку.
+ */
+export function staffTicketNext(status: string | null | undefined, hasAssignee: boolean): string | undefined {
+  if (status === "new" && hasAssignee) return "Исполнитель назначен и должен принять заявку.";
+  return undefined;
+}
+
 /** Сигнал из домового чата — только для сотрудника. */
 export const signalStatus: Record<string, StatusEntry> = {
   new: { label: "Новый", tone: "info", next: "Нужно решение оператора." },
