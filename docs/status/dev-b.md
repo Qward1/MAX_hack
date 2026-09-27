@@ -1,5 +1,26 @@
 # DEV-B — current handoff
 
+## «Мой дом»: ссылки и выбор дома — 27.09.2026
+
+**IMPLEMENTED IN BRANCH** `agent/b/house-links` от `c59c993`. Только frontend,
+тесты и документы: API, OpenAPI, БД, права и тексты не менялись.
+
+- Ссылки: официальные сервисы и тарифы/капремонт — строки цветом текста со
+  значком внешнего перехода (hover/active/focus); телефон, почта, сайт УК,
+  «Политика данных» — `ds-text-link` без синего цвета. URL, `target`/`rel`,
+  раскрытие источников и блок 112 не тронуты.
+- Выбор дома: нативный `<select>` заменён на `HouseSwitch` (кнопка + список
+  на `Sheet`: popover на компьютере, лист снизу на телефоне); правила —
+  [UX.md, «Выбор дома»](../UX.md#сервисная-ясность-ux-2--27092026).
+
+**Проверки** (стенд PostgreSQL в Docker, Chrome): `check.py --scope frontend` —
+PASS (typecheck, vitest 330 passed, +4 `HouseSwitch.test.tsx`, build);
+browser — `ux-quality`, `reaudit`, `experience`, `resident-experience`, `d3`,
+`ux-d3` — 43 passed; клавиатура/фокус/переключение/ссылки — 45 проверок
+PASS; снимки 320/390/430/1280/1440, светлая и тёмная, один/несколько домов,
+длинный адрес — без прокрутки вбок (`Claude outputs/HOUSE_LINKS_2026-09-27/`,
+вне git).
+
 ## UX-3 — замечания повторного UI/UX-аудита RA-01…RA-08 — 27.09.2026
 
 **MERGED · DEPLOYED.** PR #2 `dev/b-experience` → `main`, merge commit

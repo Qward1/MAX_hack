@@ -206,10 +206,10 @@ describe("board/detail experience", () => {
       ...(await client.me()), houses: [house, { ...house, id: "second", address: "Второй дом" }],
     });
     render(<App client={client} />);
-    const switcher = (await screen.findByRole("combobox", { name: "Дом" })) as HTMLSelectElement;
-    expect(switcher.value).toBe(house.id);
+    const switcher = await screen.findByRole("button", { name: `Дом ${house.address}` });
     await waitFor(() => expect(client.incidents).toHaveBeenCalledWith(house.id, expect.any(AbortSignal), 0));
-    fireEvent.change(switcher, { target: { value: "second" } });
+    fireEvent.click(switcher);
+    fireEvent.click(screen.getByRole("option", { name: "Второй дом" }));
     await waitFor(() => expect(client.incidents).toHaveBeenCalledWith("second", expect.any(AbortSignal), 0));
   });
   it("passes the explicit house selector to the server on incident navigation", async () => {

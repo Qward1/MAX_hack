@@ -58,3 +58,16 @@ export const IconClose = () => (
     <path d="M6 6l12 12M18 6 6 18" />
   </Icon>
 );
+/** Выбранный вариант списка. */
+export const IconCheck = () => (
+  <Icon>
+    <path d="M5 12.5 10 17.5 19 7" />
+  </Icon>
+);
+/** Переход на внешний сайт: открывается отдельно, вне приложения. */
+export const IconExternal = () => (
+  <Icon>
+    <path d="M9 5H5v14h14v-4" />
+    <path d="M13 5h6v6M19 5l-8 8" />
+  </Icon>
+);
