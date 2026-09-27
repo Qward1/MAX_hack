@@ -196,7 +196,8 @@ test("D2 onboarding: status page, quota, expansion, reset and open registration"
     // 5. Дашборды: обзор УК с CSV и обзор платформы, на телефоне без прокрутки вбок.
     await nav.getByRole("link", { name: "Обзор", exact: true }).click();
     await expect(admin.getByText("2 из 2")).toBeVisible();
-    await expect(admin.getByRole("heading", { name: "Сигналы из чатов по дням" })).toBeVisible();
+    // Есть события — график по дням; пустой период — один блок «За … событий нет» (UX-2).
+    await expect(admin.getByRole("heading", { name: /^Сигналы из чатов по дням$|событий нет$/ }).first()).toBeVisible();
     const download = admin.waitForEvent("download");
     await admin.getByRole("button", { name: "Выгрузить CSV" }).click();
     expect((await download).suggestedFilename()).toBe("domsignal-obzor-7d.csv");

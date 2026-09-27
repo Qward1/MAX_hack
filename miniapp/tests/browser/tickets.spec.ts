@@ -361,11 +361,12 @@ test("UI-TK-10/27 assignment uses scoped candidates, native focus trap and Escap
   const trigger = page.getByRole("button", { name: "Назначить исполнителя", exact: true });
   await trigger.click();
   const dialog = page.getByRole("dialog");
+  // Исполнитель — список переключателей (UX-2), только сотрудники этой УК.
   await expect(
-    dialog.getByRole("option", { name: "A16 operator", exact: true }),
+    dialog.getByRole("radio", { name: "A16 operator", exact: true }),
   ).toBeAttached();
   await expect(
-    dialog.getByRole("option", { name: "A16 beta-admin", exact: true }),
+    dialog.getByRole("radio", { name: "A16 beta-admin", exact: true }),
   ).toHaveCount(0);
   await dialog.getByRole("button", { name: "Закрыть" }).focus();
   await page.keyboard.press("Tab");
@@ -377,9 +378,7 @@ test("UI-TK-10/27 assignment uses scoped candidates, native focus trap and Escap
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
   await trigger.click();
-  await dialog
-    .getByRole("combobox", { name: "Исполнитель", exact: true })
-    .selectOption({ label: "A16 operator" });
+  await dialog.getByRole("radio", { name: "A16 operator" }).check();
   await dialog
     .getByRole("textbox", { name: "Причина" })
     .fill("Передача дежурному исполнителю");

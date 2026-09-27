@@ -108,8 +108,9 @@ test("B09 full administrative lifecycle, separate surfaces, privacy and revoke",
 
     await companyNav.getByRole("link", { name: "Сотрудники", exact: true }).click();
     await admin.getByRole("button", { name: operatorLogin, exact: true }).click();
-    await admin.getByLabel(`Доступ: ${address}`).selectOption("operator");
-    await expect(admin.getByLabel(`Доступ: ${address}`)).toHaveValue("operator");
+    const access = admin.getByRole("group", { name: `Доступ: ${address}` });
+    await access.getByRole("button", { name: "Оператор", exact: true }).click();
+    await expect(access.getByRole("button", { name: "Оператор", exact: true })).toHaveAttribute("aria-pressed", "true");
     await operator.reload();
     await operator.getByRole("link", { name: "Мои дома", exact: true }).click();
     await expect(operator.getByRole("heading", { name: address, exact: true })).toBeVisible();

@@ -139,7 +139,10 @@ test.describe.serial("UX-D3 sweep", () => {
         ] as const) {
           await page.goto(path);
           if (heading) await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
-          await expect(page.getByRole("navigation", { name: "Разделы кабинета" })).toBeVisible();
+          // Телефон: рабочие разделы в первом ряду, остальные — в меню «Разделы» (UX-2).
+          await expect(
+            page.getByRole("navigation", { name: width < 768 ? "Рабочие разделы" : "Разделы кабинета" }),
+          ).toBeVisible();
           await inspect(page, `company-${name}`, width);
         }
         await page.goto(`/admin/mailings?${q}`);
@@ -147,7 +150,9 @@ test.describe.serial("UX-D3 sweep", () => {
         await inspect(page, "company-mailing-form", width);
         const operator = `company=${ids.company}&test_actor=a16-operator`;
         await page.goto(`/admin/?${operator}`);
-        await expect(page.getByRole("navigation", { name: "Разделы кабинета" })).toBeVisible();
+        await expect(
+          page.getByRole("navigation", { name: width < 768 ? "Рабочие разделы" : "Разделы кабинета" }),
+        ).toBeVisible();
         await inspect(page, "operator-start", width);
       } finally { await ctx.close(); }
     });
