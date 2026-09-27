@@ -172,7 +172,7 @@ def _container(**overrides: Any) -> Any:
         static_dir="missing",
         llm_provider="openai_compatible",
         llm_api_key="synthetic-model-key",
-        llm_model="openai/gpt-5-mini",
+        llm_model="Qwen/Qwen3-30B-A3B",
         **overrides,
     )
     return build_container(settings)

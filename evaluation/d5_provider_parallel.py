@@ -5,9 +5,10 @@
 
 Окна — синтетика набора настройки `datasets/synthetic/d3_dialogs.v1.dev.jsonl`
 (не контроль), через сторож `evaluation/guard.py`: реальные тексты модели не
-отправляются. Профиль — как в production (`models.v1.yaml`: openai/gpt-5-mini,
-flex, промпт текущей версии). Семафор ядра обходится: параллельность задаёт
-прогон, чтобы увидеть поведение самого провайдера (задержка, 429, ошибки).
+отправляются. Профиль — как в production (`models.v1.yaml`, модель по
+умолчанию или `--model`; M1: Cloud.ru, до M1 — openai/gpt-5-mini через polza).
+Семафор ядра обходится: параллельность задаёт прогон, чтобы увидеть поведение
+самого провайдера (задержка, 429, ошибки).
 Каждый вызов учитывается в `SliceBudget`; лимит рублей — жёсткий.
 Ключ читается из окружения или `.env` и нигде не печатается.
 """
@@ -30,7 +31,6 @@ if __package__ in (None, ""):
 from evaluation.guard import SliceBudget, SliceBudgetExceeded  # noqa: E402
 from evaluation.p6_eval import _load_key, load_units, unit_windows  # noqa: E402
 
-MODEL = "openai/gpt-5-mini"
 LEDGER = pathlib.Path("evaluation/reports/2026-09-27-d5-ledger.json")
 
 
@@ -41,22 +41,24 @@ def percentile(values: list[float], share: float) -> float | None:
     return round(ordered[min(len(ordered) - 1, max(0, math.ceil(share * len(ordered)) - 1))], 3)
 
 
-def provider(api_key: str) -> Any:
+def provider(api_key: str, model: str) -> Any:
     from domsignal.ai.models import load_models
     from domsignal.ai.providers.openai_compatible import OpenAICompatibleProvider
+    from domsignal.settings import LLM_BASE_URL
 
-    profile = load_models().get(MODEL)
-    assert profile is not None
+    profile = load_models().get(model)
+    assert profile is not None, f"нет профиля {model} в models.v1.yaml"
     return OpenAICompatibleProvider(
-        base_url="https://polza.ai/api/v1",
+        base_url=LLM_BASE_URL,
         api_key=api_key,
-        model=MODEL,
+        model=model,
         schema_mode=profile.schema_mode,
         timeout_seconds=profile.timeout_seconds,
         max_tokens=profile.max_tokens,
         temperature=profile.temperature,
         extra_body=profile.extra_body,
         open_danger_extra_body=profile.open_danger_extra_body,
+        price_rub_per_million=profile.price_rub_per_million,
     )
 
 
@@ -149,8 +151,12 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
     windows = [w for unit in load_units("d3_dev") for w in unit_windows(unit, "d3_dev")]
     rng.shuffle(windows)
     windows = windows[: args.windows]
-    budget = SliceBudget(LEDGER, max_calls=args.max_calls, max_rub=args.max_rub)
-    client = provider(key)
+    budget = SliceBudget(args.ledger, max_calls=args.max_calls, max_rub=args.max_rub)
+    from domsignal.ai.models import load_models
+
+    model = args.model or load_models().default_id
+    assert model is not None
+    client = provider(key, model)
     results = []
     try:
         for concurrency in args.levels:
@@ -159,8 +165,8 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
         await client.aclose()
     return {
         "label": "измерено: настоящий провайдер, синтетические окна набора настройки",
-        "model": MODEL,
-        "provider": "polza.ai → openai/flex (профиль production)",
+        "model": model,
+        "provider": args.provider_label,
         "dataset": "datasets/synthetic/d3_dialogs.v1.dev.jsonl (не контроль)",
         "windows": len(windows),
         "levels": results,
@@ -181,6 +187,9 @@ def main() -> None:
     parser.add_argument("--max-rub", type=float, default=15.0)
     parser.add_argument("--max-calls", type=int, default=200)
     parser.add_argument("--out", type=pathlib.Path)
+    parser.add_argument("--model", help="model id from models.v1.yaml; default — its default")
+    parser.add_argument("--ledger", type=pathlib.Path, default=LEDGER)
+    parser.add_argument("--provider-label", default="Cloud.ru Evolution Foundation Models")
     args = parser.parse_args()
     result = asyncio.run(run(args))
     body = json.dumps(result, ensure_ascii=False, indent=2) + "\n"

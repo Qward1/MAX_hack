@@ -210,6 +210,7 @@ def build_ai(
         temperature=profile.temperature if profile else 0.0,
         extra_body=profile.extra_body if profile else None,
         open_danger_extra_body=profile.open_danger_extra_body if profile else None,
+        price_rub_per_million=profile.price_rub_per_million if profile else None,
     )
     budget = PostgresBudgetGuard(
         session_factory,

@@ -1,4 +1,4 @@
-"""Адаптер polza.ai на записанных ответах: сети в тестах нет.
+"""Адаптер OpenAI-совместимого API на записанных ответах: сети в тестах нет.
 
 Каждый сценарий проверяется дважды: какое исключение поднимает сам адаптер и в
 какое состояние `execution.state` его превращает фасад. Фасад не бросает
@@ -117,6 +117,48 @@ async def test_valid_answer_is_parsed_with_tokens_and_cost() -> None:
     assert (result.tokens_in, result.tokens_out) == (2480, 174)
     assert result.cost_rub == pytest.approx(0.04131306)
     assert result.latency_ms >= 0
+
+
+def cloudru_completion(content: str) -> dict[str, Any]:
+    """Записанный ответ Cloud.ru Foundation Models (27.09.2026): рублей в `usage` нет."""
+    return {
+        "id": "chatcmpl-96adf558e71327f26ed6c81d3a90ede6",
+        "object": "chat.completion",
+        "created": 1790530044,
+        "model": "qwen3-30b-a3b",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": content},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {"prompt_tokens": 6124, "total_tokens": 6452, "completion_tokens": 328},
+        "service_tier": "default",
+    }
+
+
+async def test_cost_comes_from_the_profile_price_when_the_provider_reports_none() -> None:
+    """M1: Cloud.ru сообщает только токены — ₽ считаются по цене профиля модели."""
+    body = cloudru_completion(json.dumps(VALID_ANSWER, ensure_ascii=False))
+    request, _mapping = build_request(single("Лифт не работает"))
+    priced = provider_for(replying(body), price_rub_per_million=(13.908, 55.6076))
+    result = await priced.analyze_window(request)
+    assert (result.tokens_in, result.tokens_out) == (6124, 328)
+    expected = (6124 * 13.908 + 328 * 55.6076) / 1_000_000
+    assert result.cost_rub == pytest.approx(expected, abs=1e-6)
+    assert result.model == "qwen3-30b-a3b"
+    # Без цены стоимость честно неизвестна, а не ноль.
+    unpriced = await provider_for(replying(body)).analyze_window(request)
+    assert unpriced.cost_rub is None
+
+
+async def test_reported_cost_wins_over_the_profile_price() -> None:
+    body = completion(json.dumps(VALID_ANSWER, ensure_ascii=False))
+    request, _mapping = build_request(single("Лифт не работает"))
+    provider = provider_for(replying(body), price_rub_per_million=(1000.0, 1000.0))
+    result = await provider.analyze_window(request)
+    assert result.cost_rub == pytest.approx(0.04131306)
 
 
 async def test_facade_records_model_prompt_and_accounting() -> None:
@@ -294,7 +336,7 @@ async def test_rejected_key_is_logged_once_and_without_the_key(
 # ------------------------------------------------------------------- запрос
 
 
-def test_payload_follows_the_polza_contract_and_uses_no_plugins() -> None:
+def test_payload_follows_the_openai_contract_and_uses_no_plugins() -> None:
     provider = provider_for(replying(completion("{}")), max_tokens=900)
     request, _mapping = build_request(single("Лифт не работает"))
     payload = provider.build_payload(request)
@@ -360,15 +402,11 @@ def test_open_danger_windows_get_more_reasoning() -> None:
 def test_open_danger_windows_get_a_larger_answer_limit_from_the_profile() -> None:
     """P6c: лимит ответа окна с открытой опасностью — из профиля, остальные прежние."""
     from domsignal.ai.contracts import OpenItem
-    from domsignal.ai.models import load_models
 
-    profile = load_models().default
-    assert profile is not None
     provider = provider_for(
         replying(completion("{}")),
-        max_tokens=profile.max_tokens,
-        extra_body=profile.extra_body,
-        open_danger_extra_body=profile.open_danger_extra_body,
+        max_tokens=1600,
+        open_danger_extra_body={"max_tokens": 2800},
     )
     gas = OpenItem(
         ref="signal-1", kind="signal", category="other", title="запах газа", danger_kinds=("gas",)
@@ -377,6 +415,33 @@ def test_open_danger_windows_get_a_larger_answer_limit_from_the_profile() -> Non
     alone, _ = build_request(single("Лифт не работает"))
     assert provider.build_payload(danger)["max_tokens"] == 2800
     assert provider.build_payload(alone)["max_tokens"] == 1600
+
+
+def test_shipped_profile_sends_the_same_body_with_and_without_open_danger() -> None:
+    """M1: у Qwen3-30B-A3B добавки для открытой опасности нет, рассуждения выключены."""
+    from domsignal.ai.contracts import OpenItem
+    from domsignal.ai.models import load_models
+
+    profile = load_models().default
+    assert profile is not None
+    provider = provider_for(
+        replying(completion("{}")),
+        model=profile.id,
+        max_tokens=profile.max_tokens,
+        temperature=profile.temperature,
+        extra_body=profile.extra_body,
+        open_danger_extra_body=profile.open_danger_extra_body,
+    )
+    gas = OpenItem(
+        ref="signal-1", kind="signal", category="other", title="запах газа", danger_kinds=("gas",)
+    )
+    danger, _ = build_request(window("да, женщина стучит", open_items=(gas,)))
+    alone, _ = build_request(single("Лифт не работает"))
+    for request in (danger, alone):
+        payload = provider.build_payload(request)
+        assert payload["max_tokens"] == 1600
+        assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+        assert "reasoning" not in payload and "provider" not in payload
 
 
 def test_provider_refuses_to_start_without_a_key_or_model() -> None:

@@ -1,4 +1,4 @@
-"""Адаптер OpenAI-совместимого API (polza.ai) за протоколом `AnalysisProvider`.
+"""Адаптер OpenAI-совместимого API за протоколом `AnalysisProvider`.
 
 Один вызов на окно, `temperature: 0`, ограниченный `max_tokens`, никаких
 повторов: отказ — это результат, и ядро отвечает результатом правил. Плагины
@@ -15,6 +15,12 @@
 `usage.prompt_tokens`, `usage.completion_tokens` и `usage.cost_rub` (рубли,
 фактически списанная сумма). Коды ошибок: 400, 401, 402, 403, 404, 408, 429,
 500, 502, 503.
+
+M1 (27.09.2026): провайдер по умолчанию — Cloud.ru Evolution Foundation Models
+(`POST https://foundation-models.api.cloud.ru/v1/chat/completions`, тот же
+заголовок и `response_format`). В `usage` Cloud.ru только токены, без рублей:
+стоимость считается по цене профиля модели (`price_rub_per_million`), если
+провайдер её не сообщил.
 """
 
 from __future__ import annotations
@@ -41,8 +47,8 @@ from domsignal.ai.taxonomy import Taxonomy
 
 logger = logging.getLogger("domsignal.ai.provider")
 
-#: Базовый адрес API polza.ai по документации на 20.09.2026.
-DEFAULT_BASE_URL = "https://polza.ai/api/v1"
+#: Базовый адрес API Cloud.ru Evolution Foundation Models (M1, 27.09.2026).
+DEFAULT_BASE_URL = "https://foundation-models.api.cloud.ru/v1"
 DEFAULT_MAX_TOKENS = 1600
 DEFAULT_TIMEOUT_SECONDS = 10.0
 
@@ -68,6 +74,7 @@ class OpenAICompatibleProvider:
         open_danger_extra_body: Mapping[str, Any] | None = None,
         client: httpx.AsyncClient | None = None,
         prompt_version: str = PROMPT_VERSION,
+        price_rub_per_million: tuple[float, float] | None = None,
     ) -> None:
         if not api_key:
             raise ValueError("api key is required")
@@ -83,6 +90,8 @@ class OpenAICompatibleProvider:
         self.prompt_version = prompt_spec(prompt_version).version
         self.extra_body = dict(extra_body or {})
         self.open_danger_extra_body = dict(open_danger_extra_body or {})
+        #: Цена входа и выхода, ₽ за млн токенов — когда провайдер не сообщает рубли.
+        self.price_rub_per_million = price_rub_per_million
         self._api_key = api_key
         self._taxonomy = taxonomy
         self._owns_client = client is None
@@ -193,14 +202,26 @@ class OpenAICompatibleProvider:
             raise ProviderInvalidOutput("llm returned an empty message")
         usage = body.get("usage")
         usage_map = cast(dict[str, Any], usage) if isinstance(usage, dict) else {}
+        tokens_in = _as_int(usage_map.get("prompt_tokens"))
+        tokens_out = _as_int(usage_map.get("completion_tokens"))
+        cost_rub = _as_float(usage_map.get("cost_rub", usage_map.get("cost")))
+        if cost_rub is None:
+            cost_rub = self._priced(tokens_in, tokens_out)
         return ProviderResult(
             content=content,
             model=str(body.get("model") or self.model),
-            tokens_in=_as_int(usage_map.get("prompt_tokens")),
-            tokens_out=_as_int(usage_map.get("completion_tokens")),
-            cost_rub=_as_float(usage_map.get("cost_rub", usage_map.get("cost"))),
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            cost_rub=cost_rub,
             latency_ms=latency_ms,
         )
+
+    def _priced(self, tokens_in: int | None, tokens_out: int | None) -> float | None:
+        """Стоимость по цене профиля; без цены или токенов — неизвестна (`None`)."""
+        if self.price_rub_per_million is None or tokens_in is None or tokens_out is None:
+            return None
+        price_in, price_out = self.price_rub_per_million
+        return round((tokens_in * price_in + tokens_out * price_out) / 1_000_000, 6)
 
 
 def _content_of(body: dict[str, Any]) -> str:

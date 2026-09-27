@@ -43,6 +43,8 @@ class ModelProfile:
     stores_data_in_russia: bool
     policy_basis: str
     policy_checked_at: str
+    #: ₽ за млн токенов входа и выхода (M1: Cloud.ru не сообщает рубли в `usage`).
+    price_rub_per_million: tuple[float, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -97,6 +99,7 @@ def build_catalog(document: Any) -> ModelCatalog:
                 stores_data_in_russia=bool(entry.get("stores_data_in_russia", False)),
                 policy_basis=str(entry.get("policy_basis", "")),
                 policy_checked_at=str(entry.get("policy_checked_at", "")),
+                price_rub_per_million=_price(entry),
             )
         )
     default_id = data.get("default")
@@ -109,6 +112,22 @@ def build_catalog(document: Any) -> ModelCatalog:
         models=tuple(profiles),
         default_id=str(default_id) if default_id else None,
     )
+
+
+def _price(entry: dict[str, Any]) -> tuple[float, float] | None:
+    raw = entry.get("price_rub_per_million")
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise ModelsUnavailable(f"{entry.get('id')}: price_rub_per_million must be a mapping")
+    price = cast(dict[str, Any], raw)
+    try:
+        price_in, price_out = float(price["input"]), float(price["output"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ModelsUnavailable(f"{entry.get('id')}: price needs numeric input and output") from exc
+    if price_in < 0 or price_out < 0:
+        raise ModelsUnavailable(f"{entry.get('id')}: price must not be negative")
+    return (price_in, price_out)
 
 
 @lru_cache(maxsize=1)

@@ -1,0 +1,73 @@
+{
+  "dataset": "open_danger_dev",
+  "config": "qwen3_30b_v3",
+  "calls": {
+    "windows": 20,
+    "calls": 20,
+    "states": {
+      "fallback_provider_error": 2,
+      "ok": 18
+    },
+    "valid_json": {
+      "k": 18,
+      "n": 18,
+      "value": 1.0,
+      "ci95": [
+        0.8241,
+        1.0
+      ]
+    },
+    "timeouts": 0,
+    "provider_errors": 2,
+    "p50_ms": 6137,
+    "p95_ms": 6881,
+    "p99_ms": 7145,
+    "max_ms": 7145,
+    "rub_total": 1.852,
+    "rub_per_window": 0.1029,
+    "tokens_in_mean": 6188,
+    "tokens_out_mean": 303,
+    "reasoning_tokens_mean": null,
+    "quotes": {
+      "k": 0,
+      "n": 118,
+      "value": 0.0,
+      "ci95": [
+        0.0,
+        0.0315
+      ]
+    },
+    "dropped_fields": 34,
+    "audit": {
+      "no_new_facts_violation": 10,
+      "field_dropped": 34
+    },
+    "upstreams": {
+      "None": 20
+    }
+  },
+  "open_danger": {
+    "new_kind_separate_signal": {
+      "k": 9,
+      "n": 10,
+      "value": 0.9,
+      "ci95": [
+        0.5958,
+        0.9821
+      ]
+    },
+    "continuation_without_foreign_kind": {
+      "k": 10,
+      "n": 10,
+      "value": 1.0,
+      "ci95": [
+        0.7225,
+        1.0
+      ]
+    },
+    "new_kind_missed": [
+      "od-08"
+    ],
+    "continuation_foreign_kind": []
+  }
+}

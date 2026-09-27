@@ -101,9 +101,11 @@ services:
       # Единственный процесс с ключом модели. По умолчанию — правила без ключа;
       # openai_compatible без ключа или модели не проходит проверку настроек.
       LLM_PROVIDER: ${LLM_PROVIDER:-rules}
+      # M1: Cloud.ru Evolution Foundation Models (LLM-PROVIDER-2026-09-27).
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://foundation-models.api.cloud.ru/v1}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-}
-      # Пусто — таймаут из профиля модели (gpt-5-mini: 30 с, p99 dev 20,6 с, P6);
+      # Пусто — таймаут из профиля модели (models.v1.yaml);
       # непустое значение перекрывает профиль (OWNER-DECISION-2026-09-24).
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-}
       LLM_DAILY_CALL_BUDGET: ${LLM_DAILY_CALL_BUDGET:-300}

@@ -1,0 +1,58 @@
+{
+  "dataset": "open_danger_dev",
+  "config": "qwen3_30b_v3",
+  "calls": {
+    "windows": 2,
+    "calls": 2,
+    "states": {
+      "fallback_provider_error": 2
+    },
+    "valid_json": {
+      "k": 0,
+      "n": 0,
+      "value": null,
+      "ci95": null
+    },
+    "timeouts": 0,
+    "provider_errors": 2,
+    "p50_ms": null,
+    "p95_ms": null,
+    "p99_ms": null,
+    "max_ms": null,
+    "rub_total": 0,
+    "rub_per_window": null,
+    "tokens_in_mean": null,
+    "tokens_out_mean": null,
+    "reasoning_tokens_mean": null,
+    "quotes": {
+      "k": 0,
+      "n": 0,
+      "value": null,
+      "ci95": null
+    },
+    "dropped_fields": 0,
+    "audit": {},
+    "upstreams": {
+      "None": 2
+    }
+  },
+  "open_danger": {
+    "new_kind_separate_signal": {
+      "k": 0,
+      "n": 0,
+      "value": null,
+      "ci95": null
+    },
+    "continuation_without_foreign_kind": {
+      "k": 2,
+      "n": 2,
+      "value": 1.0,
+      "ci95": [
+        0.3424,
+        1.0
+      ]
+    },
+    "new_kind_missed": [],
+    "continuation_foreign_kind": []
+  }
+}
