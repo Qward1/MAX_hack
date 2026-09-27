@@ -131,6 +131,7 @@ def main() -> int:
                 "gate_precision": item["gate"]["precision_at_val_threshold"],
                 "gate_recall": item["gate"]["recall_at_val_threshold"],
                 "class_macro_f1": item["classes_on_true_problems"]["macro_f1"],
+                "end_to_end_macro_f1": item["end_to_end_classes_all_messages"]["macro_f1"],
             }
             for name, item in report["sources"].items()
         }
