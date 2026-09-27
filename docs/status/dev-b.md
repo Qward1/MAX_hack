@@ -2,8 +2,12 @@
 
 ## «Мой дом»: ссылки и выбор дома — 27.09.2026
 
-**IMPLEMENTED IN BRANCH** `agent/b/house-links` от `c59c993`. Только frontend,
-тесты и документы: API, OpenAPI, БД, права и тексты не менялись.
+**MERGED · DEPLOYED.** Коммит `78c989a` (ветка `agent/b/house-links` от
+`c59c993`), PR #3 `dev/b-experience` → `main`, merge commit `9f0a68f`
+(quality-gate зелёный на `78c989a`; влит по указанию владельца: второй
+разработчик подтвердил вне GitHub, approve в PR нет; без `--admin`).
+Production `/version` = `9f0a68f` с 27.09.2026 20:28 МСК, до него `99037d6`.
+Только frontend, тесты и документы: API, OpenAPI, БД, права и тексты не менялись.
 
 - Ссылки: официальные сервисы и тарифы/капремонт — строки цветом текста со
   значком внешнего перехода (hover/active/focus); телефон, почта, сайт УК,
@@ -20,6 +24,18 @@ browser — `ux-quality`, `reaudit`, `experience`, `resident-experience`, `d3`,
 PASS; снимки 320/390/430/1280/1440, светлая и тёмная, один/несколько домов,
 длинный адрес — без прокрутки вбок (`Claude outputs/HOUSE_LINKS_2026-09-27/`,
 вне git).
+
+**Выкладка** (runbook §6): образ отката `domsignal-backend:pre-99037d6`, копия
+env `env-production-pre-houselinks-20260927T172734Z`, копия БД
+`domsignal-20260927T172734336557Z.dump` (344 474 байт, `pg_restore --list` —
+513 строк); bundle `99037d6..9f0a68f`, `--ff-only`, `BUILD_COMMIT`; `migrate` —
+exit 0 (изменений схемы нет), api healthy, в логах api/worker/ai-worker ошибок
+нет. Снаружи: `/ready` — ready, `/version` = `9f0a68f`, вебхук без секрета —
+401. Экран «Мой дом» — фронтенд production в Chrome (390 тёмная, 320 светлая,
+1280 тёмная) с `/api/**`, перенаправленным на локальный стенд (жителю на
+production нужен MAX `init_data`): кнопка «Дом», список, выбор с клавиатуры
+переключает дом, нативного select нет, ссылки цветом текста, прокрутки вбок нет.
+В MAX WebView людьми не проверено.
 
 ## UX-3 — замечания повторного UI/UX-аудита RA-01…RA-08 — 27.09.2026
 
