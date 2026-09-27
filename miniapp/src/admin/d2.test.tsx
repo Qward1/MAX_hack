@@ -164,8 +164,26 @@ describe("Заявка УК: понятные ошибки полей", () => {
     const { submit } = await fill();
     submit();
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toBe("Проверьте: электронную почту — в виде name@example.ru.");
+    expect(alert.textContent).toContain("Проверьте электронную почту — в виде name@example.ru.");
     expect(alert.textContent).not.toContain("One or more");
+    // Та же ошибка — рядом с полем и связана с ним; ссылка сводки ведёт к полю.
+    const email = screen.getByLabelText("Электронная почта");
+    expect(email.getAttribute("aria-invalid")).toBe("true");
+    expect(document.getElementById(email.getAttribute("aria-describedby") ?? "")?.textContent).toContain("электронную почту");
+    expect(screen.getByRole("link", { name: /электронную почту/ }).getAttribute("href")).toBe("#apply-email");
+  });
+
+  it("пустая форма называет каждое обязательное поле и ничего не отправляет", async () => {
+    const { ApiClient } = await import("../shared/api/client");
+    const request = vi.spyOn(ApiClient.prototype, "request");
+    const { CompanyApply } = await import("./CompanyApply");
+    const { container } = render(<CompanyApply />);
+    fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    const summary = await screen.findByRole("alert");
+    expect([...summary.querySelectorAll("a")].map((link) => link.getAttribute("href"))).toEqual([
+      "#apply-legal_name", "#apply-short_name", "#apply-inn", "#apply-contact_name", "#apply-email",
+    ]);
+    expect(request).not.toHaveBeenCalled();
   });
 
   it("короткий адрес ловится до отправки и называет строку", async () => {
@@ -174,7 +192,8 @@ describe("Заявка УК: понятные ошибки полей", () => {
     const { field, submit } = await fill();
     field("addresses", "Казань, ул. Баумана, 1\nд. 5");
     submit();
-    expect((await screen.findByRole("alert")).textContent).toBe("Адрес в строке 2 слишком короткий: укажите город, улицу и дом.");
+    expect((await screen.findByRole("alert")).textContent).toContain("Адрес в строке 2 слишком короткий: укажите город, улицу и дом.");
+    expect(screen.getByLabelText(/Адреса домов/).getAttribute("aria-invalid")).toBe("true");
     expect(request).not.toHaveBeenCalled();
   });
 });

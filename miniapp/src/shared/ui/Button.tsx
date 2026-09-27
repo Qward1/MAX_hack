@@ -1,6 +1,12 @@
 import { type AnchorHTMLAttributes, type ButtonHTMLAttributes, forwardRef, type ReactNode, useId } from "react";
 
-export type ButtonVariant = "primary" | "secondary" | "quiet" | "danger";
+/**
+ * primary — одно основное действие шага; secondary — альтернатива;
+ * tertiary — правка и раскрытие рядом с данными (без фона); quiet — ссылка-действие
+ * цветом акцента; danger — опасное действие до подтверждения (красный контур);
+ * destructive — само подтверждение необратимого действия (сплошной красный).
+ */
+export type ButtonVariant = "primary" | "secondary" | "tertiary" | "quiet" | "danger" | "destructive";
 
 type Common = {
   variant?: ButtonVariant;

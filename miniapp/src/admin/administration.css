@@ -115,3 +115,466 @@
   .funnel-bar { grid-column: 1 / -1; grid-row: 2; }
   .public-header .admin-brand { font-size: 20px; }
 }
+
+/* ============================================================
+ * UX-2: кабинет — операционная плотность, одно основное действие,
+ * мобильная шапка вместо трёх рядов разделов.
+ * ============================================================ */
+
+/* ------------------------------------------------------------ мобильная шапка */
+.admin-mobile-bar,
+.admin-quick-nav {
+  display: none;
+}
+.admin-menu-button {
+  gap: var(--ds-space-2);
+}
+.admin-menu-button .ds-icon {
+  width: 20px;
+  height: 20px;
+}
+.admin-drawer .ds-sheet-body {
+  gap: var(--ds-space-3);
+}
+.admin-drawer-nav {
+  display: grid;
+  gap: 2px;
+}
+.admin-drawer .admin-nav-link {
+  min-height: 48px;
+  border: 0;
+  font-size: var(--ds-text-body);
+}
+@media (max-width: 767px) {
+  .admin-shell.has-mobile-nav > .admin-sidebar {
+    display: none;
+  }
+  .admin-shell.has-mobile-nav .admin-main > .admin-toolbar {
+    display: none;
+  }
+  .admin-mobile-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    min-height: 56px;
+    padding: var(--ds-space-2) var(--ds-gutter);
+    background: var(--ds-surface);
+    border-bottom: 1px solid var(--ds-line);
+  }
+  .company-workspace .admin-mobile-bar {
+    border-top: 4px solid var(--ds-action);
+  }
+  .operator-workspace .admin-mobile-bar {
+    border-top: 4px solid var(--ds-success);
+  }
+  .admin-mobile-bar .admin-brand {
+    margin-inline-end: auto;
+    font-size: 1.0625rem;
+  }
+  .admin-mobile-bar .admin-brand span {
+    font-size: 0.75rem;
+  }
+  .admin-quick-nav {
+    display: flex;
+    gap: var(--ds-space-1);
+    padding: 0 var(--ds-gutter);
+    background: var(--ds-surface);
+    border-bottom: 1px solid var(--ds-line);
+    overflow-x: auto;
+  }
+  .admin-quick-nav .admin-nav-link {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 var(--ds-space-3);
+    border: 0;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    margin-bottom: -1px;
+  }
+  .admin-quick-nav .admin-nav-link[aria-current="page"] {
+    background: none;
+    box-shadow: none;
+    border-bottom-color: var(--ds-action);
+    color: var(--ds-ink);
+  }
+  .admin-shell.has-mobile-nav .admin-main {
+    padding-top: var(--ds-space-2);
+  }
+}
+
+/* ------------------------------------------------------------ очередь */
+.queue-table tr.is-clickable {
+  cursor: pointer;
+}
+/* Название проблемы — заголовок строки цветом текста; ссылка видна при наведении и фокусе. */
+.queue-table .cell-main a {
+  color: var(--ds-ink);
+  text-decoration: none;
+}
+.queue-table tr:hover .cell-main a,
+.queue-table .cell-main a:focus-visible {
+  color: var(--ds-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.demo-session {
+  margin-top: var(--ds-space-6);
+  padding: var(--ds-space-3);
+  border: 1px dashed var(--ds-field);
+  border-radius: var(--ds-radius-s);
+  color: var(--ds-ink-2);
+}
+
+/* ------------------------------------------------------------ карточка заявки */
+.decision-panel {
+  border: 1px solid var(--ds-line);
+  border-inline-start: 4px solid var(--ds-action);
+  gap: var(--ds-space-3);
+}
+.ticket-primary .ds-btn {
+  min-width: 220px;
+}
+.ticket-more {
+  display: grid;
+  gap: var(--ds-space-2);
+  padding-top: var(--ds-space-3);
+  border-top: 1px solid var(--ds-line);
+}
+.ticket-more .ds-btn {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: var(--ds-text-small);
+}
+/* Отмена — отдельно, с последствием до нажатия. */
+.ticket-danger-zone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2) var(--ds-space-4);
+  padding-top: var(--ds-space-3);
+  border-top: 1px solid var(--ds-line);
+}
+.ticket-danger-zone .ds-btn {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: var(--ds-text-small);
+}
+.ticket-danger-zone .ds-reason {
+  flex: 1 1 220px;
+}
+.ticket-assignee {
+  font-size: var(--ds-text-small);
+}
+.assignee-picker {
+  display: grid;
+  gap: var(--ds-space-2);
+}
+.assignee-picker legend {
+  margin-bottom: 0;
+}
+.assignee-options {
+  max-height: min(40dvh, 320px);
+  overflow: auto;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-s);
+  padding: var(--ds-space-1);
+}
+.ticket-form .ds-hint {
+  display: block;
+}
+@media (max-width: 767px) {
+  .ticket-primary .ds-btn {
+    width: 100%;
+  }
+  /* Диалог действия на телефоне — лист снизу, ближе к большому пальцу. */
+  .ticket-dialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: 90dvh;
+    margin: auto 0 0;
+    border-radius: var(--ds-radius-l) var(--ds-radius-l) 0 0;
+    padding: var(--ds-space-4) var(--ds-gutter) calc(var(--ds-space-4) + env(safe-area-inset-bottom));
+  }
+}
+
+/* ------------------------------------------------------------ обзор */
+.dashboard-empty {
+  display: grid;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-4);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-m);
+  background: var(--ds-surface);
+}
+.dashboard .dashboard-empty h2 {
+  margin: 0;
+  font-size: var(--ds-text-subtitle);
+}
+.dashboard-empty .button-row {
+  margin-top: var(--ds-space-1);
+}
+.chart-empty-row {
+  gap: 2px;
+  align-content: start;
+}
+.chart-empty-row h3 {
+  font-size: var(--ds-text-body);
+}
+.house-stats-cards {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ds-line);
+}
+.house-stats-cards > li {
+  display: grid;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3) 0;
+  border-bottom: 1px solid var(--ds-line);
+}
+.house-stats-cards h3 {
+  font-size: var(--ds-text-body);
+  overflow-wrap: anywhere;
+}
+.house-stats-main {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ds-space-2);
+  margin: 0;
+}
+.house-stats-main > div {
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-s);
+  background: var(--ds-surface-2);
+}
+.house-stats-main dt {
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-small);
+}
+.house-stats-main dd {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.house-stats-more > summary {
+  padding-inline: 0;
+  font-size: var(--ds-text-small);
+}
+/* Планшет: таблица читаемая — заголовки не рвутся по буквам, «Дом» закреплён при прокрутке вбок. */
+.house-stats-table th,
+.house-stats-table td {
+  white-space: nowrap;
+}
+.house-stats-table tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 180px;
+  max-width: 260px;
+  white-space: normal;
+  background: var(--ds-surface);
+  box-shadow: 1px 0 0 var(--ds-line);
+}
+.house-stats-table thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--ds-surface);
+}
+.house-stats-table td:last-child {
+  white-space: normal;
+  min-width: 160px;
+}
+@media (max-width: 767px) {
+  .house-stats-cards {
+    display: grid;
+  }
+  .house-stats-table {
+    display: none;
+  }
+  .dashboard-controls .ticket-button {
+    width: auto;
+  }
+}
+
+/* ------------------------------------------------------------ сотрудники */
+.invite-form {
+  margin-bottom: var(--ds-space-4);
+}
+.invite-form .ds-radio-cards {
+  max-width: 720px;
+}
+.staff-list > li {
+  padding: 0;
+}
+.staff-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2) var(--ds-space-4);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--ds-space-2) 40px var(--ds-space-2) var(--ds-space-2);
+  border: 0;
+  border-radius: var(--ds-radius-s);
+  background: none;
+  color: var(--ds-ink);
+  text-align: start;
+  cursor: pointer;
+}
+.staff-row::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: 16px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--ds-ink-2);
+  border-bottom: 2px solid var(--ds-ink-2);
+  transform: translateY(-70%) rotate(45deg);
+}
+.staff-row[aria-expanded="true"]::after {
+  transform: translateY(-30%) rotate(-135deg);
+}
+.staff-row:hover,
+.staff-row.is-selected {
+  background: var(--ds-surface-2);
+}
+.staff-name {
+  flex: 1 1 200px;
+  font-weight: var(--ds-weight-strong);
+}
+.staff-meta {
+  color: var(--ds-ink-2);
+}
+.staff-detail {
+  gap: var(--ds-space-5);
+}
+.staff-block {
+  display: grid;
+  gap: var(--ds-space-3);
+  justify-items: stretch;
+}
+.staff-block + .staff-block {
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-line);
+}
+.staff-danger h3 {
+  color: var(--ds-danger);
+}
+.assignment-row {
+  flex-wrap: wrap;
+}
+.assignment-row > span {
+  flex: 1 1 200px;
+}
+
+/* ------------------------------------------------------------ заявка УК */
+.apply-effort {
+  color: var(--ds-ink);
+}
+.company-apply .apply-steps {
+  margin-block: var(--ds-space-4);
+}
+.company-apply .apply-steps ol {
+  margin: 0;
+  padding: 0 var(--ds-space-3) var(--ds-space-3) calc(var(--ds-space-3) + 20px);
+}
+.company-apply .apply-steps li {
+  padding: 6px 0 6px 4px;
+  border: 0;
+}
+.company-apply aside .eyebrow {
+  margin-top: 0;
+}
+.apply-group {
+  display: grid;
+  gap: var(--ds-space-4);
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-line);
+}
+.apply-group legend {
+  float: left;
+  width: 100%;
+  margin-bottom: var(--ds-space-1);
+  font-size: var(--ds-text-subtitle);
+}
+.apply-group legend + * {
+  clear: both;
+}
+.ds-optional {
+  color: var(--ds-ink-2);
+  font-weight: 400;
+}
+.ds-field.has-error :where(input, textarea, select) {
+  border: 2px solid var(--ds-danger);
+}
+/* Сводка ошибок: сколько полей и ссылки прямо к ним. */
+.error-summary {
+  display: grid;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-4);
+  border: 2px solid var(--ds-danger);
+  border-radius: var(--ds-radius-m);
+  background: var(--ds-surface);
+}
+.error-summary:focus-visible {
+  outline: 3px solid var(--ds-focus);
+  outline-offset: 2px;
+}
+.error-summary h3 {
+  color: var(--ds-danger);
+}
+.error-summary ul {
+  display: grid;
+  gap: var(--ds-space-1);
+  margin: 0;
+  padding-inline-start: 20px;
+}
+.error-summary a {
+  color: var(--ds-danger);
+  font-weight: var(--ds-weight-strong);
+}
+@media (max-width: 820px) {
+  .company-apply aside > h1 {
+    font-size: 1.75rem;
+  }
+}
+
+/* Уточнения после просмотра в браузере. */
+.apply-form .ds-field > label {
+  display: block;
+}
+.company-apply .error-summary li {
+  padding: 0;
+  border: 0;
+}
+.company-apply aside > .apply-effort {
+  margin-top: var(--ds-space-3);
+  font-size: var(--ds-text-body);
+}
+.ticket-form label.ds-choice-row {
+  display: flex;
+  font-weight: 400;
+}
+.queue-table th:first-child {
+  white-space: nowrap;
+}
+.chart-table summary {
+  color: var(--ds-ink-2);
+}
+@media (max-width: 767px) {
+  .stat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ds-space-2);
+  }
+  .stat-tile {
+    padding: var(--ds-space-3);
+  }
+  .stat-tile dd {
+    font-size: 1.5rem;
+  }
+}

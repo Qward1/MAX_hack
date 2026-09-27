@@ -12,11 +12,13 @@ import {
 } from "../../shared/api/client";
 import { maxBridge } from "../../shared/max/bridge";
 import { Button } from "../../shared/ui/Button";
-import { countLabel, formatWhen } from "../../shared/ui/format";
-import { CheckAnswers, Notice, PageHeader, StatusBadge, StatusTag } from "../../shared/ui/semantic";
+import { ChoicePicker } from "../../shared/ui/ChoicePicker";
+import { countLabel, formatDay, formatWhen } from "../../shared/ui/format";
+import { DemoBadge, Notice, PageHeader, StatusBadge, StatusTag } from "../../shared/ui/semantic";
+import { SourceDisclosure } from "../../shared/ui/SourceLink";
 import { residentTicketStatus, statusOf } from "../../shared/ui/status";
-import { RouteCard, SafetyPanel } from "../routing/RouteCard";
-import { dangerLabel, knownCardActions, locationScopeLabel } from "../routing/presentation";
+import { CardAction, RouteCard, SafetyPanel, UNVERIFIED_NOTE } from "../routing/RouteCard";
+import { type CardActionType, dangerLabel, knownCardActions, linkActions, locationScopeLabel } from "../routing/presentation";
 import { categoryLabel, categoryLabels } from "./presentation";
 
 export type FlowTarget = { incident?: string; card?: string; draft?: string };
@@ -101,9 +103,11 @@ export function ReportFlow({
   const id = useId();
   const field = useRef<HTMLTextAreaElement | null>(null);
   const duplicatesRef = useRef<HTMLElement | null>(null);
+  const categoryRef = useRef<HTMLDivElement | null>(null);
   const [text, setText] = useState(draft?.text ?? "");
   const [category, setCategory] = useState<ReportCreate["category"] | "">(draft?.category ?? "");
-  const [manual, setManual] = useState(Boolean(draft?.category));
+  // «Изменить категорию» с шага проверки: на первом шаге фокус — на выборе категории.
+  const [manual, setManual] = useState(false);
   const [tooShort, setTooShort] = useState(false);
   const [preview, setPreview] = useState<ReportPreview | null>(null);
   const [result, setResult] = useState<ReportSubmitted | null>(null);
@@ -130,7 +134,8 @@ export function ReportFlow({
   }, [text, step]);
   // Новый шаг — новый заголовок: фокус переносится на него (на первом — в поле).
   useEffect(() => {
-    if (step === "describe") field.current?.focus({ preventScroll: true });
+    if (step === "describe" && manual) categoryRef.current?.querySelector("button")?.focus({ preventScroll: true });
+    else if (step === "describe") field.current?.focus({ preventScroll: true });
     else document.getElementById("page-title")?.focus({ preventScroll: true });
     window.scrollTo?.(0, 0);
   }, [step]);
@@ -239,7 +244,7 @@ export function ReportFlow({
                 К проблемам дома
               </Button>
             )}
-            <Button variant="quiet" onClick={() => onOpen({ card: result.route_outcome_id })}>
+            <Button variant="tertiary" onClick={() => onOpen({ card: result.route_outcome_id })}>
               Кто отвечает и почему
             </Button>
           </div>
@@ -325,86 +330,216 @@ export function ReportFlow({
   // ------------------------------------------------------- шаг «проверьте»
   if (preview) {
     const analysis = preview.analysis;
+    const card = preview.action_card;
     const duplicates = preview.duplicates ?? [];
-    const cardActions = knownCardActions(preview.action_card.actions);
+    const safety = card.safety;
+    // Телефон памятки уже стоит первой кнопкой экрана — второй раз его не повторяем.
+    const cardActions = knownCardActions(card.actions).filter(
+      (action) => !(safety?.phone && action.type === "call_phone" && action.phone === safety.phone),
+    );
     const offersTicket =
       duplicates.length === 0 && cardActions.some((action) => action.type === "create_ticket" && action.enabled);
+    const handlers: Partial<Record<CardActionType, () => void>> = offersTicket ? { create_ticket: () => void submit() } : {};
+    // Основное действие шага — сохранить сообщение (заявкой в УК, если её предлагают);
+    // ссылки на официальные сервисы и звонок — рядом, вторыми.
+    const primaryAction = cardActions.find((action) => action.type === "create_ticket" && offersTicket);
+    const otherActions = cardActions.filter(
+      (action) => action !== primaryAction && (linkActions.includes(action.type as CardActionType) || handlers[action.type as CardActionType]),
+    );
     const dangers = analysis.danger_kinds.map(dangerLabel).filter(Boolean);
+    const place = [
+      locationScopeLabel(analysis.location_scope),
+      analysis.entrance && `подъезд ${analysis.entrance}`,
+      analysis.floor && `этаж ${analysis.floor}`,
+    ]
+      .filter(Boolean)
+      .join(", ");
     const change = (openManual: boolean) => () => {
-      setManual(openManual || manual);
+      setManual(openManual);
       setPreview(null);
     };
-    const items = [
-      ...(houseAddress ? [{ label: "Дом", value: houseAddress }] : []),
-      { label: "Описание", value: <span className="ds-prose">{text}</span>, change: change(false), changeLabel: "описание" },
-      { label: "Категория", value: categoryLabel(analysis.category), change: change(true), changeLabel: "категорию" },
-      { label: "Место", value: locationScopeLabel(analysis.location_scope) },
-      ...(analysis.entrance ? [{ label: "Подъезд", value: analysis.entrance }] : []),
-      ...(analysis.floor ? [{ label: "Этаж", value: analysis.floor }] : []),
-      ...(analysis.since ? [{ label: "Наблюдается с", value: analysis.since }] : []),
-      ...(dangers.length ? [{ label: "Признаки опасности", value: dangers.join(", ") }] : []),
-    ];
+    const basis = card.route.basis;
+    const needsCheck =
+      card.route.stale ||
+      (basis ? basis.verification_status !== "verified" : false) ||
+      (card.route.channels ?? []).some((channel) => channel.stale || channel.verification_status !== "verified");
+    const facts = card.facts ?? [];
     return (
       <section className="report-flow" aria-labelledby="page-title">
-        <PageHeader title="Проверьте, что мы поняли" subtitle={<span className="ds-steps">Шаг 2 из 2</span>} />
-        {preview.action_card.safety && <SafetyPanel safety={preview.action_card.safety} />}
-        <section className="ds-section" aria-label="Что мы поняли">
-          <CheckAnswers items={items} />
-          {!analysis.confident && (
-            <Notice tone="warning" role="note">
-              <p>{UNSURE_NOTE} Поправьте описание или категорию, если нужно.</p>
-            </Notice>
-          )}
-        </section>
-        {duplicates.length > 0 && (
-          <section className="ds-section duplicates" ref={duplicatesRef} aria-labelledby={`${id}-dup`}>
-            <h2 id={`${id}-dup`}>{DUPLICATES_TITLE}</h2>
-            <p>
-              Если это та же проблема, ваше сообщение добавится к ней — отдельная заявка не появится. Выберите сами:
-              мы не объединяем сообщения без вас.
-            </p>
-            <ul className="ds-list">
-              {duplicates.map((candidate) => (
-                <Candidate
-                  key={candidate.incident_id}
-                  candidate={candidate}
-                  busy={busy}
-                  onJoin={() =>
-                    void guard("добавить сообщение к проблеме", async () => {
-                      setJoined(
-                        await client.joinIncident(
-                          candidate.incident_id,
-                          key(JSON.stringify(["join", candidate.incident_id])),
-                        ),
-                      );
-                      maxBridge.haptic("success");
-                      onCreated();
-                    })
-                  }
-                />
-              ))}
-            </ul>
-            <Button stretched loading={busy} loadingLabel="Отправляем…" onClick={() => void submit()}>
-              Нет, это другое
-            </Button>
-          </section>
-        )}
-        <RouteCard
-          card={preview.action_card}
-          busy={busy}
-          hideSafety
-          hideActions={duplicates.length > 0}
-          handlers={{
-            ...(offersTicket ? { create_ticket: () => void submit() } : {}),
-            join_existing: () => duplicatesRef.current?.scrollIntoView(),
-          }}
+        <PageHeader
+          title="Проверьте, что мы поняли"
+          subtitle={
+            <>
+              <span className="ds-steps">Шаг 2 из 2</span>
+              {houseAddress && (
+                <>
+                  {" · "}
+                  <span className="ds-subtle">{houseAddress}</span>
+                </>
+              )}
+            </>
+          }
         />
-        {!offersTicket && duplicates.length === 0 && (
-          <Button variant="primary" stretched loading={busy} loadingLabel="Отправляем…" onClick={() => void submit()}>
-            Всё верно, отправить
-          </Button>
-        )}
-        {failure}
+        {safety && <SafetyPanel safety={safety} />}
+        <div className="ds-split ds-review">
+          <div className="ds-main">
+            <dl className="ds-summary" aria-label="Что мы поняли">
+              <div className="ds-summary-row ds-summary-main">
+                <dt>Проблема</dt>
+                <dd className="ds-prose">{text}</dd>
+                <div className="ds-summary-change">
+                  <button type="button" className="ds-edit" onClick={change(false)}>
+                    Изменить{" "}
+                    <span className="ds-visually-hidden">описание</span>
+                  </button>
+                </div>
+              </div>
+              <div className="ds-summary-row">
+                <dt>Где</dt>
+                <dd>{place}</dd>
+              </div>
+              {analysis.since && (
+                <div className="ds-summary-row">
+                  <dt>Наблюдается с</dt>
+                  <dd>{analysis.since}</dd>
+                </div>
+              )}
+              <div className="ds-summary-row">
+                <dt>Категория</dt>
+                <dd>{categoryLabel(analysis.category)}</dd>
+                <div className="ds-summary-change">
+                  <button type="button" className="ds-edit" onClick={change(true)}>
+                    Изменить{" "}
+                    <span className="ds-visually-hidden">категорию</span>
+                  </button>
+                </div>
+              </div>
+              {dangers.length > 0 && (
+                <div className="ds-summary-row ds-summary-danger">
+                  <dt>Признаки опасности</dt>
+                  <dd>{dangers.join(", ")}</dd>
+                </div>
+              )}
+            </dl>
+            {!analysis.confident && (
+              <Notice tone="warning" role="note">
+                <p>{UNSURE_NOTE} Поправьте описание или категорию, если нужно.</p>
+              </Notice>
+            )}
+          </div>
+          <div className="ds-aside">
+            {duplicates.length > 0 ? (
+              <section className="ds-next-step duplicates" ref={duplicatesRef} aria-labelledby={`${id}-dup`}>
+                <h2 id={`${id}-dup`}>{DUPLICATES_TITLE}</h2>
+                <p>
+                  Если это та же проблема, ваше сообщение добавится к ней — отдельная заявка не появится. Выберите сами:
+                  мы не объединяем сообщения без вас.
+                </p>
+                <ul className="ds-list">
+                  {duplicates.map((candidate) => (
+                    <Candidate
+                      key={candidate.incident_id}
+                      candidate={candidate}
+                      busy={busy}
+                      onJoin={() =>
+                        void guard("добавить сообщение к проблеме", async () => {
+                          setJoined(
+                            await client.joinIncident(
+                              candidate.incident_id,
+                              key(JSON.stringify(["join", candidate.incident_id])),
+                            ),
+                          );
+                          maxBridge.haptic("success");
+                          onCreated();
+                        })
+                      }
+                    />
+                  ))}
+                </ul>
+                <Button stretched loading={busy} loadingLabel="Отправляем…" onClick={() => void submit()}>
+                  Нет, это другое
+                </Button>
+              </section>
+            ) : (
+              <section className="ds-next-step" aria-labelledby={`${id}-next`}>
+                <h2 id={`${id}-next`}>Что дальше</h2>
+                <div className="ds-stack">
+                  <p className="ds-strong">{card.title}</p>
+                  <p className="ds-prose">{card.explanation}</p>
+                  {card.route.organization_name && (
+                    <p className="ds-meta">Вероятный адресат: {card.route.organization_name}</p>
+                  )}
+                  {needsCheck && (
+                    <Notice tone="warning" role="note">
+                      <p>{UNVERIFIED_NOTE}</p>
+                    </Notice>
+                  )}
+                </div>
+                <div className="ds-stack">
+                  {primaryAction ? (
+                    <CardAction action={primaryAction} primary handler={handlers.create_ticket} busy={busy} />
+                  ) : (
+                    <Button variant="primary" stretched loading={busy} loadingLabel="Отправляем…" onClick={() => void submit()}>
+                      Всё верно, отправить
+                    </Button>
+                  )}
+                  {otherActions.map((action) => (
+                    <CardAction
+                      key={`${action.type}-${action.url ?? action.phone ?? ""}`}
+                      action={action}
+                      primary={false}
+                      handler={handlers[action.type as CardActionType]}
+                      busy={busy}
+                    />
+                  ))}
+                </div>
+                {failure}
+              </section>
+            )}
+          </div>
+          <div className="ds-main-more">
+            <div className="ds-details-list">
+              {basis && (
+                <details className="ds-disclosure">
+                  <summary>
+                    <h2 className="ds-summary-title">Кто отвечает и почему</h2>
+                  </summary>
+                  <div className="ds-disclosure-body">
+                    <p className="ds-prose">{basis.text}</p>
+                    <SourceDisclosure
+                      url={basis.source_url}
+                      title={basis.source_title}
+                      verified={formatDay(basis.verified_at)}
+                    />
+                  </div>
+                </details>
+              )}
+              {facts.length > 0 && (
+                <details className="ds-disclosure">
+                  <summary>
+                    <h2 className="ds-summary-title">Что известно об официальном сервисе</h2>
+                    <span className="ds-meta">{countLabel(facts.length, ["факт", "факта", "фактов"])}</span>
+                  </summary>
+                  <ul className="ds-bullets ds-disclosure-body">
+                    {facts.map((fact) => (
+                      <li key={fact.text}>
+                        <span className="ds-prose">{fact.text}</span>
+                        <SourceDisclosure url={fact.source_url} title={fact.source_title} />
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
+            {(card.disclaimer || card.demo_notice) && (
+              <div className="ds-stack route-disclaimer">
+                {card.disclaimer && <p className="ds-prose ds-subtle">{card.disclaimer}</p>}
+                {card.demo_notice && <DemoBadge />}
+              </div>
+            )}
+          </div>
+        </div>
+        {duplicates.length > 0 && failure}
       </section>
     );
   }
@@ -454,26 +589,19 @@ export function ReportFlow({
           {text.length} из {MAX_LENGTH}
         </p>
       </div>
-      <details open={manual} className="ds-disclosure" onToggle={(event) => setManual(event.currentTarget.open)}>
-        <summary>Уточнить категорию вручную</summary>
-        <div className="ds-disclosure-body">
-          <label className="ds-field">
-            Категория
-            <select
-              disabled={busy}
-              value={category}
-              onChange={(event) => setCategory(event.target.value as ReportCreate["category"] | "")}
-            >
-              <option value="">Определить по описанию</option>
-              {Object.entries(categoryLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </details>
+      <div ref={categoryRef}>
+        <ChoicePicker
+          label="Категория"
+          hint="Необязательно: без выбора определим по описанию."
+          value={category}
+          disabled={busy}
+          choices={[
+            { value: "", label: "Определить по описанию" },
+            ...Object.entries(categoryLabels).map(([value, label]) => ({ value, label })),
+          ]}
+          onChange={(value) => setCategory(value as ReportCreate["category"] | "")}
+        />
+      </div>
       {failure}
       <Button
         type="submit"

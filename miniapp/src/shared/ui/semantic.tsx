@@ -208,7 +208,7 @@ export function CheckAnswers({
           <dd>{item.value}</dd>
           {item.change && (
             <dd className="ds-kv-change">
-              <button type="button" className="ds-link-button" onClick={item.change}>
+              <button type="button" className="ds-edit" onClick={item.change}>
                 Изменить{" "}
                 <span className="ds-visually-hidden">{item.changeLabel ?? item.label.toLowerCase()}</span>
               </button>
@@ -251,6 +251,36 @@ export function NextAction({
         ))}
       </div>
     </section>
+  );
+}
+
+export type ProgressStep = {
+  title: ReactNode;
+  state: "done" | "current" | "upcoming";
+  detail?: ReactNode;
+};
+const STEP_STATE = { done: "готово", current: "сейчас", upcoming: "впереди" } as const;
+
+/**
+ * Ход решения по шагам процесса продукта. Шаг «готово» или «сейчас» — только
+ * по фактическому статусу из API; «впереди» — порядок работы, а не событие.
+ */
+export function ProgressSteps({ steps, label }: { steps: ProgressStep[]; label: string }) {
+  return (
+    <ol className="ds-progress" aria-label={label}>
+      {steps.map((step, index) => (
+        <li key={index} data-state={step.state} aria-current={step.state === "current" ? "step" : undefined}>
+          <span className="ds-progress-mark" aria-hidden="true" />
+          <div className="ds-progress-body">
+            <p className="ds-progress-title">
+              {step.title}
+              <span className="ds-visually-hidden">, {STEP_STATE[step.state]}</span>
+            </p>
+            {step.detail}
+          </div>
+        </li>
+      ))}
+    </ol>
   );
 }
 

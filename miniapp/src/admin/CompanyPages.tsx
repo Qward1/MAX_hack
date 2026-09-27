@@ -15,6 +15,12 @@ export function Organization({ base }: { base: string }) {
     </dl>}
     {!r.error && <CompanyProfileForm base={base} />}</>;
 }
+const ROLE_CHOICES = [
+  ["operator", "Оператор", "Работает с заявками и сигналами домов, к которым вы дадите доступ."],
+  ["company_admin", "Администратор УК", "Доступ ко всем домам организации; управляет сотрудниками, домами и чатами."],
+] as const;
+const ACCESS_CHOICES = [["none", "Нет доступа"], ["operator", "Оператор"], ["responsible", "Ответственный"]] as const;
+
 export function Staff({ base }: { base: string }) {
   const people = useRead<Schema["MembershipView"][]>(`${base}/staff`);
   const invitations = useRead<Schema["InvitationView"][]>(`${base}/employee-invitations`);
@@ -25,18 +31,25 @@ export function Staff({ base }: { base: string }) {
   const action = useAction(() => { people.refresh(); invitations.refresh(); });
   return <><Title description="Приглашения и доступ к домам вашей УК">Сотрудники</Title>
     <Feedback loading={people.loading} error={people.error ?? action.error} />
-    {!people.error && <><form className="inline-form" onSubmit={async e => {
+    {!people.error && <><form className="ticket-form invite-form" onSubmit={async e => {
       const data = submitted(e);
       const result = await action.run<Schema["InvitationView"]>(`${base}/employee-invitations`,
         { organization_role: formValue(data, "role") }, inviteKey);
       if (result) { setLink(result.invitation_url ?? ""); setInviteKey(crypto.randomUUID()); }
-    }}><label>Роль сотрудника<select name="role"><option value="operator">Оператор</option><option value="company_admin">Администратор УК</option></select></label>
-      <button className="ticket-button" disabled={action.busy}>Пригласить сотрудника</button></form>
+    }}><fieldset><legend>Роль нового сотрудника</legend>
+        <div className="ds-radio-cards">{ROLE_CHOICES.map(([value, label, hint], i) => <label className="ds-radio-card" key={value}>
+          <input type="radio" name="role" value={value} defaultChecked={i === 0} /><strong>{label}</strong><span className="ds-hint">{hint}</span>
+        </label>)}</div></fieldset>
+      <div><button className="ticket-button" disabled={action.busy}>Пригласить сотрудника</button></div></form>
       {link && <OneTimeLink url={link} />}
-      <ul className="admin-records">{people.data?.map(p => <li key={p.user_id}>
-        <button className="record-link" onClick={() => setSelected(p.user_id)}>{p.display_name}</button>
-        <span>{p.role === "company_admin" ? "Администратор УК" : "Оператор"}</span><Status value={p.status} />
-        {p.open_registration && <span className="admin-status">По открытой ссылке</span>}
+      <ul className="admin-records staff-list" aria-label="Сотрудники">{people.data?.map(p => <li key={p.user_id}>
+        <button type="button" className={`staff-row${selected === p.user_id ? " is-selected" : ""}`} aria-expanded={selected === p.user_id}
+          aria-controls={selected === p.user_id ? "staff-detail" : undefined} onClick={() => setSelected(selected === p.user_id ? null : p.user_id)}>
+          <span className="staff-name">{p.display_name}</span>
+          <span className="staff-meta">{p.role === "company_admin" ? "Администратор УК" : "Оператор"}</span>
+          <Status value={p.status} />
+          {p.open_registration && <span className="admin-status">По открытой ссылке</span>}
+        </button>
       </li>)}</ul>
       {selected && <StaffAssignments key={selected} user={selected} base={base} houses={houses.data ?? []} refresh={people.refresh} />}
       <h2>Приглашения</h2><Feedback error={invitations.error} />
@@ -51,23 +64,43 @@ export function Staff({ base }: { base: string }) {
 function StaffAssignments({ base, user, houses, refresh }: { base: string; user: string; houses: House[]; refresh: () => void }) {
   const r = useRead<Schema["StaffDetail"]>(`${base}/staff/${user}`);
   const [confirm, setConfirm] = useState(false);
+  const [saved, setSaved] = useState("");
   const action = useAction(() => { r.refresh(); refresh(); });
-  return <section className="admin-detail"><h2>{r.data?.display_name ?? "Сотрудник"}</h2><Feedback loading={r.loading} error={r.error ?? action.error} />
+  const name = r.data?.display_name ?? "Сотрудник";
+  return <section className="admin-detail staff-detail" id="staff-detail" aria-labelledby="staff-detail-title">
+    <h2 id="staff-detail-title">{name}</h2><Feedback loading={r.loading} error={r.error ?? action.error} />
     {r.data && !r.error && <><p><Status value={r.data.status} /></p>
-      {r.data.status === "active" && <><h3>Доступ к домам</h3>
+      {r.data.status === "active" && <><section className="staff-block" aria-labelledby="staff-access-title">
+        <h3 id="staff-access-title">Доступ к домам</h3>
         {houses.length === 0 && <p>Сначала запросите управление домом в разделе «Дома».</p>}
-        {houses.map(h => <label className="assignment-row" key={h.management_id}>{h.address}
-          <select aria-label={`Доступ: ${h.address}`} disabled={action.busy}
-            value={r.data?.assignments.find(a => a.management_id === h.management_id)?.role ?? "none"}
-            onChange={e => void action.run(`${base}/staff/${user}/assignments`, { management_id: h.management_id, role: e.target.value === "none" ? null : e.target.value })}>
-            <option value="none">Нет доступа</option><option value="operator">Оператор</option><option value="responsible">Ответственный</option>
-          </select></label>)}
+        {houses.map(h => {
+          const current = r.data?.assignments.find(a => a.management_id === h.management_id)?.role ?? "none";
+          return <div className="assignment-row" key={h.management_id}>
+            <span id={`access-${h.management_id}`}>{h.address}</span>
+            <div className="ds-segmented" role="group" aria-label={`Доступ: ${h.address}`}>
+              {ACCESS_CHOICES.map(([value, label]) => <button key={value} type="button" aria-pressed={current === value}
+                disabled={action.busy} onClick={async () => {
+                  if (current === value) return;
+                  setSaved("");
+                  const result = await action.run(`${base}/staff/${user}/assignments`, { management_id: h.management_id, role: value === "none" ? null : value });
+                  if (result !== undefined) setSaved(`Сохранено: ${h.address} — ${label.toLowerCase()}.`);
+                }}>{label}</button>)}
+            </div>
+          </div>;
+        })}
+        {saved && <p role="status" className="ds-notice ds-tone-success">{saved}</p>}
         <p className="muted">Администратор УК имеет доступ ко всем текущим домам своей организации. Назначение ответственного определяет работу с заявками дома.</p>
+      </section>
         <CredentialReset base={base} user={user} />
-        {!confirm ? <button className="ticket-button secondary" onClick={() => setConfirm(true)}>Отозвать доступ сотрудника</button> :
-          <div className="admin-feedback"><p>Сотрудник потеряет доступ к этой УК. Его незакрытые заявки вернутся в очередь без исполнителя.</p>
-            <button className="ticket-button" disabled={action.busy} onClick={() => void action.run(`${base}/staff/${user}/revoke`)}>Подтвердить отзыв</button>
-            <button className="ticket-button secondary" onClick={() => setConfirm(false)}>Отмена</button></div>}
+        <section className="staff-block staff-danger" aria-labelledby="staff-revoke-title">
+          <h3 id="staff-revoke-title">Отзыв доступа</h3>
+          <p>{name} потеряет доступ к кабинету этой УК со следующего действия. Незакрытые заявки сотрудника вернутся в очередь без исполнителя; история работы сохранится.</p>
+          {!confirm ? <div><button className="ds-btn ds-btn-danger" onClick={() => setConfirm(true)}>Отозвать доступ сотрудника</button></div> :
+            <div className="ds-notice ds-tone-danger" role="group" aria-label="Подтверждение отзыва доступа">
+              <p><strong>Отозвать доступ: {name}?</strong> Вход в ДомСигнал и доступ к другим организациям у сотрудника останутся.</p>
+              <div className="button-row"><button className="ds-btn ds-btn-destructive" disabled={action.busy} onClick={() => void action.run(`${base}/staff/${user}/revoke`)}>Подтвердить отзыв</button>
+                <button className="ds-btn ds-btn-secondary" onClick={() => setConfirm(false)}>Отмена</button></div></div>}
+        </section>
       </>}
     </>}
   </section>;
@@ -78,24 +111,26 @@ function CredentialReset({ base, user }: { base: string; user: string }) {
   const [confirming, setConfirming] = useState(false);
   const [link, setLink] = useState("");
   const action = useAction();
-  return <div className="passive-switch">
-    <h3>Пароль и аутентификатор</h3>
+  return <section className="staff-block passive-switch" aria-labelledby="staff-reset-title">
+    <h3 id="staff-reset-title">Пароль и аутентификатор</h3>
     {link ? <OneTimeLink url={link} title="Передайте ссылку сброса сотруднику" label="Ссылка сброса" /> : <>
       <p className="muted">Сотрудник получит одноразовую ссылку и задаст новый пароль. Все его сессии закроются сразу, прежний пароль перестанет действовать.</p>
-      <label>Что сбросить<select value={kind} onChange={e => setKind(e.target.value as typeof kind)}>
-        <option value="password_mfa">Пароль и аутентификатор</option><option value="password">Только пароль</option></select></label>
+      <fieldset><legend>Что сбросить</legend><div className="ds-segmented">
+        <label><input type="radio" name={`reset-${user}`} value="password_mfa" checked={kind === "password_mfa"} onChange={() => setKind("password_mfa")} />Пароль и аутентификатор</label>
+        <label><input type="radio" name={`reset-${user}`} value="password" checked={kind === "password"} onChange={() => setKind("password")} />Только пароль</label>
+      </div></fieldset>
       <Feedback error={action.error || undefined} />
-      {!confirming ? <button className="ticket-button secondary" onClick={() => setConfirming(true)}>Сбросить пароль/MFA</button> :
+      {!confirming ? <div><button className="ticket-button secondary" onClick={() => setConfirming(true)}>Сбросить пароль/MFA</button></div> :
         <div className="admin-feedback" role="group" aria-label="Подтверждение сброса">
           <p>Сотрудник сразу выйдет из кабинета на всех устройствах. Войти он сможет только по новой ссылке.</p>
-          <button className="ticket-button" disabled={action.busy} onClick={async () => {
+          <div className="button-row"><button className="ticket-button" disabled={action.busy} onClick={async () => {
             const result = await action.run<Schema["CredentialResetIssued"]>(`${base}/staff/${user}/credential-reset`, { kind });
             if (result) { setLink(result.reset_url); setConfirming(false); }
           }}>Подтвердить сброс</button>
-          <button className="ticket-button secondary" disabled={action.busy} onClick={() => setConfirming(false)}>Отмена</button>
+          <button className="ticket-button secondary" disabled={action.busy} onClick={() => setConfirming(false)}>Отмена</button></div>
         </div>}
     </>}
-  </div>;
+  </section>;
 }
 export function MyHouses({ base }: { base: string }) {
   const r = useRead<House[]>(`${base}/houses`);

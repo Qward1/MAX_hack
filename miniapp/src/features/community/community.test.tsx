@@ -102,7 +102,7 @@ describe("«Мой дом»", () => {
     expect(screen.getByText(/По данным управляющей компании, обновлено/)).toBeTruthy();
     expect(screen.getByText(/ДомСигнал эти сведения не проверяет/)).toBeTruthy();
     expect(screen.getAllByRole("link", { name: "112" })[0].getAttribute("href")).toBe("tel:112");
-    expect(screen.getAllByText(/проверено/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/проверено/i).length).toBeGreaterThan(0);
     expect(screen.getByText("Подключён. Бот отвечает на команду /report")).toBeTruthy();
     // «Если авария» — первым блоком раздела.
     expect(document.querySelector("section")?.id).toBe("emergency");
@@ -127,7 +127,7 @@ describe("«Мой дом»", () => {
     expect(await screen.findByRole("heading", { name: "Где посмотреть тарифы и капремонт" })).toBeTruthy();
     const link = screen.getByRole("link", { name: /Государственный комитет Республики Татарстан по тарифам/ });
     expect(link.getAttribute("href")).toBe("https://kt.tatarstan.ru/ntarif.htm");
-    expect(screen.getAllByText(/проверено/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/проверено/i).length).toBeGreaterThan(0);
   });
 
   it("403 объясняет, как стать жителем, без тупика", async () => {

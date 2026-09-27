@@ -60,13 +60,13 @@ describe("report flow", () => {
   it("shows only the fields the backend actually returned", async () => {
     show(withPreview({ entrance: "2", floor: null, since: null }));
     await describeProblem();
-    expect(screen.getByText("Подъезд").nextElementSibling?.textContent).toBe("2");
-    expect(screen.queryByText("Этаж")).toBeNull();
+    // Место, подъезд и этаж — одной строкой «Где», только из того, что вернул сервер.
+    expect(screen.getByText("Где").nextElementSibling?.textContent).toBe(
+      "Муниципальная территория, подъезд 2",
+    );
+    expect(screen.queryByText(/этаж/i)).toBeNull();
     expect(screen.queryByText("Наблюдается с")).toBeNull();
     expect(screen.queryByText("Признаки опасности")).toBeNull();
-    expect(screen.getByText("Место").nextElementSibling?.textContent).toBe(
-      "Муниципальная территория",
-    );
   });
 
   it("says out loud when the rules are not sure", async () => {
@@ -111,13 +111,18 @@ describe("report flow", () => {
     const { client } = show();
     await describeProblem();
     fireEvent.click(screen.getByRole("button", { name: /Изменить категорию/ }));
-    const select = await screen.findByRole("combobox", { name: /Категория/ });
-    expect((select.closest("details") as HTMLDetailsElement).open).toBe(true);
+    // Возврат — сразу к выбору категории: фокус на нём, текущее значение видно.
+    const picker = await screen.findByRole("button", { name: /Категория/ });
+    await waitFor(() => expect(document.activeElement).toBe(picker));
+    expect(picker.textContent).toContain("Определить по описанию");
     // Текст не пропал: повторно вводить не нужно.
     expect((screen.getByRole("textbox", { name: "Опишите проблему" }) as HTMLTextAreaElement).value).toBe(
       "у остановки не горят фонари",
     );
-    fireEvent.change(select, { target: { value: "waste" } });
+    fireEvent.click(picker);
+    fireEvent.click(await screen.findByRole("radio", { name: "Отходы" }));
+    fireEvent.click(screen.getByRole("button", { name: "Готово" }));
+    expect(screen.getByRole("button", { name: /Категория/ }).textContent).toContain("Отходы");
     fireEvent.click(screen.getByRole("button", { name: "Проверить описание" }));
     fireEvent.click(await screen.findByRole("button", { name: "Всё верно, отправить" }));
     await waitFor(() => expect(client.submitReport).toHaveBeenCalled());

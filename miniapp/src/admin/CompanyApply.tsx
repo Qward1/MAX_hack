@@ -1,6 +1,6 @@
 import { formatStaffTime, formatDay } from "../shared/ui/format";
-import { useCallback, useState } from "react";
-import { ApiClient } from "../shared/api/client";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { ApiClient, ApiProblem } from "../shared/api/client";
 import { useResource } from "../shared/api/useResource";
 import { Feedback, formValue, problemText, submitted, type Schema } from "./administration";
 
@@ -33,18 +33,68 @@ function PublicHeader() {
   </header>;
 }
 
+/** Поле формы → поле API (для ошибок 422 от сервера). */
+const API_FIELDS: Record<string, string> = {
+  legal_name: "legal_name", short_name: "short_name", inn: "inn", requested_chat_count: "chats",
+  house_addresses: "addresses", contact_name: "contact_name", contact_position: "contact_position",
+  contact_email: "email", contact_phone: "phone", body: "email", comment: "comment",
+};
+type Errors = Record<string, string>;
+
+/** Проверка до отправки: у каждого поля — своя понятная ошибка рядом с ним. */
+export function applicationErrors(data: FormData): Errors {
+  const errors: Errors = {};
+  const value = (key: string) => formValue(data, key);
+  if (value("legal_name").length < 2) errors.legal_name = "Укажите полное наименование — от 2 символов.";
+  if (value("short_name").length < 2) errors.short_name = "Укажите краткое наименование — от 2 символов.";
+  if (!/^(?:\d{10}|\d{12})$/.test(value("inn"))) errors.inn = "Укажите ИНН — 10 или 12 цифр.";
+  const chats = Number(value("chats"));
+  if (!Number.isInteger(chats) || chats < 1 || chats > 1000) errors.chats = "Укажите число чатов от 1 до 1000.";
+  if (value("contact_name").length < 2) errors.contact_name = "Укажите контактное лицо — от 2 символов.";
+  if (value("email") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value("email")))
+    errors.email = "Укажите почту в виде name@example.ru.";
+  if (!value("email") && !value("phone")) errors.email = "Укажите телефон или электронную почту — хотя бы одно.";
+  const addresses = value("addresses").split("\n").map(line => line.trim()).filter(Boolean);
+  const address = addressProblem(addresses);
+  if (address) errors.addresses = address;
+  return errors;
+}
+
+const FIELD_ORDER = ["legal_name", "short_name", "inn", "chats", "contact_name", "contact_position", "email", "phone", "addresses", "comment"];
+
+function Field({ name, label, optional, hint, error, children }: {
+  name: string; label: string; optional?: boolean; hint?: string; error?: string;
+  children: (props: { id: string; name: string; "aria-invalid"?: boolean; "aria-describedby"?: string }) => ReactNode;
+}) {
+  const id = `apply-${name}`;
+  const described = [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(" ") || undefined;
+  return <div className={`ds-field${error ? " has-error" : ""}`}>
+    <label htmlFor={id}>{label}{optional && <span className="ds-optional"> (необязательно)</span>}</label>
+    {hint && <p className="ds-hint" id={`${id}-hint`}>{hint}</p>}
+    {error && <p className="ds-error" id={`${id}-error`}>{error}</p>}
+    {children({ id, name, "aria-invalid": error ? true : undefined, "aria-describedby": described })}
+  </div>;
+}
+
 export function CompanyApply() {
   const [received, setReceived] = useState<Schema["ApplicationReceived"] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [errors, setErrors] = useState<Errors>({});
   const [copied, setCopied] = useState(false);
+  const summary = useRef<HTMLDivElement>(null);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => { if (attempt) summary.current?.focus(); }, [attempt]);
+  const listed = FIELD_ORDER.filter(key => errors[key]);
   return <><PublicHeader /><main className="company-apply"><aside>
     <p className="eyebrow">Для управляющих компаний</p><h1>Подключите домовые чаты к ДомСигналу</h1>
     <p>Бот замечает проблемы дома в переписке жителей, а ваша команда получает их очередью заявок с понятным следующим шагом.</p>
-    <ol><li>Вы подаёте заявку и получаете ссылку на страницу статуса.</li>
-      <li>Платформа проверяет организацию и выдаёт квоту — сколько чатов можно подключить.</li>
-      <li>На странице статуса вы создаёте аккаунт администратора: пароль и приложение-аутентификатор.</li>
-      <li>В кабинете добавляете дома, приглашаете сотрудников и подключаете чаты.</li></ol>
+    <p className="apply-effort">Заявка займёт несколько минут. Понадобятся наименование и ИНН организации и контакт для связи.</p>
+    <details className="ds-disclosure apply-steps"><summary>Как проходит подключение</summary>
+      <ol className="ds-disclosure-body"><li>Вы подаёте заявку и получаете ссылку на страницу статуса.</li>
+        <li>Платформа проверяет организацию и выдаёт квоту — сколько чатов можно подключить.</li>
+        <li>На странице статуса вы создаёте аккаунт администратора: пароль и приложение-аутентификатор.</li>
+        <li>В кабинете добавляете дома, приглашаете сотрудников и подключаете чаты.</li></ol></details>
     <p><a href="/privacy">Политика данных</a> — что бот читает в чатах, что хранит и как отключить чтение.</p>
   </aside><section className="admin-detail">{received ? <>
     <h2>Заявка принята</h2>
@@ -59,13 +109,13 @@ export function CompanyApply() {
       <p className="muted">Ссылка показывается один раз и заменяет пароль к заявке. Не пересылайте её посторонним.</p>
     </div>}
     <p className="muted">Заявка сама по себе не создаёт аккаунт и не открывает доступ к домам.</p></> :
-    <form className="ticket-form" onSubmit={async e => {
+    <form className="ticket-form apply-form" noValidate onSubmit={async e => {
       const data = submitted(e);
+      const found = applicationErrors(data);
+      setErrors(found); setError("");
+      if (Object.keys(found).length) { setAttempt(n => n + 1); return; }
       const addresses = formValue(data, "addresses").split("\n").map(line => line.trim()).filter(Boolean);
-      const invalid = addressProblem(addresses)
-        || (formValue(data, "email") || formValue(data, "phone") ? "" : "Укажите телефон или электронную почту.");
-      if (invalid) { setError(invalid); return; }
-      setBusy(true); setError("");
+      setBusy(true);
       try {
         setReceived(await client.request<Schema["ApplicationReceived"]>("/api/v1/onboarding/company-applications", { method: "POST", body: JSON.stringify({
           legal_name: formValue(data, "legal_name"), short_name: formValue(data, "short_name"), inn: formValue(data, "inn"),
@@ -74,23 +124,55 @@ export function CompanyApply() {
           comment: formValue(data, "comment") || null, requested_chat_count: Number(formValue(data, "chats")),
           house_addresses: addresses,
         }) }));
-      } catch (e) { setError(problemText(e, APPLY_FIELDS, "Не удалось отправить заявку")); }
+      } catch (e) {
+        // Ошибка сервера по полю — рядом с полем и в общем списке; иначе — общим сообщением.
+        const fields: Errors = {};
+        if (e instanceof ApiProblem) for (const item of e.problem.field_errors ?? []) {
+          const key = API_FIELDS[item.field.split(".").at(-1) ?? ""];
+          const hint = APPLY_FIELDS[item.field.split(".").at(-1) ?? ""];
+          if (key && hint && !fields[key]) fields[key] = `Проверьте ${hint}.`;
+        }
+        if (Object.keys(fields).length) { setErrors(fields); setAttempt(n => n + 1); }
+        else setError(problemText(e, APPLY_FIELDS, "Не удалось отправить заявку"));
+      }
       finally { setBusy(false); }
     }}><h2>Заявка управляющей компании</h2>
-      <label>Полное наименование<input name="legal_name" required minLength={2} maxLength={300} autoComplete="organization" /></label>
-      <label>Краткое наименование<input name="short_name" required minLength={2} maxLength={200} /></label>
-      <label>ИНН<input name="inn" required inputMode="numeric" pattern="(?:[0-9]{10}|[0-9]{12})" maxLength={12} /></label>
-      <p className="muted">Проверяется формат ИНН. Проверка по данным ФНС не выполняется.</p>
-      <label>Сколько домовых чатов хотите подключить<input name="chats" type="number" required min={1} max={1000} defaultValue={1} inputMode="numeric" /></label>
-      <p className="muted">Каждый чат — один слот, включая чаты отдельных подъездов. Итоговую квоту назначит платформа.</p>
-      <label>Адреса домов<textarea name="addresses" maxLength={25000} placeholder={"Необязательно. Один адрес в строке, например:\nКазань, ул. Баумана, 1"} /></label>
-      <label>Контактное лицо<input name="contact_name" required minLength={2} maxLength={200} autoComplete="name" /></label>
-      <label>Должность<input name="contact_position" maxLength={200} autoComplete="organization-title" /></label>
-      <label>Электронная почта<input type="email" name="email" maxLength={254} autoComplete="email" pattern="[^\s@]+@[^\s@]+\.[^\s@]+" title="Адрес вида name@example.ru" /></label>
-      <label>Телефон<input type="tel" name="phone" maxLength={40} autoComplete="tel" placeholder="+7 900 000-00-00" /></label>
-      <p className="muted">Укажите хотя бы один способ связи: телефон или почту.</p>
-      <label>Комментарий<textarea name="comment" maxLength={2000} /></label>
-      <Feedback error={error} /><button className="ticket-button" disabled={busy}>{busy ? "Отправляем…" : "Подать заявку"}</button>
+      <p className="ds-hint">Все поля обязательны, кроме отмеченных «необязательно».</p>
+      {listed.length > 0 && <div className="error-summary" role="alert" tabIndex={-1} ref={summary} aria-labelledby="apply-errors-title">
+        <h3 id="apply-errors-title">Проверьте {listed.length === 1 ? "одно поле" : `поля: ${listed.length}`}</h3>
+        <ul>{listed.map(key => <li key={key}><a href={`#apply-${key}`} onClick={ev => {
+          ev.preventDefault(); document.getElementById(`apply-${key}`)?.focus();
+        }}>{errors[key]}</a></li>)}</ul>
+      </div>}
+      <fieldset className="apply-group"><legend>Организация</legend>
+        <Field name="legal_name" label="Полное наименование" error={errors.legal_name}>{props =>
+          <input {...props} required minLength={2} maxLength={300} autoComplete="organization" />}</Field>
+        <Field name="short_name" label="Краткое наименование" error={errors.short_name}>{props =>
+          <input {...props} required minLength={2} maxLength={200} />}</Field>
+        <Field name="inn" label="ИНН" hint="10 или 12 цифр. Проверяется формат, проверка по данным ФНС не выполняется." error={errors.inn}>{props =>
+          <input {...props} required inputMode="numeric" maxLength={12} />}</Field>
+        <Field name="chats" label="Сколько домовых чатов хотите подключить" error={errors.chats}
+          hint="Каждый чат — один слот, включая чаты отдельных подъездов. Итоговую квоту назначит платформа.">{props =>
+          <input {...props} type="number" required min={1} max={1000} defaultValue={1} inputMode="numeric" />}</Field>
+      </fieldset>
+      <fieldset className="apply-group"><legend>Контакт для связи</legend>
+        <Field name="contact_name" label="Контактное лицо" error={errors.contact_name}>{props =>
+          <input {...props} required minLength={2} maxLength={200} autoComplete="name" />}</Field>
+        <Field name="contact_position" label="Должность" optional>{props =>
+          <input {...props} maxLength={200} autoComplete="organization-title" />}</Field>
+        <p className="ds-hint">Почта или телефон — нужно хотя бы одно.</p>
+        <Field name="email" label="Электронная почта" error={errors.email}>{props =>
+          <input {...props} type="email" maxLength={254} autoComplete="email" />}</Field>
+        <Field name="phone" label="Телефон" error={errors.phone}>{props =>
+          <input {...props} type="tel" maxLength={40} autoComplete="tel" placeholder="+7 900 000-00-00" />}</Field>
+      </fieldset>
+      <fieldset className="apply-group"><legend>Дополнительно</legend>
+        <Field name="addresses" label="Адреса домов" optional hint="Один адрес в строке, например: Казань, ул. Баумана, 1. Не больше 50." error={errors.addresses}>{props =>
+          <textarea {...props} maxLength={25000} />}</Field>
+        <Field name="comment" label="Комментарий" optional error={errors.comment}>{props =>
+          <textarea {...props} maxLength={2000} />}</Field>
+      </fieldset>
+      <Feedback error={error} /><div><button className="ticket-button" disabled={busy}>{busy ? "Отправляем…" : "Подать заявку"}</button></div>
     </form>}</section></main></>;
 }
 

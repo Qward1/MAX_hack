@@ -145,7 +145,7 @@ describe('no house yet (D1)', () => {
     expect(
       screen.getByText(/Откройте ДомСигнал кнопкой из вашего домового чата или выберите другой дом/),
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'К выбору дома' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Выбрать дом' }));
     expect(await screen.findByText('Откройте ДомСигнал кнопкой из вашего домового чата.')).toBeTruthy();
     window.history.replaceState(null, '', '/');
   });

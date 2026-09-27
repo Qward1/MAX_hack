@@ -42,6 +42,8 @@ type FormAction =
   | "wait-external"
   | "resume"
   | "cancel";
+/** Порядок выбора основного действия: работа вперёд, затем назначение. */
+const PRIMARY_ORDER = ["accept", "start", "work-attempts", "resume", "assign"];
 const implemented = [
   "assign",
   "accept",
@@ -154,6 +156,44 @@ export function TicketDetail({
   const house = me.houses.find((h) => h.id === ticket.house_id);
   const entry = statusOf(staffTicketStatus, ticket.status);
   const place = placeText(incident.location);
+  // Одно основное действие для текущего этапа: движение работы вперёд,
+  // а если его нет — назначение исполнителя. Отмена — отдельно, как опасная.
+  const cancel = actions.find((a) => a.code === "cancel");
+  const primary =
+    PRIMARY_ORDER.map((code) => actions.find((a) => a.code === code && a.enabled)).find(Boolean) ??
+    PRIMARY_ORDER.map((code) => actions.find((a) => a.code === code)).find(Boolean);
+  const secondary = actions.filter((a) => a !== primary && a !== cancel);
+  // Функция разметки, а не компонент: кнопки не пересоздаются при обновлении данных и не теряют фокус.
+  const actionButton = (
+    a: (typeof actions)[number],
+    variant: "primary" | "secondary" | "danger",
+  ) => (
+    <div className="ds-action" key={a.code}>
+      <button
+        className={`ds-btn ds-btn-${variant}`}
+        disabled={blocked || !a.enabled}
+        aria-describedby={a.reason ? `reason-${a.code}` : undefined}
+        onClick={() => {
+          if (!a.enabled || blocked) return;
+          if (a.code === "accept" || a.code === "start")
+            submit(a.code, { expected_version: ticket.version });
+          else {
+            mutation.clearFeedback();
+            setForm(a.code as FormAction);
+          }
+        }}
+      >
+        {a.code === "accept" && !ticket.assignee_id
+          ? "Взять в работу"
+          : actionLabels[a.code]}
+      </button>
+      {a.reason && (
+        <p id={`reason-${a.code}`} className="ds-reason">
+          {a.reason}
+        </p>
+      )}
+    </div>
+  );
   return (
     <>
       <div className="detail-back">{back}</div>
@@ -168,6 +208,14 @@ export function TicketDetail({
           <TicketStatusBadge status={ticket.status} />
           {entry.next && <span className="ds-subtle">{entry.next}</span>}
         </div>
+        <p className="ticket-assignee">
+          <span className="ds-subtle">Исполнитель: </span>
+          {ticket.assignee_name ??
+            (ticket.assignee_id ? "назначен" : "не назначен")}
+          {ticket.requires_reassignment && (
+            <span className="ds-subtle"> · нужно назначить доступного</span>
+          )}
+        </p>
       </header>
       {resource.loading && <p role="status">Обновляем заявку…</p>}
       {Boolean(resource.error) && (
@@ -191,35 +239,29 @@ export function TicketDetail({
         aria-busy={mutation.saving}
       >
         <h2 id="ticket-actions-title">Действия по заявке</h2>
-        <div className="ticket-buttons">
-          {actions.map((a) => (
-            <div key={a.code}>
-              <button
-                className={`ds-btn ${a.code === "cancel" ? "ds-btn-danger" : ["assign", "clarify", "wait-external"].includes(a.code) ? "ds-btn-secondary" : "ds-btn-primary"}`}
-                disabled={blocked || !a.enabled}
-                aria-describedby={a.reason ? `reason-${a.code}` : undefined}
-                onClick={() => {
-                  if (!a.enabled || blocked) return;
-                  if (a.code === "accept" || a.code === "start")
-                    submit(a.code, { expected_version: ticket.version });
-                  else {
-                    mutation.clearFeedback();
-                    setForm(a.code as FormAction);
-                  }
-                }}
-              >
-                {a.code === "accept" && !ticket.assignee_id
-                  ? "Взять в работу"
-                  : actionLabels[a.code]}
-              </button>
-              {a.reason && (
-                <p id={`reason-${a.code}`} className="ds-reason">
-                  {a.reason}
-                </p>
-              )}
+        {primary && (
+          <div className="ticket-primary">
+            {actionButton(primary, "primary")}
+          </div>
+        )}
+        {secondary.length > 0 && (
+          <div className="ticket-more" role="group" aria-labelledby="ticket-more-title">
+            <p className="ds-meta" id="ticket-more-title">
+              {primary ? "Другие действия" : "Доступные действия"}
+            </p>
+            <div className="ticket-buttons">
+              {secondary.map((a) => actionButton(a, "secondary"))}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
+        {cancel && (
+          <div className="ticket-danger-zone">
+            {actionButton(cancel, "danger")}
+            <p className="ds-reason">
+              Заявка получит статус «Отменена» — его увидят жители. Перед отменой нужна причина.
+            </p>
+          </div>
+        )}
         {!actions.length && (
           <p>Сейчас нет доступных действий. Доступна история заявки.</p>
         )}
@@ -520,6 +562,11 @@ function ActionDialog({
         }}
       >
         <h2 id="dialog-title">{actionLabels[action]}</h2>
+        {action === "cancel" && (
+          <p className="ds-notice ds-tone-danger">
+            Заявка получит статус «Отменена» — его увидят жители.
+          </p>
+        )}
         {action === "assign" &&
           (!candidates.data ? (
             <TicketState
@@ -528,41 +575,25 @@ function ActionDialog({
               retry={candidates.refresh}
             />
           ) : (
-            <label>
-              Исполнитель
-              <select
-                required
-                value={assignee}
-                disabled={busy}
-                aria-invalid={Boolean(assigneeError)}
-                aria-describedby={
-                  assigneeError ? "assignee-field-error" : undefined
-                }
-                onChange={(e) => setAssignee(e.target.value)}
-              >
-                <option value="" disabled>
-                  Выберите сотрудника
-                </option>
-                <option value="unassigned">
-                  Вернуть в очередь без исполнителя
-                </option>
-                {candidates.data.map((c) => (
-                  <option key={c.user_id} value={c.user_id}>
-                    {c.display_name}
-                  </option>
-                ))}
-              </select>
-              {assigneeError && (
-                <span id="assignee-field-error" role="alert">
-                  Выберите сотрудника из доступного списка.
-                </span>
-              )}
-            </label>
+            <AssigneePicker
+              candidates={candidates.data}
+              current={ticket.assignee_id}
+              currentName={ticket.assignee_name}
+              value={assignee}
+              disabled={busy}
+              error={Boolean(assigneeError)}
+              onChange={setAssignee}
+            />
           ))}
         <label>
           {work ? "Что было сделано?" : "Причина"}
+          <span className="ds-hint">
+            {work
+              ? "Обязательно, от 5 символов. Это описание увидят жители."
+              : "Обязательно, от 3 символов. Попадёт в историю заявки."}
+          </span>
           <textarea
-            autoFocus
+            autoFocus={action !== "assign"}
             required
             minLength={work ? 5 : 3}
             maxLength={2000}
@@ -591,7 +622,7 @@ function ActionDialog({
         {busy && <p role="status">Сохраняем и обновляем данные…</p>}
         <div className="ticket-buttons">
           <button
-            className="ds-btn ds-btn-primary"
+            className={`ds-btn ${action === "cancel" ? "ds-btn-destructive" : "ds-btn-primary"}`}
             type="submit"
             disabled={
               blocked ||
@@ -622,5 +653,102 @@ function ActionDialog({
         </div>
       </form>
     </dialog>
+  );
+}
+
+/**
+ * Выбор исполнителя: список переключателей, а не скрытый select. Текущее
+ * назначение видно сразу; при длинном списке появляется поиск по имени.
+ * «Без исполнителя» — явный вариант возврата в общую очередь.
+ */
+function AssigneePicker({
+  candidates,
+  current,
+  currentName,
+  value,
+  disabled,
+  error,
+  onChange,
+}: {
+  candidates: components["schemas"]["AssigneeView"][];
+  current: string | null;
+  currentName?: string | null;
+  value: string;
+  disabled: boolean;
+  error: boolean;
+  onChange: (value: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const search = candidates.length > 6;
+  const needle = query.trim().toLowerCase();
+  const shown = candidates.filter(
+    (c) => !needle || c.display_name.toLowerCase().includes(needle),
+  );
+  return (
+    <fieldset
+      className="assignee-picker"
+      aria-invalid={error || undefined}
+      aria-describedby={error ? "assignee-field-error" : "assignee-current"}
+    >
+      <legend>Исполнитель</legend>
+      <p id="assignee-current" className="ds-hint">
+        Сейчас: {currentName ?? (current ? "исполнитель назначен" : "без исполнителя")}
+      </p>
+      {search && (
+        <label className="ds-field">
+          Найти сотрудника
+          <input
+            type="search"
+            value={query}
+            disabled={disabled}
+            data-sheet-focus
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+      )}
+      <div className="ds-choice-list assignee-options">
+        {shown.map((c) => (
+          <label key={c.user_id} className="ds-choice-row">
+            <input
+              type="radio"
+              name="assignee"
+              value={c.user_id}
+              checked={value === c.user_id}
+              disabled={disabled}
+              required
+              onChange={() => onChange(c.user_id)}
+            />
+            <span className="ds-choice-text">
+              <span>{c.display_name}</span>
+              {c.user_id === current && (
+                <span className="ds-hint">назначен сейчас</span>
+              )}
+            </span>
+          </label>
+        ))}
+        {!shown.length && (
+          <p className="ds-hint">Никого не нашли. Измените запрос.</p>
+        )}
+        <label className="ds-choice-row">
+          <input
+            type="radio"
+            name="assignee"
+            value="unassigned"
+            checked={value === "unassigned"}
+            disabled={disabled}
+            onChange={() => onChange("unassigned")}
+          />
+          <span className="ds-choice-text">
+            <span>Без исполнителя</span>
+            <span className="ds-hint">Вернуть заявку в общую очередь дома</span>
+          </span>
+        </label>
+      </div>
+      {error && (
+        <p id="assignee-field-error" role="alert" className="ds-error">
+          Выберите сотрудника из доступного списка.
+        </p>
+      )}
+    </fieldset>
   );
 }

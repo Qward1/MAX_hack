@@ -32,6 +32,9 @@
   /* Смысл */
   --ds-danger: #b3261e;
   --ds-danger-soft: #fdecea;
+  /* Кнопка необратимого действия в подтверждении: сплошной красный. */
+  --ds-danger-action: #b3261e;
+  --ds-on-danger: #ffffff;
   --ds-warning: #8a5300;
   --ds-warning-soft: #fff3d6;
   --ds-warning-line: #b7791f;
@@ -62,8 +65,9 @@
   --ds-space-5: 24px;
   --ds-space-6: 32px;
   --ds-space-7: 48px;
-  /* Три радиуса: поле и тег, кнопка и блок, диалог */
+  /* Радиусы: поле и тег, кнопка, блок, диалог и лист выбора */
   --ds-radius-s: 8px;
+  --ds-radius-control: 10px;
   --ds-radius-m: 12px;
   --ds-radius-l: 16px;
 
@@ -71,6 +75,10 @@
   --ds-gutter: 16px;
   --ds-measure: 68ch;
   --ds-column: 640px;
+  /* Компьютер: оболочка мини-приложения с меню слева и колонкой контекста. */
+  --ds-shell: 1200px;
+  --ds-rail: 220px;
+  --ds-aside: 340px;
   --ds-target: 44px;
   --ds-target-min: 24px;
 }
@@ -99,6 +107,8 @@
     --ds-focus: #8ab4ff;
     --ds-danger: #ffb4ab;
     --ds-danger-soft: #3a1d1d;
+    --ds-danger-action: #ffb4ab;
+    --ds-on-danger: #410e0b;
     --ds-warning: #f2c14e;
     --ds-warning-soft: #33290f;
     --ds-warning-line: #c79a2e;
@@ -133,6 +143,8 @@
   --ds-focus: #8ab4ff;
   --ds-danger: #ffb4ab;
   --ds-danger-soft: #3a1d1d;
+  --ds-danger-action: #ffb4ab;
+  --ds-on-danger: #410e0b;
   --ds-warning: #f2c14e;
   --ds-warning-soft: #33290f;
   --ds-warning-line: #c79a2e;

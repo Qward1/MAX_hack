@@ -4,6 +4,7 @@ import type {
   ActivityItem,
   AnnouncementItem,
   CommunityApi,
+  HouseOverview,
   PollView,
   ProposalView,
   VerifiedSource,
@@ -14,6 +15,7 @@ import { maxBridge, safeUrl } from "../../shared/max/bridge";
 import { Button } from "../../shared/ui/Button";
 import { countLabel, formatDay, formatWhen } from "../../shared/ui/format";
 import { ConfirmDialog, InfoRow, Notice, StatePanel, StatusTag } from "../../shared/ui/semantic";
+import { SourceDisclosure } from "../../shared/ui/SourceLink";
 
 export type CommunityView = "home" | "news" | "poll" | "works" | "mine" | "reception";
 
@@ -27,24 +29,6 @@ export type CommunityLinks = {
   report: (houseId: string) => string;
   navigate: (href: string) => void;
 };
-
-/** Ссылка во внешний сервис: только http(s), в MAX — через мост. */
-function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
-  const url = safeUrl(href);
-  if (!url) return <>{children}</>;
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(event) => {
-        if (maxBridge.openLink(url)) event.preventDefault();
-      }}
-    >
-      {children} ↗
-    </a>
-  );
-}
 
 /** Ссылка внутри приложения: без перезагрузки, с обычным открытием в новой вкладке. */
 function AppLink({ href, navigate, className, children }: { href: string; navigate: (href: string) => void; className?: string; children: ReactNode }) {
@@ -63,13 +47,29 @@ function AppLink({ href, navigate, className, children }: { href: string; naviga
   );
 }
 
+/** Источник сведения — одной строкой, полностью по раскрытию (дата проверки, ссылка). */
 function Source({ source }: { source: VerifiedSource }) {
-  const checked = formatDay(source.verified_at);
+  return <SourceDisclosure url={source.url} title={source.title} verified={formatDay(source.verified_at)} />;
+}
+
+/** Внешний сервис: короткое название ссылкой с внешней меткой. */
+function ServiceLink({ href, children }: { href: string; children: ReactNode }) {
+  const url = safeUrl(href);
+  if (!url) return <span className="ds-service-name">{children}</span>;
   return (
-    <p className="ds-meta">
-      Источник: {source.url ? <ExternalLink href={source.url}>{source.title}</ExternalLink> : source.title}
-      {checked && `, проверено ${checked}`}
-    </p>
+    <a
+      className="ds-service-name"
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(event) => {
+        if (maxBridge.openLink(url)) event.preventDefault();
+      }}
+    >
+      {children}
+      <span aria-hidden="true">&nbsp;↗</span>{" "}
+      <span className="ds-visually-hidden">(откроется отдельно)</span>
+    </a>
   );
 }
 
@@ -149,159 +149,212 @@ export function MyHouseScreen({ api, houseId, links }: { api: CommunityApi; hous
           ["Часы работы", company.office_hours],
           ["Часы приёма", company.reception_hours],
           ["Адрес офиса", company.office_address],
-          ["Сайт", company.website && <ExternalLink href={company.website}>{company.website}</ExternalLink>],
+          ["Сайт", company.website && <ServiceLink href={company.website}>{company.website}</ServiceLink>],
         ] as [string, ReactNode][]
       ).filter(([, value]) => Boolean(value))
     : [];
-  const steps = house.accident_steps ?? [];
-  const emergency = house.emergency ?? [];
   const companyUpdated = formatDay(company?.updated_at);
   const factsUpdated = formatDay(house.facts_updated_at);
+  const channels = house.channels ?? [];
+  const references = house.reference_links ?? [];
+  const privacy = `${window.location.origin}/privacy`;
   return (
     <>
-      {(steps.length > 0 || emergency.length > 0) && (
-        <section className="ds-safety" id="emergency" aria-labelledby="emergency-title">
-          <h2 id="emergency-title">Если авария</h2>
-          {steps.length > 0 && (
-            <ol className="ds-bullets">
-              {steps.map((step) => (
-                <li key={step.text}>
-                  <p>
-                    <WithPhone text={step.text} phone={step.phone} />
-                  </p>
-                  {step.source && <Source source={step.source} />}
-                </li>
-              ))}
-            </ol>
-          )}
-          {emergency.length > 0 && (
-            <ul className="ds-bullets">
-              {emergency.map((item) => (
-                <li key={`${item.title}-${item.phone}`}>
-                  <p>
-                    <strong>{item.title}</strong>
-                    {item.phone && !item.title.includes(item.phone) && (
-                      <>
-                        {" — "}
-                        <a href={`tel:${item.phone}`}>{item.phone}</a>
-                      </>
-                    )}
-                  </p>
-                  {(item.lines ?? []).map((line) => (
-                    <p key={line} className="ds-subtle">
-                      {line}
-                    </p>
-                  ))}
-                  <Source source={item.source} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
-      <section className="ds-section" aria-labelledby="company-title">
-        <h2 id="company-title">Управляющая компания</h2>
-        {company ? (
-          <>
-            <p className="ds-strong">{company.name}</p>
-            {contacts.length ? (
+      <div className="ds-columns">
+        <div>
+          <EmergencyCard
+            steps={house.accident_steps ?? []}
+            emergency={house.emergency ?? []}
+            dispatcher={company?.dispatcher_phone ?? null}
+          />
+          <section className="ds-house-group" aria-labelledby="company-title">
+            <h2 id="company-title">Контакты управляющей компании</h2>
+            {company ? (
               <>
-                <dl className="ds-kv">
-                  {contacts.map(([label, value]) => (
-                    <InfoRow key={label} label={label}>
-                      {value}
-                    </InfoRow>
-                  ))}
-                </dl>
-                <p className="ds-meta">
-                  По данным управляющей компании{companyUpdated && `, обновлено ${companyUpdated}`}. ДомСигнал эти
-                  сведения не проверяет.
-                </p>
+                <p className="ds-strong">{company.name}</p>
+                {contacts.length ? (
+                  <>
+                    <dl className="ds-kv">
+                      {contacts.map(([label, value]) => (
+                        <InfoRow key={label} label={label}>
+                          {value}
+                        </InfoRow>
+                      ))}
+                    </dl>
+                    <p className="ds-meta">
+                      По данным управляющей компании{companyUpdated && `, обновлено ${companyUpdated}`}. ДомСигнал эти
+                      сведения не проверяет.
+                    </p>
+                  </>
+                ) : (
+                  <p className="ds-subtle">Управляющая компания пока не заполнила контакты.</p>
+                )}
+                {house.reception_available && (
+                  <div>
+                    <Button onClick={() => links.navigate(links.view("reception", { house: houseId }))}>
+                      Записаться на приём
+                    </Button>
+                  </div>
+                )}
               </>
             ) : (
-              <p className="ds-subtle">Управляющая компания пока не заполнила контакты.</p>
+              <p className="ds-subtle">К дому не подключена управляющая компания.</p>
             )}
-            {house.reception_available && (
-              <div>
-                <Button onClick={() => links.navigate(links.view("reception", { house: houseId }))}>
-                  Записаться на приём
-                </Button>
-              </div>
+          </section>
+          <section className="ds-house-group" aria-labelledby="house-title">
+            <h2 id="house-title">Дом и домовой чат</h2>
+            <dl className="ds-kv">
+              <InfoRow label="Адрес">{house.address}</InfoRow>
+              {facts.length > 0 && (
+                <InfoRow label="Подъезды и этажи">
+                  {facts.join(", ")}
+                  <span className="ds-meta"> — по данным управляющей компании{factsUpdated && `, ${factsUpdated}`}</span>
+                </InfoRow>
+              )}
+              <InfoRow label="Домовой чат">
+                {house.chat.connected
+                  ? house.chat.reading_enabled
+                    ? "Подключён. Бот читает сообщения, чтобы замечать проблемы"
+                    : "Подключён. Бот отвечает на команду /report"
+                  : "Не подключён"}
+              </InfoRow>
+            </dl>
+            <AppLink className="ds-link-row" href={links.view("works", { house: houseId })} navigate={links.navigate}>
+              Что сделано в доме за последние месяцы
+            </AppLink>
+          </section>
+        </div>
+        <div>
+          <section className="ds-house-group" aria-labelledby="channels-title">
+            <h2 id="channels-title">Официальные сервисы региона</h2>
+            {channels.length ? (
+              <ul className="ds-service-list">
+                {channels.map((channel) => (
+                  <li key={channel.id}>
+                    {channel.url ? (
+                      <ServiceLink href={channel.url}>{channel.label}</ServiceLink>
+                    ) : (
+                      <span className="ds-service-name">{channel.label}</span>
+                    )}
+                    {channel.phone && (
+                      <a href={`tel:${channel.phone}`} className="ds-service-phone">
+                        {channel.phone}
+                      </a>
+                    )}
+                    <Source source={channel.source} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="ds-subtle">Проверенных сервисов для региона дома пока нет в справочнике.</p>
             )}
-          </>
-        ) : (
-          <p className="ds-subtle">К дому не подключена управляющая компания.</p>
-        )}
-      </section>
-      <section className="ds-section" aria-labelledby="house-title">
-        <h2 id="house-title">Дом</h2>
-        <dl className="ds-kv">
-          <InfoRow label="Адрес">{house.address}</InfoRow>
-          {facts.length > 0 && (
-            <InfoRow label="Подъезды и этажи">
-              {facts.join(", ")}
-              <span className="ds-meta"> — по данным управляющей компании{factsUpdated && `, ${factsUpdated}`}</span>
-            </InfoRow>
+          </section>
+          {references.length > 0 && (
+            <section className="ds-house-group" aria-labelledby="references-title">
+              <h2 id="references-title">Где посмотреть тарифы и капремонт</h2>
+              <p className="ds-subtle">Официальные страницы региона. Цифры и сроки смотрите на них — ДомСигнал их не пересказывает.</p>
+              <ul className="ds-service-list">
+                {references.map((link) => (
+                  <li key={link.url}>
+                    <ServiceLink href={link.url}>{link.label}</ServiceLink>
+                    <Source source={link.source} />
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
-          <InfoRow label="Домовой чат">
-            {house.chat.connected
-              ? house.chat.reading_enabled
-                ? "Подключён. Бот читает сообщения, чтобы замечать проблемы"
-                : "Подключён. Бот отвечает на команду /report"
-              : "Не подключён"}
-          </InfoRow>
-        </dl>
-        <AppLink className="ds-link-button" href={links.view("works", { house: houseId })} navigate={links.navigate}>
-          Что сделано в доме за последние месяцы
-        </AppLink>
-      </section>
-      <section className="ds-section" aria-labelledby="channels-title">
-        <h2 id="channels-title">Официальные сервисы региона</h2>
-        {(house.channels ?? []).length ? (
-          <ul className="ds-bullets">
-            {(house.channels ?? []).map((channel) => (
-              <li key={channel.id}>
-                <p>
-                  <strong>{channel.url ? <ExternalLink href={channel.url}>{channel.label}</ExternalLink> : channel.label}</strong>
-                  {channel.phone && (
-                    <>
-                      {" — "}
-                      <a href={`tel:${channel.phone}`}>{channel.phone}</a>
-                    </>
-                  )}
-                </p>
-                <Source source={channel.source} />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="ds-subtle">Проверенных сервисов для региона дома пока нет в справочнике.</p>
-        )}
-      </section>
-      {(house.reference_links ?? []).length > 0 && (
-        <section className="ds-section" aria-labelledby="references-title">
-          <h2 id="references-title">Где посмотреть тарифы и капремонт</h2>
-          <p className="ds-subtle">Официальные страницы региона. Цифры и сроки смотрите на них — ДомСигнал их не пересказывает.</p>
-          <ul className="ds-bullets">
-            {(house.reference_links ?? []).map((link) => (
-              <li key={link.url}>
-                <p>
-                  <strong>
-                    <ExternalLink href={link.url}>{link.label}</ExternalLink>
-                  </strong>
-                </p>
-                <Source source={link.source} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      <HouseCouncil api={api} houseId={houseId} links={links} />
+          <HouseCouncil api={api} houseId={houseId} links={links} />
+        </div>
+      </div>
       <p className="ds-subtle">
-        <ExternalLink href={`${window.location.origin}/privacy`}>Политика данных</ExternalLink> — что бот читает и
-        хранит, как отключить чтение чата.
+        <a
+          href={privacy}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(event) => {
+            if (maxBridge.openLink(privacy)) event.preventDefault();
+          }}
+        >
+          Политика данных
+        </a>{" "}
+        — что бот читает и хранит, как отключить чтение чата.
       </p>
     </>
+  );
+}
+
+type Step = NonNullable<HouseOverview["accident_steps"]>[number];
+type Emergency = NonNullable<HouseOverview["emergency"]>[number];
+
+/**
+ * «Если авария» — одна карточка: сначала звонок (каждый номер — одна кнопка,
+ * 112 не повторяется), затем пункты памятки, затем источники одной строкой.
+ * Пункт экстренной службы, который повторяет шаг памятки с тем же номером,
+ * не выводит заголовок второй раз — только свои пояснения.
+ */
+function EmergencyCard({ steps, emergency, dispatcher }: { steps: Step[]; emergency: Emergency[]; dispatcher: string | null }) {
+  if (!steps.length && !emergency.length) return null;
+  const calls: { phone: string; caption?: string }[] = [];
+  const addCall = (phone: string | null | undefined, caption?: string) => {
+    if (phone && !calls.some((call) => call.phone === phone)) calls.push({ phone, caption });
+  };
+  const stepPhones = new Set(steps.map((step) => step.phone).filter(Boolean));
+  for (const step of steps) addCall(step.phone);
+  for (const item of emergency) addCall(item.phone, stepPhones.has(item.phone ?? "") ? undefined : item.title);
+  if (calls.length) addCall(dispatcher, "Аварийно-диспетчерская служба УК");
+  const lines: ReactNode[] = [];
+  for (const step of steps)
+    lines.push(
+      <li key={`step-${step.text}`}>
+        <p>
+          <WithPhone text={step.text} phone={step.phone} />
+        </p>
+      </li>,
+    );
+  for (const item of emergency) {
+    const repeated = Boolean(item.phone && stepPhones.has(item.phone));
+    if (!repeated)
+      lines.push(
+        <li key={`title-${item.title}`}>
+          <p className="ds-strong">{item.title}</p>
+        </li>,
+      );
+    for (const line of item.lines ?? [])
+      lines.push(
+        <li key={`line-${item.title}-${line}`}>
+          <p>{line}</p>
+        </li>,
+      );
+  }
+  const sources: VerifiedSource[] = [];
+  for (const source of [...steps.map((step) => step.source), ...emergency.map((item) => item.source)])
+    if (source && !sources.some((known) => known.title === source.title && known.url === source.url)) sources.push(source);
+  const [first, ...other] = calls;
+  return (
+    <section className="ds-safety" id="emergency" aria-labelledby="emergency-title">
+      <h2 id="emergency-title">Если авария</h2>
+      {first && (
+        <div className="ds-calls">
+          <a className="ds-call" href={`tel:${first.phone}`}>
+            Позвонить {first.phone}
+          </a>
+          {other.map((call) => (
+            <a key={call.phone} className="ds-call-secondary" href={`tel:${call.phone}`}>
+              {call.phone}
+              {call.caption && <small>{call.caption}</small>}
+            </a>
+          ))}
+        </div>
+      )}
+      <ul className="ds-bullets ds-safety-lines">{lines}</ul>
+      {sources.length > 0 && (
+        <div>
+          {sources.map((source) => (
+            <Source key={`${source.title}-${source.url}`} source={source} />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -502,7 +555,12 @@ function ProposePanel({
             placeholder="Например: поставить велопарковку у второго подъезда"
           />
         </label>
-        <Button type="submit" variant="primary" disabled={busy || text.trim().length < 3}>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={busy || text.trim().length < 3}
+          reason={!busy && text.trim().length < 3 ? "Напишите тему — хотя бы 3 символа." : null}
+        >
           Предложить
         </Button>
         <FormNote note={note} />
@@ -1223,42 +1281,62 @@ export function MyActivityScreen({ api, houseId, links }: { api: CommunityApi; h
   );
 }
 
-/** Главный экран: три последних обращения жителя в этом доме и путь ко всем. */
-export function RecentActivity({ api, houseId, links }: { api: CommunityApi; houseId: string; links: CommunityLinks }) {
+/**
+ * Главный экран: обращения жителя в этом доме, которых нет в списке проблем
+ * выше (черновики, «куда обратиться»), и переход ко всем. Свои проблемы
+ * доски отмечены прямо в строках — второй раз их карточки не повторяются.
+ */
+export function RecentActivity({
+  houseId,
+  links,
+  items,
+  total,
+  error,
+  onRetry,
+}: {
+  houseId: string;
+  links: CommunityLinks;
+  items: ActivityItem[];
+  /** Сколько всего обращений жителя в этом доме, включая отмеченные в списке проблем. */
+  total: number;
+  error?: unknown;
+  onRetry: () => void;
+}) {
   const titleId = useId();
-  const load = useCallback((signal: AbortSignal) => api.myActivity(0, signal), [api]);
-  const resource = useResource(`recent:${houseId}`, load);
-  if (resource.error && !resource.data)
+  if (error)
     return (
       <section className="ds-group" aria-labelledby={titleId}>
         <h2 id={titleId}>Ваши обращения</h2>
         <p className="ds-subtle">Не удалось загрузить ваши обращения.</p>
-        {retryable(resource.error) && (
+        {retryable(error) && (
           <div>
-            <Button small onClick={resource.refresh}>
+            <Button small onClick={onRetry}>
               Повторить<span className="ds-visually-hidden"> загрузку обращений</span>
             </Button>
           </div>
         )}
       </section>
     );
-  const items = (resource.data?.items ?? []).filter((item) => item.house_id === houseId).slice(0, 3);
-  if (!items.length) return null;
+  if (!total) return null;
   return (
     <section className="ds-group" aria-labelledby={titleId}>
       <div className="ds-group-head">
         <h2 id={titleId}>Ваши обращения</h2>
-        <AppLink className="ds-link-button" href={links.view("mine", { house: houseId })} navigate={links.navigate}>
+        <AppLink className="ds-action-link" href={links.view("mine", { house: houseId })} navigate={links.navigate}>
           Все обращения
         </AppLink>
       </div>
-      <ul className="ds-list">
-        {items.map((item) => (
-          <li key={`${item.kind}-${item.id}`}>
-            <ActivityRow item={item} links={links} showAddress={false} />
-          </li>
-        ))}
-      </ul>
+      {items.length ? (
+        <ul className="ds-list">
+          {items.map((item) => (
+            <li key={`${item.kind}-${item.id}`}>
+              <ActivityRow item={item} links={links} showAddress={false} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="ds-subtle">Ваши сообщения отмечены в списке проблем: «Вы сообщили» и ход заявки.</p>
+      )}
     </section>
   );
 }
