@@ -17,7 +17,7 @@ import { useResource } from "../shared/api/useResource";
 import { categoryLabel } from "../features/incidents/presentation";
 import { placeText } from "../features/incidents/IncidentCard";
 import { countLabel, formatStaffTime } from "../shared/ui/format";
-import { staffTicketStatus, statusOf } from "../shared/ui/status";
+import { staffTicketNext, staffTicketStatus, statusOf } from "../shared/ui/status";
 import {
   Pagination,
   TicketDeadlines,
@@ -26,7 +26,7 @@ import {
   TicketTimeline,
   WorkAttemptCard,
 } from "../features/tickets/components";
-import { actionLabels, ticketActions } from "../features/tickets/presentation";
+import { actionLabel, ticketActions } from "../features/tickets/presentation";
 import {
   safeError,
   useTicketMutation,
@@ -42,8 +42,8 @@ type FormAction =
   | "wait-external"
   | "resume"
   | "cancel";
-/** Порядок выбора основного действия: работа вперёд, затем назначение. */
-const PRIMARY_ORDER = ["accept", "start", "work-attempts", "resume", "assign"];
+/** Работа вперёд — основное действие шага, если оно доступно роли. */
+const FORWARD = ["accept", "start", "work-attempts", "resume"];
 const implemented = [
   "assign",
   "accept",
@@ -155,14 +155,23 @@ export function TicketDetail({
   }
   const house = me.houses.find((h) => h.id === ticket.house_id);
   const entry = statusOf(staffTicketStatus, ticket.status);
+  // Новая заявка с исполнителем ждёт, когда он её примет, а не назначения.
+  const next = staffTicketNext(ticket.status, Boolean(ticket.assignee_id)) ?? entry.next;
+  const label = (code: string) => actionLabel(code, ticket);
   const place = placeText(incident.location);
-  // Одно основное действие для текущего этапа: движение работы вперёд,
-  // а если его нет — назначение исполнителя. Отмена — отдельно, как опасная.
+  // Одно основное действие для текущего этапа: движение работы вперёд, а
+  // если его нет — назначение, пока исполнителя нет или его нужно заменить.
+  // Указанный исполнитель меняется среди других действий, первым из них.
+  // Отмена — отдельно, как опасная. Права и статусы решает сервер.
   const cancel = actions.find((a) => a.code === "cancel");
+  const assignFirst = !ticket.assignee_id || ticket.requires_reassignment;
+  const order = assignFirst ? [...FORWARD, "assign"] : FORWARD;
   const primary =
-    PRIMARY_ORDER.map((code) => actions.find((a) => a.code === code && a.enabled)).find(Boolean) ??
-    PRIMARY_ORDER.map((code) => actions.find((a) => a.code === code)).find(Boolean);
-  const secondary = actions.filter((a) => a !== primary && a !== cancel);
+    order.map((code) => actions.find((a) => a.code === code && a.enabled)).find(Boolean) ??
+    order.map((code) => actions.find((a) => a.code === code)).find(Boolean);
+  const secondary = actions
+    .filter((a) => a !== primary && a !== cancel)
+    .sort((a, b) => Number(b.code === "assign") - Number(a.code === "assign"));
   // Функция разметки, а не компонент: кнопки не пересоздаются при обновлении данных и не теряют фокус.
   const actionButton = (
     a: (typeof actions)[number],
@@ -183,9 +192,7 @@ export function TicketDetail({
           }
         }}
       >
-        {a.code === "accept" && !ticket.assignee_id
-          ? "Взять в работу"
-          : actionLabels[a.code]}
+        {label(a.code)}
       </button>
       {a.reason && (
         <p id={`reason-${a.code}`} className="ds-reason">
@@ -206,7 +213,7 @@ export function TicketDetail({
         </h1>
         <div className="ds-status-line">
           <TicketStatusBadge status={ticket.status} />
-          {entry.next && <span className="ds-subtle">{entry.next}</span>}
+          {next && <span className="ds-subtle">{next}</span>}
         </div>
         <p className="ticket-assignee">
           <span className="ds-subtle">Исполнитель: </span>
@@ -561,7 +568,7 @@ function ActionDialog({
           } else submit({ ...payload, reason: text });
         }}
       >
-        <h2 id="dialog-title">{actionLabels[action]}</h2>
+        <h2 id="dialog-title">{actionLabel(action, ticket)}</h2>
         {action === "cancel" && (
           <p className="ds-notice ds-tone-danger">
             Заявка получит статус «Отменена» — его увидят жители.
@@ -630,7 +637,7 @@ function ActionDialog({
               (action === "assign" && (!assignee || !candidates.data))
             }
           >
-            {actionLabels[action]}
+            {actionLabel(action, ticket)}
           </button>
           {retry && (
             <button

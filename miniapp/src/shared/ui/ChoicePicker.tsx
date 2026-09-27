@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { IconClose } from "./icons";
 
 export type Choice = { value: string; label: string; hint?: string };
 
@@ -6,7 +7,8 @@ export type Choice = { value: string; label: string; hint?: string };
  * Лист поверх экрана на `<dialog>`: на телефоне — снизу (bottom sheet), с
  * `popover` на широком экране — рядом с кнопкой, которая его открыла.
  * Esc, нажатие на затемнение и кнопка закрытия закрывают его; фокус
- * возвращается на кнопку-источник.
+ * возвращается на кнопку-источник. С `closeLabel` в шапке листа — значок
+ * закрытия: шапка закреплена, длинный список прокручивается под ней.
  */
 export function Sheet({
   title,
@@ -14,6 +16,7 @@ export function Sheet({
   popover = false,
   className,
   focus = "input:checked, [data-sheet-focus]",
+  closeLabel,
   onClose,
   children,
 }: {
@@ -23,6 +26,8 @@ export function Sheet({
   className?: string;
   /** Что получает фокус при открытии; если такого нет — первый интерактивный элемент. */
   focus?: string;
+  /** Доступное имя кнопки-значка закрытия в шапке листа. */
+  closeLabel?: string;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -70,7 +75,7 @@ export function Sheet({
   return (
     <dialog
       ref={ref}
-      className={["ds-sheet", anchored && "is-popover", className].filter(Boolean).join(" ")}
+      className={["ds-sheet", anchored && "is-popover", closeLabel && "has-close", className].filter(Boolean).join(" ")}
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -82,9 +87,16 @@ export function Sheet({
       }}
     >
       <div className="ds-sheet-body">
-        <p className="ds-sheet-title" id={titleId}>
-          {title}
-        </p>
+        <div className="ds-sheet-head">
+          <p className="ds-sheet-title" id={titleId}>
+            {title}
+          </p>
+          {closeLabel && (
+            <button type="button" className="ds-icon-button ds-sheet-close" aria-label={closeLabel} onClick={onClose}>
+              <IconClose />
+            </button>
+          )}
+        </div>
         {children}
       </div>
     </dialog>

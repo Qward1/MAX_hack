@@ -195,13 +195,12 @@ function MobileNavigation({ company, companies, surface, counts, href, navigate,
     </header>
     <nav className="admin-quick-nav" aria-label="Рабочие разделы">{quick.map(s => link(s))}</nav>
     {open && <Sheet title="Разделы кабинета" anchor={button.current} className="admin-drawer" focus="[aria-current=page]"
-      onClose={() => setOpen(false)}>
+      closeLabel="Закрыть" onClose={() => setOpen(false)}>
       {displayName && <p className="ds-meta">{displayName} · {company.name}</p>}
       {companies.length > 1 && <label className="ds-field">Управляющая компания<select value={company.company_id}
         onChange={e => { const next = companies.find(c => c.company_id === e.target.value); if (next) { setOpen(false); navigate(href(next.surfaces[0], next.company_id)); } }}>
         {companies.map(c => <option key={c.company_id} value={c.company_id}>{c.name}</option>)}</select></label>}
       <nav className="admin-drawer-nav" aria-label="Все разделы">{company.surfaces.map(s => link(s, () => setOpen(false)))}</nav>
-      <button type="button" className="ds-btn ds-btn-secondary ds-btn-stretched" onClick={() => setOpen(false)}>Закрыть</button>
     </Sheet>}
   </>;
 }

@@ -1347,6 +1347,32 @@ details > summary {
 .ds-sheet.is-popover .ds-sheet-done {
   display: none;
 }
+.ds-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+}
+.ds-sheet.is-popover .ds-sheet-head {
+  display: none;
+}
+/* Лист с закрытием в шапке: шапка закреплена сверху, список прокручивается под ней. */
+.ds-sheet.has-close .ds-sheet-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin-top: calc(-1 * var(--ds-space-4));
+  padding: var(--ds-space-3) 0 var(--ds-space-2);
+  border-bottom: 1px solid var(--ds-line);
+  background: var(--ds-surface);
+}
+.ds-sheet-close {
+  flex: none;
+}
+.ds-sheet-close .ds-icon {
+  width: 20px;
+  height: 20px;
+}
 .ds-choice-list {
   display: grid;
 }
@@ -1643,6 +1669,10 @@ details > summary {
   min-width: 0;
 }
 
+/* Все свои обращения уже отмечены в списке — одна ссылка на полный список под ним. */
+.ds-board-mine {
+  margin: var(--ds-space-2) 0 0;
+}
 /* Метка «вы сообщили» в строке проблемы — связь с «Мои обращения» без второй карточки. */
 .ds-row-mine {
   position: relative;

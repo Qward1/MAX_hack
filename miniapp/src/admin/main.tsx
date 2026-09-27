@@ -14,6 +14,10 @@ const invitationToken = secret("/admin/invite/");
 // D2: новый пароль по ссылке сброса и регистрация по открытой ссылке УК.
 const resetToken = secret("/admin/reset/");
 const joinCode = secret("/join/");
+// Вкладка называет задачу страницы, а не общий кабинет.
+if (invitationToken) document.title = "Приглашение в кабинет · ДомСигнал";
+else if (resetToken) document.title = "Новый пароль · ДомСигнал";
+else if (joinCode) document.title = "Регистрация сотрудника · ДомСигнал";
 
 /** После входа по ссылке — в кабинет без секрета в адресе. */
 function OpenCabinet() {

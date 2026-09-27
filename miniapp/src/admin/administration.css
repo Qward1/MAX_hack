@@ -22,8 +22,8 @@
 .connection-row button { margin: 4px; }.checkbox-label { display: flex !important; align-items: center; gap: 10px; }.checkbox-label input { width: 20px; flex: none; }
 .ticket-workspace .page-header { margin-top: 20px; }.ticket-workspace-main { width: 100%; }
 .company-apply { display: grid; grid-template-columns: minmax(280px, 5fr) minmax(350px, 6fr); gap: 60px; max-width: 1120px; margin: 0 auto; padding: 60px 32px; }
-.company-apply > aside { padding-top: 20px; }.company-apply h1 { font-size: clamp(32px, 4vw, 48px); line-height: 1.12; font-weight: 650; letter-spacing: -.035em; }
-.company-apply aside > p { color: var(--ds-ink-2); font-size: 17px; }.company-apply .eyebrow { margin-top: 48px; font-size: var(--ds-text-small); color: var(--ds-ink-2); font-weight: 600; }
+.company-apply > .apply-intro { padding-top: 20px; }.company-apply h1 { font-size: clamp(32px, 4vw, 48px); line-height: 1.12; font-weight: 650; letter-spacing: -.035em; }
+.company-apply :is(.apply-intro, .apply-more) > p { color: var(--ds-ink-2); font-size: 17px; }.company-apply .eyebrow { margin-top: 48px; font-size: var(--ds-text-small); color: var(--ds-ink-2); font-weight: 600; }
 .company-apply ol { margin-top: 40px; padding-left: 22px; }.company-apply li { padding: 10px 0 10px 12px; border-bottom: 1px solid var(--ds-line); }
 .company-apply .admin-detail { margin: 0; }.admin-detail textarea { min-height: 100px; }
 @media (max-width: 820px) {
@@ -128,6 +128,7 @@
 }
 .admin-menu-button {
   gap: var(--ds-space-2);
+  white-space: nowrap;
 }
 .admin-menu-button .ds-icon {
   width: 20px;
@@ -173,6 +174,17 @@
   }
   .admin-mobile-bar .admin-brand span {
     font-size: 0.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* 320 px: бренд уступает место, подпись «Разделы» остаётся в одну строку. */
+  .admin-mobile-bar .admin-brand {
+    min-width: 0;
+  }
+  .admin-mobile-bar .admin-menu-button {
+    flex: none;
+    padding-inline: var(--ds-space-3);
   }
   .admin-quick-nav {
     display: flex;
@@ -320,6 +332,19 @@
 .chart-empty-row h3 {
   font-size: var(--ds-text-body);
 }
+/* RA-02: пустой график — короткая карточка своей высоты, график с данными
+ * получает больше ширины; таблица «По домам» поднимается выше. */
+.chart-grid-2:is(.has-empty-first, .has-empty-second) {
+  align-items: start;
+}
+@media (min-width: 821px) {
+  .chart-grid-2.has-empty-first {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+  .chart-grid-2.has-empty-second {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+}
 .house-stats-cards {
   display: none;
   margin: 0;
@@ -388,6 +413,10 @@
 .house-stats-table td:last-child {
   white-space: normal;
   min-width: 160px;
+}
+/* Заголовок столбца переносится по словам, а не посреди слова («Сигнал|ы»). */
+.house-stats-table thead th {
+  overflow-wrap: normal;
 }
 @media (max-width: 767px) {
   .house-stats-cards {
@@ -479,9 +508,6 @@
 }
 
 /* ------------------------------------------------------------ заявка УК */
-.apply-effort {
-  color: var(--ds-ink);
-}
 .company-apply .apply-steps {
   margin-block: var(--ds-space-4);
 }
@@ -493,7 +519,7 @@
   padding: 6px 0 6px 4px;
   border: 0;
 }
-.company-apply aside .eyebrow {
+.company-apply .apply-intro .eyebrow {
   margin-top: 0;
 }
 .apply-group {
@@ -545,7 +571,7 @@
   font-weight: var(--ds-weight-strong);
 }
 @media (max-width: 820px) {
-  .company-apply aside > h1 {
+  .company-apply .apply-intro > h1 {
     font-size: 1.75rem;
   }
 }
@@ -557,10 +583,6 @@
 .company-apply .error-summary li {
   padding: 0;
   border: 0;
-}
-.company-apply aside > .apply-effort {
-  margin-top: var(--ds-space-3);
-  font-size: var(--ds-text-body);
 }
 .ticket-form label.ds-choice-row {
   display: flex;
@@ -611,5 +633,68 @@
     padding: 4px 6px;
     text-align: center;
     line-height: 1.25;
+  }
+}
+
+/* RA-01: заявка УК. Компьютер — две колонки: слева вступление и подробности,
+ * справа форма. Телефон — вступление в две-три строки, «Перейти к заявке»,
+ * форма с первым полем в первом экране 320 × 640, подробности после формы. */
+.company-apply {
+  grid-template-areas: "intro form" "more form";
+  grid-template-rows: auto 1fr;
+  row-gap: 0;
+}
+.company-apply > .apply-intro {
+  grid-area: intro;
+}
+.company-apply > .apply-card {
+  grid-area: form;
+  align-self: start;
+  scroll-margin-top: var(--ds-space-3);
+}
+.company-apply > .apply-more {
+  grid-area: more;
+  align-self: start;
+}
+.apply-jump {
+  display: none;
+}
+.company-apply .apply-intro > p:not(.eyebrow) {
+  margin-top: var(--ds-space-3);
+}
+@media (max-width: 820px) {
+  .public-header {
+    padding: var(--ds-space-2) 0;
+  }
+  .company-apply {
+    grid-template-areas: "intro" "form" "more";
+    grid-template-rows: none;
+    gap: var(--ds-space-4);
+    padding: var(--ds-space-3) var(--ds-gutter) var(--ds-space-6);
+  }
+  .company-apply > .apply-intro {
+    padding-top: 0;
+  }
+  .company-apply .apply-intro .eyebrow {
+    margin: 0 0 var(--ds-space-1);
+  }
+  .company-apply .apply-intro > h1 {
+    font-size: 1.5rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+  .company-apply .apply-intro > p:not(.eyebrow) {
+    margin-top: var(--ds-space-2);
+    font-size: var(--ds-text-body);
+  }
+  .apply-jump {
+    display: inline-flex;
+    margin-top: var(--ds-space-3);
+  }
+  .company-apply > .apply-card {
+    padding: var(--ds-space-4);
+  }
+  .company-apply .apply-more .apply-steps {
+    margin-top: 0;
   }
 }

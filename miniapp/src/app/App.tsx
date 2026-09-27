@@ -39,6 +39,7 @@ import { ResidentWorkProgress } from "../features/tickets/ResidentWorkProgress";
 import { NoHouse } from "../features/houses/NoHouse";
 import {
   AnnouncementsScreen,
+  AppLink,
   type CommunityLinks,
   type CommunityView,
   MyActivityScreen,
@@ -751,6 +752,8 @@ export function App({
  * Доска дома. Свои сообщения жителя отмечены прямо в строке проблемы — со
  * статусом заявки из «Мои обращения»; отдельным списком ниже остаются только
  * обращения, которых на этой странице доски нет (черновики, «куда обратиться»).
+ * Если все обращения уже видны в списке, вместо блока — одна ссылка на полный
+ * список: блок без новых сведений только повторял бы доску.
  */
 function Board({
   house,
@@ -778,6 +781,7 @@ function Board({
   for (const item of mine) if (item.incident_id && !byIncident.has(item.incident_id)) byIncident.set(item.incident_id, item);
   const shown = new Set(list.items.map((item) => item.id));
   const rest = mine.filter((item) => !(item.incident_id && shown.has(item.incident_id)));
+  const allOnBoard = mine.length > 0 && rest.length === 0;
   const openCount = list.items.filter((item) =>
     ["detected", "open", "reported", "overdue", "escalated"].includes(item.status),
   ).length;
@@ -817,6 +821,13 @@ function Board({
             Здесь появятся проблемы, о которых сообщили соседи.{canReport ? " Если что-то сломалось — сообщите первым." : ""}
           </p>
         )}
+        {allOnBoard && (
+          <p className="ds-board-mine">
+            <AppLink className="ds-action-link" href={links.view("mine", { house: house.id })} navigate={links.navigate}>
+              Все мои обращения
+            </AppLink>
+          </p>
+        )}
         {(list.page.total > list.page.limit || offset > 0) && (
           <nav className="pagination" aria-label="Страницы списка проблем">
             <Button
@@ -837,16 +848,18 @@ function Board({
           </nav>
         )}
       </section>
-      <div className="ds-aside">
-        <RecentActivity
-          houseId={house.id}
-          links={links}
-          items={rest.slice(0, 3)}
-          total={mine.length}
-          error={activity.data ? undefined : activity.error}
-          onRetry={activity.refresh}
-        />
-      </div>
+      {!allOnBoard && (
+        <div className="ds-aside">
+          <RecentActivity
+            houseId={house.id}
+            links={links}
+            items={rest.slice(0, 3)}
+            onBoard={mine.length - rest.length}
+            error={activity.data ? undefined : activity.error}
+            onRetry={activity.refresh}
+          />
+        </div>
+      )}
     </div>
   );
 }

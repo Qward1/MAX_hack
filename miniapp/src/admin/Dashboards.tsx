@@ -74,7 +74,7 @@ export function CompanyOverview({ base, links }: { base: string; links?: Links }
                 {links.tickets && <QueueLink href={links.tickets} navigate={links.navigate}>Открыть заявки</QueueLink>}
                 {links.signals && <QueueLink href={links.signals} navigate={links.navigate}>Открыть сигналы</QueueLink>}
               </div>}
-            </section> : <div className="chart-grid-2">
+            </section> : <div className={`chart-grid-2${signalsEmpty ? " has-empty-first" : ticketsEmpty ? " has-empty-second" : ""}`}>
               {signalsEmpty ? <EmptyChart title="Сигналы из чатов по дням" period={period} />
                 : <ColumnChart title="Сигналы из чатов по дням" days={activity.map(d => d.day)}
                   series={[{ key: "signals", label: "Сигналы", color: SERIES.primary, values: activity.map(d => d.signals) }]} />}

@@ -18,6 +18,7 @@ import { formatStaffTime } from "../shared/ui/format";
 import { StatusTag } from "../shared/ui/semantic";
 import { signalStatus, signalStrength, statusOf } from "../shared/ui/status";
 import { useTicketMutation } from "../features/tickets/useTicketMutation";
+import { verificationNotes } from "../features/routing/presentation";
 import {
   SignalState,
   signalError,
@@ -363,8 +364,7 @@ function RouteBlock({ data }: { data: SignalView }) {
   const card = data.action_card;
   const route = card.route;
   const basis = route.basis;
-  const unverified =
-    route.stale || (basis && basis.verification_status !== "verified");
+  const unverified = verificationNotes(route);
   return (
     <section
       className="ticket-panel route-card"
@@ -406,9 +406,9 @@ function RouteBlock({ data }: { data: SignalView }) {
             Правила в справочнике нет — продукт не угадывает ответственного.
           </p>
         )}
-        {unverified && (
-          <p className="ds-notice ds-tone-warning">Сведения требуют сверки.</p>
-        )}
+        {unverified.map((note) => (
+          <p key={note} className="ds-notice ds-tone-warning">{note}</p>
+        ))}
         {route.hidden_unverified_channels > 0 && (
           <p className="muted">
             Непроверенных каналов скрыто: {route.hidden_unverified_channels}.

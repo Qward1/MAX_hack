@@ -17,7 +17,7 @@ import { countLabel, formatDay, formatWhen } from "../../shared/ui/format";
 import { DemoBadge, Notice, PageHeader, StatusBadge, StatusTag } from "../../shared/ui/semantic";
 import { SourceDisclosure } from "../../shared/ui/SourceLink";
 import { residentTicketStatus, statusOf } from "../../shared/ui/status";
-import { CardAction, RouteCard, SafetyPanel, UNVERIFIED_NOTE } from "../routing/RouteCard";
+import { CardAction, RouteCard, SafetyPanel, VerificationNote } from "../routing/RouteCard";
 import { type CardActionType, dangerLabel, knownCardActions, linkActions, locationScopeLabel } from "../routing/presentation";
 import { categoryLabel, categoryLabels } from "./presentation";
 
@@ -362,10 +362,6 @@ export function ReportFlow({
       setPreview(null);
     };
     const basis = card.route.basis;
-    const needsCheck =
-      card.route.stale ||
-      (basis ? basis.verification_status !== "verified" : false) ||
-      (card.route.channels ?? []).some((channel) => channel.stale || channel.verification_status !== "verified");
     const facts = card.facts ?? [];
     return (
       <section className="report-flow" aria-labelledby="page-title">
@@ -480,11 +476,7 @@ export function ReportFlow({
                   {card.route.organization_name && (
                     <p className="ds-meta">Вероятный адресат: {card.route.organization_name}</p>
                   )}
-                  {needsCheck && (
-                    <Notice tone="warning" role="note">
-                      <p>{UNVERIFIED_NOTE}</p>
-                    </Notice>
-                  )}
+                  <VerificationNote route={card.route} />
                 </div>
                 <div className="ds-stack">
                   {primaryAction ? (
@@ -515,11 +507,7 @@ export function ReportFlow({
                 <h2 id={`${id}-route`}>{card.title}</h2>
                 <p className="ds-prose">{card.explanation}</p>
                 {card.route.organization_name && <p className="ds-meta">Вероятный адресат: {card.route.organization_name}</p>}
-                {needsCheck && (
-                  <Notice tone="warning" role="note">
-                    <p>{UNVERIFIED_NOTE}</p>
-                  </Notice>
-                )}
+                <VerificationNote route={card.route} />
               </section>
             )}
             <div className="ds-details-list">

@@ -31,7 +31,7 @@ export type CommunityLinks = {
 };
 
 /** Ссылка внутри приложения: без перезагрузки, с обычным открытием в новой вкладке. */
-function AppLink({ href, navigate, className, children }: { href: string; navigate: (href: string) => void; className?: string; children: ReactNode }) {
+export function AppLink({ href, navigate, className, children }: { href: string; navigate: (href: string) => void; className?: string; children: ReactNode }) {
   return (
     <a
       className={className}
@@ -108,19 +108,6 @@ function actionError(error: unknown): string {
     if (error.problem.status === 422) return "Проверьте выбор и попробуйте ещё раз.";
   }
   return "Не получилось. Проверьте интернет и попробуйте ещё раз.";
-}
-
-/** Номер телефона внутри строки памятки — ссылкой `tel:`. */
-function WithPhone({ text, phone }: { text: string; phone?: string | null }) {
-  if (!phone || !text.includes(phone)) return <>{text}</>;
-  const [before, ...rest] = text.split(phone);
-  return (
-    <>
-      {before}
-      <a href={`tel:${phone}`}>{phone}</a>
-      {rest.join(phone)}
-    </>
-  );
 }
 
 // ------------------------------------------------------------------ «Мой дом»
@@ -289,6 +276,7 @@ type Emergency = NonNullable<HouseOverview["emergency"]>[number];
 /**
  * «Если авария» — одна карточка: сначала звонок (каждый номер — одна кнопка,
  * 112 не повторяется), затем пункты памятки, затем источники одной строкой.
+ * Номер в тексте памятки — обычный текст: звонок уже есть кнопкой выше.
  * Пункт экстренной службы, который повторяет шаг памятки с тем же номером,
  * не выводит заголовок второй раз — только свои пояснения.
  */
@@ -306,9 +294,7 @@ function EmergencyCard({ steps, emergency, dispatcher }: { steps: Step[]; emerge
   for (const step of steps)
     lines.push(
       <li key={`step-${step.text}`}>
-        <p>
-          <WithPhone text={step.text} phone={step.phone} />
-        </p>
+        <p>{step.text}</p>
       </li>,
     );
   for (const item of emergency) {
@@ -1284,21 +1270,23 @@ export function MyActivityScreen({ api, houseId, links }: { api: CommunityApi; h
 /**
  * Главный экран: обращения жителя в этом доме, которых нет в списке проблем
  * выше (черновики, «куда обратиться»), и переход ко всем. Свои проблемы
- * доски отмечены прямо в строках — второй раз их карточки не повторяются.
+ * доски отмечены прямо в строках — второй раз их карточки не повторяются,
+ * а без таких обращений блок не показывается (доска ставит одну ссылку).
  */
 export function RecentActivity({
   houseId,
   links,
   items,
-  total,
+  onBoard = 0,
   error,
   onRetry,
 }: {
   houseId: string;
   links: CommunityLinks;
+  /** Обращения жителя в этом доме, которых нет на текущей странице доски. */
   items: ActivityItem[];
-  /** Сколько всего обращений жителя в этом доме, включая отмеченные в списке проблем. */
-  total: number;
+  /** Сколько обращений жителя уже отмечено в списке проблем выше. */
+  onBoard?: number;
   error?: unknown;
   onRetry: () => void;
 }) {
@@ -1317,26 +1305,22 @@ export function RecentActivity({
         )}
       </section>
     );
-  if (!total) return null;
+  if (!items.length) return null;
   return (
     <section className="ds-group" aria-labelledby={titleId}>
       <div className="ds-group-head">
-        <h2 id={titleId}>Ваши обращения</h2>
+        <h2 id={titleId}>{onBoard ? "Другие ваши обращения" : "Ваши обращения"}</h2>
         <AppLink className="ds-action-link" href={links.view("mine", { house: houseId })} navigate={links.navigate}>
           Все обращения
         </AppLink>
       </div>
-      {items.length ? (
-        <ul className="ds-list">
-          {items.map((item) => (
-            <li key={`${item.kind}-${item.id}`}>
-              <ActivityRow item={item} links={links} showAddress={false} />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="ds-subtle">Ваши сообщения отмечены в списке проблем: «Вы сообщили» и ход заявки.</p>
-      )}
+      <ul className="ds-list">
+        {items.map((item) => (
+          <li key={`${item.kind}-${item.id}`}>
+            <ActivityRow item={item} links={links} showAddress={false} />
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

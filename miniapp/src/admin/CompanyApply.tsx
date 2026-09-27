@@ -86,18 +86,14 @@ export function CompanyApply() {
   const [attempt, setAttempt] = useState(0);
   useEffect(() => { if (attempt) summary.current?.focus(); }, [attempt]);
   const listed = FIELD_ORDER.filter(key => errors[key]);
-  return <><PublicHeader /><main className="company-apply"><aside>
+  // Порядок в разметке — порядок телефона: вступление, форма, подробности.
+  // На компьютере подробности стоят в левой колонке под вступлением (сетка).
+  return <><PublicHeader /><main className="company-apply"><div className="apply-intro">
     <p className="eyebrow">Для управляющих компаний</p><h1>Подключите домовые чаты к ДомСигналу</h1>
-    <p>Бот замечает проблемы дома в переписке жителей, а ваша команда получает их очередью заявок с понятным следующим шагом.</p>
-    <p className="apply-effort">Заявка займёт несколько минут. Понадобятся наименование и ИНН организации и контакт для связи.</p>
-    <details className="ds-disclosure apply-steps"><summary>Как проходит подключение</summary>
-      <ol className="ds-disclosure-body"><li>Вы подаёте заявку и получаете ссылку на страницу статуса.</li>
-        <li>Платформа проверяет организацию и выдаёт квоту — сколько чатов можно подключить.</li>
-        <li>На странице статуса вы создаёте аккаунт администратора: пароль и приложение-аутентификатор.</li>
-        <li>В кабинете добавляете дома, приглашаете сотрудников и подключаете чаты.</li></ol></details>
-    <p><a href="/privacy">Политика данных</a> — что бот читает в чатах, что хранит и как отключить чтение.</p>
-  </aside><section className="admin-detail">{received ? <>
-    <h2>Заявка принята</h2>
+    <p>Бот замечает проблемы дома в переписке жителей, а ваша команда получает их очередью заявок.</p>
+    {!received && <a className="ticket-button secondary apply-jump" href="#company-application">Перейти к заявке</a>}
+  </div><section className="admin-detail apply-card" id="company-application" aria-labelledby="company-application-title">{received ? <>
+    <h2 id="company-application-title">Заявка принята</h2>
     <p>{received.message}</p>
     {received.status_url && <div className="one-time-link">
       <label>Ссылка на страницу статуса<input readOnly value={received.status_url} onFocus={e => e.target.select()} /></label>
@@ -136,8 +132,8 @@ export function CompanyApply() {
         else setError(problemText(e, APPLY_FIELDS, "Не удалось отправить заявку"));
       }
       finally { setBusy(false); }
-    }}><h2>Заявка управляющей компании</h2>
-      <p className="ds-hint">Все поля обязательны, кроме отмеченных «необязательно».</p>
+    }}><h2 id="company-application-title">Заявка управляющей компании</h2>
+      <p className="ds-hint">Займёт несколько минут. Все поля обязательны, кроме отмеченных «необязательно».</p>
       {listed.length > 0 && <div className="error-summary" role="alert" tabIndex={-1} ref={summary} aria-labelledby="apply-errors-title">
         <h3 id="apply-errors-title">Проверьте {listed.length === 1 ? "одно поле" : `поля: ${listed.length}`}</h3>
         <ul>{listed.map(key => <li key={key}><a href={`#apply-${key}`} onClick={ev => {
@@ -173,7 +169,14 @@ export function CompanyApply() {
           <textarea {...props} maxLength={2000} />}</Field>
       </fieldset>
       <Feedback error={error} /><div><button className="ticket-button" disabled={busy}>{busy ? "Отправляем…" : "Подать заявку"}</button></div>
-    </form>}</section></main></>;
+    </form>}</section><div className="apply-more">
+    <details className="ds-disclosure apply-steps"><summary>Как проходит подключение</summary>
+      <ol className="ds-disclosure-body"><li>Вы подаёте заявку и получаете ссылку на страницу статуса.</li>
+        <li>Платформа проверяет организацию и выдаёт квоту — сколько чатов можно подключить.</li>
+        <li>На странице статуса вы создаёте аккаунт администратора: пароль и приложение-аутентификатор.</li>
+        <li>В кабинете добавляете дома, приглашаете сотрудников и подключаете чаты.</li></ol></details>
+    <p><a href="/privacy">Политика данных</a> — что бот читает в чатах, что хранит и как отключить чтение.</p>
+  </div></main></>;
 }
 
 /** Страница статуса заявки по секретной ссылке `/company/apply/status/<token>`. */

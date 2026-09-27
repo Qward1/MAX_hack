@@ -5,9 +5,23 @@ import { Button, LinkButton } from "../../shared/ui/Button";
 import { countLabel, formatDay } from "../../shared/ui/format";
 import { DemoBadge, Notice } from "../../shared/ui/semantic";
 import { SourceDisclosure } from "../../shared/ui/SourceLink";
-import { type CardActionType, cardActionLabel, knownCardActions, linkActions } from "./presentation";
+import { type CardActionType, cardActionLabel, knownCardActions, linkActions, verificationNotes } from "./presentation";
 
-export const UNVERIFIED_NOTE = "Сведения требуют сверки.";
+/**
+ * «Требует сверки» с названием того, что именно не сверено: основание,
+ * кто отвечает, или сведения об официальном сервисе. Не прячется в раскрытие.
+ */
+export function VerificationNote({ route }: { route: ActionCard["route"] }) {
+  const notes = verificationNotes(route);
+  if (!notes.length) return null;
+  return (
+    <Notice tone="warning" role="note">
+      {notes.map((note) => (
+        <p key={note}>{note}</p>
+      ))}
+    </Notice>
+  );
+}
 
 /**
  * Памятка безопасности. При любом ответе она стоит первой на экране:
@@ -158,10 +172,6 @@ export function RouteCard({
   const group = useId();
   const basis = card.route.basis;
   const verified = formatDay(basis?.verified_at);
-  const needsCheck =
-    card.route.stale ||
-    (basis ? basis.verification_status !== "verified" : false) ||
-    (card.route.channels ?? []).some((channel) => channel.stale || channel.verification_status !== "verified");
   const actions = knownCardActions(card.actions).filter(
     (action) => linkActions.includes(action.type as CardActionType) || handlers[action.type as CardActionType],
   );
@@ -179,11 +189,7 @@ export function RouteCard({
           <h2 id={`${group}-basis`}>Основание</h2>
           <p className="ds-prose">{basis.text}</p>
           <SourceDisclosure url={basis.source_url} title={basis.source_title} verified={verified} />
-          {needsCheck && (
-            <Notice tone="warning" role="note">
-              <p>{UNVERIFIED_NOTE}</p>
-            </Notice>
-          )}
+          <VerificationNote route={card.route} />
         </section>
       )}
       {(card.facts ?? []).length > 0 && (
