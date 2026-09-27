@@ -1084,11 +1084,13 @@ class TicketNotificationHandler:
         различий в тексте, поэтому по ответу нельзя узнать, существует ли
         ссылка вообще.
         """
-        if not re.fullmatch(r"[wrtpn]_[A-Za-z0-9_-]{32}", ref):
+        if not re.fullmatch(r"[wrtpnc]_[A-Za-z0-9_-]{32}", ref):
             raise ResourceNotFound("Resource was not found")
         delivery = await NotificationRepository(session).by_ref(ref)
         if delivery is None:
             raise ResourceNotFound("Resource was not found")
+        if ref.startswith(CHAT_REF_PREFIX):
+            return await self._chat_launch(session, delivery, actor_id)
         if delivery.purpose in {TICKET_CHAT_PURPOSE, BROADCAST_CHAT_PURPOSE, BROADCAST_DM_PURPOSE}:
             return await self._community_launch(session, delivery, actor_id)
         if delivery.recipient_user_id != actor_id:
@@ -1110,6 +1112,27 @@ class TicketNotificationHandler:
             stale=bool(
                 delivery.work_attempt_id and (not latest or latest.id != delivery.work_attempt_id)
             ),
+        )
+
+    async def _chat_launch(
+        self, session: AsyncSession, delivery: NotificationDelivery, actor_id: UUID
+    ) -> NotificationLaunch:
+        """Кнопка сообщения бота в домовом чате: дом чата, если он доступен жителю.
+
+        Участие в чате проверено при входе по этой же ссылке (D1); здесь —
+        только актуальный доступ к дому. Любое несовпадение — 404.
+        """
+        if delivery.chat_binding_id is None:
+            raise ResourceNotFound("Resource was not found")
+        binding = await session.get(ChatBinding, delivery.chat_binding_id)
+        if binding is None:
+            raise ResourceNotFound("Resource was not found")
+        try:
+            await self._readable_house(session, actor_id, binding.house_id)
+        except (AccessDenied, ResourceNotFound):
+            raise ResourceNotFound("Resource was not found") from None
+        return NotificationLaunch(
+            kind="house", house_id=binding.house_id, work_attempt_id=None, stale=False
         )
 
     async def _community_launch(

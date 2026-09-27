@@ -13,7 +13,9 @@ class NotificationLaunch(BaseModel):
     получатель доставки, членство в доме и актуальные права.
     """
 
-    kind: Literal["ticket", "route_card", "poll", "announcements"] = "ticket"
+    #: `house` — кнопка «Открыть ДомСигнал» в домовом чате (D-01): mini app
+    #: открывается на доме этого чата, а не на первом доме по алфавиту.
+    kind: Literal["ticket", "route_card", "poll", "announcements", "house"] = "ticket"
     incident_id: UUID | None = None
     house_id: UUID
     route_outcome_id: UUID | None = None

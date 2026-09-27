@@ -250,7 +250,7 @@ export function AdminApp({ client = ticketClient, embedded = false, companyId }:
           route.searchParams.has("test_actor") &&
           session.data?.capabilities.features.test_auth && (
             <div className="demo-session">
-              <span className="demo-badge">Демонстрационные данные · локальная тестовая сессия</span>
+              <span className="demo-badge">Локальный стенд · вход без пароля</span>
               <label>
                 Участник проверки
                 <select

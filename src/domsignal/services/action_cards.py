@@ -40,7 +40,9 @@ EXTERNAL_ROUTES = frozenset(
     {"municipality", "resource_supplier", "regional_operator", "other_authority"}
 )
 
-DEMO_NOTICE = "Тестовые данные"
+#: «Пример данных»: слова «тест» и «демо» в интерфейсе не используются (решение
+#: владельца F1); синтетика отмечена в README и материалах.
+DEMO_NOTICE = "Пример данных"
 CHAT_DISCLAIMER = "Сообщение в домовом чате не является официальным обращением."
 EXTERNAL_DISCLAIMER = (
     "ДомСигнал не отправляет обращения за вас — вы отправляете его сами в официальном сервисе."

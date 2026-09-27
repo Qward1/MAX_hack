@@ -15,6 +15,7 @@ import {
   retryable,
 } from "../shared/api/client";
 import { useResource } from "../shared/api/useResource";
+import { lastHouse, rememberHouse } from "../shared/lastHouse";
 import { LAUNCH_REF, maxBridge } from "../shared/max/bridge";
 import { Button } from "../shared/ui/Button";
 import { countLabel, formatWhen } from "../shared/ui/format";
@@ -22,7 +23,6 @@ import { HouseSwitch } from "../shared/ui/HouseSwitch";
 import { IconHouse, IconNews, IconProblems, IconRequests } from "../shared/ui/icons";
 import {
   BackLink,
-  DemoBadge,
   InfoRow,
   NextAction,
   Notice,
@@ -70,6 +70,8 @@ type Loaded = {
   openHousesFailed?: boolean;
   /** Раздел сообщества D3: «Мой дом», объявления, опрос, работы, обращения, приём. */
   view?: CommunityView;
+  /** D-01: у жителя несколько домов и ни один не выбран — сначала выбор дома. */
+  pickHouse?: boolean;
 };
 
 const VIEWS: CommunityView[] = ["home", "news", "poll", "works", "mine", "reception"];
@@ -203,6 +205,13 @@ export function App({
       if (launchRef && capabilities.features.miniapp) {
         const target = await client.notificationLaunch(launchRef, signal);
         const home = me.houses.find((house) => house.id === target.house_id);
+        // Кнопка «Открыть ДомСигнал» в домовом чате — доска дома этого чата (D-01).
+        if (target.kind === "house") {
+          if (!home) return { capabilities, me, notificationLaunch: target };
+          rememberHouse(me.id, home.id);
+          const incidents = await client.incidents(home.id, signal, 0, "open");
+          return { capabilities, me, notificationLaunch: target, house: home, incidents };
+        }
         // Пост объявления или опроса и личная рассылка ведут в раздел дома (D3).
         if (target.kind === "poll" || target.kind === "announcements")
           return {
@@ -224,10 +233,20 @@ export function App({
         }
         return { capabilities, me, notificationLaunch: target, unavailable: true };
       }
-      // Дом из адреса или, если его нет, первый доступный: при нескольких домах
-      // переключатель стоит в шапке, а адрес виден перед отправкой сообщения.
-      const chosen = houseId !== null ? me.houses.find((item) => item.id === houseId) : me.houses[0];
+      // Дом из адреса; без него — последний выбранный на этом устройстве или
+      // единственный. Несколько домов и выбора нет — житель выбирает сам (D-01):
+      // первый по алфавиту дом уводил сообщение в чужую управляющую компанию.
+      const remembered = lastHouse(me.id);
+      const chosen =
+        houseId !== null
+          ? me.houses.find((item) => item.id === houseId)
+          : me.houses.length === 1
+            ? me.houses[0]
+            : me.houses.find((item) => item.id === remembered);
       if (houseId !== null && !chosen && !incidentId && !cardId && !draftId) denied();
+      if (chosen && houseId !== null) rememberHouse(me.id, chosen.id);
+      if (!chosen && me.houses.length > 1 && !incidentId && !cardId && !draftId && view !== "mine" && view !== "poll")
+        return { capabilities, me, pickHouse: true };
       if (view && capabilities.features.miniapp) {
         // «Мои обращения» и опрос не требуют выбранного дома; остальные разделы — дома.
         if (!chosen && !["mine", "poll"].includes(view)) return { capabilities, me };
@@ -267,7 +286,7 @@ export function App({
           return { capabilities, me, openHouses: [], openHousesFailed: true };
         }
       }
-      const incidents = await client.incidents(chosen.id, signal, offset);
+      const incidents = await client.incidents(chosen.id, signal, offset, "open");
       return { capabilities, me, house: chosen, incidents };
     },
     [client, houseId, incidentId, cardId, draftId, detail, offset, launchPending, view, reportParam],
@@ -468,7 +487,10 @@ export function App({
       <HouseSwitch
         houses={houses}
         value={house.id}
-        onChange={(id) => navigate(routeUrl({ house: id, view: view && view !== "poll" ? view : undefined }))}
+        onChange={(id) => {
+          rememberHouse(data.me.id, id);
+          navigate(routeUrl({ house: id, view: view && view !== "poll" ? view : undefined }));
+        }}
       />
     ) : (
       house.address
@@ -481,9 +503,7 @@ export function App({
     const topLevel = ["mine", "news", "home"].includes(data.view);
     return frame(
       <>
-        <PageHeader title={VIEW_TITLES[data.view]} subtitle={home && data.view !== "mine" ? switcher(home) : undefined}>
-          {home?.is_demo && <DemoBadge />}
-        </PageHeader>
+        <PageHeader title={VIEW_TITLES[data.view]} subtitle={home && data.view !== "mine" ? switcher(home) : undefined} />
         {data.view === "home" && home && <MyHouseScreen api={communityClient} houseId={home.id} links={links} />}
         {data.view === "news" && home && <AnnouncementsScreen api={communityClient} houseId={home.id} links={links} />}
         {data.view === "works" && home && <WorksScreen api={communityClient} houseId={home.id} links={links} />}
@@ -500,6 +520,33 @@ export function App({
       { back: !topLevel, house: home?.id, section: VIEW_SECTION[data.view], nested: !topLevel },
     );
   }
+
+  // ------------------------------------------------------------ выбор дома
+  if (data.pickHouse)
+    return frame(
+      <>
+        <PageHeader title="Выберите дом" subtitle="Вы участник нескольких домовых чатов. Сообщения уйдут в управляющую компанию выбранного дома." />
+        <ul className="ds-list ds-house-pick" aria-label="Ваши дома">
+          {houses.map((house) => (
+            <li key={house.id}>
+              <a
+                className="ds-row"
+                href={routeUrl({ house: house.id, view: view && view !== "poll" ? view : undefined, report: reportParam || undefined })}
+                onClick={(event) => {
+                  if (event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
+                  event.preventDefault();
+                  rememberHouse(data.me.id, house.id);
+                  navigate(routeUrl({ house: house.id, view: view && view !== "poll" ? view : undefined, report: reportParam || undefined }), { replace: true });
+                }}
+              >
+                <span className="ds-row-title">{house.address}</span>
+                <span className="ds-row-chevron" aria-hidden="true">›</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </>,
+    );
 
   // --------------------------------------------------------------- нет дома
   if (!data.house && !data.incident && !data.card && !data.draft)
@@ -554,9 +601,7 @@ export function App({
     const outcome = data.card;
     return frame(
       <>
-        <PageHeader title="Куда обратиться" subtitle={data.house?.address}>
-          {data.house?.is_demo && <DemoBadge />}
-        </PageHeader>
+        <PageHeader title="Куда обратиться" subtitle={data.house?.address} />
         {refresh}
         {outcome.directory_changed && (
           <Notice role="status">
@@ -598,9 +643,7 @@ export function App({
     const draft = data.draft;
     return frame(
       <>
-        <PageHeader title="Черновик обращения" subtitle={data.house?.address}>
-          {data.house?.is_demo && <DemoBadge />}
-        </PageHeader>
+        <PageHeader title="Черновик обращения" subtitle={data.house?.address} />
         {refresh}
         <div className="ds-reading">
           <AppealDraftScreen
@@ -632,10 +675,14 @@ export function App({
         >
           <div className="ds-status-line">
             <StatusBadge status={incident.status} />
-            {data.house?.is_demo && <DemoBadge />}
           </div>
         </PageHeader>
         {refresh}
+        {closureText(incident) && (
+          <Notice tone={incident.closure === "residents_confirmed" ? "success" : "neutral"} role="status">
+            <p>{closureText(incident)}</p>
+          </Notice>
+        )}
         {launchNotice && (
           <Notice role="status">
             <p>Работа обновилась. Показываем актуальный результат.</p>
@@ -689,10 +736,11 @@ export function App({
                 <h2 id="incident-history">Сообщения жителей</h2>
                 <Timeline
                   label="сообщения"
-                  events={incident.reports.map((report) => ({
+                  events={incident.reports.map((report, index) => ({
                     id: report.id,
-                    title: "Сообщение жителя",
-                    detail: report.description,
+                    // O-2: сосед присоединился — текст проблемы второй раз не повторяется.
+                    title: report.joined ? "Сосед отметил: «Меня тоже касается»" : "Сообщение жителя",
+                    detail: report.joined && index > 0 ? null : report.description,
                     occurred_at: report.created_at,
                   }))}
                 />
@@ -712,9 +760,7 @@ export function App({
   return frame(
     <>
       <div className="ds-header-row">
-        <PageHeader title="Проблемы дома" subtitle={switcher(house)}>
-          {house.is_demo && <DemoBadge />}
-        </PageHeader>
+        <PageHeader title="Проблемы дома" subtitle={switcher(house)} />
         {canReport && (
           // Телефон: липкая панель у большого пальца; компьютер — действие в шапке экрана.
           <div className="ds-bottom-bar">
@@ -728,6 +774,7 @@ export function App({
       <Board
         house={house}
         list={data.incidents!}
+        client={client}
         offset={offset}
         canReport={canReport}
         detailAvailable={data.capabilities.features.incident_detail}
@@ -751,6 +798,7 @@ export function App({
 function Board({
   house,
   list,
+  client,
   offset,
   canReport,
   detailAvailable,
@@ -760,6 +808,7 @@ function Board({
 }: {
   house: House;
   list: IncidentList;
+  client: DomSignalApi;
   offset: number;
   canReport: boolean;
   detailAvailable: boolean;
@@ -775,9 +824,11 @@ function Board({
   const shown = new Set(list.items.map((item) => item.id));
   const rest = mine.filter((item) => !(item.incident_id && shown.has(item.incident_id)));
   const allOnBoard = mine.length > 0 && rest.length === 0;
-  const openCount = list.items.filter((item) =>
-    ["detected", "open", "reported", "overdue", "escalated"].includes(item.status),
-  ).length;
+  // Счёт доски — по всему дому с сервера (F1), а не по странице списка.
+  const openCount =
+    list.open_total ??
+    list.items.filter((item) => ["detected", "open", "reported", "overdue", "escalated"].includes(item.status)).length;
+  const resolvedCount = list.resolved_recent_total ?? 0;
   return (
     <div className="ds-split">
       <section className="ds-group ds-board" aria-labelledby="board-title">
@@ -785,7 +836,7 @@ function Board({
           <h2 id="board-title">
             {openCount
               ? `Сейчас открыто: ${countLabel(openCount, PROBLEMS)}`
-              : list.items.length
+              : list.items.length || resolvedCount
                 ? "Открытых проблем нет"
                 : "О проблемах пока не сообщали"}
           </h2>
@@ -811,8 +862,20 @@ function Board({
           </ul>
         ) : (
           <p className="ds-subtle">
-            Здесь появятся проблемы, о которых сообщили соседи.{canReport ? " Если что-то сломалось — сообщите первым." : ""}
+            {resolvedCount
+              ? "Все проблемы, о которых сообщали соседи, решены."
+              : "Здесь появятся проблемы, о которых сообщили соседи."}
+            {canReport ? " Если что-то сломалось — сообщите первым." : ""}
           </p>
+        )}
+        {resolvedCount > 0 && (
+          <ResolvedRecently
+            house={house}
+            client={client}
+            total={resolvedCount}
+            detailAvailable={detailAvailable}
+            navigate={navigate}
+          />
         )}
         {allOnBoard && (
           <p className="ds-board-mine">
@@ -855,6 +918,80 @@ function Board({
       )}
     </div>
   );
+}
+
+/**
+ * «Решённые за 30 дней» (F1, B-04): проблемы, которые жители подтвердили.
+ * Список грузится при раскрытии — главная доска показывает открытые.
+ */
+function ResolvedRecently({
+  house,
+  client,
+  total,
+  detailAvailable,
+  navigate,
+}: {
+  house: House;
+  client: DomSignalApi;
+  total: number;
+  detailAvailable: boolean;
+  navigate: (href: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const load = useCallback(
+    (signal: AbortSignal) => client.incidents(house.id, signal, 0, "resolved_recent"),
+    [client, house.id],
+  );
+  return (
+    <details className="ds-disclosure ds-resolved" onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>Решённые за 30 дней ({total})</summary>
+      <div className="ds-disclosure-body">{open && <ResolvedList load={load} house={house} detailAvailable={detailAvailable} navigate={navigate} />}</div>
+    </details>
+  );
+}
+
+function ResolvedList({
+  load,
+  house,
+  detailAvailable,
+  navigate,
+}: {
+  load: (signal: AbortSignal) => Promise<IncidentList>;
+  house: House;
+  detailAvailable: boolean;
+  navigate: (href: string) => void;
+}) {
+  const resolved = useResource(`resolved:${house.id}`, load);
+  if (!resolved.data)
+    return resolved.error ? (
+      <StatePanel kind="error" title="Не удалось загрузить решённые проблемы" action="Повторить" onAction={resolved.refresh} />
+    ) : (
+      <StatePanel title="Загружаем решённые проблемы" loading />
+    );
+  return (
+    <ul className="ds-list" aria-label="Решённые за 30 дней">
+      {resolved.data.items.map((incident) => (
+        <li key={incident.id}>
+          <IncidentRow
+            incident={incident}
+            detailAvailable={detailAvailable}
+            href={routeUrl({ house: house.id, incident: incident.id })}
+            onNavigate={navigate}
+            mine={closureText(incident) ?? undefined}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** «Решена 29 сентября — жители подтвердили» / «Закрыта … — заявку отменила УК» (B-04). */
+function closureText(incident: { status: string; closure?: string | null; resolved_at?: string | null }): string | null {
+  if (!incident.closure || !incident.resolved_at) return null;
+  const day = formatWhen(incident.resolved_at);
+  return incident.closure === "residents_confirmed"
+    ? `Решена ${day} — жители подтвердили, что исправлено.`
+    : `Закрыта ${day} — управляющая компания отменила заявку.`;
 }
 
 /** «Вы сообщили · T-2 · Заявка у УК: ждёт принятия в работу» — из «Мои обращения», без второй карточки. */

@@ -3,6 +3,7 @@ import type { ResidentTicketApi } from "./tickets";
 
 export type Capabilities = components["schemas"]["CapabilitiesResponse"];
 export type Me = components["schemas"]["MeResponse"];
+export type IncidentListState = "all" | "open" | "resolved_recent";
 export type IncidentList = components["schemas"]["IncidentList"];
 // Tolerate future enum values at the read boundary; fields come from generated schema.
 export type IncidentSummary = Omit<
@@ -58,6 +59,8 @@ export interface DomSignalApi extends ResidentTicketApi {
     houseId: string,
     signal?: AbortSignal,
     offset?: number,
+    /** F1: `open` — открытые, `resolved_recent` — решённые за 30 дней; без него — все. */
+    state?: IncidentListState,
   ): Promise<IncidentList>;
   incident(id: string, signal?: AbortSignal, houseId?: string): Promise<IncidentDetail>;
   createReport(
@@ -196,9 +199,10 @@ export class ApiClient implements DomSignalApi {
     houseId: string,
     signal?: AbortSignal,
     offset = 0,
+    state?: IncidentListState,
   ): Promise<IncidentList> {
     return this.request<IncidentList>(
-      `/api/v1/houses/${encodeURIComponent(houseId)}/incidents?limit=100&offset=${offset}`,
+      `/api/v1/houses/${encodeURIComponent(houseId)}/incidents?limit=100&offset=${offset}${state ? `&state=${state}` : ""}`,
       { signal },
     );
   }

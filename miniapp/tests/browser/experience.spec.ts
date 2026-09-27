@@ -155,7 +155,7 @@ test("real API → PostgreSQL → board → detail → reload; web keyboard and 
     fullPage: true,
   });
   await expect(page.locator(".ds-source summary").last()).toContainText(
-    "Демонстрационные данные",
+    "Пример данных ДомСигнала",
   );
   await expect(
     page.getByRole("button", { name: "Подготовить обращение" }),

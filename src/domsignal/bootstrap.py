@@ -268,7 +268,7 @@ def build_container(settings: Settings) -> Container:
     report_service = ReportService(
         demo_rule=DemoRule(
             source_url="https://example.invalid/domsignal-demo-source",
-            source_title="Демонстрационный пакет ДомСигнала",
+            source_title="Пример справочника ДомСигнала",
             verification_status="demo",
             note="Правило не проверено; нормативный срок не рассчитан.",
         ),

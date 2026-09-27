@@ -9,12 +9,12 @@ describe("MAX boundary", () => {
     expect(createMaxBridge(() => undefined).startParam).toBeNull();
   });
   it("passes every launch ref the resolver accepts, including chat posts and mailings (D3)", () => {
-    for (const prefix of ["w", "r", "t", "p", "n"]) {
+    // D-01: `c_` — кнопка чата, открывает дом этого чата.
+    for (const prefix of ["w", "r", "t", "p", "n", "c"]) {
       const ref = `${prefix}_${"b".repeat(32)}`;
       expect(createMaxBridge(() => ({ initData: `start_param=${ref}` })).startParam).toBe(ref);
     }
-    // `c_` из кнопки чата сервер уже учёл при входе; экрану это не цель.
-    expect(createMaxBridge(() => ({ initData: `start_param=c_${"b".repeat(32)}` })).startParam).toBeNull();
+    expect(createMaxBridge(() => ({ initData: `start_param=x_${"b".repeat(32)}` })).startParam).toBeNull();
     expect(createMaxBridge(() => ({ initData: `start_param=t_${"b".repeat(31)}` })).startParam).toBeNull();
   });
   it("works outside MAX without global access errors", () => {

@@ -184,12 +184,21 @@ describe('no house yet (D1)', () => {
     expect(screen.getByText('Откройте ДомСигнал кнопкой из вашего домового чата.')).toBeTruthy();
   });
 
-  it('never resolves a chat button reference as a notification launch', async () => {
+  it('a chat button of a house the person is not in opens no house (D-01)', async () => {
     window.history.replaceState(null, '', `/?test_start_param=c_${'a'.repeat(32)}`);
     const client = houseless();
+    vi.mocked(client.notificationLaunch).mockResolvedValue({
+      kind: 'house',
+      house_id: house.id,
+      incident_id: null,
+      route_outcome_id: null,
+      poll_id: null,
+      work_attempt_id: null,
+      stale: false,
+    });
     render(<App client={client} />);
     expect(await screen.findByText('Откройте ДомСигнал кнопкой из вашего домового чата.')).toBeTruthy();
-    expect(client.notificationLaunch).not.toHaveBeenCalled();
+    expect(client.notificationLaunch).toHaveBeenCalledWith(`c_${'a'.repeat(32)}`, expect.any(AbortSignal));
     window.history.replaceState(null, '', '/');
   });
 

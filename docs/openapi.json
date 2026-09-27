@@ -7434,7 +7434,8 @@
               "ticket",
               "route_card",
               "poll",
-              "announcements"
+              "announcements",
+              "house"
             ],
             "title": "Kind",
             "type": "string"

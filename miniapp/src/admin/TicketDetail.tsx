@@ -321,7 +321,7 @@ export function TicketDetail({
               <Info label="Обновлена">{formatStaffTime(ticket.updated_at)}</Info>
             </dl>
             {incident.is_demo && (
-              <span className="demo-badge">Демонстрационные данные</span>
+              <span className="demo-badge">Пример данных</span>
             )}
           </section>
           <TicketDeadlines deadlines={ticket.deadlines} />

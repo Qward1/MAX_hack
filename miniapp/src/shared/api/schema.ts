@@ -5591,7 +5591,7 @@ export interface components {
              * @default ticket
              * @enum {string}
              */
-            kind: "ticket" | "route_card" | "poll" | "announcements";
+            kind: "ticket" | "route_card" | "poll" | "announcements" | "house";
             /** Poll Id */
             poll_id?: string | null;
             /** Route Outcome Id */
