@@ -1,97 +1,96 @@
 version: v1
-selected_at: '2026-09-20'
-updated_at: '2026-09-24'
-note: 'Выбор модели сделан на синтетических окнах (P2, 20.09). Профиль по умолчанию
-  обновлён по измерениям P6 (23.09, dev D3 — синтетика): reasoning minimal, промпт
-  window.v2, явная маршрутизация flex → обычный уровень, таймаут p99 + запас. Решение
-  о включении LLM-слоя пассивного режима — docs/decisions.md (P6).'
-default: openai/gpt-5-mini
+selected_at: '2026-09-27'
+updated_at: '2026-09-27'
+note: 'M1 (27.09): правила хакатона запрещают американские и проприетарные модели —
+  разбор переведён на открытую модель Qwen3 (Alibaba, Apache 2.0) в Cloud.ru Evolution
+  Foundation Models, промпт production window.v3 без изменений. Проверка — только наборы
+  настройки (d5_dev, open_danger_dev, подвыборка dev D3), контроль D5 и holdout D3 —
+  D6. Решение — docs/decisions.md#llm-provider-2026-09-27.'
+default: Qwen/Qwen3-30B-A3B
 models:
-- id: openai/gpt-5-mini
-  label: GPT-5 mini
+- id: Qwen/Qwen3-30B-A3B
+  label: Qwen3-30B-A3B
   role: default
   schema_mode: json_schema_strict
   max_tokens: 1600
-  # p99 на dev D3 = 20,6 с (P6, 23.09) + запас; не больше 60 с (значение production).
-  timeout_seconds: 30.0
-  temperature: null
-  # Метка для людей: код берёт версию из prompts.PROMPT_VERSION (P6c: была
-  # устаревшая window.v2, в production с P6b — window.v3).
+  # M1: p99 наборов настройки 12,2 с (dev D3 — 12,9 с), максимум при 8 параллельных вызовах 14,6 с + запас;
+  # аренда ai-worker 80 с ≥ таймаут + 20 с.
+  timeout_seconds: 20.0
+  temperature: 0
   prompt: window.v3
+  # Гибридная модель: рассуждения выключаются шаблоном чата, в ответе нет <think>.
   extra_body:
-    reasoning:
-      effort: minimal
-    provider:
-      order:
-      - openai/flex
-      - openai
-      allow_fallbacks: true
-  # P6b (24.09): окна при открытом в доме сигнале об опасности — reasoning low
-  # и промпт window.v3. Набор настройки open_danger_dev: новый вид отдельным
-  # сигналом 5/10 (v2, minimal) -> 10/10, продолжения без чужого вида 10/10;
-  # d5_dev без регрессии. Контроль (D5, holdout) не прогонялся.
-  # P6c (24.09): на dev D3 рассуждения low занимали 1150-1350 токенов, и 4 из
-  # 20 таких окон обрезались на 1600 (невалидный JSON -> правила). Лимит
-  # ответа этих окон — 2800 (решение владельца); остальные окна — 1600.
-  open_danger_extra_body:
-    reasoning:
-      effort: low
-    max_tokens: 2800
-  upstream: 'openai/flex первым (14,75 / 117,99 ₽ за млн токенов входа/выхода), при
-    отказе — openai обычного уровня (29,50 / 235,98 ₽); без явного выбора polza 23.09
-    направляла запросы на обычный уровень — вдвое дороже, чем при отборе 20.09'
+    chat_template_kwargs:
+      enable_thinking: false
+  # Отдельной добавки для окон при открытой опасности нет: на open_danger_dev без
+  # рассуждений новый вид — отдельный сигнал 9/10, продолжения без чужого вида 10/10.
+  open_danger_extra_body: null
+  price_rub_per_million:
+    input: 13.908
+    output: 55.6076
+  upstream: 'Cloud.ru Evolution Foundation Models, «внешняя» модель каталога (provider:
+    external; отказы приходят с кодами Huawei ModelArts). 13,908 / 55,6076 ₽ за млн
+    токенов входа/выхода (GET /v1/models, 27.09.2026). Лимит 100 тыс. токенов в минуту
+    на ключ (≈15 окон в минуту), сверх — HTTP 429 и разбор правилами.'
+  license: 'Apache 2.0 — https://huggingface.co/Qwen/Qwen3-30B-A3B (Alibaba, КНР),
+    открытые веса'
   stores_data_in_russia: false
-  policy_basis: 'polza «Конфиденциальность»: запросы у агрегатора не сохраняются,
-    OpenAI хранит до 30 дней; в список «могут использовать данные для обучения» не
-    входит.'
-  policy_checked_at: '2026-09-20'
+  policy_basis: 'Cloud.ru «Обзор доступных AI-моделей» (https://cloud.ru/docs/foundation-models/ug/topics/overview__available__models):
+    внешние модели «предоставляются через внешние API», «при работе с внешними моделями
+    данные передаются вне инфраструктуры Cloud.ru». Внутренние модели (данные в Cloud.ru)
+    дороже в 7–13 раз или не прошли пороги M1; выбор внешней — решение владельца 27.09.'
+  policy_checked_at: '2026-09-27'
   measured:
-    measured_at: '2026-09-23'
-    dataset: D3 dev (синтетика, 138 окон), evaluation/reports/2026-09-23-p6-evaluation.md
-    windows: 138
-    valid_json: 1.0
-    fabricated_quotes: 0.11
-    p50_ms: 5493
-    p95_ms: 8066
-    p99_ms: 20604
-    max_ms: 25992
-    cost_per_window_rub: 0.06
-    note: 'выдуманные цитаты отбрасывает валидатор, место при этом берётся из правил;
-      синтетика, не оценка качества на реальных сообщениях'
-  measured_before:
-    measured_at: '2026-09-23'
-    config: reasoning low, промпт window.v1, маршрутизация polza по умолчанию
-    windows: 138
-    valid_json: 0.948
-    p50_ms: 21992
-    p95_ms: 35201
-    p99_ms: 45460
-    cost_per_window_rub: 0.269
-    note: 7 ответов обрезаны на max_tokens рассуждениями, 3 таймаута по 60 с
-- id: google/gemini-3.1-flash-lite
-  label: Gemini 3.1 Flash Lite
+    measured_at: '2026-09-27'
+    dataset: 'наборы настройки (синтетика): d5_dev 100 окон, open_danger_dev 20, подвыборка
+      dev D3 40 окон; evaluation/reports/2026-09-23-p6-evaluation.md §13'
+    windows: 160
+    valid_json: 0.981
+    fabricated_quotes: 0.005
+    p50_ms: 5195
+    p95_ms: 9590
+    p99_ms: 12239
+    max_ms: 12916
+    cost_per_window_rub: 0.099
+    note: 'dev, не контроль; 29 окон d5_dev получили HTTP 429 и перезапущены с паузой 4 с
+      (составной прогон, как в P6c)'
+- id: deepseek-ai/DeepSeek-V4-Flash
+  label: DeepSeek-V4-Flash
   role: fallback
   schema_mode: json_schema_strict
   max_tokens: 1600
-  # p99 на подвыборке dev (30 окон, P6) = 12,0 с + запас.
-  timeout_seconds: 15.0
+  timeout_seconds: 30.0
   temperature: 0
-  prompt: window.v1
-  extra_body: null
-  upstream: google-vertex (global); маршрут polza по умолчанию, flex явно не закреплён
+  prompt: window.v3
+  # Рассуждения выключает параметр DeepSeek; chat_template_kwargs.thinking=false их
+  # не выключал (465 токенов рассуждений на пробе 27.09).
+  extra_body:
+    thinking:
+      type: disabled
+  open_danger_extra_body: null
+  price_rub_per_million:
+    input: 18.5318
+    output: 37.0758
+  upstream: 'Cloud.ru Evolution Foundation Models, «внешняя» модель каталога (provider:
+    external). 18,5318 / 37,0758 ₽ за млн токенов входа/выхода (GET /v1/models, 27.09.2026).'
+  license: 'MIT — https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash (DeepSeek, КНР),
+    открытые веса'
   stores_data_in_russia: false
-  policy_basis: 'polza «Конфиденциальность»: Google Vertex хранит до 30 дней; в списке
-    «могут использовать данные для обучения» не значится. Выбран вариант через Vertex,
-    а не через бесплатный уровень AI Studio.'
-  policy_checked_at: '2026-09-20'
+  policy_basis: 'Cloud.ru «Обзор доступных AI-моделей» (https://cloud.ru/docs/foundation-models/ug/topics/overview__available__models):
+    «при работе с внешними моделями данные передаются вне инфраструктуры Cloud.ru».'
+  policy_checked_at: '2026-09-27'
   measured:
-    measured_at: '2026-09-23'
-    dataset: подвыборка D3 dev (синтетика, 30 окон), те же окна, что у модели по умолчанию
-    windows: 30
-    valid_json: 1.0
-    fabricated_quotes: 0.06
-    p50_ms: 4963
-    p95_ms: 10926
-    p99_ms: 12036
-    cost_per_window_rub: 0.2199
-    note: синтетика, не оценка качества на реальных сообщениях
+    measured_at: '2026-09-27'
+    dataset: 'одна проба на окне d5_dev (синтетика): рассуждений 0, JSON валиден, 9,8 с,
+      0,13 ₽. На наборах настройки не прогонялась — резерв, не включён.'
+
+# Выведены 27.09.2026 — правила хакатона (американские и проприетарные модели
+# запрещены). Прежние измерения — для истории, не для выбора:
+# - openai/gpt-5-mini через polza.ai (default с P2, 20.09): P6 dev D3 138 окон —
+#   валидный JSON 1.0, выдуманные цитаты 0.11, p50 5,5 с, p95 8,1 с, p99 20,6 с,
+#   0,06 ₽ за окно; P6c (window.v3 + low при открытой опасности, лимит 2800) на 88
+#   окнах dev D3 — инциденты 34/35, опасность 8/8, JSON 88/88, p95 12,0 с, 0,081 ₽;
+#   d5_dev (80) — опасные 30/30, контекстные 10/10, ложные тревоги модели 5/40;
+#   open_danger_dev — новый вид 10/10, продолжения 10/10, p95 13,1 с, 0,128 ₽.
+# - google/gemini-3.1-flash-lite через polza.ai (резерв): подвыборка dev D3, 30 окон —
+#   валидный JSON 1.0, выдуманные цитаты 0.06, p50 5,0 с, p95 10,9 с, 0,22 ₽ за окно.

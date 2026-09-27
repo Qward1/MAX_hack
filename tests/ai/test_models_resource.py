@@ -92,25 +92,43 @@ def test_shipped_resource_is_the_result_of_the_selection() -> None:
         assert profile.timeout_seconds > 0
 
 
-def test_shipped_resource_excludes_the_forbidden_providers() -> None:
+#: M1 (27.09.2026): правила хакатона — ни американских, ни проприетарных моделей.
+US_DEVELOPERS = ("openai/", "anthropic/", "google/", "meta-llama/", "microsoft/", "x-ai/")
+PROPRIETARY = ("gigachat/", "yandex", "gpt-", "gemini", "gemma", "claude")
+
+
+def test_shipped_resource_excludes_the_forbidden_models() -> None:
     for profile in load_models().models:
-        lowered = f"{profile.id} {profile.upstream}".lower()
-        assert "deepseek" not in lowered
-        assert "open-inference" not in lowered and "openinference" not in lowered
-        assert "preview" not in lowered
-        assert "free" not in lowered
+        lowered = profile.id.lower()
+        assert not lowered.startswith(US_DEVELOPERS), profile.id
+        assert not any(marker in lowered for marker in PROPRIETARY), profile.id
+        assert "preview" not in lowered and "free" not in lowered
 
 
-def test_shipped_default_profile_follows_the_p6_measurement() -> None:
-    """Профиль P6: минимальные рассуждения, flex первым, таймаут ≤ production."""
-    default = load_models().default
+def test_shipped_default_profile_follows_the_m1_measurement() -> None:
+    """M1: открытая Qwen3 в Cloud.ru, без рассуждений, цена для учёта ₽."""
+    catalog = load_models()
+    default = catalog.default
     assert default is not None
-    assert default.extra_body["reasoning"] == {"effort": "minimal"}
-    assert default.extra_body["provider"]["order"][0] == "openai/flex"
-    assert default.extra_body["provider"]["allow_fallbacks"] is True
-    assert 20.0 < default.timeout_seconds <= 60.0
-    # P6b: окна при открытом сигнале об опасности — reasoning low. P6c: на dev D3
-    # рассуждения low упирались в 1600 токенов (4/20 окон — обрезанный JSON),
-    # лимит ответа таких окон — 2800; остальные окна — прежние 1600.
-    assert default.open_danger_extra_body == {"reasoning": {"effort": "low"}, "max_tokens": 2800}
+    assert default.id == "Qwen/Qwen3-30B-A3B"
+    assert default.schema_mode == "json_schema_strict"
+    assert default.extra_body == {"chat_template_kwargs": {"enable_thinking": False}}
+    assert default.open_danger_extra_body == {}
+    assert default.price_rub_per_million == (13.908, 55.6076)
+    assert default.temperature == 0
     assert default.max_tokens == 1600
+    # Аренда AI-пула production (80 с) покрывает таймаут с запасом 20 с.
+    assert 0 < default.timeout_seconds <= 60.0
+    # Внешняя модель каталога Cloud.ru: данные уходят вне его инфраструктуры.
+    assert default.stores_data_in_russia is False
+    for profile in catalog.models:
+        assert profile.price_rub_per_million is not None, profile.id
+
+
+def test_price_must_be_numeric_and_not_negative() -> None:
+    entry = {**DOCUMENT["models"][0], "price_rub_per_million": {"input": 1.5, "output": 3}}
+    catalog = build_catalog({**DOCUMENT, "models": [entry]})
+    assert catalog.models[0].price_rub_per_million == (1.5, 3.0)
+    for broken in ({"input": 1}, {"input": "x", "output": 1}, {"input": -1, "output": 1}, 5):
+        with pytest.raises(ModelsUnavailable):
+            build_catalog({**DOCUMENT, "models": [{**entry, "price_rub_per_million": broken}]})

@@ -121,7 +121,7 @@ def test_webhook_secret_matches_max_contract(secret: str) -> None:
 def test_llm_defaults_keep_the_offline_rules_path() -> None:
     settings = Settings(_env_file=None)
     assert settings.llm_provider is LlmProvider.RULES
-    assert settings.llm_base_url == "https://polza.ai/api/v1"
+    assert settings.llm_base_url == "https://foundation-models.api.cloud.ru/v1"
     assert settings.llm_api_key is None
     assert settings.llm_model is None
     assert settings.llm_schema_mode is LlmSchemaMode.JSON_SCHEMA_STRICT

@@ -46,7 +46,14 @@ def test_the_page_answers_the_five_questions_without_forbidden_claims() -> None:
         privacy.CONTACT_TITLE,
     ):
         assert f"<h2>{title}</h2>" in html
-    assert "polza.ai" in html and "72 часов" in html and "«MAX-чаты»" in html
+    assert "72 часов" in html and "«MAX-чаты»" in html
+    # M1: провайдер — Cloud.ru, модель открытая; размещения в РФ страница не
+    # обещает — Cloud.ru подключает эту модель через внешний API.
+    model_block = " ".join(privacy.MODEL)
+    assert "Cloud.ru" in model_block and "Qwen3" in model_block and "Apache 2.0" in model_block
+    assert "вне инфраструктуры Cloud.ru" in model_block
+    assert "polza" not in html.lower()
+    assert "в россии" not in model_block.lower()
     lowered = html.lower()
     for phrase in (*FORBIDDEN_PHRASES, *NOT_IN_UI):
         assert phrase not in lowered, phrase

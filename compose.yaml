@@ -105,6 +105,8 @@ services:
     stop_grace_period: 45s
     environment:
       <<: *backend-environment
+      # Провайдер модели (M1): Cloud.ru; локально модель выключена (rules).
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://foundation-models.api.cloud.ru/v1}
       AI_WORKER_CONCURRENCY: ${AI_WORKER_CONCURRENCY:-1}
     depends_on:
       db:

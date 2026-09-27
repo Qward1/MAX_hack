@@ -16,6 +16,7 @@ import yaml
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from domsignal.ai.models import load_models
 from domsignal.bootstrap import build_ai
 from domsignal.main import create_app
 from domsignal.settings import LlmProvider, Settings
@@ -24,6 +25,7 @@ from domsignal.worker.pools import lease_seconds_for
 ROOT = Path(__file__).resolve().parents[2]
 BACKEND = ("migrate", "seed", "api", "worker", "ai-worker")
 MODEL_ONLY = (
+    "LLM_BASE_URL",
     "LLM_API_KEY",
     "LLM_MODEL",
     "LLM_TIMEOUT_SECONDS",
@@ -43,7 +45,7 @@ SYNTHETIC_VPS = {
 MODEL = {
     "LLM_PROVIDER": "openai_compatible",
     "LLM_API_KEY": "synthetic-model-key",
-    "LLM_MODEL": "openai/gpt-5-mini",
+    "LLM_MODEL": "Qwen/Qwen3-30B-A3B",
 }
 _REFERENCE = re.compile(r"\$\{(?P<name>[A-Z0-9_]+)(?:(?P<op>:-|:\?)(?P<arg>[^}]*))?\}")
 
@@ -96,7 +98,8 @@ def test_only_the_ai_worker_receives_model_variables() -> None:
         if service == "ai-worker":
             assert env["LLM_PROVIDER"] == "openai_compatible"
             assert env["LLM_API_KEY"] == "synthetic-model-key"
-            assert env["LLM_MODEL"] == "openai/gpt-5-mini"
+            assert env["LLM_MODEL"] == "Qwen/Qwen3-30B-A3B"
+            assert env["LLM_BASE_URL"] == "https://foundation-models.api.cloud.ru/v1"
             continue
         assert env["LLM_PROVIDER"] == "rules", service
         assert not set(MODEL_ONLY) & set(env), service
@@ -138,14 +141,20 @@ def test_the_model_timeout_comes_from_the_profile_unless_set(
 ) -> None:
     worker = settings_of("ai-worker", {**SYNTHETIC_VPS, **MODEL}, monkeypatch)
     ai = build_ai(worker, None)  # type: ignore[arg-type]  # фабрика сессий не нужна
-    assert ai.timeout_seconds == 30.0, "профиль gpt-5-mini (P6)"
+    profile = load_models().default
+    assert profile is not None and profile.id == "Qwen/Qwen3-30B-A3B"
+    assert ai.timeout_seconds == profile.timeout_seconds, "профиль Qwen3-30B-A3B (M1)"
     assert ai.provider is not None
-    open_danger = {"reasoning": {"effort": "low"}, "max_tokens": 2800}
-    assert ai.provider.open_danger_extra_body == open_danger
+    assert ai.provider.base_url == "https://foundation-models.api.cloud.ru/v1"
+    assert ai.provider.open_danger_extra_body == {}
+    assert ai.provider.extra_body == {"chat_template_kwargs": {"enable_thinking": False}}
+    assert ai.provider.price_rub_per_million == (13.908, 55.6076)
     assert ai.provider.max_tokens == 1600
     assert ai.provider.prompt_version == "window.v3"
     assert lease_seconds_for(
-        "ai", ai_lease_seconds=worker.ai_worker_lease_seconds, model_timeout_seconds=30.0
+        "ai",
+        ai_lease_seconds=worker.ai_worker_lease_seconds,
+        model_timeout_seconds=profile.timeout_seconds,
     ) == 80
     explicit = settings_of(
         "ai-worker", {**SYNTHETIC_VPS, **MODEL, "LLM_TIMEOUT_SECONDS": "45"}, monkeypatch
@@ -168,7 +177,8 @@ def test_model_configuration_reaches_the_ai_worker_and_the_lease_covers_it(
     worker = settings_of("ai-worker", env, monkeypatch)
     assert worker.llm_provider is LlmProvider.OPENAI_COMPATIBLE
     assert worker.llm_api_key == "synthetic-model-key"
-    assert worker.llm_model == "openai/gpt-5-mini"
+    assert worker.llm_model == "Qwen/Qwen3-30B-A3B"
+    assert worker.llm_base_url == "https://foundation-models.api.cloud.ru/v1"
     assert "llm_timeout_seconds" in worker.model_fields_set
     assert (
         lease_seconds_for(
@@ -212,7 +222,7 @@ def test_the_api_advertises_the_model_without_holding_the_key(
 def test_the_model_provider_without_a_key_stops_the_ai_worker(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    env = {**SYNTHETIC_VPS, "LLM_PROVIDER": "openai_compatible", "LLM_MODEL": "openai/gpt-5-mini"}
+    env = {**SYNTHETIC_VPS, "LLM_PROVIDER": "openai_compatible", "LLM_MODEL": "Qwen/Qwen3-30B-A3B"}
     with pytest.raises(ValidationError, match="LLM_API_KEY is required"):
         settings_of("ai-worker", env, monkeypatch)
     # Процессы без модели от этого не падают: у них правила.
@@ -232,6 +242,6 @@ def test_production_still_rejects_the_template_values(monkeypatch: pytest.Monkey
             settings_of(service, {**template, **valid_key}, monkeypatch)
         for name in ("SESSION_SECRET", "DATABASE_URL", "MAX_BOT_TOKEN", "PUBLIC_BASE_URL"):
             assert name in str(rejected.value)
-    placeholder = {**SYNTHETIC_VPS, **MODEL, "LLM_API_KEY": "replace_with_polza_key"}
+    placeholder = {**SYNTHETIC_VPS, **MODEL, "LLM_API_KEY": "replace_with_provider_key"}
     with pytest.raises(ValidationError, match="placeholder"):
         settings_of("ai-worker", placeholder, monkeypatch)

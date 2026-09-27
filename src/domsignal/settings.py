@@ -42,7 +42,8 @@ class LlmSchemaMode(StrEnum):
 
 
 MAX_API_ORIGIN = "https://platform-api2.max.ru"
-LLM_BASE_URL = "https://polza.ai/api/v1"
+# M1 (27.09.2026): Cloud.ru Evolution Foundation Models (LLM-PROVIDER-2026-09-27).
+LLM_BASE_URL = "https://foundation-models.api.cloud.ru/v1"
 PRODUCTION_MAX_BOT_USERNAME = "t480_hakaton_max_bot"
 WEBHOOK_SECRET_PATTERN = re.compile(r"^[A-Za-z0-9_-]{5,256}$")
 

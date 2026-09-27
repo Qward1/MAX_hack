@@ -310,10 +310,11 @@ which Compose derives from the same `LLM_PROVIDER` value. Variables in
 | Variable | Service | Default | Demo/check value |
 |---|---|---|---|
 | `LLM_PROVIDER` | ai-worker (+ capability in api) | `rules` | `openai_compatible` |
-| `LLM_API_KEY` | ai-worker only | empty | provider key, appended on the VPS only |
-| `LLM_MODEL` | ai-worker | empty | `openai/gpt-5-mini` |
-| `LLM_TIMEOUT_SECONDS` | ai-worker | empty — the model profile applies (`gpt-5-mini`: 30 s, P6 dev p99 20.6 s) | empty (OWNER-DECISION-2026-09-24); a number overrides the profile |
-| `LLM_DAILY_CALL_BUDGET` | ai-worker | `300` | `300` (≈0.37 ₽ per window) |
+| `LLM_BASE_URL` | ai-worker | `https://foundation-models.api.cloud.ru/v1` | same — Cloud.ru Evolution Foundation Models (M1, LLM-PROVIDER-2026-09-27) |
+| `LLM_API_KEY` | ai-worker only | empty | Cloud.ru key, appended on the VPS only |
+| `LLM_MODEL` | ai-worker | empty | `Qwen/Qwen3-30B-A3B` (open weights, Apache 2.0; a Cloud.ru "external" model) |
+| `LLM_TIMEOUT_SECONDS` | ai-worker | empty — the model profile applies (`Qwen3-30B-A3B`: TIMEOUT_NOTE) | empty (OWNER-DECISION-2026-09-24); a number overrides the profile |
+| `LLM_DAILY_CALL_BUDGET` | ai-worker | `300` | `300` (≈0.10 ₽ per window → ≤ 30 ₽ a day) |
 | `LLM_CHAT_DAILY_SHARE` | ai-worker | `0.2` | `0.2` |
 | `AI_WORKER_LEASE_SECONDS` | ai-worker | `80` | `80`; must be ≥ model timeout + 20 s or the AI worker refuses to start |
 | `PASSIVE_CAPTURE_ENABLED` | api, worker, ai-worker | `false` | `true` |
@@ -323,6 +324,9 @@ which Compose derives from the same `LLM_PROVIDER` value. Variables in
 
 Append the key without echoing it (stdin, not an argument), e.g. pipe the single
 `LLM_API_KEY=` line into `cat >> deploy/.env.production` over SSH; keep mode 600.
+The Cloud.ru key is limited to 100 000 tokens a minute (≈15 windows a minute);
+above that the provider answers HTTP 429 and the window is analysed by rules.
+American and proprietary models are not allowed by the hackathon rules (M1).
 `openai_compatible` without a key or model stops only `ai-worker` (settings
 validation); rules and the report/window watchdogs keep the product working.
 The operational lease stays 30 s; `report.fallback` (30 s) and

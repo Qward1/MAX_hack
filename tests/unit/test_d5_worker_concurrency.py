@@ -35,7 +35,7 @@ def test_loops_cannot_outnumber_connections_or_the_model_semaphore() -> None:
         settings(
             llm_provider="openai_compatible",
             llm_api_key="synthetic-key",
-            llm_model="openai/gpt-5-mini",
+            llm_model="Qwen/Qwen3-30B-A3B",
             llm_max_concurrency=2,
             ai_worker_concurrency=4,
         )
