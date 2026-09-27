@@ -1,5 +1,63 @@
 # DEV-B — current handoff
 
+## M1 — смена модели: открытая неамериканская модель в Cloud.ru — 27.09.2026
+
+**MERGED · DEPLOYED.** Ветка `agent/m1-model` (от `origin/main` = `99037d6`,
+с `origin/dev/b-experience` = `05c90ea`), `--no-ff` в `dev/b-experience` —
+`d38b6e7`; `main` и `dev/a-core` — fast-forward. Production `/version` =
+`d38b6e7` с 27.09.2026 21:40 МСК, до него `9f0a68f`. Решение —
+[LLM-PROVIDER-2026-09-27](../decisions.md#llm-provider-2026-09-27), оценка —
+[отчёт §13](../../evaluation/reports/2026-09-23-p6-evaluation.md#13-m1-смена-модели-27092026).
+
+- **Модель:** `Qwen/Qwen3-30B-A3B` (Alibaba, Apache 2.0) через Cloud.ru
+  Evolution Foundation Models, рассуждения выключены, промпт `window.v3` без
+  изменений; резерв — `deepseek-ai/DeepSeek-V4-Flash` (MIT, не включён).
+  `openai/gpt-5-mini` и `google/gemini-3.1-flash-lite` выведены (правила
+  хакатона). В каталоге Cloud.ru обе модели «внешние» — данные уходят вне
+  инфраструктуры Cloud.ru; внутренние открытые модели дороже в 7–13 раз или
+  не прошли пороги (GigaChat3-10B: JSON 15/20) — выбор владельца.
+- **Код:** цена в профиле (`price_rub_per_million`) — Cloud.ru не сообщает ₽ в
+  `usage`, адаптер считает их по токенам (тест на записанном ответе);
+  `LLM_BASE_URL` по умолчанию — Cloud.ru, в Compose — только `ai-worker`;
+  `/privacy` — провайдер Cloud.ru, открытая модель, разбор вне инфраструктуры
+  Cloud.ru (контрактный тест не даёт обещать серверы в РФ).
+- **Качество (dev, не контроль):** пороги записаны до прогона и пройдены —
+  JSON 98,1 %, `d5_dev` 39/40, новый вид при открытой опасности 9/10 (правила
+  2/10), инциденты dev D3 18/18, p95 ≤ 12,2 с; 8 параллельных — 0 × 429.
+  Хуже `gpt-5-mini`: подтип dev D3 14/18 против 18/18. Окно ≈ 0,10 ₽.
+- **Ограничение:** ключ Cloud.ru — 100 тыс. токенов в минуту (HTTP 429
+  `ModelArts.81114`, непостоянно: 29/100 последовательных вызовов в одном
+  прогоне); 429 → окно разбирают правила.
+
+**Проверки:** `check.py --scope backend` — 983 passed; `contracts` — PASS;
+`integration` (PostgreSQL 16 в Docker) — 511 passed. Frontend не менялся
+(`/privacy` отдаёт backend). CI `main` на `d38b6e7`: backend, contracts,
+frontend, sanity — success; `postgres-and-docker` — 1 падение
+`test_d5_queue.py::test_claim_uses_the_partial_pool_index` (план PostgreSQL
+выбрал другой индекс; очередь в M1 не менялась, локально тест проходит) —
+повтор упавшего задания — success, quality-gate зелёный. Секреты: значений ключей `.env`/`.env.cloudru` в диффе
+нет (проверка по значениям).
+
+**Выкладка** (runbook §6): образ отката `domsignal-backend:pre-9f0a68f`, копия
+env `/var/backups/domsignal/env-production-pre-m1-20260927T183957Z` (600,
+в ней прежний ключ polza — точка отката), копия БД
+`domsignal-pre-m1-20260927T183957Z.dump` (344 720 байт, `pg_restore --list` —
+513 строк); bundle `9f0a68f..d38b6e7`, `--ff-only`; в env ключ polza удалён,
+заданы `LLM_BASE_URL`, `LLM_API_KEY` (Cloud.ru), `LLM_MODEL=Qwen/Qwen3-30B-A3B`,
+`BUILD_COMMIT`; режим 600. `migrate` — exit 0, api healthy, в журналах api,
+worker, ai-worker ошибок нет. Снаружи: `/ready` — ready, `/version` =
+`d38b6e7`, вебхук без секрета — 401, `/privacy` — новый текст. Вызов модели
+через сборку `ai-worker` (`build_ai`, синтетическое окно) — `ok`, 6,0 с,
+модель `qwen3-30b-a3b`, 6 132 / 309 токенов, 0,102 ₽. Подписка MAX — одна, URL
+и 8 типов прежние. В MAX не писал.
+
+**Потрачено:** 21,84 ₽ из 40 (срез 21,64 ₽ — 242 вызова; проверка
+production-пути локально и на VPS — 2 × 0,10 ₽).
+
+**D6:** прогон контроля (D5, holdout D3) для новой модели; обновить цифры
+качества и стоимости в документах и презентации; при необходимости —
+повышенный лимит ключа Cloud.ru.
+
 ## «Мой дом»: ссылки и выбор дома — 27.09.2026
 
 **MERGED · DEPLOYED.** Коммит `78c989a` (ветка `agent/b/house-links` от

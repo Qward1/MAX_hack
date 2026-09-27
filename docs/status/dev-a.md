@@ -4,6 +4,12 @@ Branch: `agent/a/p6c-close` (worktree `.worktrees/a-p6c-close`, от `origin/mai
 Current task: P6c — закрытие AI-ступени (одна ошибка, одно обобщение, регрессия `window.v3`, документация, выкладка)
 State: MERGED + DEPLOYED + LIVE VERIFIED — `main` = `dev/b-experience` = `dev/a-core`; на VPS `38cb5df` (после него в `main` только этот документ и журнал живых шагов); CI `main` зелёный
 
+> **M1 (27.09.2026):** модель в production — `Qwen/Qwen3-30B-A3B` через Cloud.ru
+> (правила хакатона: американские и проприетарные модели запрещены), резерв —
+> `DeepSeek-V4-Flash`; `gpt-5-mini` выведена. Таблицы ниже описывают состояние
+> до M1. Подробно — [dev-b.md «M1»](dev-b.md),
+> [LLM-PROVIDER-2026-09-27](../decisions.md#llm-provider-2026-09-27).
+
 ## AI-ступень закрыта 24.09
 
 ### Что в production
