@@ -940,18 +940,68 @@ details > summary {
   font-size: var(--ds-text-small);
   color: var(--ds-ink-2);
 }
-.ds-house-switch select {
-  min-height: var(--ds-target);
-  padding: 8px 12px;
-  border: 1px solid var(--ds-field);
-  border-radius: var(--ds-radius-s);
-  background: var(--ds-surface);
-  color: var(--ds-ink);
+/* Кнопка выбора дома: адрес до двух строк, полностью — в списке и подсказке. */
+.ds-house-trigger {
+  max-width: 30rem;
+  padding-block: 8px;
   font-size: var(--ds-text-body);
-  width: 100%;
+}
+.ds-house-trigger:active:not(:disabled) {
+  background: var(--ds-secondary-hover);
+}
+.ds-house-value {
   min-width: 0;
-  max-width: 100%;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.ds-house-trigger[aria-expanded="true"] .ds-picker-caret {
+  transform: rotate(-135deg) translateY(-2px);
+}
+/* Список домов: строки без рамок, выбранный — жирнее и с галочкой, курсор — фоном. */
+.ds-house-options {
+  display: grid;
+  gap: 2px;
+  outline: none;
+}
+.ds-house-option {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  min-height: 48px;
+  padding: 10px var(--ds-space-3);
+  border-radius: var(--ds-radius-s);
+  cursor: pointer;
+}
+.ds-house-option.is-active {
+  background: var(--ds-surface-2);
+}
+.ds-house-options.is-keyboard .ds-house-option.is-active {
+  outline: 2px solid var(--ds-focus);
+  outline-offset: -2px;
+}
+.ds-house-option:active {
+  background: var(--ds-secondary-hover);
+}
+.ds-house-option[aria-selected="true"] {
+  font-weight: var(--ds-weight-strong);
+}
+.ds-house-option-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ds-house-option .ds-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--ds-ink-2);
+}
+.ds-house-sheet.is-popover .ds-house-option {
+  min-height: 40px;
+  padding-block: 8px;
 }
 /* Разделы верхнего уровня: текущий виден подчёркиванием и жирностью. */
 .ds-tabs {
@@ -1739,13 +1789,71 @@ details > summary {
   color: var(--ds-ink);
   font-weight: var(--ds-weight-strong);
 }
-a.ds-service-name {
-  display: inline-block;
-  min-height: var(--ds-target-min);
-  color: var(--ds-accent);
+/*
+ * Официальный сервис — строка во всю ширину: название цветом текста, справа
+ * приглушённый значок внешнего перехода. Фон строки — при наведении и нажатии.
+ */
+a.ds-service-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  width: auto;
+  min-height: var(--ds-target);
+  margin-inline: calc(-1 * var(--ds-space-2));
+  padding: 6px var(--ds-space-2);
+  border-radius: var(--ds-radius-s);
+  color: var(--ds-ink);
+  text-decoration: none;
+}
+.ds-service-link-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+a.ds-service-link .ds-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--ds-ink-2);
+}
+a.ds-service-link:hover {
+  background: var(--ds-surface-2);
+}
+a.ds-service-link:hover .ds-icon {
+  color: var(--ds-ink);
+}
+a.ds-service-link:active {
+  background: var(--ds-secondary-hover);
+}
+a.ds-service-link:focus-visible {
+  outline-offset: 0;
+}
+/* Телефон, почта, «Политика данных»: цвет текста, спокойное подчёркивание. */
+a.ds-text-link {
+  color: var(--ds-ink);
   text-decoration: underline;
+  text-decoration-color: var(--ds-field);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+  border-radius: 2px;
+}
+a.ds-text-link:hover {
+  text-decoration-color: currentColor;
+}
+a.ds-text-link:active {
+  background: var(--ds-surface-2);
+}
+.ds-phone {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ds-service-list .ds-source-body a {
+  color: var(--ds-ink-2);
+  text-decoration-color: var(--ds-field);
+}
+.ds-service-list .ds-source-body a:hover {
+  color: var(--ds-ink);
 }
 .ds-house-group {
   display: grid;

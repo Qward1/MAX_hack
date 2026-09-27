@@ -14,6 +14,7 @@ import { useResource } from "../../shared/api/useResource";
 import { maxBridge, safeUrl } from "../../shared/max/bridge";
 import { Button } from "../../shared/ui/Button";
 import { countLabel, formatDay, formatWhen } from "../../shared/ui/format";
+import { IconExternal } from "../../shared/ui/icons";
 import { ConfirmDialog, InfoRow, Notice, StatePanel, StatusTag } from "../../shared/ui/semantic";
 import { SourceDisclosure } from "../../shared/ui/SourceLink";
 
@@ -52,13 +53,16 @@ function Source({ source }: { source: VerifiedSource }) {
   return <SourceDisclosure url={source.url} title={source.title} verified={formatDay(source.verified_at)} />;
 }
 
-/** Внешний сервис: короткое название ссылкой с внешней меткой. */
-function ServiceLink({ href, children }: { href: string; children: ReactNode }) {
+/**
+ * Внешний сервис: в списке сервисов — строка во всю ширину со значком
+ * внешнего перехода справа, в контактах (`inline`) — обычная текстовая ссылка.
+ */
+function ServiceLink({ href, inline = false, children }: { href: string; inline?: boolean; children: ReactNode }) {
   const url = safeUrl(href);
-  if (!url) return <span className="ds-service-name">{children}</span>;
+  if (!url) return <span className={inline ? undefined : "ds-service-name"}>{children}</span>;
   return (
     <a
-      className="ds-service-name"
+      className={inline ? "ds-text-link" : "ds-service-name ds-service-link"}
       href={url}
       target="_blank"
       rel="noopener noreferrer"
@@ -66,9 +70,18 @@ function ServiceLink({ href, children }: { href: string; children: ReactNode }) 
         if (maxBridge.openLink(url)) event.preventDefault();
       }}
     >
-      {children}
-      <span aria-hidden="true">&nbsp;↗</span>{" "}
+      <span className="ds-service-link-text">{children}</span>
+      {inline ? <span aria-hidden="true">&nbsp;↗</span> : <IconExternal />}{" "}
       <span className="ds-visually-hidden">(откроется отдельно)</span>
+    </a>
+  );
+}
+
+/** Телефон или почта: работают как tel:/mailto:, выглядят текстом, а не синей ссылкой. */
+function ContactLink({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
+  return (
+    <a className={["ds-text-link", className].filter(Boolean).join(" ")} href={href}>
+      {children}
     </a>
   );
 }
@@ -129,14 +142,32 @@ export function MyHouseScreen({ api, houseId, links }: { api: CommunityApi; hous
         [
           [
             "Аварийно-диспетчерская служба",
-            company.dispatcher_phone && <a href={`tel:${company.dispatcher_phone}`}>{company.dispatcher_phone}</a>,
+            company.dispatcher_phone && (
+              <ContactLink href={`tel:${company.dispatcher_phone}`} className="ds-phone">
+                {company.dispatcher_phone}
+              </ContactLink>
+            ),
           ],
-          ["Телефон", company.phone && <a href={`tel:${company.phone}`}>{company.phone}</a>],
-          ["Почта", company.email && <a href={`mailto:${company.email}`}>{company.email}</a>],
+          [
+            "Телефон",
+            company.phone && (
+              <ContactLink href={`tel:${company.phone}`} className="ds-phone">
+                {company.phone}
+              </ContactLink>
+            ),
+          ],
+          ["Почта", company.email && <ContactLink href={`mailto:${company.email}`}>{company.email}</ContactLink>],
           ["Часы работы", company.office_hours],
           ["Часы приёма", company.reception_hours],
           ["Адрес офиса", company.office_address],
-          ["Сайт", company.website && <ServiceLink href={company.website}>{company.website}</ServiceLink>],
+          [
+            "Сайт",
+            company.website && (
+              <ServiceLink href={company.website} inline>
+                {company.website}
+              </ServiceLink>
+            ),
+          ],
         ] as [string, ReactNode][]
       ).filter(([, value]) => Boolean(value))
     : [];
@@ -224,9 +255,9 @@ export function MyHouseScreen({ api, houseId, links }: { api: CommunityApi; hous
                       <span className="ds-service-name">{channel.label}</span>
                     )}
                     {channel.phone && (
-                      <a href={`tel:${channel.phone}`} className="ds-service-phone">
+                      <ContactLink href={`tel:${channel.phone}`} className="ds-phone ds-service-phone">
                         {channel.phone}
-                      </a>
+                      </ContactLink>
                     )}
                     <Source source={channel.source} />
                   </li>
@@ -255,6 +286,7 @@ export function MyHouseScreen({ api, houseId, links }: { api: CommunityApi; hous
       </div>
       <p className="ds-subtle">
         <a
+          className="ds-text-link"
           href={privacy}
           target="_blank"
           rel="noopener noreferrer"

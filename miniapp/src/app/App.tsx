@@ -18,6 +18,7 @@ import { useResource } from "../shared/api/useResource";
 import { LAUNCH_REF, maxBridge } from "../shared/max/bridge";
 import { Button } from "../shared/ui/Button";
 import { countLabel, formatWhen } from "../shared/ui/format";
+import { HouseSwitch } from "../shared/ui/HouseSwitch";
 import { IconHouse, IconNews, IconProblems, IconRequests } from "../shared/ui/icons";
 import {
   BackLink,
@@ -464,19 +465,11 @@ export function App({
   const houses = data.me.houses;
   const switcher = (house: House) =>
     houses.length > 1 ? (
-      <label className="ds-house-switch">
-        Дом
-        <select
-          value={house.id}
-          onChange={(event) => navigate(routeUrl({ house: event.target.value, view: view && view !== "poll" ? view : undefined }))}
-        >
-          {houses.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.address}
-            </option>
-          ))}
-        </select>
-      </label>
+      <HouseSwitch
+        houses={houses}
+        value={house.id}
+        onChange={(id) => navigate(routeUrl({ house: id, view: view && view !== "poll" ? view : undefined }))}
+      />
     ) : (
       house.address
     );

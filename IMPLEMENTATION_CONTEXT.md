@@ -1,6 +1,6 @@
 # ДомСигнал — implementation context
 
-Состояние на 27.09.2026 (срез D5). Интегратор — DEV-B; обновляется после
+Состояние на 27.09.2026 (D5, затем UX-2 и RA-01…RA-08). Интегратор — DEV-B; обновляется после
 значимого merge или выкладки. Подробности и проверки каждого среза —
 [docs/status/dev-b.md](docs/status/dev-b.md) (единый статус проекта с 24.09),
 AI-часть — [docs/status/dev-a.md](docs/status/dev-a.md). Прежние версии этого
@@ -23,8 +23,8 @@ AI-часть — [docs/status/dev-a.md](docs/status/dev-a.md). Прежние �
 - **LIVE VERIFIED** — проверено в настоящем MAX людьми по чекпоинту
   [MAX_LIVE_SMOKE](docs/MAX_LIVE_SMOKE.md).
 
-Production: `/version` = `00aafba` (D5, выложен 27.09 в 01:14 МСК; до него —
-`39e3dcc`, UX-1 + D4). Выкладка и проверки — раздел D5 в
+Production: `/version` = `99037d6` (UX-2 и RA-01…RA-08, PR #2, выложен 27.09 в
+18:55 МСК; до него — `00aafba`, D5). Выкладка и проверки — разделы UX-3 и D5 в
 [dev-b.md](docs/status/dev-b.md).
 
 | Срез | Что | Статус | Чекпоинт / решения |
@@ -38,6 +38,7 @@ Production: `/version` = `00aafba` (D5, выложен 27.09 в 01:14 МСК; д
 | UX-1 | единая визуальная система | MERGED · DEPLOYED (`39e3dcc`) | [UX_REVIEW](docs/UX_REVIEW.md) |
 | D4 | регион и пояс дома, RU-PSK/RU-PRI данными, `/privacy`, совет дома, эксплуатация | MERGED · DEPLOYED (`39e3dcc`); живые шаги 1–5 — тест-кейсы владельца | [HOUSE-REGION](docs/decisions.md#house-region-2026-09-27) |
 | D5 | параллельный разбор, пул БД, очистка очереди, здоровье очереди, дома пачкой, `region_pack new`, готовность справочника, реальные агрегаты и разметка, нагрузочные прогоны А–Д | MERGED · DEPLOYED (`00aafba`, 27.09); транспорт MAX проверен, нажатия — тест-кейсы владельца | [QUEUE-SCALE](docs/decisions.md#queue-scale-2026-09-27), [BULK-HOUSES](docs/decisions.md#bulk-houses-2026-09-27), [SCALING](docs/SCALING.md) |
+| UX-2 + RA-01…RA-08 | сервисная ясность интерфейса и замечания повторного аудита, только frontend | MERGED в `main` PR #2 (`99037d6`; `dev/a-core` не сдвигался) · DEPLOYED (`99037d6`, 27.09); публичные страницы проверены в браузере на production, MAX WebView и внутренние экраны — только локальный стенд | [UX.md](docs/UX.md#сервисная-ясность-ux-2--27092026) |
 
 **Не проверено в настоящем MAX людьми:** живые шаги D4 (посторонний житель,
 «Политика данных», совет дома, рассылка в личку и отписка, дом RU-MOW);
