@@ -6,7 +6,7 @@
 (`--actor`, у него должны быть права на дом): их собственный аудит не меняется.
 
     python -m domsignal.tools.platform_ops rename-house --house-id … --name … --address …
-    python -m domsignal.tools.platform_ops rename-company --company-id … --name …
+    python -m domsignal.tools.platform_ops rename-company --company-id … --name … [--legal-name …]
     python -m domsignal.tools.platform_ops open-access --house-id … --enable
     python -m domsignal.tools.platform_ops dismiss-signal --signal-id … --actor …
     python -m domsignal.tools.platform_ops cancel-ticket --ticket-id … --actor …
@@ -109,23 +109,32 @@ async def rename_house(
 
 
 async def rename_company(
-    session: AsyncSession, *, company_id: UUID, name: str, operator: str, reason: str
+    session: AsyncSession,
+    *,
+    company_id: UUID,
+    name: str,
+    operator: str,
+    reason: str,
+    legal_name: str | None = None,
 ) -> dict[str, Any]:
     company = await session.get(ManagementCompany, company_id, with_for_update=True)
     if company is None:
         raise ValueError("Company was not found")
-    before = {"name": company.name}
+    before = {"name": company.name, "legal_name": company.legal_name}
     company.name = name.strip()[:200]
+    if legal_name is not None:
+        company.legal_name = legal_name.strip()[:300] or None
+    after = {"name": company.name, "legal_name": company.legal_name}
     receipt(
         session,
         action="rename-company",
         object_id=company_id,
         before=before,
-        after={"name": company.name},
+        after=after,
         operator=operator,
         reason=reason,
     )
-    return {"company_id": str(company_id), "name": company.name}
+    return {"company_id": str(company_id), **after}
 
 
 async def rename_staff(
@@ -340,7 +349,11 @@ async def run(args: argparse.Namespace) -> None:
                     )
                 elif args.command == "rename-company":
                     result = await rename_company(
-                        session, company_id=args.company_id, name=args.name, **common
+                        session,
+                        company_id=args.company_id,
+                        name=args.name,
+                        legal_name=args.legal_name,
+                        **common,
                     )
                 else:
                     result = await open_access(
@@ -363,6 +376,7 @@ def main() -> None:
     company = commands.add_parser("rename-company")
     company.add_argument("--company-id", dest="company_id", type=UUID, required=True)
     company.add_argument("--name", required=True)
+    company.add_argument("--legal-name", dest="legal_name")
     access = commands.add_parser("open-access")
     access.add_argument("--house-id", dest="house_id", type=UUID, required=True)
     access.add_argument("--enable", action=argparse.BooleanOptionalAction, required=True)

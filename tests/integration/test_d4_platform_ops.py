@@ -70,7 +70,8 @@ async def test_rename_and_open_access_leave_receipts_with_before_and_after(ex) -
     assert renamed["after"]["name"] == "Казань, ул. Проверочная, 17"
     assert (renamed["operator"], renamed["reason"]) == ("pytest", "проверка завершена")
     [company_receipt] = await receipts(ex, "rename-company")
-    assert company_receipt["before"] == {"name": "Явный путь УК"}
+    assert company_receipt["before"]["name"] == "Явный путь УК"
+    assert company_receipt["after"]["legal_name"] == company.legal_name
     [access] = await receipts(ex, "open-access")
     assert (access["before"], access["after"]) == (False, True)
 
@@ -147,3 +148,20 @@ async def test_refresh_chat_takes_the_title_from_max_and_leaves_a_receipt(ex) ->
     [row] = await receipts(ex, "refresh-chat")
     assert row["before"]["title"] == "Synthetic chat"
     assert row["after"]["title"] == "Дом · Казань, Синтетическая, 1"
+
+
+@pytest.mark.integration
+async def test_rename_company_can_change_the_legal_name(ex) -> None:  # noqa: F811
+    async with ex.container.session_factory() as session, session.begin():
+        result = await platform_ops.rename_company(
+            session,
+            company_id=ex.ids["tenant"],
+            name="УК «Солнечная, 3»",
+            legal_name=" ООО «Солнечная» ",
+            **OPS,
+        )
+    assert result["legal_name"] == "ООО «Солнечная»"
+    company = await ex.scalar(
+        select(ManagementCompany).where(ManagementCompany.id == ex.ids["tenant"])
+    )
+    assert (company.name, company.legal_name) == ("УК «Солнечная, 3»", "ООО «Солнечная»")

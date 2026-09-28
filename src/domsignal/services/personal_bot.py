@@ -236,6 +236,7 @@ class PersonalBotService:
         Код одноразовый; сама ссылка статуса боту не передаётся и в сообщениях
         не упоминается. Повтор события не даёт второго ответа (ключ — событие).
         """
+        from domsignal.services.community_texts import company_quoted
         from domsignal.services.company_signup import NOTIFY_INVALID, NOTIFY_LINKED
 
         assert event.token and self.application_digest
@@ -254,7 +255,11 @@ class PersonalBotService:
             user_id=user.id,
             event_id=event.event_id,
             key="application",
-            text=NOTIFY_LINKED.format(name=row.short_name) if row else NOTIFY_INVALID,
+            text=(
+                NOTIFY_LINKED.format(name=company_quoted(row.short_name))
+                if row
+                else NOTIFY_INVALID
+            ),
         )
 
     @staticmethod
