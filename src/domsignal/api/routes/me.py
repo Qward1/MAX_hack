@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter
 
 from domsignal.api.dependencies import ContainerDep, CurrentUserDep, DbDep
-from domsignal.contracts.capabilities import CapabilityFlags
+from domsignal.api.routes.system import capability_flags
 from domsignal.contracts.identity import MeResponse, OpenHouse, OpenHouseList
 
 router = APIRouter(prefix="/api/v1", tags=["identity"])
@@ -25,14 +25,7 @@ async def me(current_user: CurrentUserDep, session: DbDep, container: ContainerD
     return await container.membership_service.me(
         session,
         user_id=current_user.id,
-        capabilities=CapabilityFlags(
-            test_auth=container.settings.test_session_enabled,
-            ai_analysis=container.ai_analysis_enabled,
-            routes=container.routes_enabled,
-            appeals=container.appeals_enabled,
-            passive_capture=container.settings.passive_capture_enabled,
-            passive_ai_analysis=container.passive_ai_analysis_enabled,
-        ),
+        capabilities=capability_flags(container),
     )
 
 

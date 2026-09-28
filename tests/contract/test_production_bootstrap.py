@@ -36,7 +36,11 @@ def test_production_disables_test_auth_and_requires_webhook_secret_before_parsin
         )
 
     assert capabilities.status_code == 200
-    assert capabilities.json()["features"]["test_auth"] is False
+    features = capabilities.json()["features"]
+    assert features["test_auth"] is False
+    assert features["max_live"] is True
+    assert features["group_mode"] is True
+    assert features["admin"] is True
     assert test_auth.status_code == 503
     assert denied.status_code == 401
     assert authenticated.status_code == 422
