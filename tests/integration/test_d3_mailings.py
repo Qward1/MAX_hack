@@ -49,7 +49,7 @@ from tests.integration.d3_harness import (  # noqa: F401 - фикстура ст
 )
 from tests.integration.passive_harness import CHAT_1, RESIDENT, ms
 
-SIGNATURE = "— Сообщение от УК «УК Первая (тест)»"
+SIGNATURE = "— Сообщение от УК Первая (тест)"
 
 
 def posts(h: Any) -> list[Any]:
@@ -136,7 +136,7 @@ async def test_announcement_from_draft_to_statistics(d3) -> None:  # noqa: F811
     await chat(d3)
     draft = await create(d3, announcement())
     assert draft["status"] == "draft" and draft["allowed_actions"][:2] == ["edit", "preview"]
-    assert draft["sender"] == "Сообщение от УК «УК Первая (тест)»"
+    assert draft["sender"] == "Сообщение от УК Первая (тест)"
 
     preview = await call(d3, "GET", f"/api/v1/broadcasts/{draft['id']}/preview")
     assert preview.status_code == 200, preview.text
@@ -174,7 +174,7 @@ async def test_announcement_from_draft_to_statistics(d3) -> None:  # noqa: F811
     assert feed.status_code == 200, feed.text
     [item] = feed.json()["items"]
     assert item["title"] == "Промывка системы отопления" and item["topic_label"] == "Работы"
-    assert item["sender"] == "Сообщение от УК «УК Первая (тест)»"
+    assert item["sender"] == "Сообщение от УК Первая (тест)"
     events = await d3.all(
         select(InboxReceipt.event_type).where(
             InboxReceipt.event_type.like("administration.broadcast%")

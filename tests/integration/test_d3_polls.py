@@ -58,7 +58,7 @@ async def test_a_poll_goes_to_the_chat_with_a_vote_button_and_a_disclaimer(d3) -
     assert view.status_code == 200, view.text
     body = view.json()
     assert body["can_vote"] is True and body["disclaimer"] == community_texts.POLL_DISCLAIMER
-    assert body["sender"] == "Сообщение от УК «УК Первая (тест)»"
+    assert body["sender"] == "Сообщение от УК Первая (тест)"
 
 
 async def test_one_vote_per_person_can_change_until_closed(d3) -> None:  # noqa: F811

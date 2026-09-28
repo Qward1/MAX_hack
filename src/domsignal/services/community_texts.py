@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -107,7 +108,7 @@ DIGEST_LINK = "Кабинет: {url}"
 
 # Запись на приём.
 RECEPTION_REMINDER = (
-    "Напоминание: завтра, {when}, — приём в управляющей компании «{company}».\nТема: {topic}"
+    "Напоминание: завтра, {when}, — приём в управляющей компании {company}.\nТема: {topic}"
 )
 RECEPTION_PLACE = "Место: {place}"
 
@@ -116,13 +117,31 @@ STAFF_NOTICE_LEAD = "ДомСигнал: сообщение платформы"
 STAFF_NOTICE_LINK = "В кабинете: {url}"
 
 
+_OWN_QUOTES = re.compile(r"[«\"“]")
+_LEGAL_FORM = re.compile(r"^(?:УК|ООО|АО|ОАО|ПАО|ТСЖ|ТСН|ЖСК|МУП|ГУП|ИП)(?=\s|«|\"|$)")
+
+
+def company_quoted(name: str) -> str:
+    """Название УК внутри текста: «Солнечная» — в кавычках, а «УК «Пилотная, 7»»,
+    «ООО Ромашка» и другие названия с формой или своими кавычками — как есть,
+    без «УК «УК …»»."""
+    cleaned = name.strip()
+    if _OWN_QUOTES.search(cleaned) or _LEGAL_FORM.match(cleaned):
+        return cleaned
+    return f"«{cleaned}»"
+
+
 def sender_label(origin: str, company_name: str | None) -> str:
     if origin == "platform":
         return PLATFORM_SENDER
     if origin == "council":
         return COUNCIL_SENDER
     cleaned = (company_name or "").strip()
-    return f"Сообщение от УК «{cleaned}»" if cleaned else UNNAMED_COMPANY_SENDER
+    if not cleaned:
+        return UNNAMED_COMPANY_SENDER
+    if cleaned.startswith("УК"):
+        return f"Сообщение от {company_quoted(cleaned)}"
+    return f"Сообщение от УК {company_quoted(cleaned)}"
 
 
 def moment(value: datetime) -> str:

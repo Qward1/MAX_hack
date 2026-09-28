@@ -45,6 +45,7 @@ from domsignal.services.community_texts import (
     OPEN_APP_LABEL,
     RECEPTION_PLACE,
     RECEPTION_REMINDER,
+    company_quoted,
     moment,
 )
 from domsignal.services.errors import (
@@ -404,7 +405,9 @@ class ReceptionService:
             raise ResourceNotFound("ACCESS_REVOKED")
         lines = [
             RECEPTION_REMINDER.format(
-                when=moment(slot.starts_at), company=company.name, topic=booking.topic
+                when=moment(slot.starts_at),
+                company=company_quoted(company.name),
+                topic=booking.topic,
             )
         ]
         place = slot.place or (profile.office_address if profile else None)

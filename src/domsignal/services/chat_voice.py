@@ -32,6 +32,7 @@ from domsignal.contracts.common import ContractModel
 from domsignal.contracts.routing import SafetyBlock
 from domsignal.core.display_time import DEFAULT_DISPLAY_TIMEZONE, staff_moment
 from domsignal.core.signals import DANGER_LABELS, author_label
+from domsignal.services.community_texts import company_quoted
 from domsignal.services.privacy import PRIVACY_LINE
 from domsignal.services.route_card_render import safety_lines
 
@@ -113,7 +114,7 @@ class SignalAlertIntent(ContractModel):
 
 def _company(name: str | None) -> str:
     cleaned = (name or "").strip()
-    return f"управляющей компанией «{cleaned}»" if cleaned else _UNNAMED_COMPANY
+    return f"управляющей компанией {company_quoted(cleaned)}" if cleaned else _UNNAMED_COMPANY
 
 
 def reading_notice_text(company_name: str | None, privacy_url: str | None = None) -> str:
@@ -124,7 +125,7 @@ def reading_notice_text(company_name: str | None, privacy_url: str | None = None
     """
     who = _company(company_name)
     subject = (
-        f"управляющая компания «{company_name.strip()}»"
+        f"управляющая компания {company_quoted(company_name)}"
         if company_name and company_name.strip()
         else _UNNAMED_COMPANY
     )

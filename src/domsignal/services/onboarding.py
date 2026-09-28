@@ -80,6 +80,7 @@ from domsignal.db.repositories.reliability import ReliabilityRepository, authori
 from domsignal.services import showcase
 from domsignal.services.bot_replies import enqueue_reply
 from domsignal.services.chat_quota import ChatQuotaService, quota_state
+from domsignal.services.community_texts import company_quoted
 from domsignal.services.employee_auth import EmployeeAuthService
 from domsignal.services.errors import (
     AccessDenied,
@@ -156,16 +157,16 @@ def transition(
 #: Сообщения бота о смене статуса заявки УК (D2, «Получать уведомления в MAX»).
 #: Ссылки статуса в них нет: она секретная и хранится только у заявителя.
 APPLICATION_NOTICES = {
-    "under_review": "Заявка «{name}»: платформа начала проверку.",
+    "under_review": "Заявка {name}: платформа начала проверку.",
     "needs_info": (
-        "Заявка «{name}»: платформе нужны уточнения. Ответьте на странице статуса "
+        "Заявка {name}: платформе нужны уточнения. Ответьте на странице статуса "
         "заявки — по ссылке, которую вы сохранили при подаче."
     ),
     "approved": (
-        "Заявка «{name}» одобрена. На странице статуса заявки создайте аккаунт "
+        "Заявка {name} одобрена. На странице статуса заявки создайте аккаунт "
         "администратора — по ссылке, которую вы сохранили при подаче."
     ),
-    "rejected": "Заявка «{name}» отклонена. Причина — на странице статуса заявки.",
+    "rejected": "Заявка {name} отклонена. Причина — на странице статуса заявки.",
 }
 
 
@@ -179,7 +180,7 @@ async def notify_application(db: AsyncSession, row: CompanyOnboardingRequest, ta
         user_id=row.notify_user_id,
         event_id=f"application:{row.id}:{uuid4().hex}",
         key=f"application-{target}",
-        text=text.format(name=row.short_name),
+        text=text.format(name=company_quoted(row.short_name)),
     )
 
 
@@ -866,7 +867,7 @@ class AdministrationService:
                 requested_address=address.strip(),
                 normalized_address=normalized,
                 requested_valid_from=now,
-                basis_text=f"Адрес из заявки УК «{row.short_name}»",
+                basis_text=f"Адрес из заявки {company_quoted(row.short_name)}",
                 submitted_by_user_id=actor,
                 candidate_house_id=await candidate_house(db, normalized),
                 source_application_id=row.id,
