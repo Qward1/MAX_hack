@@ -2,6 +2,7 @@ import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { EmployeeGate } from "./EmployeeGate";
 import { adminClient, type Schema } from "./administration";
+import { ThemeToggle } from "../shared/ui/ThemeToggle";
 import "../shared/styles/main.css";
 import "./admin.css";
 import "./administration.css";
@@ -24,7 +25,7 @@ export function LoginDestinations() {
     }).catch(() => { if (active) setError("Не удалось определить кабинет. Обновите страницу."); });
     return () => { active = false; };
   }, []);
-  return <main className="auth-layout"><section className="auth-card">
+  return <main className="auth-layout"><ThemeToggle className="auth-theme-toggle" /><section className="auth-card">
     {error ? <p role="alert">{error}</p> : !data ? <p role="status">Открываем кабинет…</p> : data.platform ? <>
       <h1>Выберите кабинет</h1>
       <div className="button-row"><a className="ticket-button" href="/platform-admin/">Управление платформой</a>

@@ -53,6 +53,7 @@ import {
 } from "../features/community/CommunityScreens";
 import { type ActivityItem, type CommunityApi, communityApi } from "../shared/api/community";
 import { categoryLabel } from "../features/incidents/presentation";
+import { ThemeToggle } from "../shared/ui/ThemeToggle";
 
 type House = Me["houses"][number];
 type Loaded = {
@@ -367,6 +368,7 @@ export function App({
         {showBack ? <BackLink onBack={back} /> : <span className="ds-brand">ДомСигнал</span>}
       </div>
       <div className="ds-topbar-end">
+        <ThemeToggle />
         {refreshable && (
           <button
             type="button"

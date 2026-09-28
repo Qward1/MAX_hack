@@ -698,3 +698,7 @@
     margin-top: 0;
   }
 }
+
+/* Тема: в листе «Разделы» на телефоне — рядом с «Выйти»; в шапке заявки УК — рядом с «Войти». */
+.admin-drawer-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.public-header-actions { display: flex; align-items: center; gap: 8px; }

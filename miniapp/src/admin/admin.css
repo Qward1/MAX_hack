@@ -433,11 +433,18 @@ html {
 
 /* ------------------------------------------------------------ вход */
 .auth-layout {
+  position: relative;
   min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: var(--ds-space-5) var(--ds-gutter);
   background: var(--ds-bg);
+}
+/* Переключатель темы на экранах входа — в углу, над карточкой. */
+.auth-theme-toggle {
+  position: absolute;
+  top: var(--ds-space-3);
+  right: var(--ds-gutter);
 }
 .auth-card {
   display: grid;

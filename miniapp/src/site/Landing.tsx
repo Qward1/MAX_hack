@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { ThemeToggle } from "../shared/ui/ThemeToggle";
 
 /**
  * Публичная страница продукта (D2, новый дизайн F1 §2.6). Только то, что продукт
@@ -30,6 +31,7 @@ export function Landing() {
           <a href="#safety">Безопасность</a>
         </nav>
         <div className="site-header-actions">
+          <ThemeToggle className="site-theme-toggle" />
           <a className="site-button site-button-quiet" href="/login">Войти</a>
           <a className="site-button" href="/company/apply">Подключить УК</a>
         </div>

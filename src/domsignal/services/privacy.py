@@ -123,10 +123,21 @@ def with_privacy(text: str, url: str) -> str:
     return f"{text}\n\n{PRIVACY_LINE.format(url=url)}"
 
 
-_STYLE = """
-:root{color-scheme:light dark;--bg:#fff;--fg:#1d2330;--muted:#5b6475;--line:#d9dee7}
-@media (prefers-color-scheme:dark){:root{--bg:#141820;--fg:#e8ebf1;--muted:#a3abba;--line:#323a48}}
+# Тема: как у приложения — выбор устройства (`data-theme`, `/theme-init.js`) или система.
+_DARK = "color-scheme:dark;--bg:#141820;--fg:#e8ebf1;--muted:#a3abba;--line:#323a48"
+_STYLE = (
+    """
+:root{color-scheme:light;--bg:#fff;--fg:#1d2330;--muted:#5b6475;--line:#d9dee7}
+:root[data-theme=dark]{"""
+    + _DARK
+    + """}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){"""
+    + _DARK
+    + """}}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,sans-serif}
+.theme{display:block;min-height:44px;margin:0 0 0 auto;padding:8px 14px;
+border:1px solid var(--line);border-radius:10px;background:transparent;color:inherit;
+font:inherit;cursor:pointer}.theme[hidden]{display:none}
 main{max-width:760px;margin:0 auto;padding:24px 16px 48px}
 h1{font-size:1.6rem;line-height:1.25}h2{font-size:1.2rem;margin-top:2rem}
 p,li{overflow-wrap:anywhere}.muted{color:var(--muted)}
@@ -134,6 +145,9 @@ table{border-collapse:collapse;width:100%}th,td{border-top:1px solid var(--line)
 padding:8px 6px;text-align:left;vertical-align:top}th{width:38%}
 a{color:inherit}
 """
+)
+#: Переключатель темы: без скрипта скрыт, `/theme-init.js` показывает и подписывает его.
+_THEME_BUTTON = '<button type="button" class="theme" data-theme-toggle hidden>Тема</button>'
 
 
 def _items(lines: tuple[str, ...]) -> str:
@@ -154,8 +168,9 @@ def render_privacy_page(*, contact: str | None, site_url: str) -> str:
     return (
         '<!doctype html><html lang="ru"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        '<script src="/theme-init.js"></script>'
         f"<title>{escape(PRIVACY_TITLE)}</title><style>{_STYLE}</style></head>"
-        f"<body><main><h1>{escape(PRIVACY_TITLE)}</h1>"
+        f"<body><main>{_THEME_BUTTON}<h1>{escape(PRIVACY_TITLE)}</h1>"
         f"<p>{escape(INTRO)}</p>"
         f"<h2>{escape(READS_TITLE)}</h2>{_items(READS)}"
         f"<h2>{escape(STORES_TITLE)}</h2><table><tbody>{rows}</tbody></table>"

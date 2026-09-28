@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { adminClient, Feedback, Title, useAction, useRead, type Schema } from "./administration";
+import { ThemeToggle } from "../shared/ui/ThemeToggle";
 
 /** Выйти и открыть ту же ссылку: вход сменится формой нового аккаунта сотрудника. */
 async function separateAccount() {
@@ -19,7 +20,7 @@ export function InvitationAccept({ token }: { token: string }) {
   const platform = who.data?.platform === true || action.code === "platform_account_invitation";
   const separate = <button className="ticket-button secondary" disabled={action.busy} onClick={() => void separateAccount()}>
     {platform ? "Выйти и создать аккаунт сотрудника" : "Создать отдельный аккаунт"}</button>;
-  return <main className="auth-layout"><section className="auth-card">
+  return <main className="auth-layout"><ThemeToggle className="auth-theme-toggle" /><section className="auth-card">
     <Title>{accepted ? "Приглашение принято" : "Присоединиться к управляющей компании"}</Title>
     {platform && !accepted ? <>
       <p>Вы вошли как администратор платформы. Приглашение УК принимает отдельный аккаунт сотрудника — со своим логином, паролем и приложением-аутентификатором.</p>
