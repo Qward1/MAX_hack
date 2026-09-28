@@ -121,8 +121,11 @@ test.describe.serial("UX-1 quality", () => {
         const report = page.getByRole("button", { name: "Сообщить о проблеме" });
         await expect(report).toBeInViewport();
         await audit(page, `board-${width}`, { mini: true });
-        // Несколько домов: переключатель в шапке, а не отдельный экран.
+        // Несколько домов без выбора — список «Выберите дом» (D-01); после выбора —
+        // переключатель в шапке, а не отдельный экран.
         await page.goto(`/?test_actor=a16-admin`);
+        await expect(page.getByRole("heading", { level: 1, name: "Выберите дом" })).toBeVisible();
+        await page.goto(`/?test_actor=a16-admin&house=${ids.house}`);
         const switcher = page.getByRole("button", { name: /^Дом / });
         await expect(switcher).toBeVisible();
         await switcher.click();
