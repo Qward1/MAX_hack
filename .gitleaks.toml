@@ -1,0 +1,7 @@
+# Правила gitleaks по умолчанию + одно исключение.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "ML-разметка: message_key — хэши сообщений (16 hex), не секреты"
+paths = ['''^ml/experiments/04_grouping/manual_gold_v1\.jsonl$''']
