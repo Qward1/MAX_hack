@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { RESOURCE_UPDATED_EVENT } from "../shared/api/useResource";
+import { ThemeToggle } from "../shared/ui/ThemeToggle";
 
 /** Вошедший сотрудник: «Выйти» живёт в шапке кабинета, а не отдельной полосой. */
 export type EmployeeSessionInfo = { logout: () => void; busy: boolean };
@@ -20,7 +21,7 @@ export function useLastUpdated(): number | null {
 
 /**
  * Шапка кабинета (U-08): бренд и организация слева; время обновления,
- * «Обновить», имя и роль сотрудника и «Выйти» справа. На телефоне её место
+ * «Обновить», тема, имя и роль сотрудника и «Выйти» справа. На телефоне её место
  * занимает мобильная шапка с листом «Разделы».
  */
 export function AdminHeader({
@@ -58,6 +59,7 @@ export function AdminHeader({
       <button type="button" className="ds-btn ds-btn-tertiary" onClick={onRefresh}>
         <span aria-hidden="true">↻</span> Обновить
       </button>
+      <ThemeToggle />
       {user && (
         <span className="admin-topbar-user">
           <strong>{user}</strong>

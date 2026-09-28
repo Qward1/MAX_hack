@@ -13,6 +13,7 @@ import { CompanyOverview } from "./Dashboards";
 import { Mailings, Notices, ReceptionAdmin } from "./CommunityPages";
 import { Sheet } from "../shared/ui/ChoicePicker";
 import { IconMenu } from "../shared/ui/icons";
+import { ThemeToggle } from "../shared/ui/ThemeToggle";
 
 type Context = Schema["CompanyContext"];
 const names: Record<string, string> = { overview: "Обзор", tickets: "Заявки", signals: "Сигналы", houses: "Дома",
@@ -218,7 +219,10 @@ function MobileNavigation({ company, companies, surface, counts, href, navigate,
 }
 function DrawerLogout() {
   const session = useContext(EmployeeSessionContext);
-  return session ? <button type="button" className="ds-btn ds-btn-secondary" disabled={session.busy} onClick={session.logout}>Выйти</button> : null;
+  return <div className="admin-drawer-actions">
+    <ThemeToggle labelled />
+    {session && <button type="button" className="ds-btn ds-btn-secondary" disabled={session.busy} onClick={session.logout}>Выйти</button>}
+  </div>;
 }
 type Workspace = { company: Context; surface: string; href: (surface: string) => string; navigate: (url: string) => void; visit: number };
 function openTicket(navigate: (url: string) => void, href: (surface: string) => string) {

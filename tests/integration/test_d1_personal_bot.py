@@ -286,21 +286,50 @@ async def test_a_replayed_event_gives_one_reply(bot: Any) -> None:
     assert await bot.scalar(select(func.count()).select_from(RouteOutcome)) == 1
 
 
-async def test_an_example_button_leads_a_stranger_to_the_route_card_in_one_tap(
-    bot: Any,
+async def nothing_created(bot: Any) -> dict[str, int]:
+    counts = {}
+    for model in (ExplicitIntake, Report, Incident, Ticket, RouteOutcome, ResidentMembership):
+        counts[model.__name__] = await bot.scalar(select(func.count()).select_from(model))
+    return counts
+
+
+@pytest.mark.parametrize("who", [GUEST, RESIDENT], ids=["newcomer", "resident"])
+async def test_example_buttons_answer_with_an_example_and_create_nothing(
+    bot: Any, who: int
 ) -> None:
-    """D4, У-3: пример → выбор открытого дома → карточка маршрута, без повторного текста."""
+    """F2: «Попробовать…» — ответ-пример; ни заявки УК, ни записи приёма, ни дома.
+
+    Раньше (D4, У-3) пример разбирался как настоящее сообщение: лифт давал заявку
+    в УК дома, фонарь — выбор открытого дома и карточку маршрута.
+    """
+    await open_house(bot)
+    before = await nothing_created(bot)
+    dialog = Dialog(bot, who)
+    for index, (label, kind) in enumerate(bot_replies.EXAMPLES.items()):
+        await dialog.say(label, mid=f"mid.example-{index}")  # кнопка `message` присылает подпись
+        again = await dialog.say(label, mid=f"mid.example-{index}")
+        assert again["duplicate"] is True
+        await dialog.settle()
+        reply = dialog.replies()[-1]
+        assert reply.text == bot_replies.EXAMPLE_REPLIES[kind]
+        assert reply.text.endswith(bot_replies.EXAMPLE_TAIL)
+        assert labels(reply) == ["Открыть ДомСигнал"]
+    assert len(dialog.replies()) == len(bot_replies.EXAMPLES)
+    assert await nothing_created(bot) == before
+
+
+async def test_a_strangers_street_message_leads_to_the_route_card_in_one_tap(bot: Any) -> None:
+    """D4, У-3: своё сообщение постороннего → выбор открытого дома → карточка маршрута."""
     await open_house(bot)
     dialog = Dialog(bot, GUEST)
-    street, _ = bot_replies.EXAMPLES
-    await dialog.say(street)  # кнопка `message` присылает свой текст
+    await dialog.say("На улице у дома не горит фонарь")
     await dialog.settle()
     [choose] = dialog.replies()
     assert choose.text == bot_replies.PICK_OPEN_HOUSE
     [payload] = payloads(choose)
     assert payload.startswith("b:joinpick:") and payload.endswith(str(bot.ids["h1"]))
     intake = await bot.scalar(select(ExplicitIntake))
-    assert intake.text == bot_replies.EXAMPLES[street] and intake.state == "awaiting_house"
+    assert intake.text == "На улице у дома не горит фонарь" and intake.state == "awaiting_house"
     await dialog.press(payload)
     await dialog.settle()
     assert dialog.answers()[-1].text.startswith("Дом: Казань, Синтетическая улица, 1")
@@ -314,10 +343,10 @@ async def test_an_example_button_leads_a_stranger_to_the_route_card_in_one_tap(
     assert await bot.scalar(select(func.count()).select_from(RouteOutcome)) == 1
 
 
-async def test_the_elevator_example_gives_a_ticket(bot: Any) -> None:
+async def test_a_typed_elevator_message_still_gives_a_ticket(bot: Any) -> None:
+    """Пример не заменяет настоящий путь: своими словами — заявка УК, как раньше."""
     dialog = Dialog(bot, RESIDENT)
-    _, elevator = bot_replies.EXAMPLES
-    await dialog.say(elevator)
+    await dialog.say("Лифт во 2 подъезде стоит")
     await dialog.settle()
     [ticket] = await bot.all(select(Ticket))
     assert ticket.house_id == bot.ids["h1"] and ticket.source == "max_dm"

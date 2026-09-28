@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode, type FormEvent } from "rea
 import { ApiProblem } from "../shared/api/client";
 import { ticketClient as client } from "../shared/api/tickets";
 import type { components } from "../shared/api/schema";
+import { ThemeToggle } from "../shared/ui/ThemeToggle";
 
 type State = components["schemas"]["EmployeeSession"];
 type Enrollment = components["schemas"]["EmployeeEnrollment"];
@@ -163,7 +164,7 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
     <div key={revision}>
       {/* U-08: «Выйти» — в шапке кабинета рядом с именем, а не отдельной полосой. */}
       {error && <p role="alert" className="ds-notice ds-tone-danger">{error}</p>}
-      {forbidden ? <main className="auth-layout"><section className="auth-card">{companyCabinet ? <>
+      {forbidden ? <main className="auth-layout"><ThemeToggle className="auth-theme-toggle" /><section className="auth-card">{companyCabinet ? <>
         <h1>Это вход для управления платформой</h1>
         <p>Вы вошли как сотрудник управляющей компании — ваш кабинет отдельный.</p>
         <a className="ticket-button" href="/admin/">Открыть кабинет управляющей компании</a>
@@ -175,7 +176,7 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
       </section></main> : <EmployeeSessionContext.Provider value={{ logout: () => void logout(), busy }}>{children}</EmployeeSessionContext.Provider>}
     </div>
   );
-  return <main className="auth-layout"><section className="auth-card">
+  return <main className="auth-layout"><ThemeToggle className="auth-theme-toggle" /><section className="auth-card">
     <a className="admin-brand" href="/admin/">ДомСигнал<span>Кабинет сотрудника</span></a>
     {!state ? <><h1>Проверяем вход…</h1>{error && <p role="alert" className="ds-notice ds-tone-danger">{error}</p>}</> :
       state.recovery_codes?.length ? <>

@@ -3,6 +3,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { ApiClient, ApiProblem } from "../shared/api/client";
 import { useResource, POLL_WAITING_MS } from "../shared/api/useResource";
 import { Feedback, formValue, problemText, submitted, type Schema } from "./administration";
+import { ThemeToggle } from "../shared/ui/ThemeToggle";
 
 const client = new ApiClient();
 const STATUS_TITLES: Record<string, string> = {
@@ -29,7 +30,7 @@ export function addressProblem(lines: string[]): string {
 function PublicHeader() {
   return <header className="public-header">
     <a className="admin-brand" href="/">ДомСигнал</a>
-    <nav aria-label="Навигация"><a className="ticket-button secondary" href="/login">Войти</a></nav>
+    <nav aria-label="Навигация" className="public-header-actions"><ThemeToggle /><a className="ticket-button secondary" href="/login">Войти</a></nav>
   </header>;
 }
 

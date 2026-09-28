@@ -31,15 +31,19 @@ IT = "tests/integration/"
 #: Сценарий → шаги: (описание шага, узел pytest).
 SCENARIOS: list[tuple[str, list[tuple[str, str]]]] = [
     (
-        "1. Личка: «Попробовать» → открытый дом → карточка маршрута → черновик → «Я отправил»",
+        "1. Личка: «Попробовать» — пример без заявки; своё сообщение → открытый дом → карточка маршрута → черновик → «Я отправил»",
         [
             (
                 "без дома бот предлагает открытые дома",
                 f"{IT}test_d1_personal_bot.py::test_a_user_without_houses_is_offered_the_open_ones",
             ),
             (
-                "«Попробовать» → выбор дома → карточка маршрута",
-                f"{IT}test_d1_personal_bot.py::test_an_example_button_leads_a_stranger_to_the_route_card_in_one_tap",
+                "«Попробовать» — ответ-пример: ни заявки, ни записи приёма, ни дома",
+                f"{IT}test_d1_personal_bot.py::test_example_buttons_answer_with_an_example_and_create_nothing[newcomer]",
+            ),
+            (
+                "своё сообщение → выбор дома → карточка маршрута",
+                f"{IT}test_d1_personal_bot.py::test_a_strangers_street_message_leads_to_the_route_card_in_one_tap",
             ),
             (
                 "черновик обращения из проверенных данных и слов жителя",

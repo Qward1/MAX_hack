@@ -90,3 +90,13 @@ def test_bot_greeting_help_and_chat_notices_link_the_page() -> None:
 def test_every_entry_screen_links_the_page(surface: str) -> None:
     text = (ROOT / surface).read_text(encoding="utf-8")
     assert "/privacy" in text and "Политика данных" in text
+
+
+def test_the_page_follows_the_device_theme_and_can_switch_it() -> None:
+    """Тема как у приложения: выбор устройства (`data-theme`) сильнее темы системы."""
+    html = page()
+    assert '<script src="/theme-init.js"></script>' in html  # ставит data-theme до отрисовки
+    assert ":root[data-theme=dark]{color-scheme:dark;" in html
+    assert "@media (prefers-color-scheme:dark){:root:not([data-theme=light]){" in html
+    # Кнопка без скрипта скрыта; скрипт показывает и подписывает её.
+    assert '<button type="button" class="theme" data-theme-toggle hidden>' in html

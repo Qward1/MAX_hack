@@ -69,7 +69,22 @@ body {
   text-decoration: none;
 }
 .site-nav a:hover { color: var(--ds-ink); background: var(--ds-surface-2); }
-.site-header-actions { display: flex; gap: 8px; margin-inline-start: auto; }
+.site-header-actions { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
+/* Переключатель темы: кнопка-значок 44 px (стили .ds-icon-button сайт не грузит). */
+.site-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--ds-line);
+  border-radius: 10px;
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  cursor: pointer;
+}
+.site-theme-toggle:hover { background: var(--ds-surface-2); }
 
 /* ------------------------------------------------------------ кнопки */
 .site-button {
