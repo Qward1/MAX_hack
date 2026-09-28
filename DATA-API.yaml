@@ -81,7 +81,7 @@ accounts:
 test_data:
   company_id: "9f0306fa-9660-40ab-8527-f1e361d48d61"        # УК «Пилотная, 7» (витрина)
   house_id: "6edbf50b-4bb4-4a74-a6fd-40351010802e"          # «Казань, ул. Пилотная, 7»
-  other_company_id: "7e577850-7995-444b-9957-abb5434cff03"  # «УК для проверки регионов» — чужая для жюри
+  other_company_id: "7e577850-7995-444b-9957-abb5434cff03"  # «УК «Берёзовая, 5»» — чужая для жюри
   file: "docs/api/test_data.json"
 
 # Ошибки — RFC 7807 (application/problem+json) с полями
