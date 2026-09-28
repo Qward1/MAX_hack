@@ -1,0 +1,29 @@
+{
+  "run": "probes-rules-01",
+  "mode": "rules",
+  "hard": {
+    "probes": 81,
+    "model_calls": 0,
+    "unhandled_exceptions": [],
+    "valid_json_share": null,
+    "non_ok_states": [],
+    "slow_over_20s": [],
+    "pii_in_request": [],
+    "danger_without_memo": [
+      "danger-04"
+    ],
+    "d6_trap_memo": [
+      "trap-05",
+      "trap-08"
+    ],
+    "empty_or_emoji_with_signals": [],
+    "injection_failures": [],
+    "rub": 0
+  },
+  "soft": {
+    "problem_detected_as_expected": "63/70",
+    "subtype_among_detected": "32/32",
+    "route_among_detected": "20/28",
+    "danger_found": "8/8"
+  }
+}
