@@ -1,6 +1,6 @@
 # Лицензии зависимостей
 
-Срез D5, 27.09.2026. Списки собраны из установленных пакетов: Python — метаданные
+Срез D5, 27.09.2026; дополнено в F1 (29.09.2026): `pymorphy3` для проверки текстов интерфейса и модель. Списки собраны из установленных пакетов: Python — метаданные
 окружения `uv sync --frozen --group dev` (`importlib.metadata`, отметка runtime —
 по `uv export --no-dev`), npm — `npx license-checker-rseidelsohn@4.4.2` по
 `miniapp/node_modules` после `npm ci` (отметка «прод» — `--production`).
@@ -8,9 +8,17 @@
 
 ## Итог
 
-- Python: 55 пакетов (42 runtime, 13 dev).
+- Python: 58 пакетов (42 runtime, 16 dev; F1 добавил dev-пакеты `pymorphy3`, `pymorphy3-dicts-ru`, `dawg2-python` — MIT).
 - npm: 131 пакет, из них в сборку мини-приложения попадают 8 (все MIT). Список снят на Windows: платформенные сборки (`lightningcss-win32-x64-msvc`, `@rollup/rollup-win32-*`) в Linux-образе заменяются своими `linux-x64` вариантами с той же лицензией.
 - Несвободных лицензий нет. Слабый копилефт — MPL-2.0 (Python: certifi, pathspec; npm: axe-core, lightningcss, lightningcss-win32-x64-msvc) — используются без изменений, условие MPL о раскрытии изменённых файлов не затрагивается.
+
+## Модель
+
+Разбор переписки — открытая модель **Qwen3-30B-A3B** (Alibaba), лицензия
+**Apache 2.0** ([карточка модели](https://huggingface.co/Qwen/Qwen3-30B-A3B)),
+через Cloud.ru Foundation Models. Веса в репозиторий и образ не входят:
+продукт обращается к API провайдера. Резервная модель в профиле —
+DeepSeek-V4-Flash (MIT), в production не включена.
 
 ## Несвободные или неясные
 
@@ -59,6 +67,9 @@
 | Pygments | 2.21.0 | BSD-2-Clause | dev |
 | PyOTP | 2.10.0 | MIT | runtime |
 | pytest | 8.4.2 | MIT License | dev |
+| pymorphy3 | 2.0.6 | MIT | dev |
+| pymorphy3-dicts-ru | 2.4.417150.4580142 | MIT | dev |
+| dawg2-python | 0.9.0 | MIT | dev |
 | pytest-asyncio | 0.26.0 | Apache-2.0 | dev |
 | python-dotenv | 1.2.3 | BSD-3-Clause | runtime |
 | PyYAML | 6.0.3 | MIT License | runtime |
