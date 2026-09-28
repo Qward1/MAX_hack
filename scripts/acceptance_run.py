@@ -439,10 +439,11 @@ def main(argv: list[str] | None = None) -> int:
         commit = json.loads(http("GET", f"{base}/version")[1] or "{}").get("commit")
     else:
         base = args.base_url or "local"
-        results = local(args.matrix, out)
+        # Коммит — на старте: код, который проверяется, а не тот, что появился за время прогона.
         commit = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True
         ).stdout.strip()
+        results = local(args.matrix, out)
     write_report(
         args.target, results, out, {"started": started, "commit": commit, "base_url": base}
     )
