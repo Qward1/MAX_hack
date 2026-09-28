@@ -152,7 +152,9 @@ def main() -> int:
     since = args.since
     if since is None:
         tags = git("tag", "--list", "online-submission-*", "--sort=-creatordate").splitlines()
-        since = tags[0] if tags and git("rev-parse", tags[0]) != head else None
+        # Теги аннотированные: без ^{commit} rev-parse вернёт объект тега, а не коммит.
+        tagged = git("rev-parse", f"{tags[0]}^{{commit}}") if tags else ""
+        since = tags[0] if tags and tagged != head else None
         if since is None and origin and origin != head:
             since = origin
     clean, detail = gitleaks(since, head)

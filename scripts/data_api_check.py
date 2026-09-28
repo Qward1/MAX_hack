@@ -5,12 +5,15 @@
     uv run python scripts/data_api_check.py --base-url http://localhost:8000 --accounts …
 
 `accounts.json` — список `{"login", "password", "totp_secret", "role"}` проверочных
-учётных записей (передаётся организаторам закрыто, в репозитории его нет); роль
+учётных записей: формат — шаблон `docs/api/accounts.example.json` с заглушками,
+значения — с закрытого служебного слайда (в репозитории их нет); роль
 проверки (`operator`, `company_admin`, `platform_admin`) сопоставляется логину по
 `DATA-API.yaml` → `accounts`. Вход — как в браузере: сессия → пароль → код TOTP;
-между входами одного аккаунта скрипт ждёт новый 30-секундный код. Проверки,
-которые меняют данные, в файле не заявлены. Выход: строка на проверку и итог;
-код возврата 0 — все обязательные проверки прошли.
+между входами одного аккаунта скрипт ждёт новый 30-секундный код. Не удался вход —
+проверки этой роли не прошли, остальные выполняются. Проверки, которые меняют
+данные, в файле не заявлены. Выход: строка на проверку и итог двумя строками —
+«без входа: X из Y» и «с входом по TOTP: X из Y» (`requires_totp` в
+`DATA-API.yaml`); код возврата 0 — все обязательные проверки прошли.
 """
 
 from __future__ import annotations
@@ -131,6 +134,23 @@ def field(value: Any, dotted: str) -> bool:
     return True
 
 
+def summary_lines(results: list[dict[str, Any]]) -> list[str]:
+    """Итог двумя строками: проверки без входа и с входом сотрудника по TOTP."""
+    lines = []
+    for title, totp in (("без входа", False), ("с входом по TOTP", True)):
+        group = [r for r in results if r["requires_totp"] is totp]
+        passed = sum(r["result"] == "PASS" for r in group)
+        failed = sum(r["result"] == "FAIL" for r in group)
+        skipped = sum(r["result"] == "SKIP" for r in group)
+        line = f"{title}: {passed} из {len(group)}"
+        if failed:
+            line += f" — не прошли {failed}"
+        if skipped:
+            line += f" — пропущено {skipped}: нет учётных записей, запустите с --accounts"
+        lines.append(line)
+    return lines
+
+
 def substitute(text: str, data: dict[str, Any]) -> str:
     for key, value in data.items():
         text = text.replace("{" + key + "}", str(value))
@@ -152,20 +172,47 @@ def main() -> int:
     accounts = json.loads(args.accounts.read_text(encoding="utf-8")) if args.accounts else []
     by_login = {item["login"]: item for item in accounts}
     flow = spec["authentication"]["employee_session"]["endpoints"]
+    print(f"{args.spec.name} → {base}")
     sessions: dict[str, Client] = {"anonymous": Client(base)}
+    failed_logins: dict[str, str] = {}
     last_codes: dict[str, str] = {}
     results: list[dict[str, Any]] = []
     failed_required = 0
     for check in spec["checks"]:
         role = check.get("role", "anonymous")
-        if role not in sessions:
+        totp = bool(check.get("requires_totp", role != "anonymous"))
+        if role not in sessions and role not in failed_logins:
             login_name = spec["accounts"].get(role, {}).get("login")
             account = by_login.get(login_name or "")
             if account is None:
-                results.append({"id": check["id"], "result": "SKIP", "why": f"нет учётки {role}"})
+                results.append(
+                    {
+                        "id": check["id"],
+                        "requires_totp": totp,
+                        "result": "SKIP",
+                        "why": f"нет учётки {role}",
+                    }
+                )
                 print(f"SKIP  {check['id']:<32} нет учётной записи роли {role}")
                 continue
-            sessions[role] = login(base, account, flow, last_codes)
+            try:
+                sessions[role] = login(base, account, flow, last_codes)
+            except (RuntimeError, ValueError) as exc:  # ValueError — секрет TOTP не base32
+                failed_logins[role] = f"вход {login_name} не удался: {exc}"
+        if role in failed_logins:
+            if check.get("required", True):
+                failed_required += 1
+            results.append(
+                {
+                    "id": check["id"],
+                    "role": role,
+                    "requires_totp": totp,
+                    "result": "FAIL",
+                    "problems": [failed_logins[role]],
+                }
+            )
+            print(f"FAIL  {check['id']:<32} {failed_logins[role]}")
+            continue
         request = check["request"]
         status, ctype, value = sessions[role].call(
             request["method"],
@@ -196,6 +243,7 @@ def main() -> int:
             {
                 "id": check["id"],
                 "role": role,
+                "requires_totp": totp,
                 "status": status,
                 "result": verdict,
                 "problems": problems,
@@ -205,13 +253,17 @@ def main() -> int:
             f"{verdict:<5} {check['id']:<32} {request['method']} {request['path']} → {status}"
             + ("" if not problems else "  " + "; ".join(problems))
         )
-    passed = sum(r["result"] == "PASS" for r in results)
-    skipped = sum(r["result"] == "SKIP" for r in results)
-    print(f"\nИтог: {passed} PASS, {len(results) - passed - skipped} FAIL, {skipped} SKIP · {base}")
+    summary = summary_lines(results)
+    print("\n" + "\n".join(summary))
     if args.report:
         args.report.write_text(
             json.dumps(
-                {"base_url": base, "at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "results": results},
+                {
+                    "base_url": base,
+                    "at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                    "summary": summary,
+                    "results": results,
+                },
                 ensure_ascii=False,
                 indent=2,
             )

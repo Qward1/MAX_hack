@@ -10,6 +10,7 @@
 #   6. query/path-параметры, заголовки, тело .... checks[].request.query / headers / body
 #                                                 (+ test_data для подстановки {…})
 #   7. роль проверочной учётной записи ......... checks[].role → accounts
+#                                                 (+ requires_totp: вход с TOTP)
 #   8. допустимые ожидаемые HTTP-коды .......... checks[].expect.status
 #   9. Content-Type, структура, обязательные поля checks[].expect.content_type /
 #                                                 required_fields / equals
@@ -18,8 +19,34 @@
 # Прогнать всё: uv run python scripts/data_api_check.py --accounts <accounts.json>
 # (без --accounts — только проверки без входа). Пароли и секреты TOTP в файле не
 # хранятся: они на закрытом служебном слайде у организаторов.
+#
+# ВНИМАНИЕ для автоматической проверки: 12 из 24 проверок требуют входа
+# сотрудника с TOTP (requires_totp: true) — см. automation_notes ниже.
 
-schema_version: "1.0"
+schema_version: "1.1"             # 1.1 — добавлены automation_notes и requires_totp
+
+automation_notes:
+  checks_total: 24
+  requires_totp: 12                 # роли operator, company_admin, platform_admin
+  without_login: 12                 # role: anonymous
+  summary: >-
+    12 из 24 проверок требуют входа сотрудника с TOTP (RFC 6238, 30 с, 6 цифр).
+    Если платформа оценки не поддерживает TOTP, они будут показаны непройденными.
+    Такие проверки помечены requires_totp: true; required: true у них сохранён.
+  fallback:
+    - id: runner
+      description: >-
+        Запасной путь 1 — раннер: uv run python scripts/data_api_check.py --accounts <файл>.
+        Формат файла — шаблон docs/api/accounts.example.json с заглушками; значения — с
+        закрытого служебного слайда. Без --accounts раннер выполняет только проверки без
+        входа. Итог — две строки: «без входа: X из 12» и «с входом по TOTP: X из 12».
+      command: "uv run python scripts/data_api_check.py --accounts <файл>"
+      accounts_template: "docs/api/accounts.example.json"
+    - id: manual
+      description: >-
+        Запасной путь 2 — ручная проверка по JURY_GUIDE.md: раздел «API» и сценарий 11 —
+        вход в браузере (пароль + код TOTP) и те же разделы кабинетов.
+      guide: "JURY_GUIDE.md#api"
 
 solution:
   name: "ДомСигнал"
@@ -224,6 +251,7 @@ checks:
   - id: operator_bootstrap
     required: true
     role: operator
+    requires_totp: true
     request: {method: GET, path: "/api/v1/admin/bootstrap"}
     expect:
       status: [200]
@@ -233,6 +261,7 @@ checks:
   - id: operator_ticket_queue
     required: true
     role: operator
+    requires_totp: true
     request: {method: GET, path: "/api/v1/tickets", query: {house_id: "{house_id}", limit: 20}}
     expect:
       status: [200]
@@ -242,6 +271,7 @@ checks:
   - id: operator_signal_inbox
     required: true
     role: operator
+    requires_totp: true
     request: {method: GET, path: "/api/v1/signals", query: {house_id: "{house_id}"}}
     expect:
       status: [200]
@@ -251,6 +281,7 @@ checks:
   - id: operator_denied_platform
     required: true
     role: operator
+    requires_totp: true
     request: {method: GET, path: "/api/v1/platform/dashboard"}
     expect:
       status: [403]
@@ -260,6 +291,7 @@ checks:
   - id: operator_denied_foreign_company
     required: true
     role: operator
+    requires_totp: true
     request: {method: GET, path: "/api/v1/companies/{other_company_id}/houses"}
     expect:
       status: [403, 404]
@@ -270,6 +302,7 @@ checks:
   - id: company_overview
     required: true
     role: company_admin
+    requires_totp: true
     request: {method: GET, path: "/api/v1/companies/{company_id}/overview"}
     expect:
       status: [200]
@@ -280,6 +313,7 @@ checks:
   - id: company_houses
     required: true
     role: company_admin
+    requires_totp: true
     request: {method: GET, path: "/api/v1/companies/{company_id}/houses"}
     expect:
       status: [200]
@@ -289,6 +323,7 @@ checks:
   - id: company_admin_denied_foreign_company
     required: true
     role: company_admin
+    requires_totp: true
     request: {method: GET, path: "/api/v1/companies/{other_company_id}/houses"}
     expect:
       status: [403, 404]
@@ -299,6 +334,7 @@ checks:
   - id: platform_dashboard
     required: true
     role: platform_admin
+    requires_totp: true
     request: {method: GET, path: "/api/v1/platform/dashboard"}
     expect:
       status: [200]
@@ -308,6 +344,7 @@ checks:
   - id: platform_health
     required: true
     role: platform_admin
+    requires_totp: true
     request: {method: GET, path: "/api/v1/platform/health"}
     expect:
       status: [200]
@@ -317,6 +354,7 @@ checks:
   - id: platform_companies
     required: true
     role: platform_admin
+    requires_totp: true
     request: {method: GET, path: "/api/v1/platform/companies"}
     expect:
       status: [200]
@@ -326,6 +364,7 @@ checks:
   - id: platform_denied_resident_tickets
     required: true
     role: platform_admin
+    requires_totp: true
     request: {method: GET, path: "/api/v1/tickets", query: {house_id: "{house_id}"}}
     expect:
       status: [403, 404]

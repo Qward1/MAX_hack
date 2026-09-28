@@ -1,5 +1,21 @@
 # DEV-B — current handoff
 
+## F2 — четыре пробела в документах — 28.09.2026
+
+**Только документы; тег `online-submission-final` перенесён с `d29c4c2` на
+коммит F2 до сдачи.** Ветка `agent/f2-doc-gaps` от `main` = `d29c4c2`.
+
+- Происхождение данных: README («Тестовые данные») и `IMPLEMENTATION_CONTEXT.md` —
+  формулировка REALDATA-D5 + `ml/`; внешним моделям исследования `ml/` уходили только
+  24 перефразированные фразы и синтетика; фразы P6 — с датой.
+- Коммит под тегом — `git rev-parse online-submission-final^{commit}`;
+  `scripts/release_check.py` сравнивает с HEAD коммит тега, а не объект тега.
+- Ложные памятки 18 из 37 — в «Известных ограничениях», «Remaining risks» и на слайде.
+- `DATA-API.yaml`: 12 из 24 — `requires_totp: true`, `automation_notes`;
+  `docs/api/accounts.example.json`; раннер печатает «без входа: X из Y» и «с входом
+  по TOTP: X из Y», неудачный вход — FAIL роли, а не обрыв
+  (`tests/unit/test_data_api_check.py`). Production до выкладки: 12/12 и 12/12.
+
 ## Финальная подготовка к сдаче — 28.09.2026
 
 **DEPLOYED, тег `online-submission-final`.** Итог и доказательства —

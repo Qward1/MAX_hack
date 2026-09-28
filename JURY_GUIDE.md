@@ -98,8 +98,22 @@
   <https://domsignal.176-108-244-168.sslip.io/openapi.json>, интерактивно — `/docs`.
 - Проверки: [`DATA-API.yaml`](DATA-API.yaml) (24), прогон —
   `uv run python scripts/data_api_check.py --accounts <файл с учётками>`.
-- `/health` → `{"status":"ok"}`, `/ready` → `{"status":"ready"}`, `/version` → `commit` на слайде.
+- `/health` → `{"status":"ok"}`, `/ready` → `{"status":"ready"}`, `/version` → `commit` на слайде —
+  тот же, что `git rev-parse online-submission-final^{commit}`. `/version` возвращает этот же коммит;
+  короткий вид — первые 7 символов.
 - Подробно — [`docs/API.md`](docs/API.md).
+
+**Проверки с TOTP.** 12 из 24 проверок `DATA-API.yaml` (роли `operator`, `company_admin`,
+`platform_admin`, поле `requires_totp: true`) требуют входа сотрудника с TOTP (RFC 6238, 30 с,
+6 цифр). Если платформа оценки не поддерживает TOTP, они будут показаны непройденными. Запасной
+путь 1 — раннер `uv run python scripts/data_api_check.py --accounts <файл>`: формат файла — шаблон
+[`docs/api/accounts.example.json`](docs/api/accounts.example.json) с заглушками, значения — с
+закрытого служебного слайда; без `--accounts` раннер выполняет только проверки без входа. Итог —
+две строки: «без входа: X из 12» и «с входом по TOTP: X из 12». Запасной путь 2 — вручную: вход в
+браузере по [«Кабинеты сотрудников»](#кабинеты-сотрудников-браузер) и те же разделы, что в
+[сценарии 11](#11-администратор-ук-и-платформа): `jury.operator` — «Заявки», «Сигналы»;
+`jury.admin` — «Обзор», «Дома»; `jury.platform` — «Обзор», «Состояние системы», «Организации»;
+чужой раздел — «Раздел недоступен».
 
 ## Сценарии
 
