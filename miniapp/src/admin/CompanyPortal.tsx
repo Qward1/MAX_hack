@@ -1,3 +1,4 @@
+import { Toaster } from "../shared/ui/Toast";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AdminApp } from "./AdminApp";
 import { TICKETS_CHANGED_EVENT } from "./TicketDetail";
@@ -149,7 +150,7 @@ export function CompanyPortal() {
     : s === "tickets" ? <NavCount id={`count-${s}`} value={counts.tickets} label="новых заявок" /> : null;
   const described = (s: string) => (s === "signals" && counts.signals) || (s === "tickets" && counts.tickets) ? `count-${s}` : undefined;
   const refreshAll = () => { bootstrap.refresh(); window.dispatchEvent(new Event("administration-refresh")); };
-  return <div className={`admin-shell has-mobile-nav ${isOrganization ? "company-workspace" : "operator-workspace"}`}>
+  return <div className={`admin-shell has-mobile-nav ${isOrganization ? "company-workspace" : "operator-workspace"}`}><Toaster />
     <MobileNavigation company={selected} companies={companies} surface={surface} counts={counts} href={href}
       navigate={navigate} displayName={bootstrap.data?.display_name} refresh={refreshAll}
       title={isOrganization ? "Управление компанией" : "Рабочее место оператора"} />

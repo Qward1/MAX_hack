@@ -1,3 +1,4 @@
+import { useConfirm } from "../shared/ui/useConfirm";
 import { POLL_LIST_MS } from "../shared/api/useResource";
 import { formatStaffTime, sentence } from "../shared/ui/format";
 import { useEffect, useState } from "react";
@@ -222,6 +223,7 @@ function MailingDetail({ id, base, platform, close, refresh }: {
   const [confirmRetract, setConfirmRetract] = useState(false);
   const [edit, setEdit] = useState<{ title: string; body: string } | null>(null);
   const action = useAction(() => { r.refresh(); refresh(); setPreview(null); });
+  const confirm = useConfirm();
   const b = r.data;
   // Отказ сервера (например, «уже отправлено») — показать актуальное состояние.
   const act = async (path: string, payload: object) => {
@@ -266,13 +268,15 @@ function MailingDetail({ id, base, platform, close, refresh }: {
         {(b.houses ?? []).length > 0 && <><dt>Дома</dt><dd>{(b.houses ?? []).join("; ")}</dd></>}
         {b.edited_at && <><dt>Изменено</dt><dd>{when(b.edited_at)}</dd></>}
       </dl>
+      {confirm.dialog}
       {b.poll && <PollResultsView poll={b.poll} />}
       {b.status === "draft" && <>
         <div className="button-row">
           <button className="ticket-button secondary" onClick={() => setEditing(true)}>Изменить черновик</button>
           <button className="ticket-button secondary" onClick={() => void loadPreview()}>Предпросмотр получателей</button>
-          <button className="ticket-button secondary" disabled={action.busy}
-            onClick={() => void act(`/api/v1/broadcasts/${id}/cancel`, { expected_version: b.version })}>Удалить черновик</button>
+          <button className="ds-btn ds-btn-danger" disabled={action.busy}
+            onClick={() => confirm.ask({ title: "Удалить черновик?", body: "Черновик нельзя будет восстановить. Если это опрос из предложения жителя, предложение вернётся в список.",
+              confirmLabel: "Удалить черновик", run: () => act(`/api/v1/broadcasts/${id}/cancel`, { expected_version: b.version }) })}>Удалить черновик</button>
         </div>
         {previewError && <p role="alert" className="admin-feedback">{previewError}</p>}
         {preview && <PreviewTable preview={preview} />}
@@ -296,8 +300,9 @@ function MailingDetail({ id, base, platform, close, refresh }: {
         </form>
       </>}
       {b.status === "scheduled" && <div className="button-row">
-        <button className="ticket-button" disabled={action.busy}
-          onClick={() => void act(`/api/v1/broadcasts/${id}/cancel`, { expected_version: b.version })}>Отменить отправку</button>
+        <button className="ds-btn ds-btn-danger" disabled={action.busy}
+          onClick={() => confirm.ask({ title: "Отменить отправку?", body: "Сообщение не уйдёт жителям. Чтобы отправить его позже, придётся создать новое.",
+            confirmLabel: "Отменить отправку", run: () => act(`/api/v1/broadcasts/${id}/cancel`, { expected_version: b.version }) })}>Отменить отправку</button>
       </div>}
       {b.status === "sent" && <>
         <StatsTable stats={b.stats ?? []} />
@@ -305,8 +310,9 @@ function MailingDetail({ id, base, platform, close, refresh }: {
           {(b.allowed_actions ?? []).includes("edit_content") && !edit &&
             <button className="ticket-button secondary" onClick={() => setEdit({ title: b.title, body: b.body })}>Исправить текст</button>}
           {(b.allowed_actions ?? []).includes("close_poll") &&
-            <button className="ticket-button secondary" disabled={action.busy}
-              onClick={() => void act(`/api/v1/broadcasts/${id}/close-poll`, { expected_version: b.version })}>Закрыть опрос</button>}
+            <button className="ds-btn ds-btn-danger" disabled={action.busy}
+              onClick={() => confirm.ask({ title: "Закрыть опрос?", body: "Голосование закончится сейчас, пост в чате покажет итоги. Открыть опрос снова нельзя.",
+                confirmLabel: "Закрыть опрос", run: () => act(`/api/v1/broadcasts/${id}/close-poll`, { expected_version: b.version }) })}>Закрыть опрос</button>}
           {!confirmRetract ? <button className="ticket-button secondary" onClick={() => setConfirmRetract(true)}>Удалить сообщение</button>
             : <div className="admin-feedback" role="group" aria-label="Подтверждение удаления">
               <p>Пост в домовом чате заменится на «Сообщение удалено автором», из ленты сообщение исчезнет. Уже доставленные личные сообщения останутся.</p>
@@ -455,7 +461,7 @@ export function CompanyProfileForm({ base }: { base: string }) {
 }
 
 export function HouseFactsForm({ base, house, refresh }: { base: string; house: Schema["CompanyHouseView"]; refresh: () => void }) {
-  const action = useAction(refresh);
+  const action = useAction(refresh, {}, "Сведения о доме сохранены");
   return <details className="passive-switch"><summary>Сведения о доме для жителей</summary>
     <form className="inline-form" onSubmit={e => {
       e.preventDefault();
@@ -506,9 +512,11 @@ export function Notices({ base }: { base: string }) {
 export function ReceptionAdmin({ base, admin }: { base: string; admin: boolean }) {
   const r = useRead<Schema["ReceptionSlotView"][]>(`${base}/reception-slots`);
   const action = useAction(r.refresh);
+  const confirm = useConfirm();
   const [starts, setStarts] = useState(() => localInput(new Date(Date.now() + 2 * 86400000)));
   return <>
     <Title description="Время приёма жителей и записи на него">Приём</Title>
+    {confirm.dialog}
     {admin && <form className="inline-form admin-detail" onSubmit={e => {
       e.preventDefault();
       const data = new FormData(e.currentTarget);
@@ -533,8 +541,10 @@ export function ReceptionAdmin({ base, admin }: { base: string; admin: boolean }
           <li key={b.id}>{b.resident_name} · {b.house_address} · {b.topic}{b.status === "cancelled" ? " (отменена)" : ""}</li>)}</ul>}
       </div>
       <span className={`admin-status status-${slot.status}`}>{slot.status === "open" ? "Открыто" : "Отменено"}</span>
-      {admin && slot.status === "open" && <button className="ticket-button secondary" disabled={action.busy}
-        onClick={() => void action.run(`${base}/reception-slots/${slot.id}/cancel`)}>Отменить время</button>}
+      {admin && slot.status === "open" && <button className="ds-btn ds-btn-danger" disabled={action.busy}
+        onClick={() => confirm.ask({ title: "Отменить время приёма?", body: slot.booked
+          ? `Записавшиеся жители (${slot.booked}) увидят, что приём отменён.` : "Жители больше не смогут записаться на это время.",
+          confirmLabel: "Отменить время", run: () => action.run(`${base}/reception-slots/${slot.id}/cancel`) })}>Отменить время</button>}
     </li>)}</ul> : <p className="state-panel">Время приёма пока не задано.{admin ? " Добавьте его формой выше." : ""}</p>)}
   </>;
 }

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { ApiProblem } from "../shared/api/client";
 import { ticketClient } from "../shared/api/tickets";
 import type { components } from "../shared/api/schema";
+import { notify } from "../shared/ui/Toast";
 import { type ResourceOptions, useResource } from "../shared/api/useResource";
 
 export type Schema = components["schemas"];
@@ -29,7 +30,11 @@ export function problemText(e: unknown, fields: Record<string, string> = {}, fal
   }
   return e instanceof Error ? e.message : fallback;
 }
-export function useAction(refresh?: () => void, fields: Record<string, string> = {}) {
+/**
+ * Действие кабинета: занятость, ошибка у формы и — если задано `success` —
+ * общее уведомление о результате (F-14). Введённое при ошибке не теряется.
+ */
+export function useAction(refresh?: () => void, fields: Record<string, string> = {}, success?: string) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [code, setCode] = useState("");
@@ -40,6 +45,7 @@ export function useAction(refresh?: () => void, fields: Record<string, string> =
       const result = await adminClient.request<T>(path, { method: "POST", body: JSON.stringify(payload),
         headers: key ? { "Idempotency-Key": key } : {} });
       refresh?.();
+      if (success) notify(success);
       return result;
     } catch (e) {
       setError(problemText(e, fields));

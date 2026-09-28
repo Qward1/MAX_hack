@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { adminClient, type Schema } from "./administration";
 import { ChatSettingsPanel, Mailings, SERVICE_ONLY_RULE } from "./CommunityPages";
@@ -121,6 +121,9 @@ describe("Рассылки: находки живой проверки D3", () =
     render(<Mailings base={BASE} />);
     fireEvent.click(await screen.findByRole("button", { name: draft.title }));
     fireEvent.click(await screen.findByRole("button", { name: "Отменить отправку" }));
+    // F-18: необратимое действие — только после подтверждения в диалоге.
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Отменить отправку" }));
     expect(await screen.findByRole("button", { name: "Исправить текст" })).toBeTruthy();
     expect(screen.getByRole("alert").textContent).toBe("Сообщение уже отправлено — отменить нельзя. Его можно удалить.");
   });

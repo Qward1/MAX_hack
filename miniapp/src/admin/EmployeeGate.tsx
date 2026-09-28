@@ -46,6 +46,17 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
   const [error, setError] = useState("");
   const [recovery, setRecovery] = useState(false);
   const [forbidden, setForbidden] = useState(false);
+  // F-08: использованное или отозванное приглашение — сразу «Ссылка недействительна», без формы.
+  const [inviteError, setInviteError] = useState("");
+  const stage = state?.stage;
+  useEffect(() => {
+    // После проверки сессии: у запроса уже есть cookie предварительного входа и CSRF.
+    if (!invitationToken || stage !== "login") return;
+    let active = true;
+    client.request("/api/v1/auth/employee/invitations/preview", { method: "POST", body: JSON.stringify({ token: invitationToken }) })
+      .catch(() => { if (active) setInviteError("Приглашение уже использовано, отозвано или устарело."); });
+    return () => { active = false; };
+  }, [invitationToken, stage]);
   const errorRef = useRef<HTMLParagraphElement>(null);
   // Ошибка входа названа текстом у формы; фокус — на неё, введённое не стирается.
   useEffect(() => {
@@ -172,6 +183,11 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
           Сохраните их в менеджере паролей.</p>
         <ul className="recovery-codes">{state.recovery_codes.map(code => <li key={code}><code>{code}</code></li>)}</ul>
         <button className="ticket-button" onClick={() => { if ((invitationToken && signup) || linkMode) window.location.assign("/admin/"); else setState({ ...state, recovery_codes: [] }); }}>Коды сохранены — открыть кабинет</button>
+      </> : inviteError && state.stage === "login" ? <>
+        <h1>Ссылка недействительна</h1>
+        <p role="alert">{inviteError}</p>
+        <p>Попросите администратора управляющей компании прислать новое приглашение.</p>
+        <a className="ds-btn ds-btn-secondary" href="/login">Перейти ко входу</a>
       </> : <form onSubmit={submit} className="ticket-form" key={`${state.stage}:${recovery}`}>
         <h1>{state.stage === "login" ? (linkMode ? (preview?.title ?? (linkError ? "Ссылка недействительна" : "Проверяем ссылку…"))
           : signup && invitationToken ? "Принять приглашение" : platform ? "Вход в управление платформой" : unified ? "Вход в кабинет" : "Вход сотрудника") : state.stage === "password_change" ? "Создайте свой пароль" :
@@ -189,8 +205,9 @@ export function EmployeeGate({ children, invitationToken, platform = false, unif
           <input name="password" type="password" autoComplete={state.stage === "login" && !signup && !linkMode ? "current-password" : "new-password"}
             minLength={state.stage === "password_change" || signup || linkMode ? 12 : 1} maxLength={1024} required
             aria-invalid={Boolean(error) || undefined}
-            aria-describedby={[state.stage !== "login" || linkMode ? "password-hint" : "", error ? "login-error" : ""].filter(Boolean).join(" ") || undefined} /></label>}
-        {(state.stage === "password_change" || (state.stage === "login" && linkMode && preview)) && <p id="password-hint" className="ds-hint">Минимум 12 символов. Удобно взять фразу из нескольких слов.</p>}
+            aria-describedby={[state.stage !== "login" || linkMode || (signup && invitationToken) ? "password-hint" : "", error ? "login-error" : ""].filter(Boolean).join(" ") || undefined} /></label>}
+        {(state.stage === "password_change" || (state.stage === "login" && ((linkMode && preview) || (signup && invitationToken)))) &&
+          <p id="password-hint" className="ds-hint">Не меньше 12 символов. Удобно взять фразу из нескольких слов.</p>}
         {state.stage === "mfa_enroll" && <>
           <p>Откройте приложение-аутентификатор (Google Authenticator, Яндекс Ключ, Microsoft Authenticator или другое) и добавьте аккаунт по QR-коду.</p>
           {!enrollment ? <button type="button" className="ticket-button secondary" disabled={busy} onClick={async () => {

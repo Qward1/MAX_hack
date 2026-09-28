@@ -1,3 +1,4 @@
+import { useConfirm } from "../shared/ui/useConfirm";
 import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
 import { AddressListForm } from "./HouseBatch";
 import { useEffect, useState, type FormEvent } from "react";
@@ -30,7 +31,9 @@ export function Staff({ base }: { base: string }) {
   const [link, setLink] = useState("");
   const [inviteKey, setInviteKey] = useState(() => crypto.randomUUID());
   const action = useAction(() => { people.refresh(); invitations.refresh(); });
+  const confirm = useConfirm();
   return <><Title description="Приглашения и доступ к домам вашей УК">Сотрудники</Title>
+    {confirm.dialog}
     <Feedback loading={people.loading} error={people.error ?? action.error} />
     {!people.error && <><form className="ticket-form invite-form" onSubmit={async e => {
       const data = submitted(e);
@@ -61,8 +64,9 @@ export function Staff({ base }: { base: string }) {
       <ul className="admin-records">{invitations.data?.map(inv => <li key={inv.id}>
         <span>{inv.organization_role === "company_admin" ? "Администратор УК" : "Оператор"}</span><Status value={inv.status} />
         <time>До {formatStaffTime(inv.expires_at)}</time>
-        {["pending", "claimed"].includes(inv.status) && <button className="ticket-button secondary" disabled={action.busy}
-          onClick={() => void action.run(`${base}/employee-invitations/${inv.id}/revoke`)}>Отозвать приглашение</button>}
+        {["pending", "claimed"].includes(inv.status) && <button className="ds-btn ds-btn-danger" disabled={action.busy}
+          onClick={() => confirm.ask({ title: "Отозвать приглашение?", body: "Ссылка перестанет работать сразу. Чтобы пригласить сотрудника, создайте новое приглашение.",
+            confirmLabel: "Отозвать приглашение", run: () => action.run(`${base}/employee-invitations/${inv.id}/revoke`) })}>Отозвать приглашение</button>}
       </li>)}</ul></>}
   </>;
 }
@@ -71,8 +75,10 @@ function StaffAssignments({ base, user, houses, refresh }: { base: string; user:
   const [confirm, setConfirm] = useState(false);
   const [saved, setSaved] = useState("");
   const action = useAction(() => { r.refresh(); refresh(); });
+  const guard = useConfirm();
   const name = r.data?.display_name ?? "Сотрудник";
   return <section className="admin-detail staff-detail" id="staff-detail" aria-labelledby="staff-detail-title">
+    {guard.dialog}
     <h2 id="staff-detail-title">{name}</h2><Feedback loading={r.loading} error={r.error ?? action.error} />
     {r.data && !r.error && <><p><Status value={r.data.status} /></p>
       {r.data.status === "active" && <><section className="staff-block" aria-labelledby="staff-access-title">
@@ -84,11 +90,17 @@ function StaffAssignments({ base, user, houses, refresh }: { base: string; user:
             <span id={`access-${h.management_id}`}>{h.address}</span>
             <div className="ds-segmented" role="group" aria-label={`Доступ: ${h.address}`}>
               {ACCESS_CHOICES.map(([value, label]) => <button key={value} type="button" aria-pressed={current === value}
-                disabled={action.busy} onClick={async () => {
+                disabled={action.busy} onClick={() => {
                   if (current === value) return;
                   setSaved("");
-                  const result = await action.run(`${base}/staff/${user}/assignments`, { management_id: h.management_id, role: value === "none" ? null : value });
-                  if (result !== undefined) setSaved(`Сохранено: ${h.address} — ${label.toLowerCase()}.`);
+                  const apply = async () => {
+                    const result = await action.run(`${base}/staff/${user}/assignments`, { management_id: h.management_id, role: value === "none" ? null : value });
+                    if (result !== undefined) setSaved(`Сохранено: ${h.address} — ${label.toLowerCase()}.`);
+                  };
+                  // F-18: снять назначение — с подтверждением: заявки сотрудника по дому вернутся в очередь.
+                  if (value === "none") guard.ask({ title: `Снять доступ к дому ${h.address}?`, body: `${name} перестанет видеть заявки и сигналы этого дома. Незакрытые заявки сотрудника вернутся в очередь.`,
+                    confirmLabel: "Снять доступ", run: apply });
+                  else void apply();
                 }}>{label}</button>)}
             </div>
           </div>;

@@ -1,3 +1,4 @@
+import { Toaster } from "../shared/ui/Toast";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   ApiProblem,
@@ -403,6 +404,7 @@ export function App({
         />
       )}
       <main className="ds-app-main">{content}</main>
+      <Toaster />
     </div>
   );
 

@@ -1,3 +1,4 @@
+import { Toaster } from "../shared/ui/Toast";
 import { POLL_LIST_MS } from "../shared/api/useResource";
 import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
 import { useState } from "react";
@@ -14,7 +15,7 @@ export function PlatformApp() {
   const bootstrap = useRead<Schema["PlatformBootstrap"]>("/api/v1/platform/bootstrap");
   const { url, navigate } = useRoute();
   const page = url.pathname.replace(/^\/platform-admin\/?/, "") || "overview";
-  return <div className="admin-shell platform-workspace"><aside className="admin-sidebar">
+  return <div className="admin-shell platform-workspace"><Toaster /><aside className="admin-sidebar">
     <a className="admin-brand" href="/platform-admin/">ДомСигнал<span>Управление платформой</span></a>
     <nav aria-label="Разделы платформы">{!bootstrap.error && bootstrap.data?.surfaces.map(s => <a className="admin-nav-link" key={s}
       href={`/platform-admin/${s}`} aria-current={page === s ? "page" : undefined}
@@ -121,7 +122,7 @@ function HouseRequestDetail({ id, refresh }: { id: string; refresh: () => void }
   const packs = useRead<Schema["RegionPackView"][]>("/api/v1/platform/region-packs");
   const action = useAction(() => { r.refresh(); refresh(); });
   return <section className="admin-detail"><Feedback loading={r.loading} error={r.error ?? action.error} />{r.data && <>
-    <h2>{r.data.requested_address}</h2><p>УК: <code>{r.data.company_id}</code></p><p>{r.data.basis_text}</p><Status value={r.data.status} />
+    <h2>{r.data.requested_address}</h2><p>УК: {r.data.company_name ?? "название не указано"}</p><p>{r.data.basis_text}</p><Status value={r.data.status} />
     {r.data.candidate_house_id && <p>Возможное совпадение: <code>{r.data.candidate_house_id}</code>. Требуется ваше решение.</p>}
     {["submitted", "under_review", "needs_info"].includes(r.data.status) && <form className="ticket-form" onSubmit={async e => {
       const data = submitted(e); const verb = (e.nativeEvent as SubmitEvent).submitter?.getAttribute("value");

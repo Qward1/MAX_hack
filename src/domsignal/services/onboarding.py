@@ -1033,6 +1033,8 @@ class AdministrationService:
             raise ResourceNotFound("Заявка не найдена")
         view = HouseRequestView.model_validate(row, from_attributes=True)
         view.history = await self.history(db, obj)
+        company = await db.get(ManagementCompany, row.company_id)
+        view.company_name = company.name if company is not None else None
         return view
 
     async def decide_house(

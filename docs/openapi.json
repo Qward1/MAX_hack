@@ -6227,6 +6227,17 @@
             "title": "Company Id",
             "type": "string"
           },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",

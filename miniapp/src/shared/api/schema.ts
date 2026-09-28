@@ -5167,6 +5167,8 @@ export interface components {
              * Format: uuid
              */
             company_id: string;
+            /** Company Name */
+            company_name?: string | null;
             /**
              * Created At
              * Format: date-time

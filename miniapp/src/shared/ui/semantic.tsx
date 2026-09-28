@@ -381,7 +381,7 @@ export function ConfirmDialog({
       <h2 id={titleId}>{title}</h2>
       {children}
       <div className="ds-actions">
-        <Button variant={tone} loading={busy} loadingLabel={busyLabel} onClick={onConfirm}>
+        <Button variant={tone === "danger" ? "destructive" : tone} loading={busy} loadingLabel={busyLabel} onClick={onConfirm}>
           {confirmLabel}
         </Button>
         <Button variant="secondary" disabled={busy} onClick={onCancel}>

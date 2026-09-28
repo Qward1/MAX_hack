@@ -313,6 +313,8 @@ class HouseRequestView(ContractModel):
     history: list[AuditView] = Field(default_factory=list)
     #: D5: заявка создана из адресов одобренной заявки УК.
     source_application_id: UUID | None = None
+    #: F-10: название УК — на экране название, а не идентификатор.
+    company_name: str | None = None
 
 
 #: D5: сколько адресов принимает одна пачка (вставка списка, одобрение).

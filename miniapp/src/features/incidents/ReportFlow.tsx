@@ -413,7 +413,8 @@ export function ReportFlow({
               )}
               <div className="ds-summary-row">
                 <dt>Категория</dt>
-                <dd>{categoryLabel(analysis.category)}</dd>
+                {/* F-11: выбранная вручную категория — её и видно, и она же уйдёт с сообщением. */}
+                <dd>{categoryLabel(category || analysis.category)}{category ? " (выбрано вами)" : ""}</dd>
                 <dd className="ds-summary-change">
                   <button type="button" className="ds-edit" onClick={change(true)}>
                     Изменить{" "}
