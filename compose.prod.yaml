@@ -80,6 +80,8 @@ services:
       BUILD_COMMIT: ${BUILD_COMMIT:?set BUILD_COMMIT}
       # Возможность разбора моделью объявляется по провайдеру AI-пула — без ключа.
       AI_POOL_LLM_PROVIDER: ${LLM_PROVIDER:-rules}
+      # Обзор платформы показывает тот же дневной бюджет модели, что действует в ai-worker.
+      LLM_DAILY_CALL_BUDGET: ${LLM_DAILY_CALL_BUDGET:-300}
     healthcheck:
       test:
         [
