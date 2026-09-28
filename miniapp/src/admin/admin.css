@@ -277,6 +277,11 @@ html {
   border-bottom: 1px solid var(--ds-line);
   overflow-wrap: anywhere;
 }
+/* Метки статуса и силы переносятся только между словами: «Критический» не рвётся. */
+.queue-table td .ds-tag,
+.queue-table td .status-badge {
+  overflow-wrap: normal;
+}
 .queue-table tr:last-child td {
   border-bottom: 0;
 }
