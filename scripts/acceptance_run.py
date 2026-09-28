@@ -251,6 +251,12 @@ def local(matrix: Path, out: Path) -> list[CaseResult]:
     results: list[CaseResult] = []
     runnable = [row for row in rows if row["class"] in {"auto-local", "auto-prod", "human-MAX"}]
     py_nodes = sorted({t for row in runnable for t in row["tests"] if t.startswith("tests/")})
+    # Приёмочный сценарий идёт шагами по порядку файла: его узлы запускаются
+    # файлом целиком, иначе pytest выполнил бы их в порядке сортировки имён.
+    scenario_files = sorted(
+        {n.split("::")[0] for n in py_nodes if n.startswith("tests/acceptance/")}
+    )
+    py_nodes = [n for n in py_nodes if not n.startswith("tests/acceptance/")] + scenario_files
     pw_specs = sorted({t for row in runnable for t in row["tests"] if t.startswith("miniapp/")})
     outcomes: dict[str, tuple[str, float]] = {}
     if py_nodes:
