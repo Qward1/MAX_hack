@@ -1,7 +1,7 @@
 # Тестирование ДомСигнала
 
 Что проверяется, как запустить и что показал последний прогон финальной версии
-(28.09.2026). Каталог кейсов — [`docs/qa/TEST_CASES.md`](qa/TEST_CASES.md) (99 TC) и
+(28.09.2026, F2: документы, переключатель темы, «Попробовать…» без заявки). Каталог кейсов — [`docs/qa/TEST_CASES.md`](qa/TEST_CASES.md) (99 TC) и
 [`docs/qa/TEST_CASES_PROD_MAX.md`](qa/TEST_CASES_PROD_MAX.md) (61 ПР), матрица «кейс →
 тест» — [`docs/qa/ACCEPTANCE_MATRIX.md`](qa/ACCEPTANCE_MATRIX.md).
 
@@ -14,7 +14,7 @@
 | Фронтенд | типы, компоненты, презентация статусов, клиент API | `npm --prefix miniapp run typecheck`, `npm --prefix miniapp test -- --run` |
 | Браузер | Playwright: кабинеты, мини-приложение на 390 и 1280 px, доступ, вход с TOTP, обновление без перезагрузки; `ui-lint` — вёрстка 39 экранов × 5 ширин × 2 темы | стенд и переменные — [`miniapp/README.md`](../miniapp/README.md), «Браузерный стенд»; `npx playwright test` |
 | Сквозной с эмулятором MAX | «своя УК с нуля» → подключение группы → `/report` → работа → «Исправлено» → личка → опасность → сигнал | `ACCEPTANCE_BASE_URL=… uv run pytest tests/acceptance` на стенде `MAX_TRANSPORT=record` |
-| Сценарии | 38 шагов 10 сценариев через HTTP API и воркер | `DATABASE_URL=… uv run python scripts/scenario_run.py` |
+| Сценарии | 39 шагов 10 сценариев через HTTP API и воркер | `DATABASE_URL=… uv run python scripts/scenario_run.py` |
 | Приёмка по матрице | все кейсы TC/ПР: авто-локально, авто-production, «нужен человек в MAX» | `scripts/acceptance_run.py --target local` / `--target prod-readonly` |
 | Проверки API | 24 проверки `DATA-API.yaml` на production, три роли | `uv run python scripts/data_api_check.py --accounts <файл>` |
 | ML-модуль | 7 юнит-тестов объединения и слотов; смоук `train → single → chat → eval` на синтетике | [`ml/README.md`](../ml/README.md#запуск-в-чистом-клоне-без-закрытых-данных) |
@@ -24,13 +24,13 @@
 
 | Проверка | Результат |
 |---|---|
-| Backend: ruff, mypy (193 файла), unit и контракты | **1 073 passed** |
+| Backend: ruff, mypy (193 файла), unit и контракты | **1 079 passed** |
 | Контракты: OpenAPI из кода = `docs/openapi.json`, типы TS, пакеты регионов | пройдено |
-| Интеграция на PostgreSQL 16 | **537 passed** (CI на `ff5573c`, с первого раза; `test_claim_uses_the_partial_pool_index` проверяет план запроса PostgreSQL и зависит от статистики таблицы — локально однажды прошёл только при повторе) |
-| Фронтенд: типы, 31 файл тестов | **343 passed**, сборка без ошибок |
-| Браузер (Playwright, Chrome) | **78 passed, 0 failed** на свежем стенде, в том числе `ui-lint` — 39 экранов × 5 ширин × 2 темы без нарушений; 10 спеков-снимков запускаются только с `UX_SNAPSHOTS=1`; спек `notifications.spec.ts` требует жителя с MAX-идентичностью в фикстурах — тот же путь покрыт `test_notifications.py` (20) и сквозным TC-035 с эмулятором |
+| Интеграция на PostgreSQL 16 | **539 passed** (локально на финальном коде F2; `test_claim_uses_the_partial_pool_index` проверяет план запроса PostgreSQL и зависит от статистики таблицы — локально однажды прошёл только при повторе) |
+| Фронтенд: типы, 31 файл тестов | **348 passed**, сборка без ошибок |
+| Браузер (Playwright, Chrome) | **86 passed, 0 failed** на свежем стенде, в том числе переключатель темы (`theme.spec.ts`, 8) и `ui-lint` — 39 экранов × 5 ширин × 2 темы без нарушений; 10 спеков-снимков запускаются только с `UX_SNAPSHOTS=1`; спек `notifications.spec.ts` требует жителя с MAX-идентичностью в фикстурах — тот же путь покрыт `test_notifications.py` (20) и сквозным TC-035 с эмулятором |
 | Сквозной с эмулятором MAX (`tests/acceptance`) | **15 из 15** |
-| Сценарии (`scenario_run.py`) | **38 из 38** шагов |
+| Сценарии (`scenario_run.py`) | **39 из 39** шагов (сценарий 1 — «Попробовать…» без заявки) |
 | ML-модуль | 7 из 7 юнит-тестов; смоук-цепочка на синтетике — работает |
 | `DATA-API.yaml` на production | 24 из 24 на финальном коммите: «без входа: 12 из 12», «с входом по TOTP: 12 из 12» ([`FINAL_JURY_READINESS_REPORT.md`](../FINAL_JURY_READINESS_REPORT.md)) |
 | Чистый клон → `docker compose build --no-cache` → `up` | сборка 34 с, `/ready` через 20 с |
