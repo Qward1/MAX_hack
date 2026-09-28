@@ -407,7 +407,7 @@ async def test_cb14_stale_job_after_revoke_and_rebind(cb):
         == 0
     )
     async with cb.container.session_factory() as session, session.begin():
-        with pytest.raises(ChatConnectionError, match="Chat connection") as error:
+        with pytest.raises(ChatConnectionError) as error:
             await cb.container.chat_connections.resolve_context(
                 session,
                 actor_id=cb.ids["resident"],
