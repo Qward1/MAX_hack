@@ -29,7 +29,7 @@ GITLEAKS_IMAGE = "zricethezav/gitleaks:v8.28.0"
 
 def git(*args: str) -> str:
     return subprocess.run(
-        ["git", *args], cwd=ROOT, capture_output=True, text=True, check=True
+        ["git", *args], cwd=ROOT, capture_output=True, encoding="utf-8", check=True
     ).stdout.strip()
 
 
@@ -79,7 +79,7 @@ def gitleaks(since: str | None, head: str) -> tuple[bool, str]:
         ]
     else:
         return False, "gitleaks не найден (ни программы, ни Docker)"
-    result = subprocess.run(command, capture_output=True, text=True)
+    result = subprocess.run(command, capture_output=True, encoding="utf-8", errors="replace")
     lines = (result.stderr + result.stdout).splitlines()
     scanned = next(
         (line.split("INF", 1)[-1].strip() for line in lines if "commits scanned" in line), ""
