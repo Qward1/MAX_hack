@@ -60,11 +60,6 @@ a.ds-text-link:hover {
   font-weight: var(--ds-weight-strong);
   text-decoration: none;
 }
-.ds-action-link::after {
-  content: "›";
-  font-size: 1.15em;
-  line-height: 1;
-}
 .ds-action-link:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -102,7 +97,8 @@ a.ds-back {
 /* ------------------------------------------------------------ раскрытие = строка */
 /* «Совет дома», «Сведения о доме для жителей», «История подключений»:
  * строка с шевроном и фоном при наведении — видно, что она раскрывается. */
-details > summary {
+details > summary,
+details:is(.ds-disclosure, .source-chip, .manual-category) > summary {
   position: relative;
   list-style: none;
   padding-inline-end: calc(var(--ds-space-3) + 24px);
@@ -220,39 +216,36 @@ details > summary:hover {
 .ds-page-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "title actions" "text actions";
   align-items: start;
   column-gap: var(--ds-space-5);
   row-gap: var(--ds-space-2);
 }
-.page-header > h1,
-.ds-page-header > h1 {
-  grid-area: title;
+/* Все строки шапки — в левой колонке в порядке разметки; действия — справа. */
+.page-header > *,
+.ds-page-header > * {
+  grid-column: 1;
 }
 .page-header > p,
 .ds-page-header > p {
-  grid-area: text;
   max-width: 80ch;
 }
 .page-header > .page-actions {
-  grid-area: actions;
+  grid-column: 2;
+  grid-row: 1 / span 2;
   display: flex;
   flex-wrap: wrap;
   gap: var(--ds-space-2);
   justify-content: flex-end;
   align-self: center;
 }
-.page-header > :not(h1, p, .page-actions),
-.ds-page-header > :not(h1, p) {
-  grid-column: 1 / -1;
-}
 @media (max-width: 767px) {
   .page-header,
   .ds-page-header {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "title" "text" "actions";
   }
   .page-header > .page-actions {
+    grid-column: 1;
+    grid-row: auto;
     justify-content: flex-start;
     margin-top: var(--ds-space-1);
   }
@@ -318,6 +311,7 @@ details > summary:hover {
 }
 .admin-shell.with-topbar {
   grid-template-rows: auto 1fr;
+  min-height: 100dvh;
 }
 .admin-shell.with-topbar > .admin-sidebar {
   border-top: 0;
@@ -524,4 +518,86 @@ details > summary:hover {
   gap: var(--ds-space-2);
   color: var(--ds-ink-2);
   font-weight: 400;
+}
+
+/* ------------------------------------------------------------ формы кабинета */
+.admin-facts {
+  margin-bottom: var(--ds-space-5);
+}
+.ticket-form fieldset.choice-row:has(input[type="text"], input[type="tel"], input[type="email"], input[type="url"]) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: var(--ds-space-4) var(--ds-space-5);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.admin-detail .ticket-form > :is(button, .ds-btn, .ticket-button),
+.admin-detail .inline-form > :is(button, .ds-btn, .ticket-button),
+.ticket-form.admin-detail > :is(button, .ds-btn, .ticket-button) {
+  justify-self: start;
+  width: auto;
+}
+.admin-detail .ticket-form,
+.ticket-form.admin-detail {
+  max-width: 880px;
+}
+@media (max-width: 430px) {
+  .admin-detail .ticket-form > :is(button, .ds-btn, .ticket-button),
+  .ticket-form.admin-detail > :is(button, .ds-btn, .ticket-button) {
+    justify-self: stretch;
+    width: 100%;
+  }
+}
+
+/* Выбранный период — тем же акцентом, что и текущий пункт меню. */
+.period-switch [aria-pressed="true"] {
+  background: var(--ds-action);
+  border-color: var(--ds-action);
+  color: var(--ds-on-action, #fff);
+}
+/* Заголовок раздела отделён от карточки под ним. */
+.admin-main h2 + :is(.state-panel, .admin-detail, .admin-records, section) {
+  margin-top: var(--ds-space-3);
+}
+
+/* Плитка с переходом — вся карточка кликабельна: рамка при наведении и шеврон. */
+.stat-tile:has(.stat-link) {
+  position: relative;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.stat-tile:has(.stat-link):hover {
+  border-color: var(--ds-action);
+  box-shadow: var(--ds-shadow-1, 0 1px 3px rgb(0 0 0 / 0.08));
+}
+.stat-tile .stat-link {
+  color: var(--ds-ink);
+  text-decoration: none;
+  font-size: inherit;
+  font-weight: inherit;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+.stat-tile .stat-link::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.stat-tile .stat-link::after {
+  content: "›";
+  margin-inline-start: 8px;
+  color: var(--ds-ink-2);
+  font-weight: 400;
+}
+.stat-tile .stat-link:hover {
+  background: none;
+}
+.stat-tile .stat-link:focus-visible {
+  outline: none;
+}
+.stat-tile:has(.stat-link:focus-visible) {
+  outline: 2px solid var(--ds-focus, var(--ds-action));
+  outline-offset: 2px;
 }

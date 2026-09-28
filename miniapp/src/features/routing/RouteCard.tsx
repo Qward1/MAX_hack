@@ -110,7 +110,7 @@ export function CardAction({
             if (maxBridge.openLink(url)) event.preventDefault();
           }}
         >
-          {label} ↗<span className="ds-visually-hidden"> (откроется отдельно)</span>
+          {label}<span className="ds-visually-hidden"> (откроется отдельно)</span>
         </LinkButton>
         {action.reason && <p className="ds-reason">{action.reason}</p>}
       </div>

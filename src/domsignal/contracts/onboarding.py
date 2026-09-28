@@ -550,6 +550,9 @@ class PlatformBindingView(ChatSummary):
     house_id: UUID
     management_id: UUID
     company_id: UUID
+    #: F1: адрес дома и название УК — вместо идентификаторов на экране.
+    house_address: str | None = None
+    company_name: str | None = None
 
 
 class PlatformHealth(ContractModel):

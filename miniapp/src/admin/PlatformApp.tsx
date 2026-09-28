@@ -126,7 +126,7 @@ function HouseRequestDetail({ id, refresh }: { id: string; refresh: () => void }
   const action = useAction(() => { r.refresh(); refresh(); });
   return <section className="admin-detail"><Feedback loading={r.loading} error={r.error ?? action.error} />{r.data && <>
     <h2>{r.data.requested_address}</h2><p>УК: {r.data.company_name ?? "название не указано"}</p><p>{r.data.basis_text}</p><Status value={r.data.status} />
-    {r.data.candidate_house_id && <p>Возможное совпадение: <code>{r.data.candidate_house_id}</code>. Требуется ваше решение.</p>}
+    {r.data.candidate_house_id && <p>Возможное совпадение с домом из справочника: {houses.data?.find(h => h.id === r.data?.candidate_house_id)?.address ?? "адрес ниже в списке домов"}. Требуется ваше решение.</p>}
     {["submitted", "under_review", "needs_info"].includes(r.data.status) && <form className="ticket-form" onSubmit={async e => {
       const data = submitted(e); const verb = (e.nativeEvent as SubmitEvent).submitter?.getAttribute("value");
       if (!verb) return;
@@ -191,7 +191,7 @@ export function PlatformHouses() {
   const [offset, setOffset] = useState(0);
   const r = useRead<Schema["PlatformHouseView"][]>(`/api/v1/platform/houses?offset=${offset}`);
   const packs = useRead<Schema["RegionPackView"][]>("/api/v1/platform/region-packs");
-  return <><Title>Дома</Title><OpenHouses /><h2>Все дома</h2><Feedback loading={r.loading} error={r.error} /><ul className="admin-records">{r.data?.map(h => <li key={h.id}>{h.address}<code>{h.id}</code>
+  return <><Title>Дома</Title><OpenHouses /><h2>Все дома</h2><Feedback loading={r.loading} error={r.error} /><ul className="admin-records">{r.data?.map(h => <li key={h.id}><span>{h.address}</span>
     {h.region_code ? <span>{[h.region_code, h.municipality_code].filter(Boolean).join(" / ")}</span>
       : <><span className="admin-status status-needs_info">Регион не задан</span><SetRegion house={h.id} packs={packs.data} refresh={r.refresh} /></>}</li>)}</ul>
     <Pages offset={offset} set={setOffset} count={r.data?.length ?? 0} /></>;
@@ -251,7 +251,7 @@ function Disputes() {
   return <><Title description="Справочные данные для разбора конфликтов. Обычное подключение выполняет администратор УК.">Спорные MAX-привязки</Title>
     <Feedback loading={r.loading} error={r.error} />{r.data?.length === 0 && <p>Приостановленных и отозванных привязок нет.</p>}
     {r.data?.map(b => <section className="admin-detail" key={b.id}><h2>{b.title ?? "MAX-чат"}</h2><Status value={b.status} /><p>{b.suspension_reason}</p>
-      <p>Дом <code>{b.house_id}</code></p><p>Управление <code>{b.management_id}</code></p></section>)}</>;
+      <p>Дом: {b.house_address ?? "адрес не указан"}</p><p>УК: {b.company_name ?? "название не указано"}</p></section>)}</>;
 }
 function Health() {
   const r = useRead<Schema["PlatformHealth"]>("/api/v1/platform/health");

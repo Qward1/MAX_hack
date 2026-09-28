@@ -22,7 +22,7 @@ describe("OpenAccessSwitch (D1): открытый доступ к дому", () 
     });
     const refresh = vi.fn();
     render(<OpenAccessSwitch base="/api/v1/companies/c1" house={house} refresh={refresh} />);
-    expect(screen.getByText("Открытый доступ:")).toBeTruthy();
+    expect(screen.getByText("Сейчас:")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Включить открытый доступ" }));
     expect(request).not.toHaveBeenCalled();
     expect(

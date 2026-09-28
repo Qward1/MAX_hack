@@ -135,7 +135,7 @@ test("external route: form → review → card → draft → copy → I sent it"
     .evaluateAll((nodes) => nodes.map((node) => node.textContent?.trim()));
   expect(labels).toEqual([
     "Скопировать текст",
-    "Открыть официальный сервис ↗",
+    "Открыть официальный сервис",
     "Я отправил(а) обращение",
   ]);
   await expect(

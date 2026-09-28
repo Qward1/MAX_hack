@@ -62,13 +62,14 @@ export function Staff({ base }: { base: string }) {
       </li>)}</ul>
       {selected && <StaffAssignments key={selected} user={selected} base={base} houses={houses.data ?? []} refresh={people.refresh} />}
       <h2>Приглашения</h2><Feedback error={invitations.error} />
-      <ul className="admin-records">{invitations.data?.map(inv => <li key={inv.id}>
+      {invitations.data && !invitations.data.length && <p className="muted">Приглашений пока нет. Новое приглашение — формой выше.</p>}
+      {!!invitations.data?.length && <ul className="admin-records">{invitations.data.map(inv => <li key={inv.id}>
         <span>{inv.organization_role === "company_admin" ? "Администратор УК" : "Оператор"}</span><Status value={inv.status} />
         <time>До {formatStaffTime(inv.expires_at)}</time>
         {["pending", "claimed"].includes(inv.status) && <button className="ds-btn ds-btn-danger" disabled={action.busy}
           onClick={() => confirm.ask({ title: "Отозвать приглашение?", body: "Ссылка перестанет работать сразу. Чтобы пригласить сотрудника, создайте новое приглашение.",
             confirmLabel: "Отозвать приглашение", run: () => action.run(`${base}/employee-invitations/${inv.id}/revoke`) })}>Отозвать приглашение</button>}
-      </li>)}</ul></>}
+      </li>)}</ul>}</>}
   </>;
 }
 function StaffAssignments({ base, user, houses, refresh }: { base: string; user: string; houses: House[]; refresh: () => void }) {
@@ -271,7 +272,7 @@ export function OpenAccessSwitch({ base, house, refresh }: { base: string; house
   };
   return <div className="passive-switch">
     <h3>Открытый доступ</h3>
-    <p>Открытый доступ: <strong>{enabled ? "включён" : "выключен"}</strong></p>
+    <p>Сейчас: <strong>{enabled ? "включён" : "выключен"}</strong></p>
     <p className="muted">{enabled
       ? "Любой пользователь MAX может выбрать этот дом и сообщать о проблемах."
       : "Сообщать о проблемах и видеть доску могут только участники домового чата."}</p>
@@ -316,7 +317,9 @@ export function CompanyHouses({ base }: { base: string }) {
       <button className="ticket-button" disabled={action.busy}>Подать заявку на управление</button></form>}
     <Feedback loading={houses.loading} error={houses.error ?? requests.error ?? action.error} />
     {!houses.error && <HouseList houses={houses.data ?? []} manage={{ base, refresh: houses.refresh }} />}
-    <h2>Заявки на управление</h2>{requests.data?.map(r => <section className="admin-detail" key={r.id}>
+    <h2>Заявки на управление</h2>
+    {requests.data && !requests.data.length && <p className="muted">Заявок на управление нет. Новый дом — кнопкой «Запросить управление домом».</p>}
+    {requests.data?.map(r => <section className="admin-detail" key={r.id}>
       <h3>{r.requested_address}</h3><Status value={r.status} /><p>{r.decision_reason}</p><History rows={r.history ?? []} />
     </section>)}
   </>;

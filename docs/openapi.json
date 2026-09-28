@@ -8481,6 +8481,28 @@
             "title": "Company Id",
             "type": "string"
           },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "house_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Address"
+          },
           "house_id": {
             "format": "uuid",
             "title": "House Id",

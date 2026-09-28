@@ -1537,9 +1537,17 @@ class AdministrationService:
     async def disputes(self, db: AsyncSession, offset: int = 0) -> list[PlatformBindingView]:
         rows = (
             await db.execute(
-                select(ChatBinding, MAXChat.title, HouseManagement.tenant_id)
+                select(
+                    ChatBinding,
+                    MAXChat.title,
+                    HouseManagement.tenant_id,
+                    House.address,
+                    ManagementCompany.name,
+                )
                 .join(MAXChat, MAXChat.max_chat_id == ChatBinding.max_chat_id)
                 .join(HouseManagement)
+                .join(House, House.id == ChatBinding.house_id)
+                .join(ManagementCompany, ManagementCompany.id == HouseManagement.tenant_id)
                 .where(ChatBinding.status.in_(["suspended", "revoked"]))
                 .order_by(ChatBinding.updated_at.desc())
                 .offset(offset)
@@ -1558,8 +1566,10 @@ class AdministrationService:
                 house_id=b.house_id,
                 management_id=b.management_id,
                 company_id=tenant,
+                house_address=address,
+                company_name=company,
             )
-            for b, title, tenant in rows
+            for b, title, tenant, address, company in rows
         ]
 
     async def health(self, db: AsyncSession) -> PlatformHealth:

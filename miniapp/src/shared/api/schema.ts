@@ -5975,6 +5975,10 @@ export interface components {
              * Format: uuid
              */
             company_id: string;
+            /** Company Name */
+            company_name?: string | null;
+            /** House Address */
+            house_address?: string | null;
             /**
              * House Id
              * Format: uuid

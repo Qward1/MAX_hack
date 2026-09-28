@@ -388,7 +388,7 @@ export function ChatSettingsPanel({ bindingId }: { bindingId: string }) {
     <summary>Что бот публикует в этом чате</summary>
     <Feedback loading={r.loading && !view} error={r.error} />
     {value && view && <form className="ticket-form" onSubmit={async e => {
-      e.preventDefault(); setSaved(false);
+      e.preventDefault();
       const result = await action.run(`/api/v1/chat-bindings/${bindingId}/settings`, value);
       if (result) { setForm(null); setSaved(true); }
     }}>
@@ -433,19 +433,17 @@ const profileErrors: Record<string, string> = {
 
 export function CompanyProfileForm({ base }: { base: string }) {
   const r = useRead<Schema["CompanyProfileView"]>(`${base}/profile`);
-  const action = useAction(r.refresh);
-  const [saved, setSaved] = useState(false);
+  const action = useAction(r.refresh, {}, "Контакты для жителей сохранены");
   const view = r.data;
   return <section className="admin-detail" aria-label="Контакты для жителей">
     <h2>Контакты для жителей</h2>
     <p className="muted">Жители увидят эти сведения в разделе «Мой дом» с пометкой «по данным УК» и датой обновления.</p>
     <Feedback loading={r.loading && !view} error={r.error} />
     {view && <form className="ticket-form" onSubmit={async e => {
-      e.preventDefault(); setSaved(false);
+      e.preventDefault();
       const data = new FormData(e.currentTarget);
       const payload = Object.fromEntries(profileFields.map(([name]) => [name, String(data.get(name) ?? "").trim() || null]));
-      const result = await action.run(`${base}/profile`, payload);
-      if (result) setSaved(true);
+      await action.run(`${base}/profile`, payload);
     }}>
       <fieldset className="choice-row" disabled={!view.can_edit}>
         {profileFields.map(([name, label, type]) => <label key={name}>{label}
@@ -456,7 +454,6 @@ export function CompanyProfileForm({ base }: { base: string }) {
       {view.can_edit ? <button className="ticket-button" disabled={action.busy}>Сохранить контакты</button>
         : <p className="muted">Контакты заполняет администратор УК.</p>}
       {view.updated_at && <p className="muted">Обновлено {when(view.updated_at)}</p>}
-      {saved && <p role="status" className="muted">Контакты сохранены.</p>}
     </form>}
   </section>;
 }
@@ -531,7 +528,7 @@ export function ReceptionAdmin({ base, admin }: { base: string; admin: boolean }
       <label>Дата и время<input type="datetime-local" value={starts} required onChange={e => setStarts(e.target.value)} /></label>
       <label>Длительность, мин<input name="duration" type="number" min={5} max={240} defaultValue={30} required /></label>
       <label>Мест<input name="capacity" type="number" min={1} max={50} defaultValue={3} required /></label>
-      <label>Место<input name="place" maxLength={500} placeholder="По умолчанию — адрес офиса" /></label>
+      <label>Место<input name="place" maxLength={500} placeholder="Офис УК" /></label>
       <button className="ticket-button">Добавить время приёма</button>
     </form>}
     <Feedback loading={r.loading && !r.data} error={r.error ?? (action.error || undefined)} />

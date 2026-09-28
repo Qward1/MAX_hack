@@ -1122,11 +1122,13 @@ function ErrorPanel({
   onRetry: () => void;
   back?: ReactNode;
 }) {
-  const status = problemStatus(error);
+  // 422 при чтении — испорченная ссылка: для жителя это «не нашли», а не ошибка формы.
+  const status = problemStatus(error) === 422 ? 404 : problemStatus(error);
   const trace = error instanceof ApiProblem ? error.problem.trace_id : null;
+  // Код для поддержки — первые 8 знаков trace_id: их достаточно для поиска в журнале.
   const safeTrace =
     typeof trace === "string" && /^[a-zA-Z0-9._:-]{1,80}$/.test(trace) && ![401, 403].includes(status ?? 0)
-      ? trace
+      ? trace.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8)
       : null;
   const titles: Record<number, string> = {
     401: "Сессия MAX истекла",
