@@ -70,6 +70,14 @@ SCENARIOS: list[tuple[str, list[tuple[str, str]]]] = [
                 "подтверждение жителем и закрытие",
                 f"{IT}test_tickets.py::test_tk05_self_verification_and_participation",
             ),
+            (
+                "проблема «Решена» вместе с заявкой после подтверждения жителя (D6)",
+                f"{IT}test_f1_incident_closure.py::test_confirmed_ticket_resolves_the_incident",
+            ),
+            (
+                "«Проблема осталась» после закрытия — та же заявка и проблема снова открыты",
+                f"{IT}test_f1_incident_closure.py::test_objection_after_close_reopens_the_same_ticket_and_incident",
+            ),
         ],
     ),
     (
