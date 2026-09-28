@@ -106,7 +106,7 @@ def downgrade() -> None:
     op.drop_index("ix_incident_events_incident", table_name="incident_events")
     op.drop_table("incident_events")
     op.drop_index("ix_incident_house_resolved", table_name="incidents")
-    op.drop_constraint("ck_incidents_closure", "incidents", type_="check")
+    op.drop_constraint(op.f("ck_incidents_closure"), "incidents", type_="check")
     op.drop_column("incidents", "status_changed_at")
     op.drop_column("incidents", "closure_reason")
     op.drop_column("incidents", "closure")
