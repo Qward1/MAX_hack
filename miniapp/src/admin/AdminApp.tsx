@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { type Me } from "../shared/api/client";
 import { TicketClient, ticketClient, type Ticket } from "../shared/api/tickets";
-import { useResource } from "../shared/api/useResource";
+import { useResource, POLL_LIST_MS } from "../shared/api/useResource";
 import { categoryLabel } from "../features/incidents/presentation";
 import { placeText } from "../features/incidents/IncidentCard";
 import { Pagination, TicketState, TicketStatusBadge } from "../features/tickets/components";
 import { actionLabels, ticketActions } from "../features/tickets/presentation";
 import { countLabel, formatStaffWhen } from "../shared/ui/format";
-import { TicketDetail } from "./TicketDetail";
+import { TICKETS_CHANGED_EVENT, TicketDetail } from "./TicketDetail";
 
 export function adminUrl(values: Record<string, string | undefined> = {}) {
   const query = new URLSearchParams();
@@ -250,7 +250,7 @@ export function AdminApp({ client = ticketClient, embedded = false, companyId }:
           route.searchParams.has("test_actor") &&
           session.data?.capabilities.features.test_auth && (
             <div className="demo-session">
-              <span className="demo-badge">Демонстрационные данные · локальная тестовая сессия</span>
+              <span className="demo-badge">Локальный стенд · вход без пароля</span>
               <label>
                 Участник проверки
                 <select
@@ -307,8 +307,13 @@ function HouseQueue({
     },
     [client, house.id, filter, me, offset],
   );
-  const resource = useResource(`${house.id}:${filter}:${offset}:${revision}`, load);
+  const resource = useResource(`${house.id}:${filter}:${offset}:${revision}`, load, { poll: POLL_LIST_MS });
   const data = resource.data;
+  useEffect(() => {
+    const changed = () => resource.refresh();
+    window.addEventListener(TICKETS_CHANGED_EVENT, changed);
+    return () => window.removeEventListener(TICKETS_CHANGED_EVENT, changed);
+  }, [resource.refresh]);
   return (
     <section className="house-queue" aria-label={house.address}>
       <div className="ticket-line">

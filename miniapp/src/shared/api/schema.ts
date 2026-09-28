@@ -690,6 +690,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/chat-connections/{request_id}/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reissue Code
+         * @description U-01: новый код подключения, пока бот не получил прежний.
+         */
+        post: operations["reissue_code_api_v1_chat_connections__request_id__code_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/chat-connections/{request_id}/reject": {
         parameters: {
             query?: never;
@@ -1394,7 +1414,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Incidents */
+        /**
+         * List Incidents
+         * @description Проблемы дома. `state=open` — открытые, `resolved_recent` — решённые за 30 дней.
+         */
         get: operations["list_incidents_api_v1_houses__house_id__incidents_get"];
         put?: never;
         post?: never;
@@ -3974,6 +3997,8 @@ export interface components {
         };
         /** ChatSummary */
         ChatSummary: {
+            /** Activated At */
+            activated_at?: string | null;
             /**
              * Id
              * Format: uuid
@@ -4352,10 +4377,16 @@ export interface components {
             binding_id?: string | null;
             /** Binding Version */
             binding_version?: number | null;
+            /** Cancelled At */
+            cancelled_at?: string | null;
             /** Candidate Max Chat Id */
             candidate_max_chat_id: string | null;
+            /** Completed At */
+            completed_at?: string | null;
             /** Correlation Token */
             correlation_token?: string | null;
+            /** Created At */
+            created_at?: string | null;
             /**
              * Expires At
              * Format: date-time
@@ -4371,9 +4402,13 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Initiated By Name */
+            initiated_by_name?: string | null;
             /** Last Error Code */
             last_error_code: string | null;
             quota?: components["schemas"]["ChatQuotaView"] | null;
+            /** Rejected At */
+            rejected_at?: string | null;
             /**
              * Scope Type
              * @enum {string}
@@ -5164,6 +5199,8 @@ export interface components {
              * Format: uuid
              */
             company_id: string;
+            /** Company Name */
+            company_name?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -5239,6 +5276,8 @@ export interface components {
             /** Allowed Actions */
             allowed_actions?: components["schemas"]["ActionDescriptor"][];
             category: components["schemas"]["ReportCategory"];
+            /** Closure */
+            closure?: ("residents_confirmed" | "ticket_cancelled") | null;
             /**
              * Created At
              * Format: date-time
@@ -5268,7 +5307,9 @@ export interface components {
             report_count: number;
             /** Reports */
             reports: components["schemas"]["ReportSummary"][];
-            rule: components["schemas"]["RuleProvenance"];
+            /** Resolved At */
+            resolved_at?: string | null;
+            rule?: components["schemas"]["RuleProvenance"] | null;
             status: components["schemas"]["IncidentStatus"];
             /** Title */
             title: string;
@@ -5279,7 +5320,11 @@ export interface components {
         IncidentList: {
             /** Items */
             items: components["schemas"]["IncidentSummary"][];
+            /** Open Total */
+            open_total?: number | null;
             page: components["schemas"]["PageMeta"];
+            /** Resolved Recent Total */
+            resolved_recent_total?: number | null;
         };
         /**
          * IncidentLocation
@@ -5305,6 +5350,8 @@ export interface components {
             /** Allowed Actions */
             allowed_actions?: components["schemas"]["ActionDescriptor"][];
             category: components["schemas"]["ReportCategory"];
+            /** Closure */
+            closure?: ("residents_confirmed" | "ticket_cancelled") | null;
             /**
              * Created At
              * Format: date-time
@@ -5332,6 +5379,8 @@ export interface components {
             provenance: components["schemas"]["Provenance"] | null;
             /** Report Count */
             report_count: number;
+            /** Resolved At */
+            resolved_at?: string | null;
             status: components["schemas"]["IncidentStatus"];
             /** Title */
             title: string;
@@ -5576,7 +5625,7 @@ export interface components {
              * @default ticket
              * @enum {string}
              */
-            kind: "ticket" | "route_card" | "poll" | "announcements";
+            kind: "ticket" | "route_card" | "poll" | "announcements" | "house";
             /** Poll Id */
             poll_id?: string | null;
             /** Route Outcome Id */
@@ -5919,11 +5968,17 @@ export interface components {
         };
         /** PlatformBindingView */
         PlatformBindingView: {
+            /** Activated At */
+            activated_at?: string | null;
             /**
              * Company Id
              * Format: uuid
              */
             company_id: string;
+            /** Company Name */
+            company_name?: string | null;
+            /** House Address */
+            house_address?: string | null;
             /**
              * House Id
              * Format: uuid
@@ -6585,6 +6640,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Joined
+             * @default false
+             */
+            joined: boolean;
         };
         /** ResidentBookingView */
         ResidentBookingView: {
@@ -12582,6 +12642,129 @@ export interface operations {
             };
         };
     };
+    reissue_code_api_v1_chat_connections__request_id__code_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionView"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    /** @description Server generated correlation ID */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     reject_api_v1_chat_connections__request_id__reject_post: {
         parameters: {
             query?: never;
@@ -18124,6 +18307,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 offset?: number;
+                state?: "all" | "open" | "resolved_recent";
             };
             header?: never;
             path: {

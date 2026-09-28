@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { signalClient, type SignalClient, type SignalList, type SignalSummary } from "../shared/api/signals";
-import { useResource } from "../shared/api/useResource";
+import { useResource, POLL_LIST_MS } from "../shared/api/useResource";
 import { Pagination } from "../features/tickets/components";
 import { dangerLabel } from "../features/routing/presentation";
 import { countLabel, formatStaffWhen } from "../shared/ui/format";
@@ -249,7 +249,7 @@ function SignalQueue({
       client.signals({ house, statuses: split(statusKey), strengths: split(strengthKey), limit: PAGE, offset }, signal),
     [client, house, statusKey, strengthKey, offset],
   );
-  const resource = useResource(`${house}:${offset}`, load);
+  const resource = useResource(`${house}:${offset}`, load, { poll: POLL_LIST_MS });
   usePolling(resource.refresh);
   // Перечитать, не стирая список: без мигания «Загружаем…».
   useEffect(() => {

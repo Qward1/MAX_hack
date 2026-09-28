@@ -70,7 +70,7 @@ test.describe.serial("D3 community", () => {
       await expect(page.getByRole("alert")).toContainText("Проверьте поля");
       await page.getByLabel("Сайт").fill("https://uk.example.invalid");
       await page.getByRole("button", { name: "Сохранить контакты" }).click();
-      await expect(page.getByText("Контакты сохранены.")).toBeVisible();
+      await expect(page.getByText("Контакты для жителей сохранены")).toBeVisible();
       await axeCheck(page);
 
       await page.goto(`/admin/max?${q}`);

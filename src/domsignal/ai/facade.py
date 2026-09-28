@@ -38,6 +38,7 @@ from domsignal.ai.providers.base import (
     ProviderCircuitOpen,
     ProviderInvalidOutput,
     ProviderOverloaded,
+    ProviderRateLimited,
     ProviderResult,
     ProviderTimeout,
     ProviderUnavailable,
@@ -91,6 +92,7 @@ class WindowAnalyzer:
         validated: ValidatedWindow | None = None
         result: ProviderResult | None = None
         called = True
+        retry_after: float | None = None
         try:
             request, mapping = build_request(window, taxonomy)
             async with asyncio.timeout(self.timeout_s):
@@ -105,6 +107,8 @@ class WindowAnalyzer:
             state, called = "fallback_overloaded", False
         except (ProviderTimeout, TimeoutError):
             state = "fallback_timeout"
+        except ProviderRateLimited as exc:
+            state, called, retry_after = "fallback_rate_limited", not exc.local, exc.retry_after
         except ProviderUnavailable:
             state = "fallback_provider_error"
         except (ProviderInvalidOutput, ValidationError, ValueError, TypeError):
@@ -117,9 +121,18 @@ class WindowAnalyzer:
         if state != "ok" or validated is None:
             if state == "ok":
                 state = "fallback_invalid_output"
-            return self._finish(
+            finished = self._finish(
                 window, rules, digest, started, state, provider_called=called, result=result
             )
+            if retry_after is not None:
+                finished = finished.model_copy(
+                    update={
+                        "execution": finished.execution.model_copy(
+                            update={"retry_after_s": round(retry_after, 3)}
+                        )
+                    }
+                )
+            return finished
 
         typed, events = subtype_from_danger(validated.signals, taxonomy)
         signals = apply_audit_sample(typed, digest, self.audit_rate)

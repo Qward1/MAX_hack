@@ -1,8 +1,11 @@
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
 from domsignal.db.session import create_engine
 from domsignal.settings import (
+    LOCAL_MFA_ENCRYPTION_KEY,
     PRODUCTION_MAX_BOT_USERNAME,
     AppEnvironment,
     LlmProvider,
@@ -62,6 +65,9 @@ def test_production_accepts_explicit_safe_baseline() -> None:
     [
         ({"auth_mfa_encryption_key": None}, "AUTH_MFA_ENCRYPTION_KEY"),
         ({"auth_mfa_encryption_key": "invalid"}, "AUTH_MFA_ENCRYPTION_KEY"),
+        # B-01: общеизвестный ключ локального стенда из compose.yaml.
+        ({"auth_mfa_encryption_key": LOCAL_MFA_ENCRYPTION_KEY}, "local stand key"),
+        ({"auth_mfa_encryption_key": ""}, "AUTH_MFA_ENCRYPTION_KEY is required"),
         ({"session_secret": "short"}, "SESSION_SECRET"),
         ({"max_transport": "off"}, "MAX_TRANSPORT"),
         ({"max_bot_token": ""}, "MAX_BOT_TOKEN"),
@@ -240,3 +246,20 @@ def test_ai_pool_provider_is_a_capability_without_credentials() -> None:
     assert Settings(_env_file=None).ai_pool_llm_provider is None
     with pytest.raises(ValidationError):
         Settings(ai_pool_llm_provider="another", _env_file=None)
+
+
+def test_local_stand_key_is_a_valid_fernet_key_for_local_use() -> None:
+    """B-01: `docker compose up` входит сотрудником без своего ключа."""
+    settings = Settings(app_env="local", auth_mfa_encryption_key=LOCAL_MFA_ENCRYPTION_KEY)
+    assert settings.auth_mfa_encryption_key == LOCAL_MFA_ENCRYPTION_KEY
+    compose = (Path(__file__).resolve().parents[2] / "compose.yaml").read_text(encoding="utf-8")
+    expected = f"AUTH_MFA_ENCRYPTION_KEY: ${{AUTH_MFA_ENCRYPTION_KEY:-{LOCAL_MFA_ENCRYPTION_KEY}}}"
+    assert expected in compose
+
+
+def test_token_limiter_must_fit_one_window() -> None:
+    """F1: ограничитель токенов в минуту, в который не помещается окно, — ошибка старта."""
+    with pytest.raises(ValidationError, match="LLM_TOKENS_PER_MINUTE"):
+        Settings(app_env="local", llm_tokens_per_minute=5000)
+    assert Settings(app_env="local", llm_tokens_per_minute=0).llm_tokens_per_minute == 0
+    assert Settings(app_env="local").llm_tokens_per_minute == 80000

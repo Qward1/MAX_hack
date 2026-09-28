@@ -38,7 +38,7 @@ from domsignal.contracts.community import (
     ProposalCreate,
     ProposalView,
 )
-from domsignal.db.models import HouseCouncilMember, HouseProposal, Poll, User
+from domsignal.db.models import Broadcast, HouseCouncilMember, HouseProposal, Poll, User
 from domsignal.db.repositories.access import AccessRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository, stable_hash
 from domsignal.services.broadcasts import BroadcastConflict, BroadcastService
@@ -423,6 +423,12 @@ class CouncilService:
         await self._staff_house(session, actor_id, company_id, proposal.house_id)
         if proposal.status != "new":
             raise BroadcastConflict("Предложение уже вынесено на опрос")
+        if proposal.broadcast_id is not None:
+            draft = await session.get(Broadcast, proposal.broadcast_id)
+            if draft is not None and draft.status in {"draft", "scheduled"}:
+                raise BroadcastConflict(
+                    "Черновик опроса по этому предложению уже есть — он в разделе «Рассылки»"
+                )
         view = await self.broadcasts.create(
             session,
             actor_id=actor_id,
@@ -440,7 +446,9 @@ class CouncilService:
             ),
             idempotency_key=idempotency_key,
         )
-        self._convert(proposal, view.id, actor_id)
+        # F-15: «Вынесено на опрос» — только когда опрос отправлен (подтверждение
+        # рассылки); пока это черновик, предложение ждёт с ссылкой на него.
+        proposal.broadcast_id = view.id
         await session.flush()
         return view
 

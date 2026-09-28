@@ -1033,6 +1033,8 @@ class AdministrationService:
             raise ResourceNotFound("Заявка не найдена")
         view = HouseRequestView.model_validate(row, from_attributes=True)
         view.history = await self.history(db, obj)
+        company = await db.get(ManagementCompany, row.company_id)
+        view.company_name = company.name if company is not None else None
         return view
 
     async def decide_house(
@@ -1246,11 +1248,21 @@ class AdministrationService:
                             scope_value=b.scope_value,
                             suspension_reason=b.suspension_reason,
                             passive_capture_enabled=b.passive_capture_enabled,
+                            activated_at=b.activated_at,
                         )
                         for b, title in bindings
                     ],
                     connection_requests=[
-                        ConnectionView.model_validate(r, from_attributes=True) for r in requests
+                        ConnectionView.model_validate(r, from_attributes=True).model_copy(
+                            update={
+                                "initiated_by_name": await db.scalar(
+                                    select(User.display_name).where(
+                                        User.id == r.initiated_by_user_id
+                                    )
+                                )
+                            }
+                        )
+                        for r in requests
                     ]
                     if member.role == "company_admin"
                     or own_roles.get(management.id) == "responsible"
@@ -1525,9 +1537,17 @@ class AdministrationService:
     async def disputes(self, db: AsyncSession, offset: int = 0) -> list[PlatformBindingView]:
         rows = (
             await db.execute(
-                select(ChatBinding, MAXChat.title, HouseManagement.tenant_id)
+                select(
+                    ChatBinding,
+                    MAXChat.title,
+                    HouseManagement.tenant_id,
+                    House.address,
+                    ManagementCompany.name,
+                )
                 .join(MAXChat, MAXChat.max_chat_id == ChatBinding.max_chat_id)
                 .join(HouseManagement)
+                .join(House, House.id == ChatBinding.house_id)
+                .join(ManagementCompany, ManagementCompany.id == HouseManagement.tenant_id)
                 .where(ChatBinding.status.in_(["suspended", "revoked"]))
                 .order_by(ChatBinding.updated_at.desc())
                 .offset(offset)
@@ -1546,8 +1566,10 @@ class AdministrationService:
                 house_id=b.house_id,
                 management_id=b.management_id,
                 company_id=tenant,
+                house_address=address,
+                company_name=company,
             )
-            for b, title, tenant in rows
+            for b, title, tenant, address, company in rows
         ]
 
     async def health(self, db: AsyncSession) -> PlatformHealth:

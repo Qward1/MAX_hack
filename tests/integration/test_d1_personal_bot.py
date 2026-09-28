@@ -272,9 +272,8 @@ async def test_the_daily_limit(bot: Any) -> None:
         await dialog.say(f"{ELEVATOR}, этаж {index + 2}")
     await dialog.settle()
     assert await bot.scalar(select(func.count()).select_from(ExplicitIntake)) == 2
-    assert dialog.replies()[-1].text == bot_replies.LIMIT.format(limit=2) or any(
-        message.text == bot_replies.LIMIT.format(limit=2) for message in dialog.replies()
-    )
+    limit_text = bot_replies.LIMIT.format(messages="2 сообщения")
+    assert any(message.text == limit_text for message in dialog.replies())
 
 
 async def test_a_replayed_event_gives_one_reply(bot: Any) -> None:

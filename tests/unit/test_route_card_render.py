@@ -167,7 +167,7 @@ def test_demo_house_message_is_marked_as_test_data(packaged: Any) -> None:
     )
     card, _ = _card(packaged, "street_lighting.failure", "municipal_territory", house=demo)
     message = render_route_card(_intent(card), ref=REF)
-    assert "Тестовые данные" in message.text
+    assert "Пример данных" in message.text
 
 
 def test_no_forbidden_phrase_in_any_rendered_route_card(packaged: Any) -> None:

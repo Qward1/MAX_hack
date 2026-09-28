@@ -727,3 +727,34 @@ async def test_delayed_message_cannot_acquire_new_binding(cb):
         == 0
     )
     assert binding["binding_version"] == 1
+
+
+async def test_one_open_connection_per_house_and_a_fresh_code(cb):
+    """U-01: второй запрос на тот же дом — 409; код можно выдать заново, прежний не действует."""
+    request = await cb.initiate()
+    async with cb.container.session_factory() as session, session.begin():
+        session.add(
+            OrganizationMembership(
+                user_id=cb.ids["outsider"], tenant_id=cb.ids["alpha"], role="company_admin"
+            )
+        )
+    second = await cb.client.post(
+        f"/api/v1/houses/{cb.ids['a1']}/chat-connections", json={}, headers=cb.headers["outsider"]
+    )
+    assert second.status_code == 409 and second.json()["code"] == "house_connection_in_progress"
+    fresh = await cb.client.post(
+        f"/api/v1/chat-connections/{request['id']}/code", headers=cb.headers["alice"]
+    )
+    assert fresh.status_code == 200, fresh.text
+    token = fresh.json()["correlation_token"]
+    assert token and token != request["correlation_token"]
+    await cb.webhook("bot_started", payload=request["correlation_token"])
+    assert (await cb.scalar(select(ConnectionRequest))).status == "created", (
+        "прежний код не действует"
+    )
+    await cb.webhook("bot_started", payload=token)
+    assert (await cb.scalar(select(ConnectionRequest))).status == "connector_claimed"
+    used = await cb.client.post(
+        f"/api/v1/chat-connections/{request['id']}/code", headers=cb.headers["alice"]
+    )
+    assert used.status_code == 409

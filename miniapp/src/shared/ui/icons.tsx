@@ -71,3 +71,28 @@ export const IconExternal = () => (
     <path d="M13 5h6v6M19 5l-8 8" />
   </Icon>
 );
+export const IconPeople = () => (
+  <Icon>
+    <circle cx="9" cy="8" r="3.2" />
+    <path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5" />
+    <circle cx="17" cy="9" r="2.4" />
+    <path d="M16 13.8c2.2.2 3.9 1.8 4.5 4.2" />
+  </Icon>
+);
+export const IconInfo = () => (
+  <Icon>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 11v5.5M12 7.8v.2" />
+  </Icon>
+);
+export const IconChat = () => (
+  <Icon>
+    <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5z" />
+  </Icon>
+);
+export const IconClock = () => (
+  <Icon>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.5V12l3 2" />
+  </Icon>
+);

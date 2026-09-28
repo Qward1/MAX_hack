@@ -43,27 +43,27 @@ async def test_rename_and_open_access_leave_receipts_with_before_and_after(ex) -
         await platform_ops.rename_house(
             session,
             house_id=ex.ids["h1"],
-            name="Казань, ул. Пилотная, 7",
-            address="Казань, ул. Пилотная, 7",
+            name="Казань, ул. Проверочная, 17",
+            address="Казань, ул. Проверочная, 17",
             **OPS,
         )
         await platform_ops.rename_company(
-            session, company_id=ex.ids["tenant"], name="УК «Пилотная, 7»", **OPS
+            session, company_id=ex.ids["tenant"], name="УК «Проверочная, 17»", **OPS
         )
         await platform_ops.open_access(session, house_id=ex.ids["h1"], enabled=True, **OPS)
     house = await ex.scalar(select(House).where(House.id == ex.ids["h1"]))
     assert (house.name, house.address, house.open_resident_access) == (
-        "Казань, ул. Пилотная, 7",
-        "Казань, ул. Пилотная, 7",
+        "Казань, ул. Проверочная, 17",
+        "Казань, ул. Проверочная, 17",
         True,
     )
     company = await ex.scalar(
         select(ManagementCompany).where(ManagementCompany.id == ex.ids["tenant"])
     )
-    assert company.name == "УК «Пилотная, 7»"
+    assert company.name == "УК «Проверочная, 17»"
     [renamed] = await receipts(ex, "rename-house")
     assert renamed["before"]["address"] == "Казань, Синтетическая улица, 1"
-    assert renamed["after"]["name"] == "Казань, ул. Пилотная, 7"
+    assert renamed["after"]["name"] == "Казань, ул. Проверочная, 17"
     assert (renamed["operator"], renamed["reason"]) == ("pytest", "проверка завершена")
     [company_receipt] = await receipts(ex, "rename-company")
     assert company_receipt["before"] == {"name": "Явный путь УК"}

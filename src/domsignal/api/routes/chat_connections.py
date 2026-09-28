@@ -73,6 +73,21 @@ async def approve(
     return BindingView.model_validate(binding, from_attributes=True)
 
 
+@router.post("/chat-connections/{request_id}/code", response_model=ConnectionView)
+async def reissue_code(
+    request_id: UUID,
+    user: CurrentUserDep,
+    session: DbDep,
+    container: ContainerDep,
+) -> ConnectionView:
+    """U-01: новый код подключения, пока бот не получил прежний."""
+    async with session.begin():
+        request, token = await container.chat_connections.reissue(
+            session, request_id=request_id, actor_id=user.id
+        )
+        return await container.chat_connections.view(session, request, token)
+
+
 @router.post("/chat-connections/{request_id}/reject", response_model=ConnectionView)
 async def reject(
     request_id: UUID,

@@ -3,6 +3,7 @@ import type { ResidentTicketApi } from "./tickets";
 
 export type Capabilities = components["schemas"]["CapabilitiesResponse"];
 export type Me = components["schemas"]["MeResponse"];
+export type IncidentListState = "all" | "open" | "resolved_recent";
 export type IncidentList = components["schemas"]["IncidentList"];
 // Tolerate future enum values at the read boundary; fields come from generated schema.
 export type IncidentSummary = Omit<
@@ -58,6 +59,8 @@ export interface DomSignalApi extends ResidentTicketApi {
     houseId: string,
     signal?: AbortSignal,
     offset?: number,
+    /** F1: `open` — открытые, `resolved_recent` — решённые за 30 дней; без него — все. */
+    state?: IncidentListState,
   ): Promise<IncidentList>;
   incident(id: string, signal?: AbortSignal, houseId?: string): Promise<IncidentDetail>;
   createReport(
@@ -138,6 +141,9 @@ export class ApiClient implements DomSignalApi {
         capabilities.features.test_auth && new URLSearchParams(window.location.search).has("test_actor"))) {
       const state = await this.employeeSession();
       if (state.stage === "authenticated") return;
+      // D-04: вход истёк по простою — шлюз входа показывает форму входа,
+      // а экран не выдаёт это за «нет доступа».
+      window.dispatchEvent(new CustomEvent("employee-access-lost", { detail: 401 }));
       throw new ApiProblem({ status: 401, type: "about:blank", code: "authentication_required",
         title: "Вход сотрудника", detail: "Войдите в кабинет", trace_id: "", retryable: false });
     }
@@ -196,9 +202,10 @@ export class ApiClient implements DomSignalApi {
     houseId: string,
     signal?: AbortSignal,
     offset = 0,
+    state?: IncidentListState,
   ): Promise<IncidentList> {
     return this.request<IncidentList>(
-      `/api/v1/houses/${encodeURIComponent(houseId)}/incidents?limit=100&offset=${offset}`,
+      `/api/v1/houses/${encodeURIComponent(houseId)}/incidents?limit=100&offset=${offset}${state ? `&state=${state}` : ""}`,
       { signal },
     );
   }
@@ -364,8 +371,12 @@ export class ApiClient implements DomSignalApi {
           // Keep the safe generic problem when the proxy returned non-JSON.
         }
         if (response.status === 401 && !silentAccess) this.token = null;
-        if (this.surface === "employee" && [401, 403].includes(response.status) &&
-            !path.startsWith("/api/v1/auth/") && !silentAccess)
+        // 401 — вход потерян: шлюз входа заново спрашивает пароль. 403 раздела
+        // кабинета УК — это «раздел недоступен», а не потеря сессии (B-08):
+        // экран сам говорит об этом и оставляет меню. Кабинет платформы по 403
+        // по-прежнему ведёт сотрудника УК в его кабинет.
+        const lost = response.status === 401 || (response.status === 403 && path.startsWith("/api/v1/platform"));
+        if (this.surface === "employee" && lost && !path.startsWith("/api/v1/auth/") && !silentAccess)
           window.dispatchEvent(new CustomEvent("employee-access-lost", { detail: response.status }));
         throw new ApiProblem(problem);
       }

@@ -269,7 +269,7 @@ export function AppealDraftScreen({
                         if (maxBridge.openLink(url)) event.preventDefault();
                       }}
                     >
-                      {actionLabels.open_official_channel} ↗
+                      {actionLabels.open_official_channel}
                     </LinkButton>
                   ) : (
                     <Button stretched disabled reason={action.reason ?? "Ссылки на официальный сервис пока нет."}>

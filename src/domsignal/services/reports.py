@@ -11,6 +11,7 @@ from domsignal.contracts.common import PageMeta
 from domsignal.contracts.incidents import (
     IncidentDetail,
     IncidentList,
+    IncidentListState,
     IncidentLocation,
     IncidentSummary,
     Provenance,
@@ -140,6 +141,7 @@ class ReportService:
         subtype: str = UNSPECIFIED_SUBTYPE,
         location_scope: LocationScope = "house_common",
         danger_kinds: Sequence[DangerKind] = (),
+        responsibility_known: bool = False,
     ) -> ReportCreated:
         """Internal entry point; caller resolves/locks context in this transaction."""
         if payload.house_id != context.house_id:
@@ -193,7 +195,12 @@ class ReportService:
             classification_mode=payload.classification_mode.value,
             provenance=context.source,
         )
-        await TicketService().ensure(session, context=context, incident_id=incident.id)
+        await TicketService().ensure(
+            session,
+            context=context,
+            incident_id=incident.id,
+            responsibility_known=responsibility_known,
+        )
         response = ReportCreated(
             report_id=report.id,
             incident=self._detail(
@@ -316,19 +323,25 @@ class ReportService:
         house_id: UUID,
         limit: int,
         offset: int,
+        state: IncidentListState = "all",
     ) -> IncidentList:
         context = await self.memberships.require_house(session, user_id=actor_id, house_id=house_id)
         repo = IncidentRepository(session)
         self.memberships.require_permission(context, "incident.read")
-        incidents, total = await repo.list_for_house(context, limit=limit, offset=offset)
+        incidents, total = await repo.list_for_house(
+            context, limit=limit, offset=offset, state=state
+        )
         counts = await repo.counts([item.id for item in incidents])
         is_demo = await repo.house_is_demo(context.house_id)
+        open_total, resolved_total = await repo.board_totals(context)
         return IncidentList(
             items=[
                 self._summary(incident, counts=counts.get(incident.id, (0, 0)), is_demo=is_demo)
                 for incident in incidents
             ],
             page=PageMeta(limit=limit, offset=offset, total=total),
+            open_total=open_total,
+            resolved_recent_total=resolved_total,
         )
 
     async def detail(
@@ -366,7 +379,8 @@ class ReportService:
             description=incident.description,
             status=IncidentStatus(incident.status),
             created_at=incident.created_at,
-            updated_at=None,  # C0 stores no update event/time; do not substitute created_at.
+            # F1: время последней смены статуса (закрыта / снова открыта).
+            updated_at=incident.status_changed_at,
             due_at=None,
             # Место отдаётся только из сохранённых полей: при чтении текст
             # по-прежнему не разбирается.
@@ -377,6 +391,10 @@ class ReportService:
             provenance=Provenance(
                 origin="demo" if is_demo else "user_reported",
                 recorded_at=incident.created_at,
+            ),
+            resolved_at=incident.resolved_at,
+            closure=cast(
+                Literal["residents_confirmed", "ticket_cancelled"] | None, incident.closure
             ),
         )
 
@@ -391,11 +409,18 @@ class ReportService:
         detail = IncidentDetail(
             **summary.model_dump(),
             reports=[
-                ReportSummary(id=item.id, description=item.description, created_at=item.created_at)
+                ReportSummary(
+                    id=item.id,
+                    description=item.description,
+                    created_at=item.created_at,
+                    joined=item.joined,
+                )
                 for item in reports
             ],
+            # DemoRule — заглушка C0: у настоящего дома основания нет, и
+            # «Демонстрационные данные» ему не показываются (D-03).
             rule=RuleProvenance(
-                origin="demo",  # This is explicitly DemoRule, not a routing engine result.
+                origin="demo",
                 verification_status=cast(
                     Literal["verified", "needs_verification", "demo"],
                     self.demo_rule.verification_status,
@@ -404,6 +429,8 @@ class ReportService:
                 source_title=self.demo_rule.source_title,
                 due_at=None,
                 note=self.demo_rule.note,
-            ),
+            )
+            if is_demo
+            else None,
         )
         return detail

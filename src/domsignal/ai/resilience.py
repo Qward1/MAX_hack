@@ -39,6 +39,7 @@ from domsignal.ai.providers.base import (
     ProviderCircuitOpen,
     ProviderInvalidOutput,
     ProviderOverloaded,
+    ProviderRateLimited,
     ProviderRequest,
     ProviderResult,
     prompt_version_of,
@@ -215,6 +216,8 @@ class CircuitBreaker:
         self._failures = 0
         self._opened_at: float | None = None
         self._probe_in_flight = False
+        #: 429 считаются отдельно: лимит запросов — не отказ провайдера.
+        self.rate_limited = 0
 
     @property
     def is_open(self) -> bool:
@@ -245,6 +248,11 @@ class CircuitBreaker:
     def record_unusable_output(self) -> None:
         """Ответ пришёл, но не пригоден: доступность провайдера не меняется."""
         self._probe_in_flight = False
+
+    def record_rate_limited(self) -> None:
+        """429: провайдер жив, лимит временный — счётчик отказов не растёт (F1)."""
+        self._probe_in_flight = False
+        self.rate_limited += 1
 
 
 # ------------------------------------------------------------ ограничитель
@@ -321,6 +329,10 @@ class ResilientProvider:
                 raise
             except ProviderInvalidOutput:
                 self.breaker.record_unusable_output()
+                self._record(scope_key, success=False)
+                raise
+            except ProviderRateLimited:
+                self.breaker.record_rate_limited()
                 self._record(scope_key, success=False)
                 raise
             except Exception:

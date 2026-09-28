@@ -5,6 +5,7 @@ import { adminClient, type Schema } from "./administration";
 import "../shared/styles/main.css";
 import "./admin.css";
 import "./administration.css";
+import "./system-last.css";
 
 /**
  * Единый вход `/login` (D2): сотрудник УК и суперадмин входят одной формой

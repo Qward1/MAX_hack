@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { AdminHeader, EmployeeSessionContext } from "./AdminHeader";
+import { Toaster } from "../shared/ui/Toast";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AdminApp } from "./AdminApp";
+import { TICKETS_CHANGED_EVENT } from "./TicketDetail";
 import { SignalsApp } from "./SignalsApp";
 import { adminClient, Feedback, Title, useRoute, type Schema } from "./administration";
 import { useResource } from "../shared/api/useResource";
+import { problemStatus } from "../shared/api/client";
 import type { SignalList } from "../shared/api/signals";
 import { ChatConnections, CompanyHouses, MyHouses, Organization, Staff } from "./CompanyPages";
 import { CompanyOverview } from "./Dashboards";
@@ -19,7 +23,7 @@ const paths: Record<string, string> = { overview: "", tickets: "tickets", signal
   mailings: "mailings", notices: "notices", reception: "reception" };
 // Очередь сигналов живёт в query-навигации, как заявки: ?section=signals&signal=<id>.
 const isSignalsRoute = (url: URL) => url.searchParams.get("section") === "signals" || url.searchParams.has("signal");
-const COUNTS_MS = 60000;
+const COUNTS_MS = 15000;
 /** Рабочие разделы, которые на телефоне стоят в первом ряду; остальные — в меню «Разделы». */
 const PRIORITY = ["tickets", "signals"];
 
@@ -72,7 +76,9 @@ function useQueueCounts(company: Context | undefined): Counts {
     const timer = window.setInterval(() => { if (document.visibilityState === "visible") void read(); }, COUNTS_MS);
     const refresh = () => void read();
     window.addEventListener("administration-refresh", refresh);
-    return () => { active = false; controller.abort(); window.clearInterval(timer); window.removeEventListener("administration-refresh", refresh); };
+    window.addEventListener(TICKETS_CHANGED_EVENT, refresh);
+    return () => { active = false; controller.abort(); window.clearInterval(timer); window.removeEventListener("administration-refresh", refresh);
+      window.removeEventListener(TICKETS_CHANGED_EVENT, refresh); };
   }, [company?.company_id, surfaces]);
   return counts;
 }
@@ -123,6 +129,9 @@ export function CompanyPortal() {
     : isSignalsRoute(url) ? "signals"
     : url.searchParams.has("ticket") || url.searchParams.has("house") || url.searchParams.has("filter") ? "tickets"
     : selected?.surfaces[0] ?? "tickets";
+  // D-04: вход истёк — шлюз входа уже показывает форму; «нет доступа» не пишем.
+  if (!selected && problemStatus(bootstrap.error) === 401) return <main className="admin-main auth-layout">
+    <section className="auth-card"><Title>Вход истёк</Title><p>Войдите снова — откроется форма входа.</p></section></main>;
   if (!selected) return <main className="admin-main auth-layout"><section className="auth-card">
     <Title description={companies.length > 1 ? "Вы сотрудник нескольких управляющих компаний. Сменить компанию можно в меню кабинета." : undefined}>
       {companies.length ? "Выберите управляющую компанию" : "Нет доступной рабочей очереди"}</Title>
@@ -142,21 +151,21 @@ export function CompanyPortal() {
     : s === "tickets" ? <NavCount id={`count-${s}`} value={counts.tickets} label="новых заявок" /> : null;
   const described = (s: string) => (s === "signals" && counts.signals) || (s === "tickets" && counts.tickets) ? `count-${s}` : undefined;
   const refreshAll = () => { bootstrap.refresh(); window.dispatchEvent(new Event("administration-refresh")); };
-  return <div className={`admin-shell has-mobile-nav ${isOrganization ? "company-workspace" : "operator-workspace"}`}>
+  const roleLabel = selected.role === "company_admin" ? "Администратор УК" : selected.role === "operator" ? "Сотрудник УК" : undefined;
+  return <div className={`admin-shell has-mobile-nav with-topbar ${isOrganization ? "company-workspace" : "operator-workspace"}`}><Toaster />
+    <AdminHeader home={href(selected.surfaces[0])} navigate={navigate} org={selected.name}
+      user={bootstrap.data?.display_name} role={roleLabel} onRefresh={refreshAll} />
     <MobileNavigation company={selected} companies={companies} surface={surface} counts={counts} href={href}
       navigate={navigate} displayName={bootstrap.data?.display_name} refresh={refreshAll}
       title={isOrganization ? "Управление компанией" : "Рабочее место оператора"} />
-    <aside className="admin-sidebar"><a className="admin-brand" href={href(selected.surfaces[0])}>ДомСигнал
-      <span>{isOrganization ? "Управление компанией" : "Рабочее место оператора"}</span></a>
+    <aside className="admin-sidebar"><p className="admin-sidebar-title">{isOrganization ? "Управление компанией" : "Рабочее место"}</p>
       {companies.length > 1 && <label>Управляющая компания<select aria-label="Управляющая компания" value={selected.company_id}
         onChange={e => { const company = companies.find(c => c.company_id === e.target.value); if (company) navigate(href(company.surfaces[0], company.company_id)); }}>
         {companies.map(c => <option key={c.company_id} value={c.company_id}>{c.name}</option>)}</select></label>}
       <nav aria-label="Разделы кабинета">{selected.surfaces.map(s => <a key={s} className="admin-nav-link"
         aria-current={s === surface ? "page" : undefined} aria-describedby={described(s)} href={href(s)}
         onClick={e => { e.preventDefault(); navigate(href(s)); }}><span>{names[s]}</span>{countFor(s)}</a>)}</nav>
-      <p className="admin-sidebar-note">{selected.name}</p>
-    </aside><main className="app-shell admin-main"><div className="admin-toolbar"><span>{bootstrap.data?.display_name}</span>
-      <button className="ds-btn ds-btn-secondary" onClick={refreshAll}>Обновить</button></div>
+    </aside><main className="app-shell admin-main">
       {isOrganization ? <CompanyWorkspace key={selected.company_id} {...shared} /> : <OperatorWorkspace key={selected.company_id} {...shared} />}
     </main>
   </div>;
@@ -197,12 +206,17 @@ function MobileNavigation({ company, companies, surface, counts, href, navigate,
     {open && <Sheet title="Разделы кабинета" anchor={button.current} className="admin-drawer" focus="[aria-current=page]"
       closeLabel="Закрыть" onClose={() => setOpen(false)}>
       {displayName && <p className="ds-meta">{displayName} · {company.name}</p>}
+      <DrawerLogout />
       {companies.length > 1 && <label className="ds-field">Управляющая компания<select value={company.company_id}
         onChange={e => { const next = companies.find(c => c.company_id === e.target.value); if (next) { setOpen(false); navigate(href(next.surfaces[0], next.company_id)); } }}>
         {companies.map(c => <option key={c.company_id} value={c.company_id}>{c.name}</option>)}</select></label>}
       <nav className="admin-drawer-nav" aria-label="Все разделы">{company.surfaces.map(s => link(s, () => setOpen(false)))}</nav>
     </Sheet>}
   </>;
+}
+function DrawerLogout() {
+  const session = useContext(EmployeeSessionContext);
+  return session ? <button type="button" className="ds-btn ds-btn-secondary" disabled={session.busy} onClick={session.logout}>Выйти</button> : null;
 }
 type Workspace = { company: Context; surface: string; href: (surface: string) => string; navigate: (url: string) => void; visit: number };
 function openTicket(navigate: (url: string) => void, href: (surface: string) => string) {
@@ -225,7 +239,7 @@ function CompanyWorkspace({ company, surface, href, navigate, visit }: Workspace
     case "mailings": return <Mailings key={visit} base={base} />;
     case "notices": return <Notices base={base} />;
     case "reception": return <ReceptionAdmin base={base} admin />;
-    default: return <DeniedRoute base={base} surface={surface} />;
+    default: return <DeniedRoute company={company} href={href} navigate={navigate} />;
   }
 }
 function OperatorWorkspace({ company, surface, href, navigate, visit }: Workspace) {
@@ -239,7 +253,7 @@ function OperatorWorkspace({ company, surface, href, navigate, visit }: Workspac
   if (surface === "mailings" && company.surfaces.includes("mailings")) return <Mailings key={visit} base={base} />;
   if (surface === "notices") return <Notices base={base} />;
   if (surface === "reception") return <ReceptionAdmin base={base} admin={false} />;
-  return <DeniedRoute base={base} surface={surface} />;
+  return <DeniedRoute company={company} href={href} navigate={navigate} />;
 }
 /** Переходы из пустого обзора — только в разделы, доступные этой роли. */
 function overviewLinks(company: Context, href: (surface: string) => string, navigate: (url: string) => void) {
@@ -249,10 +263,18 @@ function overviewLinks(company: Context, href: (surface: string) => string, navi
     navigate,
   };
 }
-function DeniedRoute({ base, surface }: { base: string; surface: string }) {
-  // A typed URL is still checked by the endpoint; navigation isn't the access boundary.
-  const load = useCallback((signal: AbortSignal) => adminClient.request(`${base}/${surface === "staff" ? "staff" : "organization"}`, { signal }), [base, surface]);
-  const result = useResource(`${base}:${surface}`, load);
-  return <><Title description="Раздел доступен другой роли. Доступ выдаёт администратор управляющей компании.">Раздел недоступен</Title>
-    <Feedback loading={result.loading} error={result.error} /></>;
+/**
+ * B-08: адрес раздела, которого нет у роли, — «Раздел недоступен» и переходы в
+ * доступные разделы; вход и меню не теряются. Данные раздела защищает API
+ * (403), навигация границей доступа не является.
+ */
+function DeniedRoute({ company, href, navigate }: { company: Context; href: (surface: string) => string; navigate: (url: string) => void }) {
+  return <><Title description="Этот раздел доступен другой роли. Доступ выдаёт администратор управляющей компании.">Раздел недоступен</Title>
+    <section className="admin-detail" aria-labelledby="denied-available">
+      <h2 id="denied-available">Вам доступны</h2>
+      <ul className="ds-row-list">{company.surfaces.map(s => <li key={s}>
+        <a className="ds-row" href={href(s)} onClick={e => { e.preventDefault(); navigate(href(s)); }}>
+          <span className="ds-row-title">{names[s]}</span>
+        </a></li>)}</ul>
+    </section></>;
 }

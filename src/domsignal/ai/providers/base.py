@@ -31,6 +31,23 @@ class ProviderUnavailable(ProviderError):
     """Провайдер недоступен: сеть, 5xx, 429 или истёкший ключ."""
 
 
+class ProviderRateLimited(ProviderUnavailable):
+    """Лимит запросов провайдера (HTTP 429) или свой ограничитель токенов в минуту.
+
+    Это не отказ провайдера: предохранитель от него не размыкается (F1,
+    LLM-RATE-2026-09-29). `retry_after` — через сколько секунд можно
+    повторить, если провайдер это сообщил; `local` — отказал собственный
+    ограничитель, вызова не было.
+    """
+
+    def __init__(
+        self, message: str, *, retry_after: float | None = None, local: bool = False
+    ) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
+        self.local = local
+
+
 class ProviderInvalidOutput(ProviderError):
     """Провайдер ответил тем, что не разбирается по схеме."""
 

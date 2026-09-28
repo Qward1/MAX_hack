@@ -1,3 +1,6 @@
+import { AdminHeader } from "./AdminHeader";
+import { Toaster } from "../shared/ui/Toast";
+import { POLL_LIST_MS } from "../shared/api/useResource";
 import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
 import { useState } from "react";
 import { Feedback, History, OneTimeLink, Status, Title, dateInput, formValue, submitted, useAction, useRead, useRoute, type Schema } from "./administration";
@@ -13,15 +16,17 @@ export function PlatformApp() {
   const bootstrap = useRead<Schema["PlatformBootstrap"]>("/api/v1/platform/bootstrap");
   const { url, navigate } = useRoute();
   const page = url.pathname.replace(/^\/platform-admin\/?/, "") || "overview";
-  return <div className="admin-shell platform-workspace"><aside className="admin-sidebar">
-    <a className="admin-brand" href="/platform-admin/">ДомСигнал<span>Управление платформой</span></a>
+  const refresh = () => window.dispatchEvent(new Event("administration-refresh"));
+  return <div className="admin-shell platform-workspace with-topbar"><Toaster />
+    <AdminHeader home="/platform-admin/" navigate={navigate} org="Платформа" user={bootstrap.data?.display_name}
+      role="Администратор платформы" onRefresh={refresh} />
+    <aside className="admin-sidebar"><p className="admin-sidebar-title">Управление платформой</p>
     <nav aria-label="Разделы платформы">{!bootstrap.error && bootstrap.data?.surfaces.map(s => <a className="admin-nav-link" key={s}
       href={`/platform-admin/${s}`} aria-current={page === s ? "page" : undefined}
       onClick={e => { e.preventDefault(); navigate(`/platform-admin/${s}`); }}>{navigation[s] ?? s}</a>)}</nav>
     <p className="admin-sidebar-note">Рассмотрение заявок и состояние организаций</p>
   </aside><main className="app-shell admin-main"><Feedback loading={bootstrap.loading} error={bootstrap.error} />
-    {bootstrap.data && !bootstrap.error && <><div className="toolbar ticket-line"><span>{bootstrap.data.display_name}</span>
-      <button className="ticket-button secondary" onClick={() => window.dispatchEvent(new Event("administration-refresh"))}>Обновить</button></div>
+    {bootstrap.data && !bootstrap.error && <>
       <PlatformPage key={page} page={page} open={next => navigate(`/platform-admin/${next}`)} /></>}
   </main></div>;
 }
@@ -40,7 +45,7 @@ function PlatformPage({ page, open }: { page: string; open: (page: string) => vo
 }
 function ApplicationReview() {
   const [offset, setOffset] = useState(0);
-  const r = useRead<Schema["ApplicationView"][]>(`/api/v1/platform/company-applications?offset=${offset}`);
+  const r = useRead<Schema["ApplicationView"][]>(`/api/v1/platform/company-applications?offset=${offset}`, 0, { poll: POLL_LIST_MS });
   const [selected, select] = useState<string | null>(null);
   return <><Title description="Заявка не выдаёт аккаунт или доступ. При одобрении создаётся приглашение первого администратора.">Заявки УК</Title>
     <Feedback loading={r.loading} error={r.error} />
@@ -98,7 +103,7 @@ function ApplicationDetail({ id, refresh }: { id: string; refresh: () => void })
 }
 function HouseReview() {
   const [offset, setOffset] = useState(0);
-  const r = useRead<Schema["HouseRequestView"][]>(`/api/v1/platform/house-management-requests?offset=${offset}`);
+  const r = useRead<Schema["HouseRequestView"][]>(`/api/v1/platform/house-management-requests?offset=${offset}`, 0, { poll: POLL_LIST_MS });
   const [selected, select] = useState<string | null>(null);
   const packs = useRead<Schema["RegionPackView"][]>("/api/v1/platform/region-packs");
   return <><Title description="Выберите физический дом явно. Пересекающиеся периоды управления недопустимы.">Заявки на дома</Title>
@@ -120,8 +125,8 @@ function HouseRequestDetail({ id, refresh }: { id: string; refresh: () => void }
   const packs = useRead<Schema["RegionPackView"][]>("/api/v1/platform/region-packs");
   const action = useAction(() => { r.refresh(); refresh(); });
   return <section className="admin-detail"><Feedback loading={r.loading} error={r.error ?? action.error} />{r.data && <>
-    <h2>{r.data.requested_address}</h2><p>УК: <code>{r.data.company_id}</code></p><p>{r.data.basis_text}</p><Status value={r.data.status} />
-    {r.data.candidate_house_id && <p>Возможное совпадение: <code>{r.data.candidate_house_id}</code>. Требуется ваше решение.</p>}
+    <h2>{r.data.requested_address}</h2><p>УК: {r.data.company_name ?? "название не указано"}</p><p>{r.data.basis_text}</p><Status value={r.data.status} />
+    {r.data.candidate_house_id && <p>Возможное совпадение с домом из справочника: {houses.data?.find(h => h.id === r.data?.candidate_house_id)?.address ?? "адрес ниже в списке домов"}. Требуется ваше решение.</p>}
     {["submitted", "under_review", "needs_info"].includes(r.data.status) && <form className="ticket-form" onSubmit={async e => {
       const data = submitted(e); const verb = (e.nativeEvent as SubmitEvent).submitter?.getAttribute("value");
       if (!verb) return;
@@ -186,7 +191,7 @@ export function PlatformHouses() {
   const [offset, setOffset] = useState(0);
   const r = useRead<Schema["PlatformHouseView"][]>(`/api/v1/platform/houses?offset=${offset}`);
   const packs = useRead<Schema["RegionPackView"][]>("/api/v1/platform/region-packs");
-  return <><Title>Дома</Title><OpenHouses /><h2>Все дома</h2><Feedback loading={r.loading} error={r.error} /><ul className="admin-records">{r.data?.map(h => <li key={h.id}>{h.address}<code>{h.id}</code>
+  return <><Title>Дома</Title><OpenHouses /><h2>Все дома</h2><Feedback loading={r.loading} error={r.error} /><ul className="admin-records">{r.data?.map(h => <li key={h.id}><span>{h.address}</span>
     {h.region_code ? <span>{[h.region_code, h.municipality_code].filter(Boolean).join(" / ")}</span>
       : <><span className="admin-status status-needs_info">Регион не задан</span><SetRegion house={h.id} packs={packs.data} refresh={r.refresh} /></>}</li>)}</ul>
     <Pages offset={offset} set={setOffset} count={r.data?.length ?? 0} /></>;
@@ -246,7 +251,7 @@ function Disputes() {
   return <><Title description="Справочные данные для разбора конфликтов. Обычное подключение выполняет администратор УК.">Спорные MAX-привязки</Title>
     <Feedback loading={r.loading} error={r.error} />{r.data?.length === 0 && <p>Приостановленных и отозванных привязок нет.</p>}
     {r.data?.map(b => <section className="admin-detail" key={b.id}><h2>{b.title ?? "MAX-чат"}</h2><Status value={b.status} /><p>{b.suspension_reason}</p>
-      <p>Дом <code>{b.house_id}</code></p><p>Управление <code>{b.management_id}</code></p></section>)}</>;
+      <p>Дом: {b.house_address ?? "адрес не указан"}</p><p>УК: {b.company_name ?? "название не указано"}</p></section>)}</>;
 }
 function Health() {
   const r = useRead<Schema["PlatformHealth"]>("/api/v1/platform/health");

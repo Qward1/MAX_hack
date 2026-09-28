@@ -352,7 +352,7 @@ async def test_route_preview_prints_a_valid_card_for_the_demo_house(
     card = json.loads(capsys.readouterr().out)
     assert card["route"]["route_type"] == expected
     assert card["generated_by"] == "rules"
-    assert card["demo_notice"] == "Тестовые данные"
+    assert card["demo_notice"] == "Пример данных"
     assert card["actions"]
     if subtype == "playground.damaged":
         assert card["route"]["requires_operator_choice"] is True

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -44,7 +45,7 @@ from domsignal.core.incidents import ReportCategory
 from domsignal.db.models import ChatBinding, ConversationWindow, Signal
 from domsignal.db.models.passive import OPEN_SIGNAL_STATUSES
 from domsignal.db.repositories.passive import BufferedLine, PassiveRepository
-from domsignal.services.ai_budget import PostgresBudgetGuard
+from domsignal.services.ai_budget import PostgresBudgetGuard, estimate_tokens
 from domsignal.services.ai_provenance import execution_provenance
 from domsignal.services.errors import RescheduleJob
 from domsignal.services.signals import (
@@ -78,7 +79,7 @@ _CLAIM = text(
         state = 'closed'
         OR (state = 'analyzing' AND claimed_at < now() - make_interval(secs => :stale))
       )
-    RETURNING house_id, chat_binding_id, binding_version, max_chat_id, has_danger
+    RETURNING house_id, chat_binding_id, binding_version, max_chat_id, has_danger, closed_at
     """
 )
 
@@ -106,6 +107,20 @@ class _LostClaim(Exception):
     """Окно успел перехватить другой воркер: запись отменяется целиком."""
 
 
+#: F1 (LLM-RATE-2026-09-29): после 429 пассивное окно откладывается на 20–60 с
+#: (не больше трёх раз — пока оно моложе 150 с), затем — правила. Опасность
+#: не ждёт: она уже обработана правилами при приёме.
+RATE_LIMIT_DEFER_WINDOW_SECONDS = 150
+RATE_LIMIT_DEFER_MIN_SECONDS = 20
+RATE_LIMIT_DEFER_MAX_SECONDS = 60
+
+
+def _defer_seconds(analysis: WindowAnalysis) -> float:
+    hinted = analysis.execution.retry_after_s or RATE_LIMIT_DEFER_MIN_SECONDS
+    base = min(max(hinted, RATE_LIMIT_DEFER_MIN_SECONDS), RATE_LIMIT_DEFER_MAX_SECONDS)
+    return base + random.uniform(0, 5)
+
+
 @dataclass(frozen=True)
 class ClaimedWindow:
     id: uuid.UUID
@@ -116,6 +131,7 @@ class ClaimedWindow:
     binding_version: int
     max_chat_id: str
     has_danger: bool
+    closed_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -193,6 +209,11 @@ class PassiveWindowAnalysis:
                 await self._settle_without_analysis(claimed, snapshot)
                 return True
             analysis = await self._analyze(claimed, snapshot)
+            if self._defer_on_rate_limit(claimed, analysis):
+                # F1: 429 или ограничитель токенов — окно подождёт 20–60 с и
+                # попробует модель снова; сторож (90 с) всё равно разберёт его
+                # правилами, так что окно не теряется.
+                raise RescheduleJob(datetime.now(UTC) + timedelta(seconds=_defer_seconds(analysis)))
             await self._write(claimed, snapshot, analysis)
         except _LostClaim:
             logger.info("passive_window_claim_lost", extra={"window_id": str(window_id)})
@@ -200,6 +221,16 @@ class PassiveWindowAnalysis:
             await self._release(claimed)
             raise
         return True
+
+    @staticmethod
+    def _defer_on_rate_limit(claimed: ClaimedWindow, analysis: WindowAnalysis) -> bool:
+        """Отложить ли окно после 429: только пассивное, без опасности, молодое."""
+        if claimed.analyzed_by != "ai" or claimed.has_danger:
+            return False
+        if analysis.execution.state != "fallback_rate_limited" or claimed.closed_at is None:
+            return False
+        age = (datetime.now(UTC) - claimed.closed_at).total_seconds()
+        return age < RATE_LIMIT_DEFER_WINDOW_SECONDS
 
     # ------------------------------------------------------------- захват
 
@@ -335,7 +366,8 @@ class PassiveWindowAnalysis:
             return await analyzer.analyze(window)
         # Единица бюджета списывается до обращения к провайдеру; исчерпанный
         # бюджет даёт `fallback_budget` и результат правил без вызова.
-        async with self.budget.reserve(str(claimed.chat_binding_id)):
+        tokens = estimate_tokens([line.text for line in window.lines])
+        async with self.budget.reserve(str(claimed.chat_binding_id), tokens=tokens):
             return await analyzer.analyze(window)
 
     # --------------------------------------------------------------- запись
@@ -509,6 +541,27 @@ class PassiveWindowAnalysis:
                             reason="danger_line",
                         )
                     return signal
+        # 1a. D-06: все реплики сигнала уже легли при приёме в сигнал, который
+        # в этом окне занят другим сигналом модели, — это второе прочтение тех же
+        # реплик (например, с темой из контекста прошлой ветки), а не новая
+        # проблема: второй критический сигнал и второе оповещение не создаются.
+        drafted = index.lines(draft.line_ids)
+        taken = [ingest.get(line.mid) for line in drafted]
+        first_taken = taken[0] if taken else None
+        if first_taken is not None and all(item is not None and item in used for item in taken):
+            signal = await repo.signal_for_update(first_taken)
+            if signal is not None and signal.status in OPEN_SIGNAL_STATUSES:
+                await engine.group(
+                    session,
+                    signal,
+                    window_id=claimed.id,
+                    draft=draft,
+                    analysis=analysis,
+                    index=index,
+                    now=now,
+                    reason="danger_line_repeat",
+                )
+                return signal
         # 2. Ядро привязало окно к открытому сигналу дома.
         if draft.ref.startswith("signal:"):
             try:

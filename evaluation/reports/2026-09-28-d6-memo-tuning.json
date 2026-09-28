@@ -1,0 +1,448 @@
+{
+  "before": {
+    "label": "правила без модели, наборы настройки",
+    "rules": "9932f80",
+    "d5_dev": {
+      "rows": 176,
+      "groups": {
+        "danger": {
+          "rows": 75,
+          "alert": 69,
+          "memo": 58
+        },
+        "trap": {
+          "rows": 91,
+          "alert": 55,
+          "memo": 19
+        },
+        "contextual": {
+          "rows": 10,
+          "alert": 1,
+          "memo": 0
+        }
+      },
+      "families": {
+        "contextual/context": {
+          "rows": 10,
+          "alert": 1,
+          "memo": 0
+        },
+        "danger/alarm_pair": {
+          "rows": 2,
+          "alert": 2,
+          "memo": 1
+        },
+        "danger/electric": {
+          "rows": 5,
+          "alert": 5,
+          "memo": 3
+        },
+        "danger/fire": {
+          "rows": 6,
+          "alert": 5,
+          "memo": 5
+        },
+        "danger/flooding": {
+          "rows": 4,
+          "alert": 3,
+          "memo": 1
+        },
+        "danger/gas": {
+          "rows": 6,
+          "alert": 5,
+          "memo": 5
+        },
+        "danger/generic_pair": {
+          "rows": 8,
+          "alert": 8,
+          "memo": 8
+        },
+        "danger/object_pair": {
+          "rows": 8,
+          "alert": 8,
+          "memo": 8
+        },
+        "danger/other_hazard": {
+          "rows": 2,
+          "alert": 0,
+          "memo": 0
+        },
+        "danger/own_house_pair": {
+          "rows": 8,
+          "alert": 8,
+          "memo": 8
+        },
+        "danger/present": {
+          "rows": 10,
+          "alert": 10,
+          "memo": 9
+        },
+        "danger/smoke_system_pair": {
+          "rows": 1,
+          "alert": 1,
+          "memo": 1
+        },
+        "danger/structural": {
+          "rows": 2,
+          "alert": 2,
+          "memo": 1
+        },
+        "danger/tobacco_pair": {
+          "rows": 8,
+          "alert": 8,
+          "memo": 6
+        },
+        "danger/trapped": {
+          "rows": 5,
+          "alert": 4,
+          "memo": 2
+        },
+        "trap/displaced": {
+          "rows": 4,
+          "alert": 4,
+          "memo": 0
+        },
+        "trap/displaced_d6": {
+          "rows": 10,
+          "alert": 9,
+          "memo": 3
+        },
+        "trap/drill": {
+          "rows": 8,
+          "alert": 0,
+          "memo": 0
+        },
+        "trap/figurative": {
+          "rows": 8,
+          "alert": 0,
+          "memo": 0
+        },
+        "trap/generic": {
+          "rows": 8,
+          "alert": 8,
+          "memo": 2
+        },
+        "trap/hypothetical": {
+          "rows": 4,
+          "alert": 4,
+          "memo": 0
+        },
+        "trap/light": {
+          "rows": 6,
+          "alert": 1,
+          "memo": 0
+        },
+        "trap/negation": {
+          "rows": 2,
+          "alert": 0,
+          "memo": 0
+        },
+        "trap/object": {
+          "rows": 10,
+          "alert": 6,
+          "memo": 5
+        },
+        "trap/past": {
+          "rows": 10,
+          "alert": 10,
+          "memo": 0
+        },
+        "trap/resolved": {
+          "rows": 8,
+          "alert": 1,
+          "memo": 0
+        },
+        "trap/smoke_system": {
+          "rows": 3,
+          "alert": 3,
+          "memo": 2
+        },
+        "trap/tobacco": {
+          "rows": 10,
+          "alert": 9,
+          "memo": 7
+        }
+      },
+      "trap_memo_ids": [
+        "d6-01",
+        "d6-02",
+        "d6-03",
+        "d6-05",
+        "d6-06",
+        "d6-08",
+        "d6-10",
+        "d6-19",
+        "d6-25",
+        "d6-26",
+        "d6-37",
+        "d6-38",
+        "d6-39",
+        "d6-40",
+        "d6-41",
+        "d6-55",
+        "d6-59",
+        "d6-71",
+        "d6-72"
+      ],
+      "expected_danger_without_alert_ids": [
+        "d5dev-05",
+        "d5dev-11",
+        "d5dev-22",
+        "d5dev-26",
+        "d5dev-29",
+        "d5dev-30",
+        "d5dev-71",
+        "d5dev-72",
+        "d5dev-73",
+        "d5dev-74",
+        "d5dev-75",
+        "d5dev-76",
+        "d5dev-77",
+        "d5dev-79",
+        "d5dev-80"
+      ]
+    },
+    "open_danger_dev": {
+      "rows": 20,
+      "groups": {
+        "new_kind": {
+          "rows": 10,
+          "alert": 2,
+          "memo": 1
+        },
+        "continuation": {
+          "rows": 10,
+          "alert": 5,
+          "memo": 2
+        }
+      },
+      "families": {
+        "continuation/None": {
+          "rows": 10,
+          "alert": 5,
+          "memo": 2
+        },
+        "new_kind/None": {
+          "rows": 10,
+          "alert": 2,
+          "memo": 1
+        }
+      },
+      "trap_memo_ids": [],
+      "expected_danger_without_alert_ids": []
+    }
+  },
+  "after": {
+    "label": "правила без модели, наборы настройки",
+    "rules": "D6 (рабочее дерево agent/f1-release)",
+    "d5_dev": {
+      "rows": 176,
+      "groups": {
+        "danger": {
+          "rows": 75,
+          "alert": 69,
+          "memo": 58
+        },
+        "trap": {
+          "rows": 91,
+          "alert": 32,
+          "memo": 0
+        },
+        "contextual": {
+          "rows": 10,
+          "alert": 1,
+          "memo": 0
+        }
+      },
+      "families": {
+        "contextual/context": {
+          "rows": 10,
+          "alert": 1,
+          "memo": 0
+        },
+        "danger/alarm_pair": {
+          "rows": 2,
+          "alert": 2,
+          "memo": 1
+        },
+        "danger/electric": {
+          "rows": 5,
+          "alert": 5,
+          "memo": 3
+        },
+        "danger/fire": {
+          "rows": 6,
+          "alert": 5,
+          "memo": 5
+        },
+        "danger/flooding": {
+          "rows": 4,
+          "alert": 3,
+          "memo": 1
+        },
+        "danger/gas": {
+          "rows": 6,
+          "alert": 5,
+          "memo": 5
+        },
+        "danger/generic_pair": {
+          "rows": 8,
+          "alert": 8,
+          "memo": 8
+        },
+        "danger/object_pair": {
+          "rows": 8,
+          "alert": 8,
+          "memo": 8
+        },
+        "danger/other_hazard": {
+          "rows": 2,
+          "alert": 0,
+          "memo": 0
+        },
+        "danger/own_house_pair": {
+          "rows": 8,
+          "alert": 8,
+          "memo": 8
+        },
+        "danger/present": {
+          "rows": 10,
+          "alert": 10,
+          "memo": 9
+        },
+        "danger/smoke_system_pair": {
+          "rows": 1,
+          "alert": 1,
+          "memo": 1
+        },
+        "danger/structural": {
+          "rows": 2,
+          "alert": 2,
+          "memo": 1
+        },
+        "danger/tobacco_pair": {
+          "rows": 8,
+          "alert": 8,
+          "memo": 6
+        },
+        "danger/trapped": {
+          "rows": 5,
+          "alert": 4,
+          "memo": 2
+        },
+        "trap/displaced": {
+          "rows": 4,
+          "alert": 4,
+          "memo": 0
+        },
+        "trap/displaced_d6": {
+          "rows": 10,
+          "alert": 8,
+          "memo": 0
+        },
+        "trap/drill": {
+          "rows": 8,
+          "alert": 0,
+          "memo": 0
+        },
+        "trap/figurative": {
+          "rows": 8,
+          "alert": 0,
+          "memo": 0
+        },
+        "trap/generic": {
+          "rows": 8,
+          "alert": 4,
+          "memo": 0
+        },
+        "trap/hypothetical": {
+          "rows": 4,
+          "alert": 4,
+          "memo": 0
+        },
+        "trap/light": {
+          "rows": 6,
+          "alert": 1,
+          "memo": 0
+        },
+        "trap/negation": {
+          "rows": 2,
+          "alert": 0,
+          "memo": 0
+        },
+        "trap/object": {
+          "rows": 10,
+          "alert": 0,
+          "memo": 0
+        },
+        "trap/past": {
+          "rows": 10,
+          "alert": 10,
+          "memo": 0
+        },
+        "trap/resolved": {
+          "rows": 8,
+          "alert": 1,
+          "memo": 0
+        },
+        "trap/smoke_system": {
+          "rows": 3,
+          "alert": 0,
+          "memo": 0
+        },
+        "trap/tobacco": {
+          "rows": 10,
+          "alert": 0,
+          "memo": 0
+        }
+      },
+      "trap_memo_ids": [],
+      "expected_danger_without_alert_ids": [
+        "d5dev-05",
+        "d5dev-11",
+        "d5dev-22",
+        "d5dev-26",
+        "d5dev-29",
+        "d5dev-30",
+        "d5dev-71",
+        "d5dev-72",
+        "d5dev-73",
+        "d5dev-74",
+        "d5dev-75",
+        "d5dev-76",
+        "d5dev-77",
+        "d5dev-79",
+        "d5dev-80"
+      ]
+    },
+    "open_danger_dev": {
+      "rows": 20,
+      "groups": {
+        "new_kind": {
+          "rows": 10,
+          "alert": 2,
+          "memo": 1
+        },
+        "continuation": {
+          "rows": 10,
+          "alert": 5,
+          "memo": 2
+        }
+      },
+      "families": {
+        "continuation/None": {
+          "rows": 10,
+          "alert": 5,
+          "memo": 2
+        },
+        "new_kind/None": {
+          "rows": 10,
+          "alert": 2,
+          "memo": 1
+        }
+      },
+      "trap_memo_ids": [],
+      "expected_danger_without_alert_ids": []
+    }
+  }
+}

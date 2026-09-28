@@ -110,6 +110,8 @@ services:
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-}
       LLM_DAILY_CALL_BUDGET: ${LLM_DAILY_CALL_BUDGET:-300}
       LLM_CHAT_DAILY_SHARE: ${LLM_CHAT_DAILY_SHARE:-0.2}
+      # F1 (LLM-RATE-2026-09-29): токенов в минуту на все процессы — 80 % лимита ключа Cloud.ru.
+      LLM_TOKENS_PER_MINUTE: ${LLM_TOKENS_PER_MINUTE:-80000}
       # Аренда задачи AI-пула ≥ таймаут модели + 20 с, иначе воркер не стартует.
       AI_WORKER_LEASE_SECONDS: ${AI_WORKER_LEASE_SECONDS:-80}
       # D5: параллельные вызовы модели в процессе, не больше LLM_MAX_CONCURRENCY (4).

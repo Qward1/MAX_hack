@@ -186,11 +186,18 @@ describe("board/detail experience", () => {
     );
     await waitFor(() => expect(client.incident).toHaveBeenCalledTimes(2));
   });
-  it("marks backgrounded data stale", async () => {
-    render(<App client={apiWith()} />);
+  it("re-reads the board quietly on return to the tab (F1 §2.3)", async () => {
+    const client = apiWith();
+    render(<App client={client} />);
     await screen.findByText(house.address);
+    const before = vi.mocked(client.incidents).mock.calls.length;
+    const now = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now + 10000);
     fireEvent(document, new Event("visibilitychange"));
-    expect(await screen.findByText("Данные могли измениться.")).toBeTruthy();
+    await waitFor(() => expect(vi.mocked(client.incidents).mock.calls.length).toBeGreaterThan(before));
+    expect(screen.queryByText("Данные могли измениться.")).toBeNull();
+    expect(screen.getByText(house.address)).toBeTruthy();
+    clock.mockRestore();
   });
   it.each(["foreign", ""])("invalid house selector %s does not show the default house", async (selector) => {
     window.history.replaceState(null, "", `/?house=${selector}`);
@@ -200,17 +207,28 @@ describe("board/detail experience", () => {
     expect(client.incidents).not.toHaveBeenCalled();
     expect(screen.queryByText(house.address)).toBeNull();
   });
-  it("with several houses opens the first one and offers a switcher in the header", async () => {
+  it("with several houses asks which house first, then remembers it and offers a switcher (D-01)", async () => {
+    window.localStorage.clear();
     const client = apiWith();
     vi.mocked(client.me).mockResolvedValue({
       ...(await client.me()), houses: [house, { ...house, id: "second", address: "Второй дом" }],
     });
-    render(<App client={client} />);
-    const switcher = await screen.findByRole("button", { name: `Дом ${house.address}` });
-    await waitFor(() => expect(client.incidents).toHaveBeenCalledWith(house.id, expect.any(AbortSignal), 0));
+    const view = render(<App client={client} />);
+    await screen.findByRole("heading", { name: "Выберите дом" });
+    expect(client.incidents).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("link", { name: /Второй дом/ }));
+    await waitFor(() => expect(client.incidents).toHaveBeenCalledWith("second", expect.any(AbortSignal), 0, "open"));
+    const switcher = await screen.findByRole("button", { name: "Дом Второй дом" });
     fireEvent.click(switcher);
-    fireEvent.click(screen.getByRole("option", { name: "Второй дом" }));
-    await waitFor(() => expect(client.incidents).toHaveBeenCalledWith("second", expect.any(AbortSignal), 0));
+    fireEvent.click(screen.getByRole("option", { name: house.address }));
+    await waitFor(() => expect(client.incidents).toHaveBeenCalledWith(house.id, expect.any(AbortSignal), 0, "open"));
+    view.unmount();
+    // Следующий запуск без выбора — последний дом этого устройства.
+    window.history.replaceState(null, "", "/");
+    vi.mocked(client.incidents).mockClear();
+    render(<App client={client} />);
+    await waitFor(() => expect(client.incidents).toHaveBeenCalledWith(house.id, expect.any(AbortSignal), 0, "open"));
+    window.localStorage.clear();
   });
   it("passes the explicit house selector to the server on incident navigation", async () => {
     window.history.replaceState(null, "", `/?house=wrong&incident=${incident.id}`);
@@ -322,10 +340,13 @@ describe("route card and appeal draft navigation", () => {
     window.history.replaceState(null, "", `/?draft=${draft.id}`);
     render(<App client={apiWith()} />);
     const area = await screen.findByRole("textbox", { name: "Обращение" });
-    // Возврат из официального сервиса или минута на экране — «данные могли измениться».
+    // Возврат из официального сервиса: экран перечитывается тихо, текст не теряется.
+    fireEvent.change(area, { target: { value: "Здравствуйте! Черновик" } });
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 10000);
     fireEvent(document, new Event("visibilitychange"));
-    expect(await screen.findByText("Данные могли измениться.")).toBeTruthy();
+    clock.mockRestore();
     expect((area as HTMLTextAreaElement).disabled).toBe(false);
+    expect((screen.getByRole("textbox", { name: "Обращение" }) as HTMLTextAreaElement).value).toBe("Здравствуйте! Черновик");
     expect(
       (screen.getByRole("button", { name: "Скопировать текст" }) as HTMLButtonElement).disabled,
     ).toBe(false);

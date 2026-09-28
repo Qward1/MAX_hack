@@ -26,7 +26,7 @@ export const TONE_MARK: Record<Tone, string> = {
 export const UNKNOWN_STATUS: StatusEntry = {
   label: "Состояние обновилось",
   tone: "neutral",
-  next: "Обновите страницу, чтобы увидеть актуальные данные.",
+  next: "Подробности появятся после обновления данных.",
 };
 
 /** Проблема дома (Incident) — для жителя. */
@@ -40,8 +40,9 @@ export const residentIncidentStatus: Record<string, StatusEntry> = {
   },
   overdue: { label: "Срок истёк", tone: "warning" },
   escalated: { label: "На следующем уровне", tone: "info" },
-  resolved: { label: "Решена", tone: "success" },
-  dismissed: { label: "Не подтвердилась", tone: "neutral" },
+  resolved: { label: "Решена", tone: "success", next: "Жители подтвердили, что исправлено." },
+  // F1: проблема закрыта отменой её заявки управляющей компанией.
+  dismissed: { label: "Закрыта", tone: "neutral", next: "Управляющая компания отменила заявку." },
 };
 
 /** Заявка в управляющую компанию (Ticket) — как её видит житель. */

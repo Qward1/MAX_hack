@@ -1,0 +1,685 @@
+/*
+ * F1 — единый язык дизайна поверх токенов (UX-SYSTEM-F1-2026-09-29).
+ * Подключается последним во всех входах: мини-приложение, кабинеты УК и
+ * платформы, вход, заявка УК и её статус, приглашение. Правила — docs/UX.md,
+ * раздел «F1».
+ *
+ * 1. Кликабельное выглядит кликабельным: кнопка, строка с шевроном и
+ *    фоном при наведении, вкладка, поле. Текст без признаков не нажимается.
+ * 2. Синего подчёркнутого текста-действия нет: ссылка в абзаце — цветом
+ *    текста с тихим подчёркиванием; переход — строка или .ds-action-link.
+ * 3. Отступы — шкала 4/8/12/16/24/32: текст → кнопка ≥ 12, кнопка → кнопка
+ *    ≥ 8, карточка 16–20 внутри, секции 24–32.
+ */
+
+/* ------------------------------------------------------------ ссылки */
+/* Ссылка в тексте: цвет текста и тихое подчёркивание, а не синий. */
+:where(p, li, dd, td, .ds-prose, .muted, .ds-meta, .ds-subtle, .ds-hint) a:not([class]),
+a.ds-text-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  text-underline-offset: 3px;
+}
+:where(p, li, dd, td, .ds-prose, .muted, .ds-meta, .ds-subtle, .ds-hint) a:not([class]):hover,
+a.ds-text-link:hover {
+  text-decoration-color: currentColor;
+}
+/* Прежние «кнопки-ссылки» (.ds-link-button, .record-link, .stat-link) — третичные
+ * действия: цвет текста, фон при наведении, без синего подчёркивания. */
+.ds-link-button,
+.record-link,
+.stat-link {
+  min-height: 32px;
+  padding: 4px 8px;
+  margin-inline: -8px;
+  border-radius: var(--ds-radius-s);
+  color: var(--ds-ink);
+  text-decoration: none;
+}
+.ds-link-button:hover,
+.record-link:hover,
+.stat-link:hover {
+  background: var(--ds-surface-2);
+}
+/* Шеврон рамкой, а не символом: символ попадал бы в доступное имя кнопки. */
+.ds-link-button::after,
+.record-link::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-top: 2px solid var(--ds-ink-2);
+  border-right: 2px solid var(--ds-ink-2);
+  transform: translateY(-1px) rotate(45deg);
+  vertical-align: middle;
+  margin-inline-start: 8px;
+}
+/* Переход к списку: акцентный цвет и шеврон, без подчёркивания. */
+.ds-action-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--ds-target-min);
+  color: var(--ds-accent);
+  font-weight: var(--ds-weight-strong);
+  text-decoration: none;
+}
+.ds-action-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+/* Внешний сервис — кнопка-ссылка со значком ↗. */
+a.ds-btn[target="_blank"]::after,
+a.ticket-button[target="_blank"]::after {
+  content: "↗" / "";
+  font-weight: 400;
+}
+
+/* ------------------------------------------------------------ «Назад» */
+.ds-back,
+.detail-back a,
+a.ds-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  min-height: var(--ds-target);
+  padding: 0 var(--ds-space-3) 0 var(--ds-space-2);
+  margin-inline-start: calc(-1 * var(--ds-space-2));
+  border: 0;
+  border-radius: var(--ds-radius-s);
+  background: none;
+  color: var(--ds-ink);
+  font-weight: var(--ds-weight-strong);
+  text-decoration: none;
+  cursor: pointer;
+}
+.ds-back:hover,
+.detail-back a:hover {
+  background: var(--ds-surface-2);
+}
+
+/* ------------------------------------------------------------ раскрытие = строка */
+/* «Совет дома», «Сведения о доме для жителей», «История подключений»:
+ * строка с шевроном и фоном при наведении — видно, что она раскрывается. */
+details > summary,
+details:is(.ds-disclosure, .source-chip, .manual-category) > summary {
+  position: relative;
+  list-style: none;
+  padding-inline-end: calc(var(--ds-space-3) + 24px);
+  border-radius: var(--ds-radius-s);
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details > summary::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: calc(var(--ds-space-3) + 2px);
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--ds-ink-2);
+  border-bottom: 2px solid var(--ds-ink-2);
+  transform: translateY(-70%) rotate(45deg);
+  transition: transform 0.15s;
+}
+details[open] > summary::after {
+  transform: translateY(-30%) rotate(-135deg);
+}
+details > summary:hover {
+  background: var(--ds-surface-2);
+}
+@media (prefers-reduced-motion: reduce) {
+  details > summary::after {
+    transition: none;
+  }
+}
+/* Раскрытие внутри карточки кабинета — строка во всю ширину с рамкой сверху. */
+.admin-detail > details,
+.admin-detail > .passive-switch:is(details) {
+  margin: 0 calc(-1 * var(--ds-space-2));
+  border: 0;
+  border-top: 1px solid var(--ds-line);
+  border-radius: 0;
+}
+.admin-detail > details > summary {
+  min-height: 48px;
+  padding-inline-start: var(--ds-space-2);
+}
+.admin-detail > details[open] {
+  padding-bottom: var(--ds-space-3);
+}
+.admin-detail > details > :not(summary) {
+  margin-inline: var(--ds-space-2);
+}
+.ds-summary-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent);
+  flex: none;
+}
+.ds-summary-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ------------------------------------------------------------ карточки и отступы */
+.admin-detail,
+.ds-section {
+  padding: var(--ds-space-4) calc(var(--ds-space-4) + 4px);
+}
+/* Кнопка внутри карточки — своей ширины, а не полосой на всю карточку. */
+.admin-detail > :is(button, a.ds-btn, a.ticket-button, .ds-btn, .ticket-button),
+.passive-switch > :is(button, a.ds-btn, .ds-btn, .ticket-button),
+.connection-row > :is(button, .ds-btn, .ticket-button) {
+  justify-self: start;
+}
+.passive-switch {
+  gap: var(--ds-space-3);
+}
+.button-row,
+.ds-actions,
+.ticket-buttons {
+  gap: var(--ds-space-2);
+}
+/* Текст перед кнопкой — не ближе 12 px. */
+:is(p, .ds-hint, .muted) + :is(.button-row, .ds-actions, button, .ds-btn, .ticket-button) {
+  margin-top: var(--ds-space-1);
+}
+.connection-row button {
+  margin: 0;
+}
+.admin-main > * + h2 {
+  margin-top: var(--ds-space-5);
+}
+/* На телефоне кнопки блока — столбиком во всю ширину, 8 px между ними. */
+@media (max-width: 430px) {
+  .button-row,
+  .ds-actions,
+  .ticket-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .button-row > :is(button, a, .ds-btn, .ticket-button),
+  .ds-actions > :is(button, a, .ds-btn, .ticket-button, .ds-action) {
+    width: 100%;
+  }
+  .admin-detail > :is(button, a.ds-btn, .ds-btn, .ticket-button),
+  .passive-switch > :is(button, .ds-btn, .ticket-button) {
+    justify-self: stretch;
+  }
+}
+
+/* ------------------------------------------------------------ заголовок страницы */
+/* h1 и описание — на ширину контента, действие справа; на телефоне — под описанием. */
+.page-header,
+.ds-page-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--ds-space-5);
+  row-gap: var(--ds-space-2);
+}
+/* Все строки шапки — в левой колонке в порядке разметки; действия — справа. */
+.page-header > *,
+.ds-page-header > * {
+  grid-column: 1;
+}
+.page-header > p,
+.ds-page-header > p {
+  max-width: 80ch;
+}
+.page-header > .page-actions {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  justify-content: flex-end;
+  align-self: center;
+}
+@media (max-width: 767px) {
+  .page-header,
+  .ds-page-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .page-header > .page-actions {
+    grid-column: 1;
+    grid-row: auto;
+    justify-content: flex-start;
+    margin-top: var(--ds-space-1);
+  }
+}
+
+/* ------------------------------------------------------------ шапка кабинета */
+.admin-topbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-4);
+  min-height: 56px;
+  padding: var(--ds-space-2) var(--ds-space-5);
+  background: var(--ds-surface);
+  border-bottom: 1px solid var(--ds-line);
+}
+.admin-topbar-brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-space-3);
+  min-width: 0;
+  margin-inline-end: auto;
+  color: var(--ds-ink);
+  text-decoration: none;
+}
+.admin-topbar-brand strong {
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+}
+.admin-topbar-org {
+  overflow: hidden;
+  color: var(--ds-ink-2);
+  font-weight: var(--ds-weight-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-topbar-org::before {
+  content: "·";
+  margin-inline-end: var(--ds-space-3);
+  color: var(--ds-line);
+}
+.admin-topbar-user {
+  display: grid;
+  justify-items: end;
+  line-height: 1.25;
+}
+.admin-topbar-user strong {
+  font-size: var(--ds-text-small);
+}
+.admin-topbar-user span {
+  color: var(--ds-ink-2);
+  font-size: 0.75rem;
+}
+.admin-topbar .ds-btn {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: var(--ds-text-small);
+}
+.admin-updated {
+  color: var(--ds-ink-2);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.admin-shell.with-topbar {
+  grid-template-rows: auto 1fr;
+  min-height: 100dvh;
+}
+.admin-shell.with-topbar > .admin-sidebar {
+  border-top: 0;
+}
+.admin-shell.with-topbar .admin-toolbar {
+  display: none;
+}
+.platform-workspace .admin-topbar {
+  border-top: 4px solid var(--ds-ink);
+}
+.company-workspace .admin-topbar {
+  border-top: 4px solid var(--ds-action);
+}
+.operator-workspace .admin-topbar {
+  border-top: 4px solid var(--ds-success);
+}
+@media (max-width: 767px) {
+  .admin-shell.has-mobile-nav > .admin-topbar {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------ боковое меню */
+/* Выбран ровно один пункт — текущий раздел; фокус — только рамка, без заливки. */
+.admin-nav-link:focus-visible {
+  outline: 2px solid var(--ds-focus);
+  outline-offset: -2px;
+  background: none;
+}
+.admin-nav-link[aria-current="page"]:focus-visible {
+  background: var(--ds-accent-soft);
+}
+
+/* ------------------------------------------------------------ списки-переходы */
+.ds-row-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ds-line);
+}
+.ds-row-list > li {
+  border-bottom: 1px solid var(--ds-line);
+}
+.ds-house-pick {
+  margin-top: var(--ds-space-4);
+}
+
+/* ------------------------------------------------------------ уведомления */
+.ds-toaster {
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(var(--ds-space-4) + env(safe-area-inset-bottom));
+  z-index: 50;
+  display: grid;
+  justify-items: center;
+  gap: var(--ds-space-2);
+  padding-inline: var(--ds-gutter);
+  pointer-events: none;
+}
+.ds-toast {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  max-width: min(100%, 480px);
+  padding: 10px 16px;
+  border-radius: var(--ds-radius-m);
+  background: var(--ds-ink);
+  color: var(--ds-surface);
+  box-shadow: var(--ds-shadow-pop);
+  font-weight: var(--ds-weight-strong);
+}
+.ds-toast.ds-tone-danger {
+  background: var(--ds-danger-action);
+  color: var(--ds-on-danger);
+}
+
+/* ------------------------------------------------------------ подключение чата */
+.connect-steps {
+  display: grid;
+  gap: var(--ds-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+.connect-steps > li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: var(--ds-space-3);
+  align-items: start;
+  counter-increment: step;
+}
+.connect-steps > li::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent);
+  font-weight: 650;
+}
+.connect-steps > li.is-done::before {
+  content: "✓";
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
+}
+.connect-steps > li > div {
+  display: grid;
+  gap: var(--ds-space-2);
+}
+.connect-command {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  align-items: center;
+}
+.connect-command code {
+  padding: 6px 10px;
+  border-radius: var(--ds-radius-s);
+  background: var(--ds-surface-2);
+  font-size: var(--ds-text-small);
+  overflow-wrap: anywhere;
+}
+.connect-waiting {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  color: var(--ds-ink-2);
+}
+.connect-waiting::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ds-warning-line);
+  animation: ds-pulse 1.6s ease-in-out infinite;
+}
+@keyframes ds-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .connect-waiting::before {
+    animation: none;
+  }
+}
+.quota-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+}
+.quota-line .quota-meter {
+  flex: 1 1 240px;
+  max-width: 420px;
+}
+.chat-connected {
+  display: grid;
+  gap: var(--ds-space-1);
+}
+.chat-connected-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2);
+  font-weight: var(--ds-weight-strong);
+}
+.admin-sidebar-title {
+  margin: 0;
+  padding-inline: 12px;
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-small);
+  font-weight: var(--ds-weight-strong);
+}
+/* Раскрытие в карточке — строка во всю ширину карточки. */
+.admin-detail > details {
+  justify-self: stretch;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.admin-detail > details + details {
+  margin-top: calc(-1 * var(--ds-space-4));
+}
+.admin-detail > details > summary {
+  width: 100%;
+}
+.admin-main > .button-row {
+  margin-block: var(--ds-space-1) var(--ds-space-4);
+}
+.connect-block {
+  display: grid;
+  gap: var(--ds-space-3);
+}
+.connect-block > .button-row:last-child {
+  margin-top: var(--ds-space-1);
+}
+.connect-command {
+  display: grid;
+  gap: var(--ds-space-2);
+  color: var(--ds-ink-2);
+  font-weight: 400;
+}
+
+/* ------------------------------------------------------------ формы кабинета */
+.admin-facts {
+  margin-bottom: var(--ds-space-5);
+}
+.ticket-form fieldset.choice-row:has(input[type="text"], input[type="tel"], input[type="email"], input[type="url"]) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: var(--ds-space-4) var(--ds-space-5);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.admin-detail .ticket-form > :is(button, .ds-btn, .ticket-button),
+.admin-detail .inline-form > :is(button, .ds-btn, .ticket-button),
+.ticket-form.admin-detail > :is(button, .ds-btn, .ticket-button) {
+  justify-self: start;
+  width: auto;
+}
+.admin-detail .ticket-form,
+.ticket-form.admin-detail {
+  max-width: 880px;
+}
+@media (max-width: 430px) {
+  .admin-detail .ticket-form > :is(button, .ds-btn, .ticket-button),
+  .ticket-form.admin-detail > :is(button, .ds-btn, .ticket-button) {
+    justify-self: stretch;
+    width: 100%;
+  }
+}
+
+/* Выбранный период — тем же акцентом, что и текущий пункт меню. */
+.period-switch [aria-pressed="true"] {
+  background: var(--ds-action);
+  border-color: var(--ds-action);
+  color: var(--ds-on-action, #fff);
+}
+/* Заголовок раздела отделён от карточки под ним. */
+.admin-main h2 + :is(.state-panel, .admin-detail, .admin-records, section) {
+  margin-top: var(--ds-space-3);
+}
+
+/* Плитка с переходом — вся карточка кликабельна: рамка при наведении и шеврон. */
+.stat-tile:has(.stat-link) {
+  position: relative;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.stat-tile:has(.stat-link):hover {
+  border-color: var(--ds-action);
+  box-shadow: var(--ds-shadow-1, 0 1px 3px rgb(0 0 0 / 0.08));
+}
+.stat-tile .stat-link {
+  color: var(--ds-ink);
+  text-decoration: none;
+  font-size: inherit;
+  font-weight: inherit;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+.stat-tile .stat-link::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.stat-tile .stat-link::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-top: 2px solid var(--ds-ink-2);
+  border-right: 2px solid var(--ds-ink-2);
+  transform: translateY(-1px) rotate(45deg);
+  vertical-align: middle;
+  margin-inline-start: 10px;
+}
+.stat-tile .stat-link:hover {
+  background: none;
+}
+.stat-tile .stat-link:focus-visible {
+  outline: none;
+}
+.stat-tile:has(.stat-link:focus-visible) {
+  outline: 2px solid var(--ds-focus, var(--ds-action));
+  outline-offset: 2px;
+}
+
+/* Период — кнопки через 8 px, как везде. */
+.period-switch {
+  gap: var(--ds-space-2);
+}
+/* Цели нажатия на телефоне — не меньше 44 px (F1 §2.5). */
+@media (max-width: 430px) {
+  .ds-btn,
+  .ds-btn-small,
+  .ticket-button,
+  .ds-edit,
+  .record-link,
+  .ds-action-link,
+  select,
+  .admin-brand,
+  .site-brand,
+  a.ds-source-link {
+    min-height: 44px;
+  }
+  .record-link,
+  .ds-action-link,
+  .admin-brand,
+  .site-brand,
+  a.ds-source-link {
+    display: inline-flex;
+    align-items: center;
+  }
+  .stat-tile .stat-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  /* Компактные кнопки и «Изменить» на компьютере — на телефоне полной высоты. */
+  .app-shell .ds-edit,
+  .ticket-more .ds-btn,
+  .ticket-danger-zone .ds-btn,
+  .demo-session select {
+    min-height: 44px;
+  }
+}
+.apply-intro .apply-jump {
+  margin-top: var(--ds-space-3);
+}
+
+/* Шапка кабинета без мобильного листа (платформа) на телефоне: переносится,
+   время обновления скрыто, кнопки полной высоты. */
+@media (max-width: 767px) {
+  .admin-topbar {
+    flex-wrap: wrap;
+    gap: var(--ds-space-2) var(--ds-space-3);
+    padding: var(--ds-space-2) var(--ds-space-4);
+  }
+  .admin-topbar .ds-btn {
+    min-height: 44px;
+  }
+  .admin-updated {
+    display: none;
+  }
+  .admin-topbar-user {
+    justify-items: start;
+  }
+  .admin-topbar-brand {
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
+/* Раскрытие-карточка между секциями отделено так же, как секция (16 px). */
+.ds-disclosure.route-facts {
+  margin-bottom: var(--ds-space-4);
+}

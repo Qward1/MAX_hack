@@ -70,6 +70,14 @@ SCENARIOS: list[tuple[str, list[tuple[str, str]]]] = [
                 "подтверждение жителем и закрытие",
                 f"{IT}test_tickets.py::test_tk05_self_verification_and_participation",
             ),
+            (
+                "проблема «Решена» вместе с заявкой после подтверждения жителя (D6)",
+                f"{IT}test_f1_incident_closure.py::test_confirmed_ticket_resolves_the_incident",
+            ),
+            (
+                "«Проблема осталась» после закрытия — та же заявка и проблема снова открыты",
+                f"{IT}test_f1_incident_closure.py::test_objection_after_close_reopens_the_same_ticket_and_incident",
+            ),
         ],
     ),
     (
@@ -249,6 +257,23 @@ def main() -> int:
     database = os.environ.get("DATABASE_URL", "")
     if os.environ.get("APP_ENV") == "production" or "prod" in database or not database:
         print("Сценарии только на своей тестовой БД (DATABASE_URL)", file=sys.stderr)
+        return 2
+    # F-12: новая БД — сначала миграции; не вышло — понятная подсказка, а не
+    # 36 упавших шагов.
+    migrated = subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if migrated.returncode != 0:
+        print(
+            "Не удалось применить миграции к DATABASE_URL (alembic upgrade head). "
+            "Проверьте, что PostgreSQL запущена и БД существует. "
+            + migrated.stderr[-2000:],
+            file=sys.stderr,
+        )
         return 2
     nodes = [node for _, steps in SCENARIOS for _, node in steps]
     with tempfile.TemporaryDirectory() as temp:

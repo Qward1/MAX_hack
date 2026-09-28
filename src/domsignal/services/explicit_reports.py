@@ -22,6 +22,7 @@ Responsibility Router по проверенному справочнику. За
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -74,7 +75,7 @@ from domsignal.db.repositories.access import AccessRepository
 from domsignal.db.repositories.incidents import IncidentRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
 from domsignal.services.action_cards import ActionCardBuilder
-from domsignal.services.ai_budget import PostgresBudgetGuard
+from domsignal.services.ai_budget import PostgresBudgetGuard, estimate_tokens
 from domsignal.services.ai_provenance import execution_provenance
 from domsignal.services.bot_replies import (
     DUPLICATE_LEAD,
@@ -185,6 +186,10 @@ _SETTLE = text(
     WHERE event_id = :event_id
     """
 )
+
+
+#: F1: пауза перед повтором вызова модели после 429 на явном пути.
+EXPLICIT_RETRY_MAX_SECONDS = 5.0
 
 
 @dataclass(frozen=True)
@@ -310,12 +315,18 @@ class ExplicitReportService:
                 location_scope=decision.location_scope,
                 danger_kinds=danger,
             )
-            duplicates = await self._duplicates(
-                session,
-                context,
-                category=decision.product_category,
-                entrance=decision.entrance.value if decision.entrance else None,
-                now=datetime.now(UTC),
+            # B-06: при опасности дубли не предлагаются — как в личке бота:
+            # сначала блок безопасности, а не «присоединиться» к чужой проблеме.
+            duplicates = (
+                []
+                if danger
+                else await self._duplicates(
+                    session,
+                    context,
+                    category=decision.product_category,
+                    entrance=decision.entrance.value if decision.entrance else None,
+                    now=datetime.now(UTC),
+                )
             )
             card = self.action_cards.build(
                 route,
@@ -392,7 +403,10 @@ class ExplicitReportService:
 
         Продукт ничего не сливает сам: список нужен только для того, чтобы
         житель сам сказал «это та же проблема» или «нет, это другое».
+        «Другое» — не категория, а её отсутствие: совпадением не считается (B-06).
         """
+        if category == ReportCategory.OTHER:
+            return []
         repo = IncidentRepository(session)
         incidents = await repo.open_candidates(
             context,
@@ -881,7 +895,16 @@ class ExplicitReportService:
         scope = (
             f"dm:{intake.user_id}" if intake.channel == "dm_report" else str(intake.chat_binding_id)
         )
-        async with self.budget.reserve(scope):
+        tokens = estimate_tokens([intake.text])
+        async with self.budget.reserve(scope, tokens=tokens):
+            analysis = await self.analyzer.analyze(window)
+        if analysis.execution.state != "fallback_rate_limited":
+            return analysis
+        # F1: житель ждёт ответа — одна повторная попытка не позже чем через
+        # 5 с, затем правила с честной пометкой `fallback_rate_limited`.
+        pause = min(analysis.execution.retry_after_s or 2.0, EXPLICIT_RETRY_MAX_SECONDS)
+        await asyncio.sleep(pause)
+        async with self.budget.reserve(scope, tokens=tokens):
             return await self.analyzer.analyze(window)
 
     # --------------------------------------------------------------- решение

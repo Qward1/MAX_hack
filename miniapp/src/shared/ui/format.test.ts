@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countLabel, formatDay, formatStaffTime, formatStaffWhen, formatWhen, pluralize } from "./format";
+import { countLabel, formatDay, formatStaffTime, formatStaffWhen, formatWhen, pluralize, sentence } from "./format";
 
 const NEIGHBOURS = ["сосед", "соседа", "соседей"] as const;
 
@@ -59,7 +59,18 @@ describe("даты для сотрудника — по Москве и с «М�
 describe("день проверки справочника", () => {
   it("только день, без выдуманного времени", () => {
     expect(formatDay("2026-09-20")).toBe("20 сентября 2026 г.");
-    expect(formatDay("2026-09-20T23:59:00Z")).toBe("20 сентября 2026 г.");
+    // B-05 / D-07: момент времени — день по Москве, а не срез UTC-строки.
+    expect(formatDay("2026-09-26T21:00:00Z")).toBe("27 сентября 2026 г.");
+    expect(formatDay("2026-09-27T22:11:00Z")).toBe("28 сентября 2026 г.");
+    expect(formatDay("2026-09-20T23:59:00Z", "UTC")).toBe("20 сентября 2026 г.");
+    expect(formatDay("2026-09-20T15:00:00Z", "Asia/Vladivostok")).toBe("21 сентября 2026 г.");
     expect(formatDay(undefined)).toBeNull();
+  });
+});
+
+describe("sentence (F-13)", () => {
+  it("не ставит вторую точку после «г.»", () => {
+    expect(sentence("обновлено 27 сентября 2026 г.")).toBe("обновлено 27 сентября 2026 г.");
+    expect(sentence("По данным УК")).toBe("По данным УК.");
   });
 });

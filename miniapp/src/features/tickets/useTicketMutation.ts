@@ -20,8 +20,10 @@ export function safeError(error: unknown, saving = false, resident = false) {
         422: "Проверьте поля формы.",
         429: "Слишком много запросов. Подождите минуту и повторите.",
       };
+  // При чтении 422 значит испорченную ссылку на заявку, а не поля формы.
+  const status = problemStatus(error) === 422 && !saving ? 404 : problemStatus(error);
   return (
-    messages[problemStatus(error) ?? 0] ??
+    messages[status ?? 0] ??
     (saving
       ? "Не удалось сохранить. Проверьте интернет и повторите."
       : "Не удалось загрузить данные. Проверьте интернет и повторите.")

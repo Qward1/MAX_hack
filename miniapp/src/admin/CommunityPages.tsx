@@ -1,4 +1,7 @@
-import { formatStaffTime } from "../shared/ui/format";
+import { IconInfo } from "../shared/ui/icons";
+import { useConfirm } from "../shared/ui/useConfirm";
+import { POLL_LIST_MS } from "../shared/api/useResource";
+import { formatStaffTime, sentence } from "../shared/ui/format";
 import { useEffect, useState } from "react";
 import { adminClient, Feedback, Title, useAction, useRead, type Schema } from "./administration";
 
@@ -46,16 +49,16 @@ function Skipped({ skipped }: { skipped?: Record<string, number> }) {
 export function Mailings({ base, platform = false }: { base: string; platform?: boolean }) {
   const listPath = platform ? "/api/v1/platform/broadcasts" : `${base}/broadcasts`;
   const [offset, setOffset] = useState(0);
-  const list = useRead<Schema["BroadcastList"]>(`${listPath}?limit=20&offset=${offset}`);
+  const list = useRead<Schema["BroadcastList"]>(`${listPath}?limit=20&offset=${offset}`, 0, { poll: POLL_LIST_MS });
   const [selected, select] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const refresh = () => list.refresh();
   return <>
     <Title description={platform
-      ? "Сообщения платформы: в кабинеты и личку сотрудников УК и в домовые чаты, где это разрешено"
-      : "Объявления, рассылки и опросы жителям ваших домов. Черновик → предпросмотр → подтверждение → отправка."}>
+      ? "Сообщения платформы: в кабинеты и личку сотрудников УК и в домовые чаты, где это разрешено."
+      : "Объявления, рассылки и опросы жителям ваших домов: черновик, предпросмотр получателей, подтверждение и отправка."}
+      actions={!creating && !selected && <button className="ds-btn ds-btn-primary" onClick={() => setCreating(true)}>Новое сообщение</button>}>
       {platform ? "Сообщения платформы" : "Рассылки"}</Title>
-    {!creating && !selected && <button className="ticket-button" onClick={() => setCreating(true)}>Новое сообщение</button>}
     {creating && <MailingEditor base={base} platform={platform} onDone={(id) => { setCreating(false); refresh(); if (id) select(id); }} />}
     {selected && <MailingDetail key={selected} id={selected} base={base} platform={platform}
       close={() => { select(null); refresh(); }} refresh={refresh} />}
@@ -221,6 +224,7 @@ function MailingDetail({ id, base, platform, close, refresh }: {
   const [confirmRetract, setConfirmRetract] = useState(false);
   const [edit, setEdit] = useState<{ title: string; body: string } | null>(null);
   const action = useAction(() => { r.refresh(); refresh(); setPreview(null); });
+  const confirm = useConfirm();
   const b = r.data;
   // Отказ сервера (например, «уже отправлено») — показать актуальное состояние.
   const act = async (path: string, payload: object) => {
@@ -265,13 +269,15 @@ function MailingDetail({ id, base, platform, close, refresh }: {
         {(b.houses ?? []).length > 0 && <><dt>Дома</dt><dd>{(b.houses ?? []).join("; ")}</dd></>}
         {b.edited_at && <><dt>Изменено</dt><dd>{when(b.edited_at)}</dd></>}
       </dl>
+      {confirm.dialog}
       {b.poll && <PollResultsView poll={b.poll} />}
       {b.status === "draft" && <>
         <div className="button-row">
           <button className="ticket-button secondary" onClick={() => setEditing(true)}>Изменить черновик</button>
           <button className="ticket-button secondary" onClick={() => void loadPreview()}>Предпросмотр получателей</button>
-          <button className="ticket-button secondary" disabled={action.busy}
-            onClick={() => void act(`/api/v1/broadcasts/${id}/cancel`, { expected_version: b.version })}>Удалить черновик</button>
+          <button className="ds-btn ds-btn-danger" disabled={action.busy}
+            onClick={() => confirm.ask({ title: "Удалить черновик?", body: "Черновик нельзя будет восстановить. Если это опрос из предложения жителя, предложение вернётся в список.",
+              confirmLabel: "Удалить черновик", run: () => act(`/api/v1/broadcasts/${id}/cancel`, { expected_version: b.version }) })}>Удалить черновик</button>
         </div>
         {previewError && <p role="alert" className="admin-feedback">{previewError}</p>}
         {preview && <PreviewTable preview={preview} />}
@@ -295,8 +301,9 @@ function MailingDetail({ id, base, platform, close, refresh }: {
         </form>
       </>}
       {b.status === "scheduled" && <div className="button-row">
-        <button className="ticket-button" disabled={action.busy}
-          onClick={() => void act(`/api/v1/broadcasts/${id}/cancel`, { expected_version: b.version })}>Отменить отправку</button>
+        <button className="ds-btn ds-btn-danger" disabled={action.busy}
+          onClick={() => confirm.ask({ title: "Отменить отправку?", body: "Сообщение не уйдёт жителям. Чтобы отправить его позже, придётся создать новое.",
+            confirmLabel: "Отменить отправку", run: () => act(`/api/v1/broadcasts/${id}/cancel`, { expected_version: b.version }) })}>Отменить отправку</button>
       </div>}
       {b.status === "sent" && <>
         <StatsTable stats={b.stats ?? []} />
@@ -304,8 +311,9 @@ function MailingDetail({ id, base, platform, close, refresh }: {
           {(b.allowed_actions ?? []).includes("edit_content") && !edit &&
             <button className="ticket-button secondary" onClick={() => setEdit({ title: b.title, body: b.body })}>Исправить текст</button>}
           {(b.allowed_actions ?? []).includes("close_poll") &&
-            <button className="ticket-button secondary" disabled={action.busy}
-              onClick={() => void act(`/api/v1/broadcasts/${id}/close-poll`, { expected_version: b.version })}>Закрыть опрос</button>}
+            <button className="ds-btn ds-btn-danger" disabled={action.busy}
+              onClick={() => confirm.ask({ title: "Закрыть опрос?", body: "Голосование закончится сейчас, пост в чате покажет итоги. Открыть опрос снова нельзя.",
+                confirmLabel: "Закрыть опрос", run: () => act(`/api/v1/broadcasts/${id}/close-poll`, { expected_version: b.version }) })}>Закрыть опрос</button>}
           {!confirmRetract ? <button className="ticket-button secondary" onClick={() => setConfirmRetract(true)}>Удалить сообщение</button>
             : <div className="admin-feedback" role="group" aria-label="Подтверждение удаления">
               <p>Пост в домовом чате заменится на «Сообщение удалено автором», из ленты сообщение исчезнет. Уже доставленные личные сообщения останутся.</p>
@@ -331,7 +339,7 @@ function MailingDetail({ id, base, platform, close, refresh }: {
 }
 
 function PreviewTable({ preview }: { preview: Schema["BroadcastPreview"] }) {
-  return <div className="table-scroll"><table className="admin-table" aria-label="Предпросмотр получателей">
+  return <div className="table-scroll" tabIndex={0} role="region" aria-label="Предпросмотр получателей, таблица"><table className="admin-table" aria-label="Предпросмотр получателей">
     <caption>Домов в аудитории: {preview.houses}{preview.companies ? ` · УК: ${preview.companies}` : ""}</caption>
     <thead><tr><th>Канал</th><th>Всего</th><th>Получат</th><th>Пропущено</th></tr></thead>
     <tbody>{preview.channels.map(c => <tr key={c.channel}><td>{channelLabels[c.channel]}</td><td>{c.targets}</td>
@@ -340,7 +348,7 @@ function PreviewTable({ preview }: { preview: Schema["BroadcastPreview"] }) {
 }
 
 function StatsTable({ stats }: { stats: Schema["ChannelStats"][] }) {
-  return <div className="table-scroll"><table className="admin-table" aria-label="Статистика отправки">
+  return <div className="table-scroll" tabIndex={0} role="region" aria-label="Статистика отправки, таблица"><table className="admin-table" aria-label="Статистика отправки">
     <thead><tr><th>Канал</th><th>Доставлено</th><th>Ошибка</th><th>Исход неизвестен</th><th>Ожидает</th><th>Тихие часы</th><th>Пропущено</th></tr></thead>
     <tbody>{stats.map(s => <tr key={s.channel}><td>{channelLabels[s.channel]}</td><td>{s.accepted}</td><td>{s.failed}</td>
       <td>{s.unknown}</td><td>{s.pending}</td><td>{s.deferred_quiet_hours}</td><td><Skipped skipped={s.skipped} /></td></tr>)}</tbody>
@@ -380,7 +388,7 @@ export function ChatSettingsPanel({ bindingId }: { bindingId: string }) {
     <summary>Что бот публикует в этом чате</summary>
     <Feedback loading={r.loading && !view} error={r.error} />
     {value && view && <form className="ticket-form" onSubmit={async e => {
-      e.preventDefault(); setSaved(false);
+      e.preventDefault();
       const result = await action.run(`/api/v1/chat-bindings/${bindingId}/settings`, value);
       if (result) { setForm(null); setSaved(true); }
     }}>
@@ -425,19 +433,17 @@ const profileErrors: Record<string, string> = {
 
 export function CompanyProfileForm({ base }: { base: string }) {
   const r = useRead<Schema["CompanyProfileView"]>(`${base}/profile`);
-  const action = useAction(r.refresh);
-  const [saved, setSaved] = useState(false);
+  const action = useAction(r.refresh, {}, "Контакты для жителей сохранены");
   const view = r.data;
   return <section className="admin-detail" aria-label="Контакты для жителей">
     <h2>Контакты для жителей</h2>
     <p className="muted">Жители увидят эти сведения в разделе «Мой дом» с пометкой «по данным УК» и датой обновления.</p>
     <Feedback loading={r.loading && !view} error={r.error} />
     {view && <form className="ticket-form" onSubmit={async e => {
-      e.preventDefault(); setSaved(false);
+      e.preventDefault();
       const data = new FormData(e.currentTarget);
       const payload = Object.fromEntries(profileFields.map(([name]) => [name, String(data.get(name) ?? "").trim() || null]));
-      const result = await action.run(`${base}/profile`, payload);
-      if (result) setSaved(true);
+      await action.run(`${base}/profile`, payload);
     }}>
       <fieldset className="choice-row" disabled={!view.can_edit}>
         {profileFields.map(([name, label, type]) => <label key={name}>{label}
@@ -448,14 +454,13 @@ export function CompanyProfileForm({ base }: { base: string }) {
       {view.can_edit ? <button className="ticket-button" disabled={action.busy}>Сохранить контакты</button>
         : <p className="muted">Контакты заполняет администратор УК.</p>}
       {view.updated_at && <p className="muted">Обновлено {when(view.updated_at)}</p>}
-      {saved && <p role="status" className="muted">Контакты сохранены.</p>}
     </form>}
   </section>;
 }
 
 export function HouseFactsForm({ base, house, refresh }: { base: string; house: Schema["CompanyHouseView"]; refresh: () => void }) {
-  const action = useAction(refresh);
-  return <details className="passive-switch"><summary>Сведения о доме для жителей</summary>
+  const action = useAction(refresh, {}, "Сведения о доме сохранены");
+  return <details className="passive-switch"><summary><span className="ds-summary-icon"><IconInfo /></span>Сведения о доме для жителей</summary>
     <form className="inline-form" onSubmit={e => {
       e.preventDefault();
       const data = new FormData(e.currentTarget);
@@ -466,7 +471,7 @@ export function HouseFactsForm({ base, house, refresh }: { base: string; house: 
       <label>Этажей<input name="floors" type="number" min={1} max={200} inputMode="numeric" defaultValue={house.floor_count ?? ""} /></label>
       <button className="ticket-button secondary" disabled={action.busy}>Сохранить</button>
     </form>
-    <p className="muted">Необязательно. Жители увидят «по данным УК»{house.facts_updated_at ? `, обновлено ${when(house.facts_updated_at)}` : ""}.</p>
+    <p className="muted">{sentence(`Необязательно. Жители увидят «по данным УК»${house.facts_updated_at ? `, обновлено ${when(house.facts_updated_at)}` : ""}`)}</p>
     <Feedback error={action.error || undefined} />
   </details>;
 }
@@ -505,9 +510,11 @@ export function Notices({ base }: { base: string }) {
 export function ReceptionAdmin({ base, admin }: { base: string; admin: boolean }) {
   const r = useRead<Schema["ReceptionSlotView"][]>(`${base}/reception-slots`);
   const action = useAction(r.refresh);
+  const confirm = useConfirm();
   const [starts, setStarts] = useState(() => localInput(new Date(Date.now() + 2 * 86400000)));
   return <>
     <Title description="Время приёма жителей и записи на него">Приём</Title>
+    {confirm.dialog}
     {admin && <form className="inline-form admin-detail" onSubmit={e => {
       e.preventDefault();
       const data = new FormData(e.currentTarget);
@@ -521,7 +528,7 @@ export function ReceptionAdmin({ base, admin }: { base: string; admin: boolean }
       <label>Дата и время<input type="datetime-local" value={starts} required onChange={e => setStarts(e.target.value)} /></label>
       <label>Длительность, мин<input name="duration" type="number" min={5} max={240} defaultValue={30} required /></label>
       <label>Мест<input name="capacity" type="number" min={1} max={50} defaultValue={3} required /></label>
-      <label>Место<input name="place" maxLength={500} placeholder="По умолчанию — адрес офиса" /></label>
+      <label>Место<input name="place" maxLength={500} placeholder="Офис УК" /></label>
       <button className="ticket-button">Добавить время приёма</button>
     </form>}
     <Feedback loading={r.loading && !r.data} error={r.error ?? (action.error || undefined)} />
@@ -532,8 +539,10 @@ export function ReceptionAdmin({ base, admin }: { base: string; admin: boolean }
           <li key={b.id}>{b.resident_name} · {b.house_address} · {b.topic}{b.status === "cancelled" ? " (отменена)" : ""}</li>)}</ul>}
       </div>
       <span className={`admin-status status-${slot.status}`}>{slot.status === "open" ? "Открыто" : "Отменено"}</span>
-      {admin && slot.status === "open" && <button className="ticket-button secondary" disabled={action.busy}
-        onClick={() => void action.run(`${base}/reception-slots/${slot.id}/cancel`)}>Отменить время</button>}
+      {admin && slot.status === "open" && <button className="ds-btn ds-btn-danger" disabled={action.busy}
+        onClick={() => confirm.ask({ title: "Отменить время приёма?", body: slot.booked
+          ? `Записавшиеся жители (${slot.booked}) увидят, что приём отменён.` : "Жители больше не смогут записаться на это время.",
+          confirmLabel: "Отменить время", run: () => action.run(`${base}/reception-slots/${slot.id}/cancel`) })}>Отменить время</button>}
     </li>)}</ul> : <p className="state-panel">Время приёма пока не задано.{admin ? " Добавьте его формой выше." : ""}</p>)}
   </>;
 }

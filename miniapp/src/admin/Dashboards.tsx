@@ -169,7 +169,7 @@ export function PlatformOverview({ open }: { open: (page: string) => void }) {
       </dl>
       <h2>Управляющие компании</h2>
       {data.companies.length === 0 ? <p className="state-panel">Организаций пока нет. Они появляются после одобрения заявки УК.</p> :
-        <div className="table-scroll"><table className="data-table">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Управляющие компании, таблица"><table className="data-table">
           <thead><tr><th scope="col">УК</th><th scope="col">Статус</th><th scope="col">Чаты: использовано / выдано</th>
             <th scope="col">Дома</th><th scope="col">Запросы</th></tr></thead>
           <tbody>{data.companies.map(c => <tr key={c.company_id}>
@@ -212,7 +212,7 @@ export function PlatformOverview({ open }: { open: (page: string) => void }) {
       </dl>
       <ColumnChart title="Вызовы модели по дням" days={data.model.days.map(d => d.day)}
         series={[{ key: "calls", label: "Вызовы", color: SERIES.primary, values: data.model.days.map(d => d.calls) }]} />
-      {data.model.by_company.length > 0 && <div className="table-scroll"><table className="data-table">
+      {data.model.by_company.length > 0 && <div className="table-scroll" tabIndex={0} role="region" aria-label="Модель по организациям, таблица"><table className="data-table">
         <thead><tr><th scope="col">УК (через дом)</th><th scope="col">Вызовы</th><th scope="col">Стоимость</th></tr></thead>
         <tbody>{data.model.by_company.map(c => <tr key={c.company_id ?? "none"}><th scope="row">{c.company_name}</th>
           <td>{formatNumber(c.calls)}</td><td>{rub.format(c.cost_rub)}</td></tr>)}</tbody></table></div>}
@@ -261,7 +261,7 @@ function QueueHealthBlock({ queue }: { queue: Schema["QueueHealth"] }) {
 function DirectoryReadiness({ packs }: { packs: Schema["DirectoryPackReadiness"][] }) {
   return <section className="ds-section" aria-labelledby="directory-readiness">
     <h2 id="directory-readiness">Справочник регионов</h2>
-    <div className="table-scroll"><table className="data-table">
+    <div className="table-scroll" tabIndex={0} role="region" aria-label="Справочник регионов, таблица"><table className="data-table">
       <thead><tr><th scope="col">Пакет</th><th scope="col">Версия</th><th scope="col">Проверено</th><th scope="col">Ждёт сверки</th>
         <th scope="col">Старше 180 дней</th><th scope="col">Недоступны в регионе</th></tr></thead>
       <tbody>{packs.map(pack => <tr key={pack.pack}><th scope="row">{pack.name} <span className="muted">{pack.pack}</span></th>

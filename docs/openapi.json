@@ -3012,6 +3012,18 @@
       "ChatSummary": {
         "additionalProperties": false,
         "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -4139,6 +4151,18 @@
             ],
             "title": "Binding Version"
           },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
           "candidate_max_chat_id": {
             "anyOf": [
               {
@@ -4150,6 +4174,18 @@
             ],
             "title": "Candidate Max Chat Id"
           },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
           "correlation_token": {
             "anyOf": [
               {
@@ -4160,6 +4196,18 @@
               }
             ],
             "title": "Correlation Token"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
           },
           "expires_at": {
             "format": "date-time",
@@ -4175,6 +4223,17 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "initiated_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initiated By Name"
           },
           "last_error_code": {
             "anyOf": [
@@ -4196,6 +4255,18 @@
                 "type": "null"
               }
             ]
+          },
+          "rejected_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected At"
           },
           "scope_type": {
             "enum": [
@@ -6227,6 +6298,17 @@
             "title": "Company Id",
             "type": "string"
           },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -6449,6 +6531,21 @@
           "category": {
             "$ref": "#/components/schemas/ReportCategory"
           },
+          "closure": {
+            "anyOf": [
+              {
+                "enum": [
+                  "residents_confirmed",
+                  "ticket_cancelled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closure"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -6528,8 +6625,27 @@
             "title": "Reports",
             "type": "array"
           },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
           "rule": {
-            "$ref": "#/components/schemas/RuleProvenance"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuleProvenance"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "status": {
             "$ref": "#/components/schemas/IncidentStatus"
@@ -6566,8 +6682,7 @@
           "participant_count",
           "is_demo",
           "provenance",
-          "reports",
-          "rule"
+          "reports"
         ],
         "title": "IncidentDetail",
         "type": "object"
@@ -6582,8 +6697,32 @@
             "title": "Items",
             "type": "array"
           },
+          "open_total": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Total"
+          },
           "page": {
             "$ref": "#/components/schemas/PageMeta"
+          },
+          "resolved_recent_total": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Recent Total"
           }
         },
         "required": [
@@ -6667,6 +6806,21 @@
           "category": {
             "$ref": "#/components/schemas/ReportCategory"
           },
+          "closure": {
+            "anyOf": [
+              {
+                "enum": [
+                  "residents_confirmed",
+                  "ticket_cancelled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closure"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -6738,6 +6892,18 @@
             "minimum": 0.0,
             "title": "Report Count",
             "type": "integer"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
           },
           "status": {
             "$ref": "#/components/schemas/IncidentStatus"
@@ -7350,7 +7516,8 @@
               "ticket",
               "route_card",
               "poll",
-              "announcements"
+              "announcements",
+              "house"
             ],
             "title": "Kind",
             "type": "string"
@@ -8297,10 +8464,44 @@
       "PlatformBindingView": {
         "additionalProperties": false,
         "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
           "company_id": {
             "format": "uuid",
             "title": "Company Id",
             "type": "string"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "house_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Address"
           },
           "house_id": {
             "format": "uuid",
@@ -9961,6 +10162,11 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "joined": {
+            "default": false,
+            "title": "Joined",
+            "type": "boolean"
           }
         },
         "required": [
@@ -20947,6 +21153,215 @@
         ]
       }
     },
+    "/api/v1/chat-connections/{request_id}/code": {
+      "post": {
+        "description": "U-01: новый код подключения, пока бот не получил прежний.",
+        "operationId": "reissue_code_api_v1_chat_connections__request_id__code_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionView"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Method Not Allowed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Unprocessable Entity",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server generated correlation ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reissue Code",
+        "tags": [
+          "chat-connections"
+        ]
+      }
+    },
     "/api/v1/chat-connections/{request_id}/reject": {
       "post": {
         "operationId": "reject_api_v1_chat_connections__request_id__reject_post",
@@ -30680,6 +31095,7 @@
     },
     "/api/v1/houses/{house_id}/incidents": {
       "get": {
+        "description": "Проблемы дома. `state=open` — открытые, `resolved_recent` — решённые за 30 дней.",
         "operationId": "list_incidents_api_v1_houses__house_id__incidents_get",
         "parameters": [
           {
@@ -30713,6 +31129,21 @@
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "open",
+                "resolved_recent"
+              ],
+              "title": "State",
+              "type": "string"
             }
           }
         ],

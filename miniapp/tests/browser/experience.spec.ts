@@ -155,7 +155,7 @@ test("real API → PostgreSQL → board → detail → reload; web keyboard and 
     fullPage: true,
   });
   await expect(page.locator(".ds-source summary").last()).toContainText(
-    "Демонстрационные данные",
+    "Пример данных ДомСигнала",
   );
   await expect(
     page.getByRole("button", { name: "Подготовить обращение" }),
@@ -185,11 +185,15 @@ test("real API → PostgreSQL → board → detail → reload; web keyboard and 
   await expect(page.getByText(/Показаны данные, загруженные раньше/)).toHaveCount(0);
   await noOverflow(page);
   await axeCheck(page);
+  // В хранилище браузера — только подсказка «последний выбранный дом» (D-01):
+  // идентификатор дома, без данных проблем и карточек.
   expect(
-    await page.evaluate(
-      () => window.localStorage.length + window.sessionStorage.length,
-    ),
-  ).toBe(0);
+    await page.evaluate(() => {
+      const keys = [...Object.keys(window.localStorage), ...Object.keys(window.sessionStorage)];
+      return keys.filter((key) => !/^ds:last-house:/.test(key) ||
+        !/^[0-9a-f-]{36}$/.test(window.localStorage.getItem(key) ?? ""));
+    }),
+  ).toEqual([]);
   // The actual C0 backend rejects a foreign actor; frontend may not reveal the cached card.
   const session = await request.post("/api/v1/auth/test-session", {
     data: { actor: "outsider" },

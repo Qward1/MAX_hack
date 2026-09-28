@@ -50,20 +50,20 @@ test("D2 site: landing, login entry and application page in a regular browser", 
     await page.goto("/site");
     await expect(page.getByRole("heading", { level: 1, name: "Проблемы дома — из домового чата в работу" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Подключить УК" }).first()).toHaveAttribute("href", "/company/apply");
-    await expect(page.getByRole("link", { name: "Вход", exact: true })).toHaveAttribute("href", "/login");
+    await expect(page.getByRole("link", { name: "Войти", exact: true })).toHaveAttribute("href", "/login");
     await expect(page.getByRole("heading", { name: "Как это работает" })).toBeVisible();
-    await expect(page.getByText("Пример: как переписка становится сигналом и заявкой")).toBeVisible();
+    await expect(page.getByText("Пример: как сообщение в чате становится заявкой и закрывается жителями")).toBeVisible();
     await noOverflow(page);
     await axeCheck(page);
     await page.emulateMedia({ colorScheme: "dark" });
     await axeCheck(page);
-    await page.getByRole("link", { name: "Вход", exact: true }).click();
+    await page.getByRole("link", { name: "Войти", exact: true }).click();
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole("heading", { name: "Вход в кабинет" })).toBeVisible();
     await noOverflow(page);
     await page.goto("/company/apply");
     await expect(page.getByLabel("Сколько домовых чатов хотите подключить")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Вход", exact: true })).toHaveAttribute("href", "/login");
+    await expect(page.getByRole("link", { name: "Войти", exact: true })).toHaveAttribute("href", "/login");
     await noOverflow(page);
     await page.goto("/company/apply/status/" + "x".repeat(43));
     await expect(page.getByRole("alert")).toContainText("не найдена");
@@ -163,16 +163,18 @@ test("D2 onboarding: status page, quota, expansion, reset and open registration"
     const nav = admin.getByRole("navigation", { name: "Разделы кабинета" });
     await nav.getByRole("link", { name: "MAX-чаты", exact: true }).click();
     await expect(admin.getByText("0 из 1")).toBeVisible();
-    await admin.getByRole("button", { name: "Подключить существующий MAX-чат" }).click();
-    await expect(admin.getByText("После подключения останется свободных слотов: 0 из 1.")).toBeVisible();
+    await admin.getByRole("button", { name: "Подключить чат" }).click();
+    // U-04: одна фраза о последнем месте вместо «0 из 1» дважды.
+    await expect(admin.getByText("Этот чат займёт последнее свободное место.")).toBeVisible();
     const first = (await admin.getByLabel("Команда подключения MAX").inputValue()).replace("/start ", "");
     // Живой D2: кнопка открывает бота сразу с кодом — набирать команду не нужно.
     await expect(admin.getByRole("link", { name: "Открыть бота в MAX" })).toHaveAttribute("href", new RegExp(`\\?start=${first}$`));
     expect(d2("connect", first, `d2-${suffix}-1`, adminLogin).status).toBe("active");
     await admin.getByRole("button", { name: "Обновить", exact: true }).click();
     await expect(admin.getByText("1 из 1")).toBeVisible();
-    await admin.getByRole("button", { name: "Подключить существующий MAX-чат" }).click();
-    await expect(admin.getByRole("alert")).toContainText("Лимит исчерпан");
+    // Мест нет: кнопки подключения нет, расширение — у квоты (U-04).
+    await expect(admin.getByText(/Свободных мест для чатов нет/)).toBeVisible();
+    await admin.getByRole("button", { name: "Запросить расширение" }).click();
     await admin.getByLabel("Сколько чатов добавить").fill("1");
     await admin.getByLabel("Обоснование").fill("Второй чат — подъезд 2");
     await admin.getByRole("button", { name: "Отправить запрос" }).click();
@@ -186,7 +188,7 @@ test("D2 onboarding: status page, quota, expansion, reset and open registration"
 
     await admin.getByRole("button", { name: "Обновить", exact: true }).click();
     await expect(admin.getByText("1 из 2")).toBeVisible();
-    await admin.getByRole("button", { name: "Подключить существующий MAX-чат" }).click();
+    await admin.getByRole("button", { name: "Подключить ещё один чат" }).click();
     await expect(admin.getByLabel("Команда подключения MAX")).not.toHaveValue(`/start ${first}`);
     const second = (await admin.getByLabel("Команда подключения MAX").inputValue()).replace("/start ", "");
     expect(d2("connect", second, `d2-${suffix}-2`, adminLogin).status).toBe("active");

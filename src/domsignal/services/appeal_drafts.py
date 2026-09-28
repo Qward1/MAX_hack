@@ -66,6 +66,14 @@ class StaleDraftVersion(ServiceError):
     title = "Данные изменились"
 
 
+class DraftAlreadyFiled(ServiceError):
+    """F-17: после «Я отправил(а)» текст обращения не меняется."""
+
+    status = 409
+    code = "draft_filed"
+    title = "Обращение уже отмечено отправленным"
+
+
 class AppealDraftService:
     """Один и тот же сервис вызывают REST и (в будущем) бот."""
 
@@ -129,6 +137,9 @@ class AppealDraftService:
     ) -> AppealDraftView:
         async with session.begin():
             draft, outcome, context = await self._own(session, actor_id, draft_id, lock=True)
+            if draft.filed_at is not None:
+                # Интерфейс обещает «Отметку потом не изменить» — текст тоже.
+                raise DraftAlreadyFiled("Обращение уже отмечено отправленным — текст не меняется")
             if payload.version != draft.version:
                 # Конфликт не затирает ввод: клиент получает свежую версию.
                 raise StaleDraftVersion("Обновите черновик и повторите правку")

@@ -78,6 +78,7 @@ from domsignal.services.bot_replies import (
     ReplyButton,
     as_message,
     callback_button,
+    count_label,
     enqueue_reply,
     example_button,
     open_app_button,
@@ -418,7 +419,14 @@ class PersonalBotService:
                 "help": (self._with_privacy(HELP), [[open_app_button()]]),
                 "version": (VERSION.format(version=self.version), []),
                 "short": (f"{NOT_A_PROBLEM}\n\n{HELP}", []),
-                "limit": (LIMIT.format(limit=self.daily_limit), []),
+                "limit": (
+                    LIMIT.format(
+                        messages=count_label(
+                            self.daily_limit, ("сообщение", "сообщения", "сообщений")
+                        )
+                    ),
+                    [],
+                ),
             }.get(kind, (HELP, []))
             async with self.sessions() as session, session.begin():
                 await enqueue_reply(

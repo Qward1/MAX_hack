@@ -390,6 +390,9 @@ class SignalInboxService:
                     classification_mode=ClassificationMode.MANUAL,
                 ),
                 idempotency_key=f"signal:{signal.id}:{idempotency_key}"[:200],
+                # D-05: оператор создаёт заявку по маршруту «зона УК» — кто
+                # отвечает, уже известно, даже если категория «Другое».
+                responsibility_known=resolved.route.route_type == "uk_internal",
             )
             located = {
                 "location_entrance": (quoted_value(own_value(signal.entrance)) or (None,))[0],

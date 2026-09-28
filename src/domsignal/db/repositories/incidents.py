@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domsignal.db.models import House, Incident, Report
@@ -12,6 +12,8 @@ from domsignal.services.context import OperationContext
 
 #: Статусы, при которых о проблеме ещё имеет смысл сообщать повторно.
 OPEN_STATUSES: tuple[str, ...] = ("detected", "open", "reported", "overdue", "escalated")
+#: F1: «Решённые за 30 дней» на доске дома.
+RESOLVED_RECENT_DAYS = 30
 
 
 class IncidentRepository:
@@ -59,30 +61,48 @@ class IncidentRepository:
         await self.session.flush()
         return report
 
+    def _scope(self, context: OperationContext, state: str) -> list[ColumnElement[bool]]:
+        where: list[ColumnElement[bool]] = [
+            Incident.house_id == context.house_id,
+            Incident.management_id == context.management_id.value,
+        ]
+        if state == "open":
+            where.append(Incident.status.in_(OPEN_STATUSES))
+        elif state == "resolved_recent":
+            where.append(Incident.status == "resolved")
+            where.append(
+                Incident.resolved_at >= datetime.now(UTC) - timedelta(days=RESOLVED_RECENT_DAYS)
+            )
+        return where
+
     async def list_for_house(
-        self, context: OperationContext, *, limit: int, offset: int
+        self, context: OperationContext, *, limit: int, offset: int, state: str = "all"
     ) -> tuple[list[Incident], int]:
+        where = self._scope(context, state)
+        order = (
+            Incident.resolved_at.desc()
+            if state == "resolved_recent"
+            else Incident.created_at.desc()
+        )
         items = list(
             await self.session.scalars(
-                select(Incident)
-                .where(
-                    Incident.house_id == context.house_id,
-                    Incident.management_id == context.management_id.value,
-                )
-                .order_by(Incident.created_at.desc())
-                .limit(limit)
-                .offset(offset)
+                select(Incident).where(*where).order_by(order).limit(limit).offset(offset)
             )
         )
-        total = await self.session.scalar(
+        total = await self.session.scalar(select(func.count()).select_from(Incident).where(*where))
+        return items, int(total or 0)
+
+    async def board_totals(self, context: OperationContext) -> tuple[int, int]:
+        """Открытые проблемы дома и решённые за 30 дней — счёт доски."""
+        opened = await self.session.scalar(
+            select(func.count()).select_from(Incident).where(*self._scope(context, "open"))
+        )
+        resolved = await self.session.scalar(
             select(func.count())
             .select_from(Incident)
-            .where(
-                Incident.house_id == context.house_id,
-                Incident.management_id == context.management_id.value,
-            )
+            .where(*self._scope(context, "resolved_recent"))
         )
-        return items, int(total or 0)
+        return int(opened or 0), int(resolved or 0)
 
     async def open_candidates(
         self,

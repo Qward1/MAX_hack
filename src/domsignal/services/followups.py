@@ -51,6 +51,7 @@ from domsignal.services.community_texts import (
     moment,
 )
 from domsignal.services.errors import RescheduleJob, ResourceNotFound
+from domsignal.services.incident_lifecycle import CLOSED_STATUSES
 from domsignal.services.membership import MembershipService
 from domsignal.services.routing import RoutingService
 
@@ -154,7 +155,8 @@ class FollowupService:
             .join(Report, Report.incident_id == Incident.id)
             .where(Report.id == outcome.report_id)
         )
-        return status == "closed"
+        # F-16: проблема закрыта вместе с заявкой (F1) — «Решена» или закрыта отменой.
+        return status in CLOSED_STATUSES
 
     # ------------------------------------------------------------- доставка
 

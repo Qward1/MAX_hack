@@ -313,6 +313,8 @@ class HouseRequestView(ContractModel):
     history: list[AuditView] = Field(default_factory=list)
     #: D5: заявка создана из адресов одобренной заявки УК.
     source_application_id: UUID | None = None
+    #: F-10: название УК — на экране название, а не идентификатор.
+    company_name: str | None = None
 
 
 #: D5: сколько адресов принимает одна пачка (вставка списка, одобрение).
@@ -422,6 +424,8 @@ class ChatSummary(ContractModel):
     suspension_reason: str | None
     # Чтение чата включено у привязки. `None` — поверхность этого не сообщает.
     passive_capture_enabled: bool | None = None
+    #: U-01: когда чат подключён.
+    activated_at: datetime | None = None
 
 
 class CompanyHouseView(ContractModel):
@@ -546,6 +550,9 @@ class PlatformBindingView(ChatSummary):
     house_id: UUID
     management_id: UUID
     company_id: UUID
+    #: F1: адрес дома и название УК — вместо идентификаторов на экране.
+    house_address: str | None = None
+    company_name: str | None = None
 
 
 class PlatformHealth(ContractModel):

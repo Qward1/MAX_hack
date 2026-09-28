@@ -85,8 +85,9 @@ async def test_counts_provenance_and_runtime_schema(integration_settings: Settin
         detail = (await client.get(f"/api/v1/incidents/{incident['id']}", headers=headers)).json()
         assert detail["participant_count"] == 2 and detail["report_count"] == 5
         assert detail["provenance"]["origin"] == "user_reported"
-        assert detail["rule"]["origin"] == "demo"  # independent provenance
-        assert detail["rule"]["verified_at"] is None
+        # D-03: заглушка DemoRule — только у демо-дома; настоящему дому основание
+        # не выдумывается и «Пример данных» не показывается.
+        assert detail["rule"] is None
         board = (
             await client.get(f"/api/v1/houses/{DEMO_HOUSE_ID}/incidents", headers=headers)
         ).json()

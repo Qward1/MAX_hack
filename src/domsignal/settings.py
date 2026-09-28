@@ -11,6 +11,10 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from domsignal.core.display_time import display_zone
 
+#: B-01: ключ шифрования секретов TOTP локального стенда (`compose.yaml`).
+#: Он общеизвестен, поэтому production-конфигурация его отвергает.
+LOCAL_MFA_ENCRYPTION_KEY = "bG9jYWwtb25seS1tZmEta2V5LWRvLW5vdC11c2UtISE="
+
 
 class AppEnvironment(StrEnum):
     LOCAL = "local"
@@ -22,6 +26,9 @@ class MaxTransportMode(StrEnum):
     OFF = "off"
     RECORDING = "recording"
     WEBHOOK = "webhook"
+    #: F1 §3.2: локальный эмулятор MAX — вебхук с локальным секретом, исходящие
+    #: вызовы пишет двойник API в MAX_RECORD_DIR. В production невозможен.
+    RECORD = "record"
 
 
 class LlmProvider(StrEnum):
@@ -44,6 +51,9 @@ class LlmSchemaMode(StrEnum):
 MAX_API_ORIGIN = "https://platform-api2.max.ru"
 # M1 (27.09.2026): Cloud.ru Evolution Foundation Models (LLM-PROVIDER-2026-09-27).
 LLM_BASE_URL = "https://foundation-models.api.cloud.ru/v1"
+#: Одно окно с промптом window.v3 — около 7 тыс. токенов (M1): меньше ограничитель
+#: не пропустит ни одного вызова.
+MIN_TOKENS_PER_MINUTE = 10000
 PRODUCTION_MAX_BOT_USERNAME = "t480_hakaton_max_bot"
 WEBHOOK_SECRET_PATTERN = re.compile(r"^[A-Za-z0-9_-]{5,256}$")
 
@@ -69,6 +79,8 @@ class Settings(BaseSettings):
     max_webhook_secret: str | None = Field(default=None, repr=False)
     max_api_base_url: str = MAX_API_ORIGIN
     max_api_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
+    #: Каталог двойника MAX API (`MAX_TRANSPORT=record`): state.json и outbox.jsonl.
+    max_record_dir: str = "output/max-record"
     max_bot_username: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_]{1,100}$")
     max_required_permissions: frozenset[str] = frozenset({"read_all_messages"})
     chat_connection_ttl_seconds: int = Field(default=900, ge=60, le=3600)
@@ -84,6 +96,9 @@ class Settings(BaseSettings):
     llm_max_concurrency: int = Field(default=4, ge=1, le=64)
     llm_daily_call_budget: int = Field(default=1000, ge=0)
     llm_chat_daily_share: float = Field(default=0.2, gt=0, le=1)
+    # F1 (LLM-RATE-2026-09-29): токенов модели в минуту на все процессы —
+    # 80 % лимита ключа Cloud.ru (100 тыс./мин). 0 — ограничитель выключен.
+    llm_tokens_per_minute: int = Field(default=80000, ge=0)
     # Провайдер AI-пула для процессов, которые модель не вызывают (api): они
     # объявляют возможность разбора, не получая ключа. Не задан — возможность
     # следует собственному `LLM_PROVIDER`, как в однопроцессном стенде.
@@ -188,6 +203,9 @@ class Settings(BaseSettings):
     @field_validator("auth_mfa_encryption_key")
     @classmethod
     def validate_mfa_key(cls, value: str | None) -> str | None:
+        if not value:
+            # Пустая строка из скопированного `.env.example` — «не задан».
+            return None
         if value is not None:
             from cryptography.fernet import Fernet
 
@@ -333,8 +351,30 @@ class Settings(BaseSettings):
             and self.ai_worker_concurrency > self.llm_max_concurrency
         ):
             problems.append("AI_WORKER_CONCURRENCY must not exceed LLM_MAX_CONCURRENCY")
+        if 0 < self.llm_tokens_per_minute < MIN_TOKENS_PER_MINUTE:
+            # Как у LLM_MAX_CONCURRENCY: ограничитель, в который не помещается
+            # ни одно окно, молча отдал бы всё правилам.
+            problems.append(f"LLM_TOKENS_PER_MINUTE must be 0 or at least {MIN_TOKENS_PER_MINUTE}")
         if problems:
             raise ValueError("worker concurrency: " + "; ".join(problems))
+        return self
+
+    @model_validator(mode="after")
+    def require_record_settings(self) -> Settings:
+        """Эмулятор MAX подписывает события секретом и данные входа токеном бота."""
+        if self.max_transport is not MaxTransportMode.RECORD:
+            return self
+        missing = [
+            name
+            for name, value in (
+                ("MAX_WEBHOOK_SECRET", self.max_webhook_secret),
+                ("MAX_BOT_TOKEN", self.max_bot_token),
+                ("MAX_BOT_USERNAME", self.max_bot_username),
+            )
+            if not value
+        ]
+        if missing:
+            raise ValueError("MAX_TRANSPORT=record requires " + ", ".join(missing))
         return self
 
     @model_validator(mode="after")
@@ -344,6 +384,9 @@ class Settings(BaseSettings):
         problems: list[str] = []
         if not self.auth_mfa_encryption_key:
             problems.append("AUTH_MFA_ENCRYPTION_KEY is required")
+        elif self.auth_mfa_encryption_key == LOCAL_MFA_ENCRYPTION_KEY:
+            # B-01: общеизвестный ключ локального стенда из compose.yaml.
+            problems.append("AUTH_MFA_ENCRYPTION_KEY must not be the local stand key")
         database = urlparse(self.database_url)
         session_secret_lower = self.session_secret.lower()
         if self.allow_test_session:

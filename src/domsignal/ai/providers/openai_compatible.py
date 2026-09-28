@@ -29,6 +29,7 @@ import json
 import logging
 import time
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from types import TracebackType
 from typing import Any, cast
 
@@ -37,6 +38,7 @@ import httpx
 from domsignal.ai.prompts import PROMPT_VERSION, build_messages, prompt_spec
 from domsignal.ai.providers.base import (
     ProviderInvalidOutput,
+    ProviderRateLimited,
     ProviderRequest,
     ProviderResult,
     ProviderTimeout,
@@ -53,6 +55,27 @@ DEFAULT_MAX_TOKENS = 1600
 DEFAULT_TIMEOUT_SECONDS = 10.0
 
 _FENCE = "```"
+
+
+
+def retry_after_seconds(response: httpx.Response) -> float | None:
+    """`Retry-After` ответа 429: секунды или HTTP-дата; нет или не разобрать — `None`."""
+    value = response.headers.get("retry-after")
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        pass
+    try:
+        from email.utils import parsedate_to_datetime
+
+        moment = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if moment.tzinfo is None:
+        return None
+    return max(0.0, (moment - datetime.now(UTC)).total_seconds())
 
 
 class OpenAICompatibleProvider:
@@ -188,6 +211,10 @@ class OpenAICompatibleProvider:
                     extra={"ai_provider_status": status, "ai_model": self.model},
                 )
             raise ProviderUnavailable(f"llm rejected the key: HTTP {status}")
+        if status == 429:
+            raise ProviderRateLimited(
+                "llm rate limit: HTTP 429", retry_after=retry_after_seconds(response)
+            )
         raise ProviderUnavailable(f"llm responded HTTP {status}")
 
     def _parse(self, response: httpx.Response, latency_ms: int) -> ProviderResult:

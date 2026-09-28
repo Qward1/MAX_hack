@@ -1,7 +1,7 @@
 import { formatStaffTime, formatDay } from "../shared/ui/format";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { ApiClient, ApiProblem } from "../shared/api/client";
-import { useResource } from "../shared/api/useResource";
+import { useResource, POLL_WAITING_MS } from "../shared/api/useResource";
 import { Feedback, formValue, problemText, submitted, type Schema } from "./administration";
 
 const client = new ApiClient();
@@ -29,7 +29,7 @@ export function addressProblem(lines: string[]): string {
 function PublicHeader() {
   return <header className="public-header">
     <a className="admin-brand" href="/">ДомСигнал</a>
-    <nav aria-label="Навигация"><a className="ticket-button secondary" href="/login">Вход</a></nav>
+    <nav aria-label="Навигация"><a className="ticket-button secondary" href="/login">Войти</a></nav>
   </header>;
 }
 
@@ -183,7 +183,7 @@ export function CompanyApply() {
 export function ApplicationStatus({ token }: { token: string }) {
   const load = useCallback((signal: AbortSignal) => client.request<Schema["ApplicationStatusView"]>(
     "/api/v1/onboarding/application-status", { method: "POST", body: JSON.stringify({ token }), signal }), [token]);
-  const r = useResource(`application-status:${token}`, load);
+  const r = useResource(`application-status:${token}`, load, { poll: POLL_WAITING_MS });
   const [view, setView] = useState<Schema["ApplicationStatusView"] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -236,7 +236,8 @@ export function ApplicationStatus({ token }: { token: string }) {
       </section>}
       {data.status === "rejected" && data.decision_reason && <section className="admin-detail"><h2>Причина</h2><p>{data.decision_reason}</p></section>}
       {["submitted", "under_review"].includes(data.status) && <p>Платформа проверяет организацию. Решение и вопросы появятся на этой странице — сохраните её в закладки.</p>}
-      {data.status !== "approved" && data.requested_chat_count != null &&
+      {/* F-09: у отклонённой или отменённой заявки квоты и уведомлений больше нет. */}
+      {!["approved", "rejected", "cancelled"].includes(data.status) && data.requested_chat_count != null &&
         <p className="muted">Запрошено: {data.requested_chat_count} {plural(data.requested_chat_count)}. Итоговую квоту назначит платформа.</p>}
       {data.messages.length > 0 && <section className="admin-detail"><h2>Вопросы и ответы</h2>
         <ol className="message-list">{data.messages.map((m, i) => <li key={i} className={`message-${m.author}`}>
@@ -247,7 +248,7 @@ export function ApplicationStatus({ token }: { token: string }) {
       }}><h2>Ответ платформе</h2>
         <label>Ваш ответ<textarea name="text" required maxLength={2000} /></label>
         <button className="ticket-button" disabled={busy}>{busy ? "Отправляем…" : "Отправить ответ"}</button></form>}
-      <section className="admin-detail notify-max">
+      {!["rejected", "cancelled"].includes(data.status) && <section className="admin-detail notify-max">
         <h2>Уведомления в MAX</h2>
         {data.max_notifications && !botLink
           ? <p>Бот ДомСигнала присылает изменения статуса этой заявки в MAX.</p>
@@ -256,7 +257,7 @@ export function ApplicationStatus({ token }: { token: string }) {
           <p className="muted">В боте нажмите «Начать». Ссылка одноразовая.</p></>
           : <button className="ticket-button secondary" disabled={busy} onClick={() => void notifyLink()}>
             {data.max_notifications ? "Получать в другой аккаунт MAX" : "Получать уведомления в MAX"}</button>}
-      </section>
+      </section>}
       {data.house_addresses.length > 0 && <details><summary>Адреса из заявки</summary><ul>{data.house_addresses.map(a => <li key={a}>{a}</li>)}</ul></details>}
       <Feedback error={error || undefined} />
     </>}

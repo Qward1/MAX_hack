@@ -3,13 +3,14 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { ApiProblem } from "../shared/api/client";
 import { ticketClient } from "../shared/api/tickets";
 import type { components } from "../shared/api/schema";
-import { useResource } from "../shared/api/useResource";
+import { notify } from "../shared/ui/Toast";
+import { type ResourceOptions, useResource } from "../shared/api/useResource";
 
 export type Schema = components["schemas"];
 export const adminClient = ticketClient;
-export function useRead<T>(path: string, revision = 0) {
+export function useRead<T>(path: string, revision = 0, options: ResourceOptions = {}) {
   const load = useCallback((signal: AbortSignal) => adminClient.request<T>(path, { signal }), [path]);
-  const resource = useResource(`${path}:${revision}`, load);
+  const resource = useResource(`${path}:${revision}`, load, options);
   useEffect(() => { const refresh = () => resource.refresh(); window.addEventListener("administration-refresh", refresh);
     return () => window.removeEventListener("administration-refresh", refresh); }, [resource.refresh]);
   return resource;
@@ -29,7 +30,11 @@ export function problemText(e: unknown, fields: Record<string, string> = {}, fal
   }
   return e instanceof Error ? e.message : fallback;
 }
-export function useAction(refresh?: () => void, fields: Record<string, string> = {}) {
+/**
+ * Действие кабинета: занятость, ошибка у формы и — если задано `success` —
+ * общее уведомление о результате (F-14). Введённое при ошибке не теряется.
+ */
+export function useAction(refresh?: () => void, fields: Record<string, string> = {}, success?: string) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [code, setCode] = useState("");
@@ -40,6 +45,7 @@ export function useAction(refresh?: () => void, fields: Record<string, string> =
       const result = await adminClient.request<T>(path, { method: "POST", body: JSON.stringify(payload),
         headers: key ? { "Idempotency-Key": key } : {} });
       refresh?.();
+      if (success) notify(success);
       return result;
     } catch (e) {
       setError(problemText(e, fields));
@@ -53,9 +59,11 @@ export function Feedback({ loading, error }: { loading?: boolean; error?: unknow
   return error ? <p role="alert" className="admin-feedback">{error instanceof Error ? error.message : String(error)}</p>
     : loading ? <p role="status">Загружаем…</p> : null;
 }
-export function Title({ children, description }: { children: ReactNode; description?: string }) {
+/** Заголовок страницы кабинета: h1, описание на ширину контента и действие справа (U-11). */
+export function Title({ children, description, actions }: { children: ReactNode; description?: string; actions?: ReactNode }) {
   return <header className="page-header"><h1 id="page-title" tabIndex={-1}>{children}</h1>
-    {description && <p className="muted">{description}</p>}</header>;
+    {description && <p className="muted">{description}</p>}
+    {actions && <div className="page-actions">{actions}</div>}</header>;
 }
 export const labels: Record<string, string> = {
   submitted: "Подана", under_review: "На рассмотрении", needs_info: "Нужны уточнения", approved: "Одобрена",

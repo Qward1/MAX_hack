@@ -60,6 +60,7 @@ export const incident: IncidentDetail = {
       id: "r1",
       description: "Не открываются двери",
       created_at: "2026-09-17T10:00:00Z",
+      joined: false,
     },
   ],
   rule: {
@@ -153,7 +154,7 @@ export const actionCard: ActionCard = {
   ],
   disclaimer:
     "ДомСигнал не отправляет обращения за вас — вы отправляете его сами в официальном сервисе.",
-  demo_notice: "Тестовые данные",
+  demo_notice: "Пример данных",
   existing_ticket_ref: null,
   generated_by: "rules",
 };

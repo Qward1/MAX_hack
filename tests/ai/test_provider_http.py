@@ -204,7 +204,9 @@ async def test_http_errors_become_provider_unavailable(status: int) -> None:
     with pytest.raises(ProviderUnavailable):
         await provider.analyze_window(request)
     analysis = await WindowAnalyzer(provider).analyze(single("Лифт не работает"))
-    assert analysis.execution.state == "fallback_provider_error"
+    # F1: 429 — лимит запросов (ProviderRateLimited ⊂ ProviderUnavailable), своё состояние.
+    expected = "fallback_rate_limited" if status == 429 else "fallback_provider_error"
+    assert analysis.execution.state == expected
     assert analysis.mode == "rules"
     assert [signal.subtype for signal in analysis.signals] == ["elevator.stopped"]
 

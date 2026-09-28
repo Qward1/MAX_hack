@@ -27,7 +27,7 @@ export function StatusBadge({ status }: { status: string }) {
 }
 
 export function DemoBadge() {
-  return <span className="ds-tag ds-tone-neutral ds-tag-demo">Демонстрационные данные</span>;
+  return <span className="ds-tag ds-tone-neutral ds-tag-demo">Пример данных</span>;
 }
 
 /**
@@ -61,7 +61,7 @@ const sourceLabels: Record<string, string> = {
   official: "Официальный источник",
   product_derived: "Рассчитано ДомСигналом",
   user_reported: "Со слов жителей",
-  demo: "Демонстрационные данные",
+  demo: "Пример данных ДомСигнала",
 };
 
 /** Происхождение сведений: видно сразу, подробности — по нажатию. */
@@ -88,6 +88,7 @@ export function SourceChip({ source, label = "Источник" }: { source: Sou
         {recorded && <p>Записано: {recorded}</p>}
         {url && (
           <a
+            className="ds-text-link ds-source-link"
             href={url}
             target="_blank"
             rel="noopener noreferrer"
@@ -381,7 +382,7 @@ export function ConfirmDialog({
       <h2 id={titleId}>{title}</h2>
       {children}
       <div className="ds-actions">
-        <Button variant={tone} loading={busy} loadingLabel={busyLabel} onClick={onConfirm}>
+        <Button variant={tone === "danger" ? "destructive" : tone} loading={busy} loadingLabel={busyLabel} onClick={onConfirm}>
           {confirmLabel}
         </Button>
         <Button variant="secondary" disabled={busy} onClick={onCancel}>

@@ -6,6 +6,7 @@ export function SourceLink({ url, title }: { url?: string | null; title?: string
   if (!safe) return title ? <span className="muted">Источник: {title}</span> : null;
   return (
     <a
+      className="ds-text-link ds-source-link"
       href={safe}
       target="_blank"
       rel="noopener noreferrer"
@@ -48,6 +49,7 @@ export function SourceDisclosure({
       <div className="ds-source-body">
         {safe ? (
           <a
+            className="ds-text-link ds-source-link"
             href={safe}
             target="_blank"
             rel="noopener noreferrer"
