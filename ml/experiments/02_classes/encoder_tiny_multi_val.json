@@ -1,0 +1,82 @@
+{
+  "name": "tiny_multi",
+  "mode": "multi",
+  "model": "ml\\artifacts\\models\\rubert-tiny2",
+  "seed": 42,
+  "epochs": 3,
+  "batch_size": 32,
+  "max_length": 96,
+  "lr": 5e-05,
+  "class_weights": "moderate",
+  "train_rows": 19702,
+  "real_train": 16933,
+  "synthetic_train": 2008,
+  "device": "cuda",
+  "gpu_peak_mb": 583.4,
+  "rss_mb": 478.2,
+  "total_seconds": 398.8,
+  "best_val_mean_macro_f1": 0.4405,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 0.7597,
+      "seconds_so_far": 143.9,
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.4249,
+          "gate_ap_flat": 0.8209,
+          "gate_ap_head": 0.8095,
+          "class_f1_true_positives": 0.4283
+        },
+        "real_telegram": {
+          "macro_f1": 0.2885,
+          "gate_ap_flat": 0.728,
+          "gate_ap_head": 0.7268,
+          "class_f1_true_positives": 0.3157
+        }
+      },
+      "mean_macro_f1": 0.3567
+    },
+    {
+      "epoch": 2,
+      "loss": 0.4112,
+      "seconds_so_far": 271.3,
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.4765,
+          "gate_ap_flat": 0.8403,
+          "gate_ap_head": 0.8117,
+          "class_f1_true_positives": 0.4795
+        },
+        "real_telegram": {
+          "macro_f1": 0.4039,
+          "gate_ap_flat": 0.8003,
+          "gate_ap_head": 0.7914,
+          "class_f1_true_positives": 0.4435
+        }
+      },
+      "mean_macro_f1": 0.4402
+    },
+    {
+      "epoch": 3,
+      "loss": 0.3145,
+      "seconds_so_far": 397.2,
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.469,
+          "gate_ap_flat": 0.8434,
+          "gate_ap_head": 0.8116,
+          "class_f1_true_positives": 0.4699
+        },
+        "real_telegram": {
+          "macro_f1": 0.4119,
+          "gate_ap_flat": 0.8147,
+          "gate_ap_head": 0.8042,
+          "class_f1_true_positives": 0.4503
+        }
+      },
+      "mean_macro_f1": 0.4405
+    }
+  ],
+  "checkpoint_bytes": 116852893
+}

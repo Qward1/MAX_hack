@@ -1,0 +1,115 @@
+{
+  "scope_warning": "Assistant annotation and reused days; exploratory oracle ceilings only.",
+  "policies": {
+    "development": {
+      "routing": {
+        "all_candidates_selected": 18,
+        "all_candidates_routed_missed_positive": 3,
+        "context_or_reply_selected": 9,
+        "context_or_reply_routed_missed_positive": 3,
+        "reply_only_selected": 5,
+        "reply_only_routed_missed_positive": 2,
+        "messages": 69,
+        "scorable": 60,
+        "selected": 18,
+        "selected_scorable": 17,
+        "selected_gold_positive": 15,
+        "selected_gold_negative": 2,
+        "selected_uncertain": 1,
+        "missed_positive": 12,
+        "routed_missed_positive": 3,
+        "reason_reply_to_open_case": 5,
+        "reason_accepted_class_conflict": 9,
+        "reason_rejected_context_near_case": 4
+      },
+      "baseline_pair": {
+        "precision": 0.7952,
+        "recall": 0.2284,
+        "f1": 0.3548,
+        "tp": 66,
+        "fp": 17,
+        "fn": 223
+      },
+      "all_candidates_oracle_pair_ceiling": {
+        "precision": 0.9238,
+        "recall": 0.3356,
+        "f1": 0.4924,
+        "tp": 97,
+        "fp": 8,
+        "fn": 192
+      },
+      "context_or_reply_oracle_pair_ceiling": {
+        "precision": 0.8247,
+        "recall": 0.2768,
+        "f1": 0.4145,
+        "tp": 80,
+        "fp": 17,
+        "fn": 209
+      },
+      "reply_only_oracle_pair_ceiling": {
+        "precision": 0.8023,
+        "recall": 0.2388,
+        "f1": 0.368,
+        "tp": 69,
+        "fp": 17,
+        "fn": 220
+      }
+    },
+    "heldout": {
+      "routing": {
+        "all_candidates_selected": 49,
+        "all_candidates_routed_missed_positive": 12,
+        "context_or_reply_selected": 24,
+        "context_or_reply_routed_missed_positive": 12,
+        "reply_only_selected": 5,
+        "reply_only_routed_missed_positive": 0,
+        "messages": 136,
+        "scorable": 121,
+        "selected": 49,
+        "selected_scorable": 46,
+        "selected_gold_positive": 40,
+        "selected_gold_negative": 6,
+        "selected_uncertain": 3,
+        "missed_positive": 39,
+        "routed_missed_positive": 12,
+        "reason_accepted_class_conflict": 25,
+        "reason_reply_to_open_case": 5,
+        "reason_rejected_context_near_case": 15,
+        "reason_rejected_service_near_case": 4
+      },
+      "baseline_pair": {
+        "precision": 0.9281,
+        "recall": 0.2188,
+        "f1": 0.3541,
+        "tp": 310,
+        "fp": 24,
+        "fn": 1107
+      },
+      "all_candidates_oracle_pair_ceiling": {
+        "precision": 0.8736,
+        "recall": 0.4538,
+        "f1": 0.5973,
+        "tp": 643,
+        "fp": 93,
+        "fn": 774
+      },
+      "context_or_reply_oracle_pair_ceiling": {
+        "precision": 0.8197,
+        "recall": 0.3818,
+        "f1": 0.5209,
+        "tp": 541,
+        "fp": 119,
+        "fn": 876
+      },
+      "reply_only_oracle_pair_ceiling": {
+        "precision": 0.9294,
+        "recall": 0.2322,
+        "f1": 0.3715,
+        "tp": 329,
+        "fp": 25,
+        "fn": 1088
+      }
+    }
+  },
+  "api_calls": 0
+}

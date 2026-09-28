@@ -1,0 +1,47 @@
+{
+  "name": "base_pos_debug",
+  "mode": "flat",
+  "model": "ml\\artifacts\\models\\rubert-base",
+  "seed": 42,
+  "epochs": 1,
+  "batch_size": 8,
+  "max_length": 64,
+  "lr": 2e-05,
+  "class_weights": "moderate",
+  "train_rows": 64,
+  "positive_only": true,
+  "negative_ratio": 0.0,
+  "real_train": 16933,
+  "synthetic_train": 2008,
+  "device": "cuda",
+  "gpu_peak_mb": 3417.8,
+  "rss_mb": 1288.8,
+  "total_seconds": 58.9,
+  "best_val_mean_macro_f1": -1.0,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 9.723,
+      "seconds_so_far": 58.9,
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.0033,
+          "gate_ap_flat": 0.1725,
+          "gate_ap_head": 0.1281,
+          "class_f1_true_positives": 0.0145,
+          "end_f1_with_frozen_gate": 0.055
+        },
+        "real_telegram": {
+          "macro_f1": 0.0009,
+          "gate_ap_flat": 0.1262,
+          "gate_ap_head": 0.1008,
+          "class_f1_true_positives": 0.0082,
+          "end_f1_with_frozen_gate": 0.0364
+        }
+      },
+      "mean_macro_f1": 0.0021,
+      "mean_end_f1_with_frozen_gate": 0.0457
+    }
+  ],
+  "checkpoint_bytes": null
+}

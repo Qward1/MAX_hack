@@ -1,0 +1,19 @@
+{
+  "split": "real val",
+  "gate_threshold": 0.533688210083243,
+  "bands": {
+    "real_whatsapp": {
+      "n": 1008,
+      "score_0_35_to_0_70_count": 39,
+      "score_0_35_to_0_70_share": 0.0387,
+      "score_0_20_to_0_80_share": 0.0774
+    },
+    "real_telegram": {
+      "n": 3195,
+      "score_0_35_to_0_70_count": 123,
+      "score_0_35_to_0_70_share": 0.0385,
+      "score_0_20_to_0_80_share": 0.0792
+    }
+  },
+  "note": "Review-load estimate only, no LLM accuracy or cost measured."
+}

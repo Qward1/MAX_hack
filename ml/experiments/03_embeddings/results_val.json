@@ -1,0 +1,41 @@
+{
+  "model": "intfloat/multilingual-e5-base",
+  "frozen": true,
+  "prefix": "query: ",
+  "max_seq_length": 128,
+  "device": "cuda",
+  "batch_size": 16,
+  "seed": 42,
+  "train_real": 16933,
+  "train_synthetic_class": 1552,
+  "train_synthetic_gate": 735,
+  "cache_hit": false,
+  "encode_seconds": 87.25,
+  "total_seconds": 97.8,
+  "gpu_peak_allocated_mb": 1142.0,
+  "python": "3.10.10",
+  "val_gate_ap_pooled": 0.7634,
+  "gate_op": {
+    "threshold": 0.8499078206849808,
+    "val_precision": 0.8006535947712419,
+    "val_recall": 0.5619266055045872
+  },
+  "sources": {
+    "real_whatsapp": {
+      "n": 1008,
+      "problems": 132,
+      "gate_ap": 0.8383,
+      "gate_precision": 0.8706,
+      "gate_recall": 0.5606,
+      "class_macro_f1": 0.7921
+    },
+    "real_telegram": {
+      "n": 3195,
+      "problems": 304,
+      "gate_ap": 0.7368,
+      "gate_precision": 0.7738,
+      "gate_recall": 0.5625,
+      "class_macro_f1": 0.6568
+    }
+  }
+}

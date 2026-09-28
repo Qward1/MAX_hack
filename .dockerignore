@@ -9,6 +9,8 @@
 miniapp/node_modules
 miniapp/dist
 tests
+# Самостоятельный ML-модуль (DEV-A) в образ продукта не входит.
+ml
 .env
 **/.env
 **/.env.*

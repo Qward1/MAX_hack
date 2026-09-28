@@ -612,6 +612,10 @@ legend {
   padding: var(--ds-space-3) 0;
   min-width: 0;
 }
+/* Кандидат-дубль: кнопка «Это та же проблема» не вплотную к строке с датой. */
+.ds-candidate > .ds-btn {
+  margin-top: var(--ds-space-2);
+}
 a.ds-row,
 button.ds-row {
   width: 100%;

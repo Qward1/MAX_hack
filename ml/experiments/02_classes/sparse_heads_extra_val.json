@@ -1,0 +1,104 @@
+{
+  "split": "val",
+  "results": [
+    {
+      "name": "lr",
+      "strength": 0.5,
+      "class_weight": "balanced",
+      "synthetic_weight": 0.5,
+      "seconds": 2.82,
+      "macro_f1_wa": 0.6519,
+      "macro_f1_tg": 0.5514
+    },
+    {
+      "name": "lr",
+      "strength": 0.5,
+      "class_weight": null,
+      "synthetic_weight": 0.5,
+      "seconds": 2.72,
+      "macro_f1_wa": 0.5826,
+      "macro_f1_tg": 0.3915
+    },
+    {
+      "name": "lr",
+      "strength": 4.0,
+      "class_weight": "balanced",
+      "synthetic_weight": 0.5,
+      "seconds": 3.88,
+      "macro_f1_wa": 0.6558,
+      "macro_f1_tg": 0.5207
+    },
+    {
+      "name": "lr",
+      "strength": 4.0,
+      "class_weight": null,
+      "synthetic_weight": 0.5,
+      "seconds": 3.83,
+      "macro_f1_wa": 0.5944,
+      "macro_f1_tg": 0.5114
+    },
+    {
+      "name": "lr",
+      "strength": 16.0,
+      "class_weight": "balanced",
+      "synthetic_weight": 0.5,
+      "seconds": 4.54,
+      "macro_f1_wa": 0.6383,
+      "macro_f1_tg": 0.5281
+    },
+    {
+      "name": "lr",
+      "strength": 16.0,
+      "class_weight": null,
+      "synthetic_weight": 0.5,
+      "seconds": 4.51,
+      "macro_f1_wa": 0.6495,
+      "macro_f1_tg": 0.5413
+    },
+    {
+      "name": "svm",
+      "strength": 0.25,
+      "class_weight": null,
+      "synthetic_weight": 0.5,
+      "seconds": 0.72,
+      "macro_f1_wa": 0.6061,
+      "macro_f1_tg": 0.5365
+    },
+    {
+      "name": "svm",
+      "strength": 1.0,
+      "class_weight": null,
+      "synthetic_weight": 0.5,
+      "seconds": 0.83,
+      "macro_f1_wa": 0.6414,
+      "macro_f1_tg": 0.5373
+    },
+    {
+      "name": "ridge",
+      "strength": 1.0,
+      "class_weight": "balanced",
+      "synthetic_weight": 0.5,
+      "seconds": 1.78,
+      "macro_f1_wa": 0.6827,
+      "macro_f1_tg": 0.5576
+    },
+    {
+      "name": "cnb",
+      "strength": 0.1,
+      "class_weight": null,
+      "synthetic_weight": 0.5,
+      "seconds": 0.19,
+      "macro_f1_wa": 0.5666,
+      "macro_f1_tg": 0.5142
+    },
+    {
+      "name": "cnb",
+      "strength": 1.0,
+      "class_weight": null,
+      "synthetic_weight": 0.5,
+      "seconds": 0.18,
+      "macro_f1_wa": 0.5782,
+      "macro_f1_tg": 0.4126
+    }
+  ]
+}

@@ -11,6 +11,8 @@
     python -m domsignal.tools.platform_ops dismiss-signal --signal-id … --actor …
     python -m domsignal.tools.platform_ops cancel-ticket --ticket-id … --actor …
     python -m domsignal.tools.platform_ops redact-report --report-id …
+    python -m domsignal.tools.platform_ops rename-staff --user-id … --name …
+    python -m domsignal.tools.platform_ops refresh-chat --binding-id …
 
 Все команды принимают `--operator` и `--reason`.
 """
@@ -24,6 +26,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domsignal.bootstrap import Container, build_container
@@ -31,13 +34,16 @@ from domsignal.contracts.signals import SignalDismiss
 from domsignal.contracts.tickets import ReasonCommand
 from domsignal.core.tickets import TicketAction
 from domsignal.db.models import (
+    ChatBinding,
     House,
     InboxReceipt,
     Incident,
     ManagementCompany,
+    MAXChat,
     Report,
     Signal,
     Ticket,
+    User,
 )
 from domsignal.services.onboarding import audit
 from domsignal.services.resident_access import ResidentAccessService
@@ -120,6 +126,64 @@ async def rename_company(
         reason=reason,
     )
     return {"company_id": str(company_id), "name": company.name}
+
+
+async def rename_staff(
+    session: AsyncSession, *, user_id: UUID, name: str, operator: str, reason: str
+) -> dict[str, Any]:
+    """Отображаемое имя сотрудника — без входа, прав и назначений."""
+    user = await session.get(User, user_id, with_for_update=True)
+    if user is None:
+        raise ValueError("User was not found")
+    if not name.strip():
+        raise ValueError("A non-empty --name is required")
+    before = {"display_name": user.display_name}
+    user.display_name = name.strip()[:200]
+    receipt(
+        session,
+        action="rename-staff",
+        object_id=user_id,
+        before=before,
+        after={"display_name": user.display_name},
+        operator=operator,
+        reason=reason,
+    )
+    return {"user_id": str(user_id), "display_name": user.display_name}
+
+
+async def refresh_chat(
+    container: Container, *, binding_id: UUID, operator: str, reason: str
+) -> dict[str, Any]:
+    """Сверить подключённый чат с MAX: название, бот и его права.
+
+    Та же проверка, что после `/report` в чате (`verify_binding_health`): название
+    берётся из MAX, без нужных прав привязка приостанавливается.
+    """
+
+    async def state(session: AsyncSession) -> dict[str, Any]:
+        binding = await session.get(ChatBinding, binding_id)
+        if binding is None:
+            raise ValueError("Binding was not found")
+        title = await session.scalar(
+            select(MAXChat.title).where(MAXChat.max_chat_id == binding.max_chat_id)
+        )
+        return {"title": title, "status": binding.status}
+
+    async with container.session_factory() as session, session.begin():
+        before = await state(session)
+        await container.chat_connections.verify_binding_health(session, binding_id)
+    async with container.session_factory() as session, session.begin():
+        after = await state(session)
+        receipt(
+            session,
+            action="refresh-chat",
+            object_id=binding_id,
+            before=before,
+            after=after,
+            operator=operator,
+            reason=reason,
+        )
+    return {"binding_id": str(binding_id), **after}
 
 
 async def open_access(
@@ -256,6 +320,8 @@ async def run(args: argparse.Namespace) -> None:
             result = await cancel_ticket(
                 container, ticket_id=args.ticket_id, actor=args.actor, **common
             )
+        elif args.command == "refresh-chat":
+            result = await refresh_chat(container, binding_id=args.binding_id, **common)
         else:
             async with container.session_factory() as session, session.begin():
                 if args.command == "rename-house":
@@ -268,6 +334,10 @@ async def run(args: argparse.Namespace) -> None:
                     )
                 elif args.command == "redact-report":
                     result = await redact_report(session, report_id=args.report_id, **common)
+                elif args.command == "rename-staff":
+                    result = await rename_staff(
+                        session, user_id=args.user_id, name=args.name, **common
+                    )
                 elif args.command == "rename-company":
                     result = await rename_company(
                         session, company_id=args.company_id, name=args.name, **common
@@ -304,7 +374,12 @@ def main() -> None:
     ticket.add_argument("--actor", type=UUID, required=True)
     redact = commands.add_parser("redact-report")
     redact.add_argument("--report-id", dest="report_id", type=UUID, required=True)
-    for sub in (house, company, access, signal, ticket, redact):
+    staff = commands.add_parser("rename-staff")
+    staff.add_argument("--user-id", dest="user_id", type=UUID, required=True)
+    staff.add_argument("--name", required=True)
+    chat = commands.add_parser("refresh-chat")
+    chat.add_argument("--binding-id", dest="binding_id", type=UUID, required=True)
+    for sub in (house, company, access, signal, ticket, redact, staff, chat):
         sub.add_argument("--operator", required=True)
         sub.add_argument("--reason", required=True)
     asyncio.run(run(parser.parse_args()))

@@ -29,10 +29,12 @@ MODEL_ONLY = (
     "LLM_API_KEY",
     "LLM_MODEL",
     "LLM_TIMEOUT_SECONDS",
-    "LLM_DAILY_CALL_BUDGET",
     "LLM_CHAT_DAILY_SHARE",
     "AI_WORKER_LEASE_SECONDS",
 )
+# Дневной бюджет модели — не секрет: его показывает обзор платформы в `api`,
+# поэтому он есть и там (test_dashboard_shows_the_budget_the_ai_worker_enforces).
+BUDGET = "LLM_DAILY_CALL_BUDGET"
 SYNTHETIC_VPS = {
     "PUBLIC_DOMAIN": "domsignal.example.ru",
     "POSTGRES_PASSWORD": "synthetic-postgres-password-1234",
@@ -77,7 +79,7 @@ def environment(service: str, env: dict[str, str]) -> dict[str, str]:
 
 def settings_of(service: str, env: dict[str, str], monkeypatch: pytest.MonkeyPatch) -> Settings:
     """Настройки процесса ровно из его окружения, без переменных оболочки."""
-    for name in (*MODEL_ONLY, "LLM_PROVIDER", "AI_POOL_LLM_PROVIDER", "DATABASE_URL"):
+    for name in (*MODEL_ONLY, BUDGET, "LLM_PROVIDER", "AI_POOL_LLM_PROVIDER", "DATABASE_URL"):
         monkeypatch.delenv(name, raising=False)
     values = {key.lower(): value for key, value in environment(service, env).items()}
     return Settings(**values, static_dir="missing", _env_file=None)
@@ -245,3 +247,22 @@ def test_production_still_rejects_the_template_values(monkeypatch: pytest.Monkey
     placeholder = {**SYNTHETIC_VPS, **MODEL, "LLM_API_KEY": "replace_with_provider_key"}
     with pytest.raises(ValidationError, match="placeholder"):
         settings_of("ai-worker", placeholder, monkeypatch)
+
+
+def test_production_login_threshold_fits_a_jury_behind_one_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Финал: 30 попыток за 5 минут на логин и новых входов с адреса; локально — 10."""
+    assert settings_of("api", SYNTHETIC_VPS, monkeypatch).auth_rate_threshold == 30
+    custom = {**SYNTHETIC_VPS, "AUTH_RATE_THRESHOLD": "12"}
+    assert settings_of("api", custom, monkeypatch).auth_rate_threshold == 12
+    assert Settings.model_fields["auth_rate_threshold"].default == 10
+
+
+def test_dashboard_shows_the_budget_the_ai_worker_enforces(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    env = {**SYNTHETIC_VPS, "LLM_DAILY_CALL_BUDGET": "500"}
+    api = settings_of("api", env, monkeypatch).llm_daily_call_budget
+    assert api == 500
+    assert environment("ai-worker", env)["LLM_DAILY_CALL_BUDGET"] == "500"

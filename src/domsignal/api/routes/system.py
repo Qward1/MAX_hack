@@ -6,10 +6,12 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import text
 
 from domsignal.api.dependencies import ContainerDep, DbDep
+from domsignal.bootstrap import Container
 from domsignal.contracts.capabilities import CapabilitiesResponse, CapabilityFlags
 from domsignal.services import showcase
 from domsignal.services.errors import ResourceNotFound
 from domsignal.services.privacy import PRIVACY_PATH, render_privacy_page
+from domsignal.settings import MaxTransportMode
 
 router = APIRouter(tags=["system"])
 
@@ -48,18 +50,33 @@ async def privacy(container: ContainerDep) -> HTMLResponse:
     )
 
 
+def capability_flags(container: Container) -> CapabilityFlags:
+    """Флаги возможностей сборки — одни и те же в `/capabilities` и `/me`.
+
+    Отражают фактическое состояние, а не значения контракта c0.1 по умолчанию:
+    настоящий бот MAX — только webhook; группы работают и с эмулятором MAX;
+    кабинеты и напоминания (вопрос по обращению, утренняя сводка) есть всегда.
+    """
+    transport = container.settings.max_transport
+    return CapabilityFlags(
+        test_auth=container.settings.test_session_enabled,
+        max_live=transport is MaxTransportMode.WEBHOOK,
+        group_mode=transport in {MaxTransportMode.WEBHOOK, MaxTransportMode.RECORD},
+        admin=True,
+        reminders=True,
+        ai_analysis=container.ai_analysis_enabled,
+        routes=container.routes_enabled,
+        appeals=container.appeals_enabled,
+        passive_capture=container.settings.passive_capture_enabled,
+        passive_ai_analysis=container.passive_ai_analysis_enabled,
+    )
+
+
 @router.get("/api/v1/capabilities", response_model=CapabilitiesResponse)
 async def capabilities(container: ContainerDep) -> Any:
     return CapabilitiesResponse(
         environment=container.settings.app_env.value,
-        features=CapabilityFlags(
-            test_auth=container.settings.test_session_enabled,
-            ai_analysis=container.ai_analysis_enabled,
-            routes=container.routes_enabled,
-            appeals=container.appeals_enabled,
-            passive_capture=container.settings.passive_capture_enabled,
-            passive_ai_analysis=container.passive_ai_analysis_enabled,
-        ),
+        features=capability_flags(container),
         bot_url=(
             f"https://max.ru/{container.settings.max_bot_username}"
             if container.settings.max_bot_username

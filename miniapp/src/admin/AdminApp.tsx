@@ -436,7 +436,8 @@ function TicketRow({
       </td>
       <td className="col-wide" data-label="Исполнитель">
         {ticket.assignee_name ?? (ticket.assignee_id ? "Назначен" : <span className="ds-subtle">Не назначен</span>)}
-        {ticket.requires_reassignment && <p className="ds-meta">Нужно переназначить</p>}
+        {/* «Переназначить» — только если исполнитель был и потерял доступ; «Не назначен» уже видно. */}
+        {ticket.requires_reassignment && ticket.assignee_id && <p className="ds-meta">Нужно переназначить</p>}
       </td>
       <td className="col-wide cell-when" data-label="Создана">
         {formatStaffWhen(ticket.created_at)}

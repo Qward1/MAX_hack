@@ -1,0 +1,348 @@
+{
+  "selection": "high-volume quiet day, cross-channel problem day, Telegram problem day",
+  "engine": "heavy",
+  "inference_seconds_by_day": {
+    "2022-10-10": 3.57,
+    "2025-06-13": 1.95,
+    "2026-02-21": 1.73
+  },
+  "days": [
+    {
+      "day": "2022-10-10",
+      "merge_policy": "conservative",
+      "rows": 268,
+      "sources": {
+        "real_telegram": 268
+      },
+      "seconds": 0.0,
+      "events": {
+        "ignored": 268,
+        "urgent_review": 0
+      },
+      "accepted_only": {
+        "messages": 268,
+        "gold_problem": 0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 268
+      },
+      "cases_created": 0,
+      "cases_open_at_end": 0,
+      "case_size_distribution": {},
+      "cases_with_multiple_gold_problem_classes": 0,
+      "gold_class_entrance_groups_in_multiple_cases": 0,
+      "warning": "Gold labels are LLM labels for individual messages. Neither count is incident accuracy."
+    },
+    {
+      "day": "2022-10-10",
+      "merge_policy": "broad_6h",
+      "rows": 268,
+      "sources": {
+        "real_telegram": 268
+      },
+      "seconds": 0.0,
+      "events": {
+        "ignored": 268,
+        "urgent_review": 0
+      },
+      "accepted_only": {
+        "messages": 268,
+        "gold_problem": 0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 268
+      },
+      "cases_created": 0,
+      "cases_open_at_end": 0,
+      "case_size_distribution": {},
+      "cases_with_multiple_gold_problem_classes": 0,
+      "gold_class_entrance_groups_in_multiple_cases": 0,
+      "warning": "Gold labels are LLM labels for individual messages. Neither count is incident accuracy."
+    },
+    {
+      "day": "2022-10-10",
+      "merge_policy": "broad_24h",
+      "rows": 268,
+      "sources": {
+        "real_telegram": 268
+      },
+      "seconds": 0.0,
+      "events": {
+        "ignored": 268,
+        "urgent_review": 0
+      },
+      "accepted_only": {
+        "messages": 268,
+        "gold_problem": 0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 268
+      },
+      "cases_created": 0,
+      "cases_open_at_end": 0,
+      "case_size_distribution": {},
+      "cases_with_multiple_gold_problem_classes": 0,
+      "gold_class_entrance_groups_in_multiple_cases": 0,
+      "warning": "Gold labels are LLM labels for individual messages. Neither count is incident accuracy."
+    },
+    {
+      "day": "2025-06-13",
+      "merge_policy": "conservative",
+      "rows": 182,
+      "sources": {
+        "real_whatsapp": 63,
+        "real_telegram": 119
+      },
+      "seconds": 0.0,
+      "events": {
+        "created_preliminary": 39,
+        "urgent_review": 21,
+        "ignored": 113,
+        "urgent_human_review": 12,
+        "attached": 11,
+        "notice": 3,
+        "unmatched_update": 1,
+        "unmatched_resolution": 3
+      },
+      "accepted_only": {
+        "messages": 156,
+        "gold_problem": 45,
+        "tp": 35,
+        "fp": 9,
+        "fn": 10,
+        "tn": 102,
+        "excluded_unlabelled": 26,
+        "excluded_predicted_problem": 13
+      },
+      "cases_created": 39,
+      "cases_open_at_end": 39,
+      "case_size_distribution": {
+        "1": 31,
+        "2": 6,
+        "3": 1,
+        "4": 1
+      },
+      "cases_with_multiple_gold_problem_classes": 0,
+      "gold_class_entrance_groups_in_multiple_cases": 2,
+      "warning": "Gold labels are LLM labels for individual messages. Neither count is incident accuracy."
+    },
+    {
+      "day": "2025-06-13",
+      "merge_policy": "broad_6h",
+      "rows": 182,
+      "sources": {
+        "real_whatsapp": 63,
+        "real_telegram": 119
+      },
+      "seconds": 0.0,
+      "events": {
+        "created_preliminary": 15,
+        "urgent_review": 21,
+        "ignored": 113,
+        "urgent_human_review": 12,
+        "attached": 36,
+        "notice": 3,
+        "closed_unverified": 3
+      },
+      "accepted_only": {
+        "messages": 156,
+        "gold_problem": 45,
+        "tp": 35,
+        "fp": 9,
+        "fn": 10,
+        "tn": 102,
+        "excluded_unlabelled": 26,
+        "excluded_predicted_problem": 13
+      },
+      "cases_created": 15,
+      "cases_open_at_end": 12,
+      "case_size_distribution": {
+        "1": 6,
+        "2": 1,
+        "3": 2,
+        "4": 3,
+        "6": 1,
+        "8": 1,
+        "14": 1
+      },
+      "cases_with_multiple_gold_problem_classes": 1,
+      "gold_class_entrance_groups_in_multiple_cases": 2,
+      "warning": "Gold labels are LLM labels for individual messages. Neither count is incident accuracy."
+    },
+    {
+      "day": "2025-06-13",
+      "merge_policy": "broad_24h",
+      "rows": 182,
+      "sources": {
+        "real_whatsapp": 63,
+        "real_telegram": 119
+      },
+      "seconds": 0.0,
+      "events": {
+        "created_preliminary": 15,
+        "urgent_review": 21,
+        "ignored": 113,
+        "urgent_human_review": 12,
+        "attached": 36,
+        "notice": 3,
+        "closed_unverified": 3
+      },
+      "accepted_only": {
+        "messages": 156,
+        "gold_problem": 45,
+        "tp": 35,
+        "fp": 9,
+        "fn": 10,
+        "tn": 102,
+        "excluded_unlabelled": 26,
+        "excluded_predicted_problem": 13
+      },
+      "cases_created": 15,
+      "cases_open_at_end": 12,
+      "case_size_distribution": {
+        "1": 6,
+        "2": 1,
+        "3": 2,
+        "4": 3,
+        "6": 1,
+        "8": 1,
+        "14": 1
+      },
+      "cases_with_multiple_gold_problem_classes": 1,
+      "gold_class_entrance_groups_in_multiple_cases": 2,
+      "warning": "Gold labels are LLM labels for individual messages. Neither count is incident accuracy."
+    },
+    {
+      "day": "2026-02-21",
+      "merge_policy": "conservative",
+      "rows": 138,
+      "sources": {
+        "real_telegram": 131,
+        "real_whatsapp": 7
+      },
+      "seconds": 0.0,
+      "events": {
+        "ignored": 85,
+        "urgent_review": 3,
+        "created_preliminary": 27,
+        "unmatched_update": 8,
+        "attached": 9,
+        "notice": 2,
+        "unmatched_resolution": 4,
+        "urgent_human_review": 2,
+        "closed_unverified": 1
+      },
+      "accepted_only": {
+        "messages": 103,
+        "gold_problem": 38,
+        "tp": 35,
+        "fp": 1,
+        "fn": 3,
+        "tn": 64,
+        "excluded_unlabelled": 35,
+        "excluded_predicted_problem": 15
+      },
+      "cases_created": 27,
+      "cases_open_at_end": 26,
+      "case_size_distribution": {
+        "1": 21,
+        "2": 4,
+        "4": 2
+      },
+      "cases_with_multiple_gold_problem_classes": 0,
+      "gold_class_entrance_groups_in_multiple_cases": 3,
+      "warning": "Gold labels are LLM labels for individual messages. Neither count is incident accuracy."
+    },
+    {
+      "day": "2026-02-21",
+      "merge_policy": "broad_6h",
+      "rows": 138,
+      "sources": {
+        "real_telegram": 131,
+        "real_whatsapp": 7
+      },
+      "seconds": 0.0,
+      "events": {
+        "ignored": 85,
+        "urgent_review": 3,
+        "created_preliminary": 11,
+        "attached": 33,
+        "notice": 2,
+        "closed_unverified": 4,
+        "urgent_human_review": 2,
+        "unmatched_resolution": 1
+      },
+      "accepted_only": {
+        "messages": 103,
+        "gold_problem": 38,
+        "tp": 35,
+        "fp": 1,
+        "fn": 3,
+        "tn": 64,
+        "excluded_unlabelled": 35,
+        "excluded_predicted_problem": 15
+      },
+      "cases_created": 11,
+      "cases_open_at_end": 7,
+      "case_size_distribution": {
+        "1": 2,
+        "2": 3,
+        "3": 1,
+        "4": 1,
+        "5": 2,
+        "8": 1,
+        "15": 1
+      },
+      "cases_with_multiple_gold_problem_classes": 2,
+      "gold_class_entrance_groups_in_multiple_cases": 2,
+      "warning": "Gold labels are LLM labels for individual messages. Neither count is incident accuracy."
+    },
+    {
+      "day": "2026-02-21",
+      "merge_policy": "broad_24h",
+      "rows": 138,
+      "sources": {
+        "real_telegram": 131,
+        "real_whatsapp": 7
+      },
+      "seconds": 0.0,
+      "events": {
+        "ignored": 85,
+        "urgent_review": 3,
+        "created_preliminary": 11,
+        "attached": 33,
+        "notice": 2,
+        "closed_unverified": 4,
+        "urgent_human_review": 2,
+        "unmatched_resolution": 1
+      },
+      "accepted_only": {
+        "messages": 103,
+        "gold_problem": 38,
+        "tp": 35,
+        "fp": 1,
+        "fn": 3,
+        "tn": 64,
+        "excluded_unlabelled": 35,
+        "excluded_predicted_problem": 15
+      },
+      "cases_created": 11,
+      "cases_open_at_end": 7,
+      "case_size_distribution": {
+        "1": 2,
+        "2": 3,
+        "3": 1,
+        "4": 1,
+        "5": 2,
+        "8": 1,
+        "15": 1
+      },
+      "cases_with_multiple_gold_problem_classes": 2,
+      "gold_class_entrance_groups_in_multiple_cases": 2,
+      "warning": "Gold labels are LLM labels for individual messages. Neither count is incident accuracy."
+    }
+  ]
+}

@@ -1,0 +1,165 @@
+{
+  "split": "reused_val",
+  "api_calls": 0,
+  "note": "Oracle replacement is an upper bound, not measured LLM gain.",
+  "sources": {
+    "real_whatsapp": {
+      "n": 1008,
+      "errors": 52,
+      "baseline_f1": 0.763,
+      "routes": {
+        "gate_border_0.05": {
+          "routed": 50,
+          "error_capture": 0.4,
+          "oracle_f1": 0.8794,
+          "missed_positive_captured": 12
+        },
+        "class_margin_0.05": {
+          "routed": 50,
+          "error_capture": 0.28,
+          "oracle_f1": 0.8087,
+          "missed_positive_captured": 0
+        },
+        "head_disagreement_0.05": {
+          "routed": 50,
+          "error_capture": 0.16,
+          "oracle_f1": 0.794,
+          "missed_positive_captured": 1
+        },
+        "gate_plus_class_0.05": {
+          "routed": 50,
+          "error_capture": 0.38,
+          "oracle_f1": 0.8307,
+          "missed_positive_captured": 5
+        },
+        "gate_border_0.10": {
+          "routed": 101,
+          "error_capture": 0.3564,
+          "oracle_f1": 0.9105,
+          "missed_positive_captured": 21
+        },
+        "class_margin_0.10": {
+          "routed": 101,
+          "error_capture": 0.2079,
+          "oracle_f1": 0.8297,
+          "missed_positive_captured": 0
+        },
+        "head_disagreement_0.10": {
+          "routed": 101,
+          "error_capture": 0.0891,
+          "oracle_f1": 0.7957,
+          "missed_positive_captured": 2
+        },
+        "gate_plus_class_0.10": {
+          "routed": 101,
+          "error_capture": 0.3069,
+          "oracle_f1": 0.9118,
+          "missed_positive_captured": 12
+        },
+        "gate_border_0.20": {
+          "routed": 202,
+          "error_capture": 0.2277,
+          "oracle_f1": 0.945,
+          "missed_positive_captured": 24
+        },
+        "class_margin_0.20": {
+          "routed": 202,
+          "error_capture": 0.1238,
+          "oracle_f1": 0.8367,
+          "missed_positive_captured": 3
+        },
+        "head_disagreement_0.20": {
+          "routed": 202,
+          "error_capture": 0.0693,
+          "oracle_f1": 0.8064,
+          "missed_positive_captured": 6
+        },
+        "gate_plus_class_0.20": {
+          "routed": 202,
+          "error_capture": 0.2129,
+          "oracle_f1": 0.9377,
+          "missed_positive_captured": 21
+        }
+      }
+    },
+    "real_telegram": {
+      "n": 3195,
+      "errors": 160,
+      "baseline_f1": 0.6307,
+      "routes": {
+        "gate_border_0.05": {
+          "routed": 160,
+          "error_capture": 0.4688,
+          "oracle_f1": 0.773,
+          "missed_positive_captured": 27
+        },
+        "class_margin_0.05": {
+          "routed": 160,
+          "error_capture": 0.5312,
+          "oracle_f1": 0.8609,
+          "missed_positive_captured": 0
+        },
+        "head_disagreement_0.05": {
+          "routed": 160,
+          "error_capture": 0.3063,
+          "oracle_f1": 0.7475,
+          "missed_positive_captured": 1
+        },
+        "gate_plus_class_0.05": {
+          "routed": 160,
+          "error_capture": 0.525,
+          "oracle_f1": 0.8557,
+          "missed_positive_captured": 12
+        },
+        "gate_border_0.10": {
+          "routed": 320,
+          "error_capture": 0.3563,
+          "oracle_f1": 0.855,
+          "missed_positive_captured": 41
+        },
+        "class_margin_0.10": {
+          "routed": 320,
+          "error_capture": 0.3125,
+          "oracle_f1": 0.8901,
+          "missed_positive_captured": 0
+        },
+        "head_disagreement_0.10": {
+          "routed": 320,
+          "error_capture": 0.1562,
+          "oracle_f1": 0.7556,
+          "missed_positive_captured": 1
+        },
+        "gate_plus_class_0.10": {
+          "routed": 320,
+          "error_capture": 0.3844,
+          "oracle_f1": 0.9434,
+          "missed_positive_captured": 27
+        },
+        "gate_border_0.20": {
+          "routed": 639,
+          "error_capture": 0.2394,
+          "oracle_f1": 0.9868,
+          "missed_positive_captured": 53
+        },
+        "class_margin_0.20": {
+          "routed": 639,
+          "error_capture": 0.1659,
+          "oracle_f1": 0.8937,
+          "missed_positive_captured": 6
+        },
+        "head_disagreement_0.20": {
+          "routed": 639,
+          "error_capture": 0.0908,
+          "oracle_f1": 0.7772,
+          "missed_positive_captured": 8
+        },
+        "gate_plus_class_0.20": {
+          "routed": 639,
+          "error_capture": 0.2207,
+          "oracle_f1": 0.9673,
+          "missed_positive_captured": 41
+        }
+      }
+    }
+  }
+}

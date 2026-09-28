@@ -1,0 +1,64 @@
+{
+  "name": "base_multi_gate_r3",
+  "mode": "multi",
+  "model": "ml\\artifacts\\models\\rubert-base",
+  "seed": 42,
+  "epochs": 2,
+  "batch_size": 8,
+  "max_length": 64,
+  "lr": 2e-05,
+  "class_weights": "moderate",
+  "train_rows": 9121,
+  "positive_only": false,
+  "negative_ratio": 3.0,
+  "real_train": 16933,
+  "synthetic_train": 2008,
+  "device": "cuda",
+  "gpu_peak_mb": 3417.8,
+  "rss_mb": 749.3,
+  "total_seconds": 2292.7,
+  "best_val_mean_macro_f1": 0.6284,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 1.1161,
+      "seconds_so_far": 1143.2,
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.5604,
+          "gate_ap_flat": 0.8438,
+          "gate_ap_head": 0.8401,
+          "class_f1_true_positives": 0.6221
+        },
+        "real_telegram": {
+          "macro_f1": 0.4678,
+          "gate_ap_flat": 0.8637,
+          "gate_ap_head": 0.841,
+          "class_f1_true_positives": 0.5671
+        }
+      },
+      "mean_macro_f1": 0.5141
+    },
+    {
+      "epoch": 2,
+      "loss": 0.4171,
+      "seconds_so_far": 2289.5,
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.6705,
+          "gate_ap_flat": 0.8873,
+          "gate_ap_head": 0.8741,
+          "class_f1_true_positives": 0.7274
+        },
+        "real_telegram": {
+          "macro_f1": 0.5863,
+          "gate_ap_flat": 0.8862,
+          "gate_ap_head": 0.8668,
+          "class_f1_true_positives": 0.7179
+        }
+      },
+      "mean_macro_f1": 0.6284
+    }
+  ],
+  "checkpoint_bytes": 713440560
+}

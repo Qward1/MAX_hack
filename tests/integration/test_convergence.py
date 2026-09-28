@@ -103,7 +103,7 @@ async def test_counts_provenance_and_runtime_schema(integration_settings: Settin
             "miniapp": True,
             "photo_analysis": False,
             "voice": False,
-            "admin": False,
+            "admin": True,
         }
     await container.engine.dispose()
 

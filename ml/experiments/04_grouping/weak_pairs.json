@@ -1,0 +1,8 @@
+{
+  "n": 8298,
+  "positives": 4579,
+  "precision": 1.0,
+  "recall": 0.0644,
+  "f1": 0.1211,
+  "warning": "Weak heuristic pairs, partly defined by gold class/time. This is not incident-level accuracy; no human incident gold exists."
+}

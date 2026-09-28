@@ -1,0 +1,27 @@
+{
+  "split": "synthetic_val_selected_before_api",
+  "selection": "5 near local gate threshold plus 5 low local class scores; strict privacy screen",
+  "gold_origin": "synthetic labels generated/checked by LLM, not independent humans",
+  "n": 10,
+  "gold_in_local_top5": 9,
+  "local_correct": 2,
+  "models": {
+    "qwen35b_yandex": {
+      "correct": 4,
+      "rescued_local_errors": 2,
+      "spoiled_local_correct": 0,
+      "invalid_responses": 3,
+      "actual_billed_rub": 0.7902,
+      "median_latency_seconds": 2.355
+    },
+    "gpt_oss_120b_yandex": {
+      "correct": 5,
+      "rescued_local_errors": 3,
+      "spoiled_local_correct": 0,
+      "invalid_responses": 1,
+      "actual_billed_rub": 1.486,
+      "median_latency_seconds": 1.57
+    }
+  },
+  "caution": "Tiny selected synthetic sample; no production performance claim."
+}

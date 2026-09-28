@@ -3,18 +3,22 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID
 
 import pytest
 from sqlalchemy import select
 
+from domsignal.bot.chat_provider import ChatInfo
 from domsignal.db.models import (
     House,
     InboxReceipt,
     Incident,
     ManagementCompany,
+    MAXChat,
     Report,
     Signal,
     Ticket,
+    User,
 )
 from domsignal.tools import platform_ops
 from tests.integration.explicit_harness import ex  # noqa: F401
@@ -113,3 +117,33 @@ async def test_dismiss_signal_goes_through_the_signal_inbox(pv) -> None:  # noqa
     assert (stored.decision_reason, stored.decision_note) == ("resolved", "проверка завершена")
     [dismissed] = await receipts(pv, "dismiss-signal")
     assert dismissed["after"] == "dismissed"
+
+
+@pytest.mark.integration
+async def test_rename_staff_changes_only_the_display_name(ex) -> None:  # noqa: F811
+    async with ex.container.session_factory() as session, session.begin():
+        result = await platform_ops.rename_staff(
+            session, user_id=ex.ids["admin"], name="  Диспетчер УК  ", **OPS
+        )
+    assert result["display_name"] == "Диспетчер УК"
+    user = await ex.scalar(select(User).where(User.id == ex.ids["admin"]))
+    assert user.display_name == "Диспетчер УК"
+    [row] = await receipts(ex, "rename-staff")
+    assert row["after"] == {"display_name": "Диспетчер УК"}
+    with pytest.raises(ValueError, match="non-empty"):
+        async with ex.container.session_factory() as session, session.begin():
+            await platform_ops.rename_staff(session, user_id=ex.ids["admin"], name=" ", **OPS)
+
+
+@pytest.mark.integration
+async def test_refresh_chat_takes_the_title_from_max_and_leaves_a_receipt(ex) -> None:  # noqa: F811
+    binding = await ex.bind()
+    ex.fake.chats["-501"] = ChatInfo("-501", "chat", "Дом · Казань, Синтетическая, 1", True)
+    result = await platform_ops.refresh_chat(ex.container, binding_id=UUID(binding["id"]), **OPS)
+    assert result["title"] == "Дом · Казань, Синтетическая, 1"
+    assert result["status"] == "active"
+    chat = await ex.scalar(select(MAXChat).where(MAXChat.max_chat_id == "-501"))
+    assert chat.title == "Дом · Казань, Синтетическая, 1"
+    [row] = await receipts(ex, "refresh-chat")
+    assert row["before"]["title"] == "Synthetic chat"
+    assert row["after"]["title"] == "Дом · Казань, Синтетическая, 1"

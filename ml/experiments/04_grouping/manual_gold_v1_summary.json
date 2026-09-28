@@ -1,0 +1,46 @@
+{
+  "version": "assistant_review_v1",
+  "days": {
+    "2024-10-25": {
+      "purpose": "development",
+      "messages": 69,
+      "incidents": 10,
+      "roles": {
+        "negative": 20,
+        "multi_issue": 6,
+        "report": 23,
+        "context": 14,
+        "uncertain": 9,
+        "resolution": 3
+      }
+    },
+    "2025-05-02": {
+      "purpose": "heldout",
+      "messages": 76,
+      "incidents": 4,
+      "roles": {
+        "report": 19,
+        "multi_issue": 0,
+        "context": 19,
+        "negative": 19,
+        "uncertain": 10,
+        "resolution": 9
+      }
+    },
+    "2026-01-24": {
+      "purpose": "heldout",
+      "messages": 60,
+      "incidents": 6,
+      "roles": {
+        "report": 19,
+        "multi_issue": 2,
+        "context": 30,
+        "uncertain": 5,
+        "resolution": 3,
+        "negative": 3
+      }
+    }
+  },
+  "annotator": "assistant_manual_review",
+  "independent_human_adjudication": false
+}
