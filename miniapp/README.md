@@ -162,6 +162,13 @@ uv run uvicorn domsignal.main:create_app --factory --host 127.0.0.1 --port 8031
 PLAYWRIGHT_BASE_URL=http://127.0.0.1:8031 npm --prefix miniapp run test:browser
 ```
 
+`tests/ui-lint.spec.ts` (F1 §2.5) — проверка вёрстки всех экранов на 5 ширинах
+в двух темах (правила — `docs/UX.md`, «Проверка вёрстки»); полный проход —
+около 20 минут. Сузить: `UI_LINT_ONLY="^(site-|platform-)"`,
+`UI_LINT_WIDTHS=390,1280`, `UI_LINT_THEMES=light`. `tests/browser/f1.spec.ts` —
+статус и новый дом появляются без перезагрузки не позже 20 с, 403 раздела не
+теряет сессию.
+
 `signals.spec.ts` (P5) засевает сигналы настоящим путём P4 через
 `tests/browser/signal_fixture.py`: события вебхука → `parse_update` +
 `MaxWebhookService.accept` → окно → разбор правилами, без INSERT в `signals`.

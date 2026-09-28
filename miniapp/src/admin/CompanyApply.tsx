@@ -29,7 +29,7 @@ export function addressProblem(lines: string[]): string {
 function PublicHeader() {
   return <header className="public-header">
     <a className="admin-brand" href="/">ДомСигнал</a>
-    <nav aria-label="Навигация"><a className="ticket-button secondary" href="/login">Вход</a></nav>
+    <nav aria-label="Навигация"><a className="ticket-button secondary" href="/login">Войти</a></nav>
   </header>;
 }
 

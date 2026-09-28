@@ -18,6 +18,7 @@ import json
 import os
 import sys
 import time
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import pyotp
@@ -81,9 +82,14 @@ async def main() -> None:
             elif command == "reset-rate":
                 await db.execute(delete(AuthRateLimit))
                 print(json.dumps({"reset": True}))
-            elif command == "house":
-                company = await db.scalar(
-                    select(ManagementCompany).where(ManagementCompany.inn == sys.argv[2])
+            elif command in {"house", "house-company"}:
+                # house <ИНН> <адрес>; house-company <id УК> <адрес> — для УК без ИНН (A-16).
+                company = (
+                    await db.get(ManagementCompany, uuid.UUID(sys.argv[2]))
+                    if command == "house-company"
+                    else await db.scalar(
+                        select(ManagementCompany).where(ManagementCompany.inn == sys.argv[2])
+                    )
                 )
                 assert company is not None
                 house = House(name=sys.argv[3][:200], address=sys.argv[3])

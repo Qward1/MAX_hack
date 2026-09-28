@@ -6,7 +6,7 @@ import { EmployeeGate } from "./EmployeeGate";
 import "../shared/styles/main.css";
 import "./admin.css";
 import "./administration.css";
-import "../shared/styles/system.css";
+import "./system-last.css";
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element is missing");
 const path = window.location.pathname;

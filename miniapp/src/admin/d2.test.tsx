@@ -39,13 +39,14 @@ describe("Лендинг", () => {
     const { container } = render(<Landing />);
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Проблемы дома — из домового чата в работу");
     expect(screen.getAllByRole("link", { name: "Подключить УК" })[0].getAttribute("href")).toBe("/company/apply");
-    expect(screen.getByRole("link", { name: "Вход" }).getAttribute("href")).toBe("/login");
+    expect(screen.getByRole("link", { name: "Войти" }).getAttribute("href")).toBe("/login");
     expect((await screen.findByRole("link", { name: "Открыть бота в MAX" })).getAttribute("href")).toBe("https://max.ru/domsignal_bot");
     expect(screen.getByRole("heading", { name: "Как это работает" })).toBeTruthy();
     expect(container.querySelectorAll(".site-steps > li")).toHaveLength(4);
     const text = container.textContent ?? "";
-    expect(text).toContain("Пример: как переписка становится сигналом и заявкой");
-    expect(text).not.toMatch(/отзыв|клиент[аоы]в?\b|%|\d{3,}/i);
+    expect(text).toContain("Пример: как сообщение в чате становится заявкой и закрывается жителями");
+    // 112 — номер экстренных служб, а не показатель.
+    expect(text.replace(/\b112\b/g, "")).not.toMatch(/отзыв|клиент[аоы]в?\b|%|\d{3,}/i);
     expect(text.toLowerCase()).not.toMatch(/тест|демо/);
   });
   it("без ника бота ссылку на бота не показывает", async () => {

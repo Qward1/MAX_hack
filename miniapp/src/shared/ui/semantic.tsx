@@ -88,6 +88,7 @@ export function SourceChip({ source, label = "Источник" }: { source: Sou
         {recorded && <p>Записано: {recorded}</p>}
         {url && (
           <a
+            className="ds-text-link ds-source-link"
             href={url}
             target="_blank"
             rel="noopener noreferrer"

@@ -601,3 +601,74 @@ details > summary:hover {
   outline: 2px solid var(--ds-focus, var(--ds-action));
   outline-offset: 2px;
 }
+
+/* Период — кнопки через 8 px, как везде. */
+.period-switch {
+  gap: var(--ds-space-2);
+}
+/* Цели нажатия на телефоне — не меньше 44 px (F1 §2.5). */
+@media (max-width: 430px) {
+  .ds-btn,
+  .ds-btn-small,
+  .ticket-button,
+  .ds-edit,
+  .record-link,
+  .ds-action-link,
+  select,
+  .admin-brand,
+  .site-brand,
+  a.ds-source-link {
+    min-height: 44px;
+  }
+  .record-link,
+  .ds-action-link,
+  .admin-brand,
+  .site-brand,
+  a.ds-source-link {
+    display: inline-flex;
+    align-items: center;
+  }
+  .stat-tile .stat-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  /* Компактные кнопки и «Изменить» на компьютере — на телефоне полной высоты. */
+  .app-shell .ds-edit,
+  .ticket-more .ds-btn,
+  .ticket-danger-zone .ds-btn,
+  .demo-session select {
+    min-height: 44px;
+  }
+}
+.apply-intro .apply-jump {
+  margin-top: var(--ds-space-3);
+}
+
+/* Шапка кабинета без мобильного листа (платформа) на телефоне: переносится,
+   время обновления скрыто, кнопки полной высоты. */
+@media (max-width: 767px) {
+  .admin-topbar {
+    flex-wrap: wrap;
+    gap: var(--ds-space-2) var(--ds-space-3);
+    padding: var(--ds-space-2) var(--ds-space-4);
+  }
+  .admin-topbar .ds-btn {
+    min-height: 44px;
+  }
+  .admin-updated {
+    display: none;
+  }
+  .admin-topbar-user {
+    justify-items: start;
+  }
+  .admin-topbar-brand {
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
+/* Раскрытие-карточка между секциями отделено так же, как секция (16 px). */
+.ds-disclosure.route-facts {
+  margin-bottom: var(--ds-space-4);
+}

@@ -339,7 +339,7 @@ function MailingDetail({ id, base, platform, close, refresh }: {
 }
 
 function PreviewTable({ preview }: { preview: Schema["BroadcastPreview"] }) {
-  return <div className="table-scroll"><table className="admin-table" aria-label="Предпросмотр получателей">
+  return <div className="table-scroll" tabIndex={0} role="region" aria-label="Предпросмотр получателей, таблица"><table className="admin-table" aria-label="Предпросмотр получателей">
     <caption>Домов в аудитории: {preview.houses}{preview.companies ? ` · УК: ${preview.companies}` : ""}</caption>
     <thead><tr><th>Канал</th><th>Всего</th><th>Получат</th><th>Пропущено</th></tr></thead>
     <tbody>{preview.channels.map(c => <tr key={c.channel}><td>{channelLabels[c.channel]}</td><td>{c.targets}</td>
@@ -348,7 +348,7 @@ function PreviewTable({ preview }: { preview: Schema["BroadcastPreview"] }) {
 }
 
 function StatsTable({ stats }: { stats: Schema["ChannelStats"][] }) {
-  return <div className="table-scroll"><table className="admin-table" aria-label="Статистика отправки">
+  return <div className="table-scroll" tabIndex={0} role="region" aria-label="Статистика отправки, таблица"><table className="admin-table" aria-label="Статистика отправки">
     <thead><tr><th>Канал</th><th>Доставлено</th><th>Ошибка</th><th>Исход неизвестен</th><th>Ожидает</th><th>Тихие часы</th><th>Пропущено</th></tr></thead>
     <tbody>{stats.map(s => <tr key={s.channel}><td>{channelLabels[s.channel]}</td><td>{s.accepted}</td><td>{s.failed}</td>
       <td>{s.unknown}</td><td>{s.pending}</td><td>{s.deferred_quiet_hours}</td><td><Skipped skipped={s.skipped} /></td></tr>)}</tbody>
