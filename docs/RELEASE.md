@@ -17,7 +17,8 @@ uv run python scripts/release_check.py --fetch
 ```
 
 Скрипт проверяет: рабочее дерево чистое; `HEAD` = `origin/main`; `/version`
-production = `HEAD`; `/ready`; вебхук без секрета → 401; OpenAPI из кода =
+production = `HEAD` (или после выкладки в `main` пришли только документы —
+`docs/`, `*.md`, `evaluation/reports/`: код образа тот же); `/ready`; вебхук без секрета → 401; OpenAPI из кода =
 `docs/openapi.json`; gitleaks по коммитам с прошлого выпуска. Последняя строка —
 для служебного слайда: репозиторий, commit, дата.
 

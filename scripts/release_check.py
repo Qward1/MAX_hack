@@ -103,8 +103,22 @@ def main() -> int:
 
     status, body = http("GET", f"{base}/version")
     commit = json.loads(body).get("commit", "") if status == 200 and body.startswith("{") else ""
-    same = bool(commit) and head.startswith(commit)
-    checks.append(("/version = HEAD", same, commit or f"HTTP {status}"))
+    same = bool(commit) and (head.startswith(commit) or commit.startswith(head))
+    detail = commit[:7] if commit else f"HTTP {status}"
+    if commit and not same:
+        # После выкладки в main могут прийти только документы: код образа тот же.
+        try:
+            changed = git("diff", "--name-only", commit, head).splitlines()
+        except subprocess.CalledProcessError:
+            changed = ["?"]
+        docs_only = bool(changed) and all(
+            path.startswith(("docs/", "evaluation/reports/")) or path.endswith(".md")
+            for path in changed
+        )
+        if docs_only:
+            same = True
+            detail = f"{commit[:7]}; после него только документы ({len(changed)} файлов)"
+    checks.append(("/version = HEAD", same, detail))
     status, body = http("GET", f"{base}/ready")
     ready = status == 200 and '"ready"' in body
     checks.append(("/ready", ready, body[:40] if status == 200 else f"HTTP {status}"))
