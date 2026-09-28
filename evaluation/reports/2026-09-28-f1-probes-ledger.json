@@ -1,0 +1,13 @@
+{
+  "calls": 81,
+  "max_calls": 150,
+  "max_rub": 40.0,
+  "rub": 7.635309,
+  "runs": {
+    "probes": {
+      "calls": 81,
+      "rub": 7.635309
+    }
+  },
+  "unknown_cost_calls": 0
+}
