@@ -2,6 +2,53 @@
 
 Модуль читает сообщения домового чата, определяет, есть ли проблема, предлагает её вид и адресата, оценивает срочность и объединяет сообщения об одной проблеме в предварительную заявку. Он работает из консоли **отдельно от основного приложения**. Рекомендуемый вариант сочетает три локальные модели; для обычного процессора есть облегчённый вариант. Настоящие заявки приложение пока через этот модуль не создаёт.
 
+## Коротко для проверяющих
+
+| Вопрос | Ответ |
+|---|---|
+| **Статус** | Код и отчёты — в сдаваемом репозитории. **В рабочую систему не подключён:** образ продукта (`Dockerfile`) папку `ml/` не копирует, бот и кабинеты её не вызывают. В продукте сейчас разбор переписки — правила + модель Qwen3-30B-A3B через Cloud.ru (`src/domsignal/ai/`). |
+| **Задача** | По одному сообщению домового чата: есть ли проблема дома, какая (33 класса), тип реплики, срочность, подъезд/этаж; по ленте чата — объединить сообщения об одной проблеме в предварительную заявку. |
+| **Зачем продукту** | Локальная модель без внешнего API: 0 ₽ за запрос, нет передачи текста наружу, задержка ≈ 8 мс (лёгкий вариант) вместо секунд у внешней модели. Это путь к пилоту «модель внутри контура», которого сейчас нет. |
+| **Вход** | Текст сообщения; для ленты — JSONL `{"id","house_id","ts","reply_to","text"}`. |
+| **Выход** | JSON: `is_problem`, `fine_class`, `product_category_suggestion`, `product_subtype_suggestion`, `recipient_hint`, `utterance`, `emergency`, `urgent_human_review`, `slots`, `confidence`; в ленте — `event.action` (`created_preliminary` / `attached` / `resolution_pending_human`) и `case_id`. [Все поля](docs/RUN_GUIDE.md#как-читать-результат). |
+| **Модели** | Лёгкий вариант: TF-IDF (буквы и слова) + логистическая регрессия / SGD. Усиленный: + E5 (`intfloat/multilingual-e5-base`) для этапа «есть ли проблема», дообученный `ai-forever/ruBert-base` поровну с лёгким определителем класса. Объединение — правила по дому, классу, подъезду, времени и ответу. |
+| **Данные** | Набор v3.0: обезличенные сообщения двух реальных домовых чатов, разметка ИИ-агентом по правилам (людьми не проверена) + синтетика. **В Git не входит** — это производные реальных переписок; веса тоже не публикуются (словарь TF-IDF несёт фрагменты текстов). |
+| **Измерено** (отложенная часть v3.0) | Нахождение проблемы AP **0,900 / 0,829**, вся цепочка macro-F1 **0,669 / 0,571** (WhatsApp / Telegram); объединение F1 **0,354** при точности **0,928**; срочность — полнота **0,507**, для самостоятельной тревоги недостаточно. Подробно — ниже. |
+| **Как проверить без закрытых данных** | Юнит-тесты и смоук-запуск всей цепочки на синтетике — [раздел ниже](#запуск-в-чистом-клоне-без-закрытых-данных). Числа смоук-запуска качество **не измеряют**. |
+| **Как войдёт в продукт** | Третий провайдер разбора `local_ml` рядом с `rules` и `openai_compatible` за тем же интерфейсом `analyze_window(ProviderRequest) → ProviderResult` (`src/domsignal/ai/providers/base.py`), только в `ai-worker`. Классы переводятся в подтипы продукта по [`configs/class_mapping.yaml`](configs/class_mapping.yaml); опасность по-прежнему первыми решают правила в транзакции приёма; заявку создаёт оператор. План — [`docs/FUTURE_INTEGRATION.md`](docs/FUTURE_INTEGRATION.md) и [план финала](../docs/FINAL_PLAN.md). |
+
+Описание нынешнего разбора в [`docs/CURRENT_SOLUTION.md`](docs/CURRENT_SOLUTION.md) — срез 26.09.2026 (тогда gpt-5-mini через polza.ai); с 27.09 production использует Qwen3-30B-A3B через Cloud.ru, устройство разбора то же.
+
+## Запуск в чистом клоне без закрытых данных
+
+Набора v3.0 и обученных весов в репозитории нет. Чтобы проверить, что код модуля
+работает целиком — обучение, одно сообщение, лента чата, оценка, — используйте
+синтетический смоук-набор: его строит `ml/scripts/make_smoke_data.py` из шаблонов
+(ни одного реального сообщения) в игнорируемую Git папку `ml/artifacts/smoke-data/`.
+Обученная на нём модель знает 10 классов и нужна только для проверки
+работоспособности; её числа **не являются оценкой качества**.
+
+```bash
+python -m venv ml/.venv            # Windows: ml\.venv\Scripts\python вместо ml/.venv/bin/python
+ml/.venv/bin/python -m pip install -r ml/requirements.txt
+PYTHONPATH=ml/src ml/.venv/bin/python -m unittest discover -s ml/tests      # 7 тестов объединения и слотов
+ml/.venv/bin/python ml/scripts/make_smoke_data.py
+ml/.venv/bin/python ml/cli.py train --variant real --data-root ml/artifacts/smoke-data \
+  --artifact ml/artifacts/light.joblib --output ml/artifacts/smoke_train.json
+ml/.venv/bin/python ml/check.py --engine light                               # "ready": true
+ml/.venv/bin/python ml/cli.py single --text "В третьем подъезде не работает лифт"
+ml/.venv/bin/python ml/cli.py chat --merge-policy service_context_6h --file ml/examples/demo_chat.jsonl
+ml/.venv/bin/python ml/cli.py eval --split test --data-root ml/artifacts/smoke-data \
+  --output ml/artifacts/smoke_eval.json
+```
+
+Ожидаемо: лифт → `"is_problem":true,"fine_class":"elevator_out"`; «Соседи, во
+сколько собрание?» → `"is_problem":false`; лента из трёх сообщений →
+`created_preliminary`, `attached`, `resolution_pending_human` для `case-1`.
+Отчёты `train`/`eval` пишите в `ml/artifacts/` (как выше): без `--output` команды
+перезапишут отчёты исследований в `ml/experiments/`. Проверено 28.09.2026 на
+Windows 11, Python 3.12, scikit-learn 1.7.2.
+
 **Начните с [пошагового руководства](docs/RUN_GUIDE.md):** там есть установка, запуск одного сообщения и чата, примеры ответов, проверка качества, запуск в чистом клоне и объяснение полей результата. Ниже — устройство, результаты опытов и ограничения. Имена режимов и полей ответа оставлены на английском, поскольку это точные названия команд и полей программы.
 
 ## Итоговая поставка: без LLM и API-ключей
@@ -31,11 +78,11 @@
 
 ## Запуск и проверка
 
-Команды выполняются из `C:\Users\Dimentiy\repoVScode\MAX_hack_ml_standalone`. На этой машине веса уже подготовлены; в чистом клоне их нет. Нужен Python 3.10 или новее. Подробные действия для обоих случаев, пояснение ошибок и примеры — в [руководстве по запуску](docs/RUN_GUIDE.md).
+Команды выполняются из корня репозитория. Веса обученных моделей и набор v3.0 есть только у автора модуля; в чистом клоне их нет — модуль целиком проверяется [смоук-запуском на синтетике](#запуск-в-чистом-клоне-без-закрытых-данных). Нужен Python 3.10 или новее. Подробные действия для обоих случаев, пояснение ошибок и примеры — в [руководстве по запуску](docs/RUN_GUIDE.md).
 
 ```powershell
 python -m pip install -r ml/requirements-embeddings.txt
-python ml/check.py --engine heavy --data-root ..\MAX_hack\datasets
+python ml/check.py --engine heavy --data-root <путь к набору v3.0>
 ```
 
 **Рекомендуемый вариант с лучшей измеренной классификацией:**
@@ -43,7 +90,7 @@ python ml/check.py --engine heavy --data-root ..\MAX_hack\datasets
 ```powershell
 python ml/cli.py single --engine heavy --text "В подъезде нет горячей воды"
 python ml/cli.py chat --engine heavy --merge-policy service_context_6h --file ml/examples/demo_chat.jsonl
-python ml/cli.py eval --engine heavy --split test --data-root ..\MAX_hack\datasets --output ml/artifacts/my_eval.json
+python ml/cli.py eval --engine heavy --split test --data-root <путь к набору v3.0> --output ml/artifacts/my_eval.json
 ```
 
 Вымышленный пример чата создаёт предварительную заявку `case-1`, прикрепляет к ней второе сообщение и оставляет открытой после фразы «воду дали». Файл чата содержит по одному сообщению на строку; программа выдаёт по одному решению на строку. В руководстве показаны содержимое файла и смысл действий `created_preliminary`, `attached`, `resolution_pending_human`. Оценка качества (`eval`) выводит общие числа без исходных сообщений.
@@ -190,9 +237,9 @@ python ml/cli.py eval --engine heavy --split test --data-root ..\MAX_hack\datase
 python -m pip install -r ml/requirements-embeddings.txt
 python -c "from huggingface_hub import snapshot_download; snapshot_download('intfloat/multilingual-e5-base')"
 python -c "from huggingface_hub import snapshot_download; snapshot_download('ai-forever/ruBert-base', local_dir='ml/artifacts/models/rubert-base')"
-python ml/experiments/03_embeddings/run.py --data-root ..\MAX_hack\datasets
-python ml/experiments/03_embeddings/hybrid_gate_sparse_head_val.py ..\MAX_hack\datasets
-python ml/experiments/02_classes/train_encoder.py --data-root ..\MAX_hack\datasets --model ml/artifacts/models/rubert-base --name base_positive --mode flat --positive-only --epochs 3 --batch-size 8 --max-length 64 --lr 2e-5
+python ml/experiments/03_embeddings/run.py --data-root <путь к набору v3.0>
+python ml/experiments/03_embeddings/hybrid_gate_sparse_head_val.py <путь к набору v3.0>
+python ml/experiments/02_classes/train_encoder.py --data-root <путь к набору v3.0> --model ml/artifacts/models/rubert-base --name base_positive --mode flat --positive-only --epochs 3 --batch-size 8 --max-length 64 --lr 2e-5
 python ml/cli.py single --engine heavy --text "Во втором подъезде нет горячей воды"
 ```
 

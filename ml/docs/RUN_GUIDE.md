@@ -6,15 +6,18 @@
 
 - Python 3.10 или новее. Команды ниже написаны для PowerShell в Windows.
 - Папка `ml/` из ветки `ml/standalone`. Команды выполняются **из корня этой рабочей копии**, где видна папка `ml/`.
-- Для проверки качества и для обучения — отдельная папка с **реальным размеченным набором v3.0**. На машине автора он лежит в `C:\Users\Dimentiy\repoVScode\MAX_hack\datasets`. Именно этот набор домовых чатов **не входит в Git**; в клоне есть другие служебные и искусственные файлы под именем `datasets/`, но они не заменяют v3.0. В другом месте передайте свой путь через `--data-root "C:\путь\к\datasets"`. Реальный набор предназначен только для участников проекта; не добавляйте его в открытый репозиторий. Для обработки одного сообщения или примера чата данные не нужны, если веса уже подготовлены.
+- Для проверки качества и для обучения — отдельная папка с **реальным размеченным набором v3.0**. Он есть только на машине автора модуля. Именно этот набор домовых чатов **не входит в Git**; в клоне есть другие служебные и искусственные файлы под именем `datasets/`, но они не заменяют v3.0. В другом месте передайте свой путь через `--data-root "C:\путь\к\datasets"`. Реальный набор предназначен только для участников проекта; не добавляйте его в открытый репозиторий. Для обработки одного сообщения или примера чата данные не нужны, если веса уже подготовлены.
 - Для лёгкого варианта — файл `ml/artifacts/light.joblib`. Для усиленного — дополнительно файлы весов и локальный кэш E5. Веса намеренно не хранятся в Git: это большие файлы, полученные при обучении. В рабочей копии автора они уже есть; в чистом клоне их потребуется создать.
 
-Проверить установленный Python и перейти в рабочую копию (если она лежит в другом месте, замените путь в команде `cd`):
+Проверить установленный Python и перейти в корень репозитория:
 
 ```powershell
 python --version
-cd C:\Users\Dimentiy\repoVScode\MAX_hack_ml_standalone
+cd MAX_hack
 ```
+
+Без набора v3.0 и весов модуль проверяется на синтетике — раздел
+[«Запуск в чистом клоне без закрытых данных»](../README.md#запуск-в-чистом-клоне-без-закрытых-данных).
 
 ## Быстрый запуск в подготовленной рабочей копии
 
@@ -22,7 +25,7 @@ cd C:\Users\Dimentiy\repoVScode\MAX_hack_ml_standalone
 
 ```powershell
 python -m pip install -r ml/requirements-embeddings.txt
-python ml/check.py --engine heavy --data-root ..\MAX_hack\datasets
+python ml/check.py --engine heavy --data-root <путь к набору v3.0>
 ```
 
 Если проверка напечатала `"ready": true`, можно пользоваться усиленным вариантом. Если `ready` равно `false`, поля `missing_packages`, `missing_files`, `e5_cached` и `data_ready` показывают, чего не хватает. Отсутствие `datasets` мешает только обучению и оценке качества, но проверка с указанным `--data-root` тоже пометит это как ошибку. Для обработки готовой моделью запустите `python ml/check.py --engine heavy` без пути к данным.
@@ -65,7 +68,7 @@ python ml/cli.py chat --engine heavy --merge-policy service_context_6h --file ml
 **Проверить качество на размеченном наборе v3.0:**
 
 ```powershell
-python ml/cli.py eval --engine heavy --split test --data-root ..\MAX_hack\datasets --output ml/artifacts/my_eval.json
+python ml/cli.py eval --engine heavy --split test --data-root <путь к набору v3.0> --output ml/artifacts/my_eval.json
 ```
 
 В консоль выводятся общие показатели отдельно для WhatsApp и Telegram; полный отчёт сохраняется в указанный файл. Исходные тексты не выводятся. Используйте `--split val` для настроечной части и `--split test` для проверочной. Не подбирайте настройки по результатам `test`: иначе проверка качества перестанет быть независимой. Эти показатели сравниваются с разметкой моделью, а не с подтверждёнными людьми метками.
@@ -84,7 +87,7 @@ python ml/check.py --engine light
 Если отсутствует `ml/artifacts/light.joblib`, но доступен набор v3.0, обучите его локально. Отчёт обучения и веса сохранятся в игнорируемой Git папке `ml/artifacts/`:
 
 ```powershell
-python ml/cli.py train --variant best --data-root ..\MAX_hack\datasets --artifact ml/artifacts/light.joblib --output ml/artifacts/train_report.json
+python ml/cli.py train --variant best --data-root <путь к набору v3.0> --artifact ml/artifacts/light.joblib --output ml/artifacts/train_report.json
 python ml/check.py --engine light
 python ml/cli.py single --engine light --text "В подъезде нет горячей воды"
 python ml/cli.py chat --engine light --merge-policy service_context_6h --file ml/examples/demo_chat.jsonl
