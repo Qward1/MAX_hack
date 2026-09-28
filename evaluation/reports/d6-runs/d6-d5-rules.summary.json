@@ -1,0 +1,196 @@
+{
+  "dataset": "d5",
+  "config": "rules",
+  "calls": {
+    "windows": 70,
+    "calls": 0,
+    "states": {
+      "disabled": 70
+    },
+    "valid_json": {
+      "k": 0,
+      "n": 0,
+      "value": null,
+      "ci95": null
+    },
+    "timeouts": 0,
+    "provider_errors": 0,
+    "p50_ms": null,
+    "p95_ms": null,
+    "p99_ms": null,
+    "max_ms": null,
+    "rub_total": 0,
+    "rub_per_window": null,
+    "tokens_in_mean": null,
+    "tokens_out_mean": null,
+    "reasoning_tokens_mean": null,
+    "quotes": {
+      "k": 0,
+      "n": 0,
+      "value": null,
+      "ci95": null
+    },
+    "dropped_fields": 0,
+    "audit": {},
+    "upstreams": {}
+  },
+  "d5": {
+    "danger_found": {
+      "k": 24,
+      "n": 30,
+      "value": 0.8,
+      "ci95": [
+        0.6269,
+        0.9049
+      ]
+    },
+    "contextual_found": {
+      "k": 1,
+      "n": 10,
+      "value": 0.1,
+      "ci95": [
+        0.0179,
+        0.4042
+      ]
+    },
+    "trap_false_alarms": {
+      "k": 11,
+      "n": 30,
+      "value": 0.3667,
+      "ci95": [
+        0.2187,
+        0.5449
+      ]
+    },
+    "rules_danger_found": {
+      "k": 24,
+      "n": 30,
+      "value": 0.8,
+      "ci95": [
+        0.6269,
+        0.9049
+      ]
+    },
+    "rules_contextual_found": {
+      "k": 1,
+      "n": 10,
+      "value": 0.1,
+      "ci95": [
+        0.0179,
+        0.4042
+      ]
+    },
+    "rules_trap_false_alarms": {
+      "k": 11,
+      "n": 30,
+      "value": 0.3667,
+      "ci95": [
+        0.2187,
+        0.5449
+      ]
+    },
+    "misses": [
+      "d5-03",
+      "d5-17",
+      "d5-21",
+      "d5-24",
+      "d5-27",
+      "d5-30",
+      "d5-61",
+      "d5-62",
+      "d5-63",
+      "d5-64",
+      "d5-65",
+      "d5-66",
+      "d5-67",
+      "d5-69",
+      "d5-70"
+    ],
+    "false_alarms": [
+      "d5-33",
+      "d5-40",
+      "d5-42",
+      "d5-43",
+      "d5-44",
+      "d5-47",
+      "d5-51",
+      "d5-54",
+      "d5-56",
+      "d5-58",
+      "d5-59"
+    ],
+    "intake": {
+      "danger_alert": {
+        "k": 24,
+        "n": 30,
+        "value": 0.8,
+        "ci95": [
+          0.6269,
+          0.9049
+        ]
+      },
+      "danger_memo": {
+        "k": 15,
+        "n": 30,
+        "value": 0.5,
+        "ci95": [
+          0.3315,
+          0.6685
+        ]
+      },
+      "contextual_memo": {
+        "k": 0,
+        "n": 10,
+        "value": 0.0,
+        "ci95": [
+          0.0,
+          0.2775
+        ]
+      },
+      "trap_alert": {
+        "k": 15,
+        "n": 30,
+        "value": 0.5,
+        "ci95": [
+          0.3315,
+          0.6685
+        ]
+      },
+      "trap_memo": {
+        "k": 1,
+        "n": 30,
+        "value": 0.0333,
+        "ci95": [
+          0.0059,
+          0.1667
+        ]
+      },
+      "trap_memo_units": [
+        "d5-42"
+      ]
+    },
+    "families": {
+      "contextual": {
+        "windows": 10,
+        "alarm": 1,
+        "rules_alarm": 1,
+        "intake_alert": 1,
+        "memo": 0
+      },
+      "danger": {
+        "windows": 30,
+        "alarm": 24,
+        "rules_alarm": 24,
+        "intake_alert": 24,
+        "memo": 15
+      },
+      "trap": {
+        "windows": 30,
+        "alarm": 11,
+        "rules_alarm": 11,
+        "intake_alert": 15,
+        "memo": 1
+      }
+    }
+  }
+}
