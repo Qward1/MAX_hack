@@ -112,8 +112,9 @@ test.describe.serial("UX-1 quality", () => {
         await expect(page.getByRole("heading", { level: 1, name: "Как открыть свой дом" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Проверить снова" })).toBeVisible();
         await audit(page, `nohouse-${width}`, { mini: true });
-        // Один дом: сразу «что с домом», главное действие внизу, «Если авария» наверху.
-        await page.goto(`/?test_actor=a16-resident`);
+        // Дом выбран: сразу «что с домом», главное действие внизу, «Если авария» наверху.
+        // (Без выбора при нескольких домах — список «Выберите дом», D-01.)
+        await page.goto(`/?test_actor=a16-resident&house=${ids.house}`);
         await expect(page.getByRole("heading", { level: 1, name: "Проблемы дома" })).toBeVisible();
         await expect(page.getByRole("navigation", { name: "Разделы" }).getByRole("link", { name: "Проблемы" })).toHaveAttribute("aria-current", "page");
         await expect(page.getByRole("link", { name: /Если авария/ })).toBeVisible();

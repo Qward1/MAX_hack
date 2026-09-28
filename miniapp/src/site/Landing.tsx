@@ -22,7 +22,7 @@ export function Landing() {
     <a className="skip-link" href="#main">Перейти к содержанию</a>
     <header className="site-header">
       <div className="site-header-inner">
-        <a className="site-brand" href="/" aria-label="ДомСигнал — на главную"><Logo />ДомСигнал</a>
+        <a className="site-brand" href="/" aria-label="ДомСигнал — на главную"><Logo /><span className="site-brand-text">ДомСигнал</span></a>
         <nav aria-label="Разделы страницы" className="site-nav">
           <a href="#how">Как это работает</a>
           <a href="#residents">Жителям</a>

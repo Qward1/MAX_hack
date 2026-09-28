@@ -382,6 +382,7 @@ body {
   .site-actions .site-button { flex: 1 1 100%; }
 }
 @media (max-width: 480px) {
-  .site-header-actions .site-button-quiet { display: none; }
-  .site-brand { font-size: 18px; }
+  .site-header-inner { gap: 8px; }
+  .site-header .site-brand-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .site-header-actions .site-button { padding-inline: 12px; }
 }

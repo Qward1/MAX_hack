@@ -45,7 +45,7 @@ a.ds-text-link:hover {
 }
 .ds-link-button::after,
 .record-link::after {
-  content: "›";
+  content: "›" / "";
   margin-inline-start: 6px;
   color: var(--ds-ink-2);
   font-weight: 400;
@@ -67,7 +67,7 @@ a.ds-text-link:hover {
 /* Внешний сервис — кнопка-ссылка со значком ↗. */
 a.ds-btn[target="_blank"]::after,
 a.ticket-button[target="_blank"]::after {
-  content: "↗";
+  content: "↗" / "";
   font-weight: 400;
 }
 
@@ -586,7 +586,7 @@ details > summary:hover {
   border-radius: inherit;
 }
 .stat-tile .stat-link::after {
-  content: "›";
+  content: "›" / "";
   margin-inline-start: 8px;
   color: var(--ds-ink-2);
   font-weight: 400;
