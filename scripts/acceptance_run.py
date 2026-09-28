@@ -18,7 +18,8 @@
 
   Базы разные: `ACCEPTANCE_PYTEST_DATABASE_URL` — для `tests/integration`,
   `ACCEPTANCE_BROWSER_DATABASE_URL` — для фикстур Playwright (стенд
-  `PLAYWRIGHT_BASE_URL`); `ACCEPTANCE_BASE_URL` — стенд `tests/acceptance`.
+  `PLAYWRIGHT_BASE_URL`, прочее окружение стенда — файл `ACCEPTANCE_BROWSER_ENV`);
+  `ACCEPTANCE_BASE_URL` — стенд `tests/acceptance`.
 """
 
 from __future__ import annotations
@@ -322,6 +323,14 @@ def run_pytest(nodes: list[str]) -> dict[str, tuple[str, float]]:
 def run_playwright(specs: list[str], out: Path) -> dict[str, tuple[str, float]]:
     report = ROOT / "output" / "acceptance" / "playwright.json"
     env = dict(os.environ, PLAYWRIGHT_JSON_OUTPUT_NAME=str(report))
+    # Окружение стенда Playwright (фикстуры, тестовый вход) — только этому процессу:
+    # файл строк KEY=VALUE, чтобы оно не попало в pytest с интеграционной базой.
+    env_file = os.getenv("ACCEPTANCE_BROWSER_ENV")
+    if env_file:
+        for line in Path(env_file).read_text(encoding="utf-8").splitlines():
+            key, sep, value = line.partition("=")
+            if sep and key.strip() and not key.startswith("#"):
+                env[key.strip()] = value
     if os.getenv("ACCEPTANCE_BROWSER_DATABASE_URL"):
         env["DATABASE_URL"] = os.environ["ACCEPTANCE_BROWSER_DATABASE_URL"]
     results_dir = out / "playwright"
