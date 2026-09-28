@@ -30,7 +30,7 @@ fast-forward. Production `/version` = `c9fcf0e` с 28.09.2026 ≈ 06:00 МСК, 
 vitest, сборка; contracts — PASS; integration (PostgreSQL 16) — 525 из 526,
 `test_d5_queue.py::test_claim_uses_the_partial_pool_index` — известная
 нестабильность выбора индекса (M1), повтор — 2 × passed; браузерные — все
-спеки, `ui-lint` — 10 вариантов × 40 экранов без замечаний (`notifications` и
+спеки, `ui-lint` — 10 вариантов × 39 экранов без замечаний (`notifications` и
 `administration` пропускаются без своих фикстур, как раньше); docker smoke с
 TOTP и перезапуском — PASS; сквозные сценарии — 38 из 38; gitleaks по
 коммитам F1 — одно ложное срабатывание (ключ идемпотентности), помечено.
