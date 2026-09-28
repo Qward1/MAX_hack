@@ -58,7 +58,7 @@ function Candidate({
 }) {
   const created = formatWhen(candidate.created_at);
   return (
-    <li className="ds-row">
+    <li className="ds-row ds-candidate">
       <div className="ds-row-head">
         <h3 className="ds-row-title">{candidate.title}</h3>
         <StatusBadge status={candidate.status} />
