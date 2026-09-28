@@ -74,6 +74,7 @@ from domsignal.db.models import (
     House,
     HouseCouncilMember,
     HouseManagement,
+    HouseProposal,
     HouseRoutingProfile,
     ManagementCompany,
     MAXChat,
@@ -914,6 +915,12 @@ class BroadcastService:
             actor_id,
             broadcast.id,
         )
+        # F-15: опрос из предложения жителя подтверждён — предложение вынесено.
+        await session.execute(
+            update(HouseProposal)
+            .where(HouseProposal.broadcast_id == broadcast.id, HouseProposal.status == "new")
+            .values(status="converted", decided_by=actor_id, decided_at=now)
+        )
         await session.flush()
         return await self.view(session, broadcast, scope)
 
@@ -936,6 +943,12 @@ class BroadcastService:
         broadcast.cancelled_at = datetime.now(UTC)
         broadcast.cancelled_by = actor_id
         broadcast.version += 1
+        # F-15: отменённый до отправки опрос возвращает предложение жителя.
+        await session.execute(
+            update(HouseProposal)
+            .where(HouseProposal.broadcast_id == broadcast.id)
+            .values(status="new", broadcast_id=None, decided_by=None, decided_at=None)
+        )
         audit(session, "broadcast.cancelled", actor_id, broadcast.id)
         await session.flush()
         return await self.view(session, broadcast, scope)

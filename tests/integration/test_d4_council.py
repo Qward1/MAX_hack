@@ -9,7 +9,12 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import select, update
 
-from domsignal.contracts.community import CouncilMemberChange, CouncilMemberRevoke
+from domsignal.contracts.community import (
+    BroadcastCommand,
+    BroadcastConfirm,
+    CouncilMemberChange,
+    CouncilMemberRevoke,
+)
 from domsignal.db.models import (
     Broadcast,
     BroadcastHouse,
@@ -190,7 +195,35 @@ async def test_a_proposal_becomes_a_council_poll_or_a_uk_draft(ex) -> None:  # n
         )
     assert draft.origin == "company" and draft.status == "draft" and draft.poll is not None
     stored = await ex.scalar(select(HouseProposal).where(HouseProposal.id == second["id"]))
-    assert stored.status == "converted" and stored.broadcast_id == draft.id
+    # F-15: пока опрос — черновик, предложение не «вынесено», а ждёт со ссылкой.
+    assert stored.status == "new" and stored.broadcast_id == draft.id
+    # Отмена черновика возвращает предложение; подтверждение нового — выносит.
+    async with ex.container.session_factory() as session, session.begin():
+        await ex.container.broadcasts.cancel(
+            session,
+            actor_id=ex.ids["admin"],
+            broadcast_id=draft.id,
+            payload=BroadcastCommand(expected_version=draft.version),
+        )
+    stored = await ex.scalar(select(HouseProposal).where(HouseProposal.id == second["id"]))
+    assert stored.status == "new" and stored.broadcast_id is None
+    async with ex.container.session_factory() as session, session.begin():
+        again = await ex.container.council.proposal_to_poll(
+            session,
+            actor_id=ex.ids["admin"],
+            company_id=ex.ids["tenant"],
+            proposal_id=second["id"],
+            idempotency_key=f"key-{uuid4().hex}",
+        )
+    async with ex.container.session_factory() as session, session.begin():
+        await ex.container.broadcasts.confirm(
+            session,
+            actor_id=ex.ids["admin"],
+            broadcast_id=again.id,
+            payload=BroadcastConfirm(expected_version=again.version, service_only=True),
+        )
+    stored = await ex.scalar(select(HouseProposal).where(HouseProposal.id == second["id"]))
+    assert stored.status == "converted" and stored.broadcast_id == again.id
 
 
 @pytest.mark.integration

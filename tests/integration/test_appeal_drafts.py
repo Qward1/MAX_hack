@@ -185,6 +185,27 @@ async def test_mark_filed_without_a_reference_is_allowed(ex) -> None:  # noqa: F
 
 
 @pytest.mark.integration
+async def test_a_filed_draft_text_cannot_change_even_through_the_api(ex) -> None:  # noqa: F811
+    """F-17: интерфейс обещает «Отметку потом не изменить» — API держит слово."""
+    outcome = await _external_outcome(ex)
+    draft = (await _create(ex, outcome)).json()
+    await ex.client.post(
+        f"/api/v1/appeal-drafts/{draft['id']}/mark-filed", headers=ex.headers["resident"]
+    )
+    patched = await ex.client.patch(
+        f"/api/v1/appeal-drafts/{draft['id']}",
+        json={"text": "Новый текст после отправки", "version": draft["version"]},
+        headers=ex.headers["resident"],
+    )
+    assert patched.status_code == 409, patched.text
+    assert patched.json()["code"] == "draft_filed"
+    fresh = await ex.client.get(
+        f"/api/v1/appeal-drafts/{draft['id']}", headers=ex.headers["resident"]
+    )
+    assert fresh.json()["text"] == draft["text"]
+
+
+@pytest.mark.integration
 async def test_marking_twice_keeps_the_first_mark(ex) -> None:  # noqa: F811
     outcome = await _external_outcome(ex)
     draft = (await _create(ex, outcome)).json()

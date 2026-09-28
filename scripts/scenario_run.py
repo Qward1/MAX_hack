@@ -250,6 +250,23 @@ def main() -> int:
     if os.environ.get("APP_ENV") == "production" or "prod" in database or not database:
         print("Сценарии только на своей тестовой БД (DATABASE_URL)", file=sys.stderr)
         return 2
+    # F-12: новая БД — сначала миграции; не вышло — понятная подсказка, а не
+    # 36 упавших шагов.
+    migrated = subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if migrated.returncode != 0:
+        print(
+            "Не удалось применить миграции к DATABASE_URL (alembic upgrade head). "
+            "Проверьте, что PostgreSQL запущена и БД существует. "
+            + migrated.stderr[-2000:],
+            file=sys.stderr,
+        )
+        return 2
     nodes = [node for _, steps in SCENARIOS for _, node in steps]
     with tempfile.TemporaryDirectory() as temp:
         report = Path(temp) / "junit.xml"
