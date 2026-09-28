@@ -328,7 +328,10 @@ async def test_tk06_idempotency_current_replay_hash_and_revoke(tickets: dict) ->
     assert (
         await observe(d, attempt_id, "carol", "resolved", key="repeat-observation")
     ).status_code == 404
-    assert (await read(d, "alice")).json()["requires_reassignment"]
+    # Исполнитель отозван, но заявка уже закрыта — переназначать её незачем
+    # (активная заявка с отозванным исполнителем — test_tk07).
+    closed = (await read(d, "alice")).json()
+    assert closed["status"] == "closed" and not closed["requires_reassignment"]
 
 
 async def test_tk07_parallel_positive_negative_and_ensure(tickets: dict) -> None:

@@ -44,6 +44,7 @@ from domsignal.contracts.tickets import (
     WorkAttemptCreate,
 )
 from domsignal.core.tickets import (
+    ACTIVE,
     TicketAction,
     TicketEventKind,
     observation_status,
@@ -697,7 +698,8 @@ class TicketService:
             else None,
             accepted_by=ticket.accepted_by,
             accepted_at=ticket.accepted_at,
-            requires_reassignment=not available,
+            # Завершённую заявку переназначать некому и незачем.
+            requires_reassignment=not available and ticket.status in ACTIVE,
             routing_reason=ticket.routing_reason,
             source=ticket.source,
             created_by=ticket.created_by,

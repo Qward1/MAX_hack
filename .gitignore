@@ -53,3 +53,6 @@ miniapp/test-results/
 miniapp/playwright-report/
 .worktrees/
 worktrees/
+
+# Снимки и журналы Playwright MCP (локальные прогоны агента)
+.playwright-mcp/
