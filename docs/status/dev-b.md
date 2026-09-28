@@ -1,5 +1,28 @@
 # DEV-B — current handoff
 
+## Финальная подготовка к сдаче — 28.09.2026
+
+**DEPLOYED, тег `online-submission-final`.** Итог и доказательства —
+[`FINAL_JURY_READINESS_REPORT.md`](../../FINAL_JURY_READINESS_REPORT.md), пункты
+сдачи — [`SUBMISSION_CHECKLIST.md`](../../SUBMISSION_CHECKLIST.md), прогоны —
+[`docs/TESTING.md`](../TESTING.md).
+
+- ML DEV-A — merge-коммитом в `ml/`, в образ продукта не входит; смоук без закрытых
+  данных ([ML-IN-REPO-2026-09-28](../decisions.md#ml-in-repo-2026-09-28)).
+- API заявлен: `DATA-API.yaml`, `docs/API.md`, `docs/api/test_data.json`,
+  `scripts/data_api_check.py` — 24/24 на production
+  ([API-DECLARED-2026-09-28](../decisions.md#api-declared-2026-09-28)).
+- Исправления среза: флаги `/capabilities`, «Нужно переназначить», «Такой страницы
+  нет», лимит входа 30 на production, бюджет модели в обзоре, название УК в
+  кавычках один раз, `platform_ops rename-staff | refresh-chat | rename-company
+  --legal-name`.
+- Витрина на production: служебные названия заменены штатными командами, 64
+  тестовых сообщения удалены из демо-чата, закреплено сообщение о подключении.
+- Гид жюри `JURY_GUIDE.md` переписан по дословным названиям кнопок (сверка скриптом
+  с `src/` и `miniapp/src`); подключение своей группы — `jury.admin` → «MAX-чаты» →
+  «Подключить ещё один чат» к демо-дому, без новой УК; код не менялся.
+- Выкладки 18:47 (`56ceaa2`), 19:47 (`ff5573c`) и финальная — документы.
+
 ## F1 — готовность к сдаче — 28–29.09.2026
 
 **Выкладка A — DEPLOYED.** Ветка `agent/f1-release` (от `main` = `9932f80`),
