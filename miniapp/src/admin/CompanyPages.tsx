@@ -1,9 +1,10 @@
+import { IconChat, IconClock, IconPeople } from "../shared/ui/icons";
 import { useConfirm } from "../shared/ui/useConfirm";
 import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
 import { AddressListForm } from "./HouseBatch";
 import { useEffect, useState, type FormEvent } from "react";
 import { POLL_LIST_MS, POLL_WAITING_MS } from "../shared/api/useResource";
-import { Feedback, History, OneTimeLink, Status, Title, connectionErrors, dateInput, formValue, submitted, useAction, useRead, type Schema } from "./administration";
+import { Feedback, History, OneTimeLink, Status, Title, connectionErrors, dateInput, formValue, labels, submitted, useAction, useRead, type Schema } from "./administration";
 import { QuotaMeter } from "./charts";
 import { ChatSettingsPanel, CompanyProfileForm, HouseFactsForm } from "./CommunityPages";
 
@@ -176,7 +177,7 @@ export function HouseList({ houses, manage, base = manage?.base }: { houses: Hou
 export function HouseCouncil({ base, house }: { base: string; house: House }) {
   const [open, setOpen] = useState(false);
   return <details className="passive-switch" onToggle={e => setOpen(e.currentTarget.open)}>
-    <summary>Совет дома</summary>
+    <summary><span className="ds-summary-icon"><IconPeople /></span>Совет дома</summary>
     {open && <CouncilDetail base={base} houseId={house.house_id} />}
   </details>;
 }
@@ -299,9 +300,9 @@ export function CompanyHouses({ base }: { base: string }) {
   const [list, setList] = useState(false);
   const [key, setKey] = useState(() => crypto.randomUUID());
   const action = useAction(requests.refresh);
-  return <><Title description="Действующее управление и заявки на подключение домов">Дома</Title>
-    <div className="button-row"><button className="ticket-button" aria-expanded={show} onClick={() => setShow(!show)}>Запросить управление домом</button>
-      <button className="ticket-button secondary" aria-expanded={list} onClick={() => setList(!list)}>Вставить список адресов</button></div>
+  return <><Title description="Дома, которыми управляет ваша УК, и заявки на подключение новых домов."
+    actions={<><button className="ds-btn ds-btn-primary" aria-expanded={show} onClick={() => setShow(!show)}>Запросить управление домом</button>
+      <button className="ds-btn ds-btn-secondary" aria-expanded={list} onClick={() => setList(!list)}>Вставить список адресов</button></>}>Дома</Title>
     {list && <AddressListForm base={base} onDone={requests.refresh} />}
     {show && <form className="ticket-form admin-detail" onSubmit={async e => {
       const data = submitted(e);
@@ -320,62 +321,135 @@ export function CompanyHouses({ base }: { base: string }) {
     </section>)}
   </>;
 }
+const OPEN_REQUEST = (status: string) => !["completed", "rejected", "cancelled", "expired"].includes(status);
+const DETECTED = ["chat_detected", "max_verified", "awaiting_approval"];
+const connectionOutcome: Record<string, string> = {
+  completed: "Подключён", rejected: "Отклонён", cancelled: "Отменён", expired: "Истёк срок",
+};
+
+/**
+ * «MAX-чаты» (U-01…U-05). У дома три состояния: чата нет — «Подключить чат»,
+ * пока есть свободное место; идёт подключение — только оно: шаги, код,
+ * «Открыть бота в MAX», «Скопировать команду», статус ожидания и одно
+ * «Отменить подключение»; чат подключён — название, дата, чтение. Страница
+ * сама проверяет статус раз в 5 с, пока идёт подключение, — обновлять её не нужно.
+ */
 export function ChatConnections({ base, canRequest = true }: { base: string; canRequest?: boolean }) {
-  // U-05: пока идёт подключение, страница сама проверяет статус раз в 5 с.
   const [waiting, setWaiting] = useState(false);
   const houses = useRead<House[]>(`${base}/houses`, 0, { poll: waiting ? POLL_WAITING_MS : POLL_LIST_MS });
-  const active = (houses.data ?? []).some(h => h.connection_requests.some(r => !["completed", "rejected", "cancelled", "expired"].includes(r.status)));
-  useEffect(() => { setWaiting(active); }, [active]);
-  const quota = useRead<Schema["CompanyQuotaView"]>(`${base}/chat-quota`);
+  const quota = useRead<Schema["CompanyQuotaView"]>(`${base}/chat-quota`, 0, { poll: waiting ? POLL_WAITING_MS : POLL_LIST_MS });
   const capabilities = useRead<Schema["CapabilitiesResponse"]>("/api/v1/capabilities");
+  const active = (houses.data ?? []).some(h => h.connection_requests.some(r => OPEN_REQUEST(r.status)));
+  useEffect(() => { setWaiting(active); }, [active]);
   const action = useAction(() => { houses.refresh(); quota.refresh(); });
-  const [token, setToken] = useState("");
-  const [remaining, setRemaining] = useState<Schema["ChatQuotaView"] | null>(null);
-  const [confirm, setConfirm] = useState<string | null>(null);
+  const confirm = useConfirm();
+  // Код подключения живёт только в памяти страницы: в базе — лишь его хэш.
+  const [codes, setCodes] = useState<Record<string, string>>({});
+  const [confirmPassive, setConfirmPassive] = useState<string | null>(null);
   const [expand, setExpand] = useState(false);
   const available = capabilities.data?.features.passive_capture === true;
   const aiAnalysis = capabilities.data?.features.passive_ai_analysis === true;
   const exceeded = action.code === "CHAT_QUOTA_EXCEEDED";
-  return <><Title description="Подключение существующих чатов к подтверждённым домам">MAX-чаты</Title>
+  const q = quota.data?.quota;
+  const free = q ? (q.limit === null || q.limit === undefined ? null : Math.max(0, (q.remaining ?? 0))) : null;
+  const connect = async (houseId: string) => {
+    const result = await action.run<Schema["ConnectionView"]>(`/api/v1/houses/${houseId}/chat-connections`, { scope_type: "house" });
+    if (result?.correlation_token) setCodes(c => ({ ...c, [result.id]: result.correlation_token as string }));
+  };
+  const reissue = async (requestId: string) => {
+    const result = await action.run<Schema["ConnectionView"]>(`/api/v1/chat-connections/${requestId}/code`);
+    if (result?.correlation_token) setCodes(c => ({ ...c, [result.id]: result.correlation_token as string }));
+  };
+  return <>
+    <Title description="Чаты домов, подключённые к ДомСигналу: бот читает переписку, замечает проблемы и публикует статусы заявок.">MAX-чаты</Title>
+    {confirm.dialog}
     <ChatQuotaPanel base={base} view={quota.data} error={quota.error} refresh={quota.refresh} open={expand || (exceeded && canRequest)}
       setOpen={setExpand} canRequest={canRequest} />
-    {exceeded ? <div className="admin-feedback" role="alert"><p><strong>Лимит исчерпан.</strong> {action.error}</p>
-      {!canRequest ? <p>Расширение квоты запрашивает администратор УК.</p>
-        : !expand && <button className="ticket-button" onClick={() => setExpand(true)}>Запросить расширение</button>}</div>
-      : <Feedback loading={houses.loading} error={houses.error ?? (action.error || undefined)} />}
-    {token && <section className="one-time-link"><h2>Продолжите в MAX</h2>
-      {remaining?.limit != null && <p>После подключения останется свободных слотов: {Math.max((remaining.remaining ?? 0) - 1, 0)} из {remaining.limit}.</p>}
-      <p>1. Администратор чата открывает бота ДомСигнал по кнопке — код подключения передаётся сам, бот ответит, что делать дальше.</p>
-      {capabilities.data?.bot_url && <a className="ticket-button" href={`${capabilities.data.bot_url}?start=${token}`} target="_blank" rel="noopener noreferrer">Открыть бота в MAX</a>}
-      <p className="muted">Или отправьте боту в личные сообщения эту команду целиком:</p>
-      <input aria-label="Команда подключения MAX" readOnly value={`/start ${token}`} onFocus={e => e.target.select()} />
-      <p>2. После ответа бота администратор добавляет бота в группу дома и делает его администратором с правом читать все сообщения.</p>
-      <p>3. Обновите эту страницу и нажмите «Подтвердить подключение».</p></section>}
-    {!houses.error && houses.data?.map(h => <section className="admin-detail" key={h.management_id}><h2>{h.address}</h2>
-      {h.bindings.map(b => <div key={b.id} className="connection-row">
-        <p>{b.title ?? "MAX-чат"} · <Status value={b.status} /> · {b.scope_type === "entrance" ? `Подъезд ${b.scope_value}` : "Весь дом"}
-          {b.suspension_reason && ` · ${b.suspension_reason}`}</p>
-        {b.status === "active" && <PassiveSwitch binding={b} available={available} aiAnalysis={aiAnalysis} busy={action.busy}
-          confirming={confirm === b.id} ask={() => setConfirm(b.id)} cancel={() => setConfirm(null)}
-          change={async enabled => { await action.run(`/api/v1/chat-bindings/${b.id}/passive-capture`, { enabled }); setConfirm(null); }} />}
-        {b.status === "active" && <NoticeAgain binding={b.id} />}
-        {b.status === "active" && <ChatSettingsPanel bindingId={b.id} />}
-      </div>)}
-      {h.can_connect_chats ? <button className="ticket-button" disabled={action.busy} onClick={async () => {
-        const result = await action.run<Schema["ConnectionView"]>(`/api/v1/houses/${h.house_id}/chat-connections`, { scope_type: "house" });
-        if (result) { setToken(result.correlation_token ?? ""); setRemaining(result.quota ?? null); }
-      }}>Подключить существующий MAX-чат</button> : <p className="muted">Чаты этого дома подключает администратор УК или ответственный за дом.</p>}
-      {h.connection_requests.map(r => <div className="connection-row" key={r.id}><Status value={r.status} />
-        {r.last_error_code && <p>{connectionErrors[r.last_error_code] ?? r.last_error_code}</p>}
-        {r.status === "chat_detected" && r.last_error_code && <p className="muted">Исправьте это в MAX и нажмите «Подтвердить подключение» — проверка пройдёт заново.</p>}
-        {["chat_detected", "max_verified", "awaiting_approval"].includes(r.status) && <button className="ticket-button" disabled={action.busy}
-          onClick={() => void action.run(`/api/v1/chat-connections/${r.id}/approve`, { confirm: true })}>Подтвердить подключение</button>}
-        {!["completed", "rejected", "cancelled", "expired"].includes(r.status) && <>
-          <button className="ticket-button secondary" disabled={action.busy} onClick={() => void action.run(`/api/v1/chat-connections/${r.id}/cancel`)}>Отменить подключение</button>
-          <button className="ticket-button secondary" disabled={action.busy} onClick={() => void action.run(`/api/v1/chat-connections/${r.id}/reject`)}>Отклонить подключение</button></>}
-      </div>)}
-    </section>)}
+    {exceeded && <div className="admin-feedback" role="alert"><p><strong>Лимит исчерпан.</strong> {action.error}</p>
+      {!canRequest && <p>Расширение квоты запрашивает администратор УК.</p>}</div>}
+    {!exceeded && <Feedback loading={houses.loading && !houses.data} error={houses.error ?? (action.error || undefined)} />}
+    {!houses.error && houses.data?.length === 0 && <p className="state-panel">Подтверждённых домов пока нет. Сначала запросите управление домом в разделе «Дома».</p>}
+    {!houses.error && houses.data?.map(h => {
+      const request = h.connection_requests.find(r => OPEN_REQUEST(r.status));
+      const history = h.connection_requests.filter(r => !OPEN_REQUEST(r.status));
+      const connected = h.bindings.filter(b => b.status !== "revoked");
+      return <section className="admin-detail" key={h.management_id} aria-labelledby={`house-${h.management_id}`}>
+        <h2 id={`house-${h.management_id}`}>{h.address}</h2>
+        {connected.map(b => <div key={b.id} className="chat-connected">
+          <p className="chat-connected-title"><IconChat />{b.title ?? "MAX-чат дома"} <Status value={b.status} /></p>
+          <p className="muted">{b.scope_type === "entrance" ? `Подъезд ${b.scope_value}` : "Весь дом"}
+            {b.activated_at && ` · подключён ${formatDay(b.activated_at)}`}{b.suspension_reason && ` · ${b.suspension_reason}`}</p>
+          {b.status === "active" && <PassiveSwitch binding={b} available={available} aiAnalysis={aiAnalysis} busy={action.busy}
+            confirming={confirmPassive === b.id} ask={() => setConfirmPassive(b.id)} cancel={() => setConfirmPassive(null)}
+            change={async enabled => { await action.run(`/api/v1/chat-bindings/${b.id}/passive-capture`, { enabled }); setConfirmPassive(null); }} />}
+          {b.status === "active" && <NoticeAgain binding={b.id} />}
+          {b.status === "active" && <ChatSettingsPanel bindingId={b.id} />}
+        </div>)}
+        {request ? <ConnectionSteps request={request} code={codes[request.id]} botUrl={capabilities.data?.bot_url ?? null}
+          lastSlot={free === 1} busy={action.busy}
+          onReissue={() => void reissue(request.id)}
+          onApprove={() => void action.run(`/api/v1/chat-connections/${request.id}/approve`, { confirm: true })}
+          onCancel={() => confirm.ask({ title: "Отменить подключение?", body: "Код подключения перестанет действовать. Чтобы подключить чат позже, начните заново.",
+            confirmLabel: "Отменить подключение", run: () => action.run(`/api/v1/chat-connections/${request.id}/cancel`) })} />
+        : !h.can_connect_chats ? (!connected.length && <p className="muted">Чаты этого дома подключает администратор УК или ответственный за дом.</p>)
+        : free === 0 ? <p className="muted">Свободных мест для чатов нет{canRequest ? " — запросите расширение квоты выше." : "."}</p>
+        : <div className="button-row"><button className="ds-btn ds-btn-primary" disabled={action.busy} onClick={() => void connect(h.house_id)}>
+            {connected.length ? "Подключить ещё один чат" : "Подключить чат"}</button></div>}
+        {history.length > 0 && <details><summary><span className="ds-summary-icon"><IconClock /></span>История подключений ({history.length})</summary>
+          <ul className="admin-records">{history.map(r => <li key={r.id}>
+            <span><strong>{connectionOutcome[r.status] ?? labels[r.status] ?? r.status}</strong>
+              {r.initiated_by_name && <> · начал(а) {r.initiated_by_name}</>}
+              {r.last_error_code && <> · {connectionErrors[r.last_error_code] ?? "проверка не прошла"}</>}</span>
+            <time>{formatStaffTime(r.completed_at ?? r.cancelled_at ?? r.rejected_at ?? r.expires_at ?? r.created_at)}</time>
+          </li>)}</ul></details>}
+      </section>;
+    })}
   </>;
+}
+
+/** Шаги подключения чата: код → бот в группе → подтверждение (U-01, U-05). */
+function ConnectionSteps({ request, code, botUrl, lastSlot, busy, onReissue, onApprove, onCancel }: {
+  request: Schema["ConnectionView"]; code?: string; botUrl: string | null; lastSlot: boolean; busy: boolean;
+  onReissue: () => void; onApprove: () => void; onCancel: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const claimed = request.status !== "created";
+  const detected = DETECTED.includes(request.status);
+  const ready = detected && !request.last_error_code;
+  const command = code ? `/start ${code}` : "";
+  return <div className="connect-block" aria-live="polite">
+    <p><strong>Идёт подключение чата</strong> · до {formatStaffTime(request.expires_at)}</p>
+    {lastSlot && <p className="muted">Этот чат займёт последнее свободное место.</p>}
+    <ol className="connect-steps">
+      <li className={claimed ? "is-done" : undefined}><div>
+        <strong>Администратор группы открывает бота ДомСигнал</strong>
+        {claimed ? <p className="muted">Бот получил код подключения.</p> : code ? <>
+          <div className="button-row">
+            {botUrl && <a className="ds-btn ds-btn-primary" href={`${botUrl}?start=${code}`} target="_blank" rel="noopener noreferrer">Открыть бота в MAX</a>}
+            <button type="button" className="ds-btn ds-btn-secondary" onClick={async () => {
+              try { await navigator.clipboard.writeText(command); setCopied(true); } catch { setCopied(false); }
+            }}>{copied ? "Скопировано" : "Скопировать команду"}</button>
+          </div>
+          <label className="connect-command">Или отправьте боту в личные сообщения команду целиком
+            <input aria-label="Команда подключения MAX" readOnly value={command} onFocus={e => e.target.select()} /></label>
+        </> : <>
+          <p className="muted">Код показывается один раз. Выдайте новый — прежний перестанет действовать.</p>
+          <div className="button-row"><button type="button" className="ds-btn ds-btn-secondary" disabled={busy} onClick={onReissue}>Показать новый код</button></div>
+        </>}
+      </div></li>
+      <li className={detected ? "is-done" : undefined}><div>
+        <strong>Он добавляет бота в группу дома администратором с правом читать все сообщения</strong>
+        {!detected && claimed && <p className="connect-waiting">Ждём, когда бот появится в группе — страница проверит сама.</p>}
+      </div></li>
+      <li><div>
+        <strong>Вы подтверждаете подключение</strong>
+        {request.last_error_code && <p className="admin-feedback">{connectionErrors[request.last_error_code] ?? "Проверка в MAX не прошла"}. Исправьте это в MAX — проверка пройдёт заново.</p>}
+        {ready ? <div className="button-row"><button type="button" className="ds-btn ds-btn-primary" disabled={busy} onClick={onApprove}>Подтвердить подключение</button></div>
+          : <p className="muted">Кнопка появится, когда бот будет в группе с нужными правами.</p>}
+      </div></li>
+    </ol>
+    <div className="button-row"><button type="button" className="ds-btn ds-btn-danger" disabled={busy} onClick={onCancel}>Отменить подключение</button></div>
+  </div>;
 }
 
 /** «Отправить сообщение с кнопкой ещё раз» для уже подключённого чата. */
@@ -421,22 +495,42 @@ export function PassiveSwitch({ binding, available, aiAnalysis, busy, confirming
   </div>;
 }
 
-/** «Чаты: N из Q», запрос на расширение и история квоты (CHAT-QUOTA-2026-09-26). */
+/**
+ * Квота чатов (U-04): «Подключено 0 из 1 · свободно 1» одной строкой,
+ * «Запросить расширение» — вторичная кнопка обычной ширины рядом с квотой
+ * (CHAT-QUOTA-2026-09-26).
+ */
 export function ChatQuotaPanel({ base, view, error, refresh, open, setOpen, canRequest = true }: {
   base: string; view?: Schema["CompanyQuotaView"]; error?: unknown; refresh: () => void; open: boolean; setOpen: (open: boolean) => void;
   canRequest?: boolean;
 }) {
   const [key, setKey] = useState(() => crypto.randomUUID());
-  const action = useAction(refresh);
+  const action = useAction(refresh, {}, "Запрос на расширение отправлен платформе");
+  const confirm = useConfirm();
   if (error) return <Feedback error={error} />;
   if (!view) return null;
   const pending = view.requests.find(r => r.status === "pending");
-  const limited = view.quota.limit !== null && view.quota.limit !== undefined;
+  const q = view.quota;
+  const limited = q.limit !== null && q.limit !== undefined;
+  const free = limited ? Math.max(0, q.remaining ?? 0) : null;
+  const share = limited ? (q.limit === 0 ? 1 : Math.min(1, q.used / (q.limit as number))) : 0;
   return <section className="admin-detail quota-panel" aria-label="Квота чатов">
-    <QuotaMeter quota={view.quota} label="Подключённые чаты" />
-    {pending ? <p>Запрос на расширение +{pending.requested_delta} на рассмотрении платформы.
-      {canRequest && <button className="ticket-button secondary" disabled={action.busy} onClick={() => void action.run(`${base}/chat-quota/requests/${pending.id}/cancel`)}>Отозвать запрос</button>}</p>
-      : limited && canRequest && (!open ? <button className="ticket-button secondary" onClick={() => setOpen(true)}>Запросить расширение</button> :
+    {confirm.dialog}
+    <div className="quota-line">
+      <div className={`quota-meter quota-${q.over_limit ? "over" : q.exhausted ? "full" : "ok"}`}>
+        <p className="quota-value"><strong>{limited ? `Подключено ${q.used} из ${q.limit} · свободно ${free}` : `Подключено ${q.used} · без ограничения`}</strong></p>
+        {limited && <div className="quota-track" role="meter" aria-valuemin={0} aria-valuemax={q.limit as number} aria-valuenow={q.used}
+          aria-label={`Подключено ${q.used} из ${q.limit}`}><span style={{ width: `${share * 100}%` }} /></div>}
+      </div>
+      {limited && canRequest && !pending && !open &&
+        <button type="button" className="ds-btn ds-btn-secondary" onClick={() => setOpen(true)}>Запросить расширение</button>}
+    </div>
+    {q.over_limit && <p className="quota-note">Квота ниже числа подключённых чатов: они работают, новые не подключаются.</p>}
+    {pending && <div className="button-row"><p>Запрос на расширение +{pending.requested_delta} на рассмотрении платформы.</p>
+      {canRequest && <button className="ds-btn ds-btn-danger" disabled={action.busy} onClick={() => confirm.ask({
+        title: "Отозвать запрос на расширение?", body: "Платформа не будет его рассматривать. Новый запрос можно отправить позже.",
+        confirmLabel: "Отозвать запрос", run: () => action.run(`${base}/chat-quota/requests/${pending.id}/cancel`) })}>Отозвать запрос</button>}</div>}
+    {!pending && limited && canRequest && open &&
       <form className="ticket-form" onSubmit={async e => {
         const data = submitted(e);
         const result = await action.run(`${base}/chat-quota/requests`, {
@@ -446,10 +540,10 @@ export function ChatQuotaPanel({ base, view, error, refresh, open, setOpen, canR
         <label>Сколько чатов добавить<input name="delta" type="number" min={1} max={1000} required defaultValue={1} inputMode="numeric" /></label>
         <label>Обоснование<textarea name="reason" required minLength={3} maxLength={2000} placeholder="Например: подключаем чаты подъездов дома на ул. Баумана, 1" /></label>
         <Feedback error={action.error || undefined} />
-        <div className="button-row"><button className="ticket-button" disabled={action.busy}>Отправить запрос</button>
-          <button type="button" className="ticket-button secondary" onClick={() => setOpen(false)}>Отмена</button></div>
-      </form>)}
-    {view.requests.some(r => r.status !== "pending") && <details><summary>История запросов и выдач</summary>
+        <div className="button-row"><button className="ds-btn ds-btn-primary" disabled={action.busy}>Отправить запрос</button>
+          <button type="button" className="ds-btn ds-btn-secondary" onClick={() => setOpen(false)}>Отмена</button></div>
+      </form>}
+    {view.requests.some(r => r.status !== "pending") && <details><summary><span className="ds-summary-icon"><IconClock /></span>История запросов и выдач</summary>
       <ul className="admin-records">{view.requests.filter(r => r.status !== "pending").map(r => <li key={r.id}>
         <span>+{r.requested_delta}: {r.reason}</span><Status value={r.status} />
         {r.granted_delta != null && r.status !== "rejected" && <span>выдано +{r.granted_delta}</span>}

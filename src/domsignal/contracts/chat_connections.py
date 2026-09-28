@@ -37,6 +37,12 @@ class ConnectionView(ContractModel):
     correlation_token: str | None = None
     #: Квота чатов УК на момент ответа (D2): «осталось N из Q».
     quota: ChatQuotaView | None = None
+    #: U-03: история подключений — когда создан и закончился запрос и кто начал.
+    created_at: datetime | None = None
+    completed_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    rejected_at: datetime | None = None
+    initiated_by_name: str | None = None
 
 
 class ConnectionApprove(ContractModel):

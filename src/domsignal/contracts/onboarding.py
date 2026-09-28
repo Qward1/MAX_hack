@@ -424,6 +424,8 @@ class ChatSummary(ContractModel):
     suspension_reason: str | None
     # Чтение чата включено у привязки. `None` — поверхность этого не сообщает.
     passive_capture_enabled: bool | None = None
+    #: U-01: когда чат подключён.
+    activated_at: datetime | None = None
 
 
 class CompanyHouseView(ContractModel):

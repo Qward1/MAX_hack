@@ -361,7 +361,7 @@ test.describe.serial("UX-1 quality", () => {
           await expect(assign).toBeFocused();
         }
         // Возврат к очереди сохраняет фильтр.
-        await page.getByRole("link", { name: /← К заявкам/ }).click();
+        await page.getByRole("link", { name: "Все заявки" }).click();
         await expect(page).toHaveURL(/filter=new/);
       } finally {
         await ctx.close();

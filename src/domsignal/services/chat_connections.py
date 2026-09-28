@@ -594,4 +594,8 @@ class ChatConnectionService:
             binding_version=binding.binding_version if binding else None,
             correlation_token=token,
             quota=quota,
+            created_at=request.created_at,
+            completed_at=request.completed_at,
+            cancelled_at=request.cancelled_at,
+            rejected_at=request.rejected_at,
         )

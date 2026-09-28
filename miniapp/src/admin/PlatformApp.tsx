@@ -1,3 +1,4 @@
+import { AdminHeader } from "./AdminHeader";
 import { Toaster } from "../shared/ui/Toast";
 import { POLL_LIST_MS } from "../shared/api/useResource";
 import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
@@ -15,15 +16,17 @@ export function PlatformApp() {
   const bootstrap = useRead<Schema["PlatformBootstrap"]>("/api/v1/platform/bootstrap");
   const { url, navigate } = useRoute();
   const page = url.pathname.replace(/^\/platform-admin\/?/, "") || "overview";
-  return <div className="admin-shell platform-workspace"><Toaster /><aside className="admin-sidebar">
-    <a className="admin-brand" href="/platform-admin/">ДомСигнал<span>Управление платформой</span></a>
+  const refresh = () => window.dispatchEvent(new Event("administration-refresh"));
+  return <div className="admin-shell platform-workspace with-topbar"><Toaster />
+    <AdminHeader home="/platform-admin/" navigate={navigate} org="Платформа" user={bootstrap.data?.display_name}
+      role="Администратор платформы" onRefresh={refresh} />
+    <aside className="admin-sidebar"><p className="admin-sidebar-title">Управление платформой</p>
     <nav aria-label="Разделы платформы">{!bootstrap.error && bootstrap.data?.surfaces.map(s => <a className="admin-nav-link" key={s}
       href={`/platform-admin/${s}`} aria-current={page === s ? "page" : undefined}
       onClick={e => { e.preventDefault(); navigate(`/platform-admin/${s}`); }}>{navigation[s] ?? s}</a>)}</nav>
     <p className="admin-sidebar-note">Рассмотрение заявок и состояние организаций</p>
   </aside><main className="app-shell admin-main"><Feedback loading={bootstrap.loading} error={bootstrap.error} />
-    {bootstrap.data && !bootstrap.error && <><div className="toolbar ticket-line"><span>{bootstrap.data.display_name}</span>
-      <button className="ticket-button secondary" onClick={() => window.dispatchEvent(new Event("administration-refresh"))}>Обновить</button></div>
+    {bootstrap.data && !bootstrap.error && <>
       <PlatformPage key={page} page={page} open={next => navigate(`/platform-admin/${next}`)} /></>}
   </main></div>;
 }

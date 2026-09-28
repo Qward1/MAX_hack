@@ -59,9 +59,11 @@ export function Feedback({ loading, error }: { loading?: boolean; error?: unknow
   return error ? <p role="alert" className="admin-feedback">{error instanceof Error ? error.message : String(error)}</p>
     : loading ? <p role="status">Загружаем…</p> : null;
 }
-export function Title({ children, description }: { children: ReactNode; description?: string }) {
+/** Заголовок страницы кабинета: h1, описание на ширину контента и действие справа (U-11). */
+export function Title({ children, description, actions }: { children: ReactNode; description?: string; actions?: ReactNode }) {
   return <header className="page-header"><h1 id="page-title" tabIndex={-1}>{children}</h1>
-    {description && <p className="muted">{description}</p>}</header>;
+    {description && <p className="muted">{description}</p>}
+    {actions && <div className="page-actions">{actions}</div>}</header>;
 }
 export const labels: Record<string, string> = {
   submitted: "Подана", under_review: "На рассмотрении", needs_info: "Нужны уточнения", approved: "Одобрена",

@@ -3997,6 +3997,8 @@ export interface components {
         };
         /** ChatSummary */
         ChatSummary: {
+            /** Activated At */
+            activated_at?: string | null;
             /**
              * Id
              * Format: uuid
@@ -4375,10 +4377,16 @@ export interface components {
             binding_id?: string | null;
             /** Binding Version */
             binding_version?: number | null;
+            /** Cancelled At */
+            cancelled_at?: string | null;
             /** Candidate Max Chat Id */
             candidate_max_chat_id: string | null;
+            /** Completed At */
+            completed_at?: string | null;
             /** Correlation Token */
             correlation_token?: string | null;
+            /** Created At */
+            created_at?: string | null;
             /**
              * Expires At
              * Format: date-time
@@ -4394,9 +4402,13 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Initiated By Name */
+            initiated_by_name?: string | null;
             /** Last Error Code */
             last_error_code: string | null;
             quota?: components["schemas"]["ChatQuotaView"] | null;
+            /** Rejected At */
+            rejected_at?: string | null;
             /**
              * Scope Type
              * @enum {string}
@@ -5956,6 +5968,8 @@ export interface components {
         };
         /** PlatformBindingView */
         PlatformBindingView: {
+            /** Activated At */
+            activated_at?: string | null;
             /**
              * Company Id
              * Format: uuid

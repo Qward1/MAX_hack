@@ -599,7 +599,7 @@ for (const width of [390, 768, 1024, 1366])
     ).toBeVisible();
     await noOverflow(page);
     await axe(page);
-    const back = page.getByRole("link", { name: "← К заявкам" });
+    const back = page.getByRole("link", { name: "Все заявки" });
     await back.focus();
     expect(
       await back.evaluate((e) => getComputedStyle(e).outlineStyle),

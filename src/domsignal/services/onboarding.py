@@ -1248,11 +1248,21 @@ class AdministrationService:
                             scope_value=b.scope_value,
                             suspension_reason=b.suspension_reason,
                             passive_capture_enabled=b.passive_capture_enabled,
+                            activated_at=b.activated_at,
                         )
                         for b, title in bindings
                     ],
                     connection_requests=[
-                        ConnectionView.model_validate(r, from_attributes=True) for r in requests
+                        ConnectionView.model_validate(r, from_attributes=True).model_copy(
+                            update={
+                                "initiated_by_name": await db.scalar(
+                                    select(User.display_name).where(
+                                        User.id == r.initiated_by_user_id
+                                    )
+                                )
+                            }
+                        )
+                        for r in requests
                     ]
                     if member.role == "company_admin"
                     or own_roles.get(management.id) == "responsible"

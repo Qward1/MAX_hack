@@ -1,3 +1,4 @@
+import { IconInfo } from "../shared/ui/icons";
 import { useConfirm } from "../shared/ui/useConfirm";
 import { POLL_LIST_MS } from "../shared/api/useResource";
 import { formatStaffTime, sentence } from "../shared/ui/format";
@@ -54,10 +55,10 @@ export function Mailings({ base, platform = false }: { base: string; platform?: 
   const refresh = () => list.refresh();
   return <>
     <Title description={platform
-      ? "Сообщения платформы: в кабинеты и личку сотрудников УК и в домовые чаты, где это разрешено"
-      : "Объявления, рассылки и опросы жителям ваших домов. Черновик → предпросмотр → подтверждение → отправка."}>
+      ? "Сообщения платформы: в кабинеты и личку сотрудников УК и в домовые чаты, где это разрешено."
+      : "Объявления, рассылки и опросы жителям ваших домов: черновик, предпросмотр получателей, подтверждение и отправка."}
+      actions={!creating && !selected && <button className="ds-btn ds-btn-primary" onClick={() => setCreating(true)}>Новое сообщение</button>}>
       {platform ? "Сообщения платформы" : "Рассылки"}</Title>
-    {!creating && !selected && <button className="ticket-button" onClick={() => setCreating(true)}>Новое сообщение</button>}
     {creating && <MailingEditor base={base} platform={platform} onDone={(id) => { setCreating(false); refresh(); if (id) select(id); }} />}
     {selected && <MailingDetail key={selected} id={selected} base={base} platform={platform}
       close={() => { select(null); refresh(); }} refresh={refresh} />}
@@ -462,7 +463,7 @@ export function CompanyProfileForm({ base }: { base: string }) {
 
 export function HouseFactsForm({ base, house, refresh }: { base: string; house: Schema["CompanyHouseView"]; refresh: () => void }) {
   const action = useAction(refresh, {}, "Сведения о доме сохранены");
-  return <details className="passive-switch"><summary>Сведения о доме для жителей</summary>
+  return <details className="passive-switch"><summary><span className="ds-summary-icon"><IconInfo /></span>Сведения о доме для жителей</summary>
     <form className="inline-form" onSubmit={e => {
       e.preventDefault();
       const data = new FormData(e.currentTarget);

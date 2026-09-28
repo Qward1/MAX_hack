@@ -3012,6 +3012,18 @@
       "ChatSummary": {
         "additionalProperties": false,
         "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -4139,6 +4151,18 @@
             ],
             "title": "Binding Version"
           },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
           "candidate_max_chat_id": {
             "anyOf": [
               {
@@ -4150,6 +4174,18 @@
             ],
             "title": "Candidate Max Chat Id"
           },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
           "correlation_token": {
             "anyOf": [
               {
@@ -4160,6 +4196,18 @@
               }
             ],
             "title": "Correlation Token"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
           },
           "expires_at": {
             "format": "date-time",
@@ -4175,6 +4223,17 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "initiated_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initiated By Name"
           },
           "last_error_code": {
             "anyOf": [
@@ -4196,6 +4255,18 @@
                 "type": "null"
               }
             ]
+          },
+          "rejected_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected At"
           },
           "scope_type": {
             "enum": [
@@ -8393,6 +8464,18 @@
       "PlatformBindingView": {
         "additionalProperties": false,
         "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
           "company_id": {
             "format": "uuid",
             "title": "Company Id",

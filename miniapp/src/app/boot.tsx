@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
 import '../shared/styles/main.css';
+import '../shared/styles/system.css';
 
 /** Мини-приложение жителя внутри MAX (прежняя точка входа). */
 export function renderMiniApp(root: HTMLElement) {

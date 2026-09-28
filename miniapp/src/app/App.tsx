@@ -545,7 +545,6 @@ export function App({
                 }}
               >
                 <span className="ds-row-title">{house.address}</span>
-                <span className="ds-row-chevron" aria-hidden="true">›</span>
               </a>
             </li>
           ))}

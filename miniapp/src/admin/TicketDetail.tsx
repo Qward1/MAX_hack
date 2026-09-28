@@ -97,15 +97,17 @@ export function TicketDetail({
   useEffect(() => {
     if (data) document.getElementById("page-title")?.focus();
   }, [Boolean(data)]);
+  // U-10: «Назад» — стрелка и цвет текста, без «(закрыть)» и синего подчёркивания.
   const back = (
     <a
+      className="ds-back"
       href={backHref}
       onClick={(e) => {
         e.preventDefault();
         navigate(backHref);
       }}
     >
-      {inPanel ? "← К заявкам (закрыть)" : "← К заявкам"}
+      <span aria-hidden="true">←</span> Все заявки
     </a>
   );
   if (!data)

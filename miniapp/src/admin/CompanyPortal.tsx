@@ -1,5 +1,6 @@
+import { AdminHeader, EmployeeSessionContext } from "./AdminHeader";
 import { Toaster } from "../shared/ui/Toast";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AdminApp } from "./AdminApp";
 import { TICKETS_CHANGED_EVENT } from "./TicketDetail";
 import { SignalsApp } from "./SignalsApp";
@@ -150,21 +151,21 @@ export function CompanyPortal() {
     : s === "tickets" ? <NavCount id={`count-${s}`} value={counts.tickets} label="новых заявок" /> : null;
   const described = (s: string) => (s === "signals" && counts.signals) || (s === "tickets" && counts.tickets) ? `count-${s}` : undefined;
   const refreshAll = () => { bootstrap.refresh(); window.dispatchEvent(new Event("administration-refresh")); };
-  return <div className={`admin-shell has-mobile-nav ${isOrganization ? "company-workspace" : "operator-workspace"}`}><Toaster />
+  const roleLabel = selected.role === "company_admin" ? "Администратор УК" : selected.role === "operator" ? "Сотрудник УК" : undefined;
+  return <div className={`admin-shell has-mobile-nav with-topbar ${isOrganization ? "company-workspace" : "operator-workspace"}`}><Toaster />
+    <AdminHeader home={href(selected.surfaces[0])} navigate={navigate} org={selected.name}
+      user={bootstrap.data?.display_name} role={roleLabel} onRefresh={refreshAll} />
     <MobileNavigation company={selected} companies={companies} surface={surface} counts={counts} href={href}
       navigate={navigate} displayName={bootstrap.data?.display_name} refresh={refreshAll}
       title={isOrganization ? "Управление компанией" : "Рабочее место оператора"} />
-    <aside className="admin-sidebar"><a className="admin-brand" href={href(selected.surfaces[0])}>ДомСигнал
-      <span>{isOrganization ? "Управление компанией" : "Рабочее место оператора"}</span></a>
+    <aside className="admin-sidebar"><p className="admin-sidebar-title">{isOrganization ? "Управление компанией" : "Рабочее место"}</p>
       {companies.length > 1 && <label>Управляющая компания<select aria-label="Управляющая компания" value={selected.company_id}
         onChange={e => { const company = companies.find(c => c.company_id === e.target.value); if (company) navigate(href(company.surfaces[0], company.company_id)); }}>
         {companies.map(c => <option key={c.company_id} value={c.company_id}>{c.name}</option>)}</select></label>}
       <nav aria-label="Разделы кабинета">{selected.surfaces.map(s => <a key={s} className="admin-nav-link"
         aria-current={s === surface ? "page" : undefined} aria-describedby={described(s)} href={href(s)}
         onClick={e => { e.preventDefault(); navigate(href(s)); }}><span>{names[s]}</span>{countFor(s)}</a>)}</nav>
-      <p className="admin-sidebar-note">{selected.name}</p>
-    </aside><main className="app-shell admin-main"><div className="admin-toolbar"><span>{bootstrap.data?.display_name}</span>
-      <button className="ds-btn ds-btn-secondary" onClick={refreshAll}>Обновить</button></div>
+    </aside><main className="app-shell admin-main">
       {isOrganization ? <CompanyWorkspace key={selected.company_id} {...shared} /> : <OperatorWorkspace key={selected.company_id} {...shared} />}
     </main>
   </div>;
@@ -205,12 +206,17 @@ function MobileNavigation({ company, companies, surface, counts, href, navigate,
     {open && <Sheet title="Разделы кабинета" anchor={button.current} className="admin-drawer" focus="[aria-current=page]"
       closeLabel="Закрыть" onClose={() => setOpen(false)}>
       {displayName && <p className="ds-meta">{displayName} · {company.name}</p>}
+      <DrawerLogout />
       {companies.length > 1 && <label className="ds-field">Управляющая компания<select value={company.company_id}
         onChange={e => { const next = companies.find(c => c.company_id === e.target.value); if (next) { setOpen(false); navigate(href(next.surfaces[0], next.company_id)); } }}>
         {companies.map(c => <option key={c.company_id} value={c.company_id}>{c.name}</option>)}</select></label>}
       <nav className="admin-drawer-nav" aria-label="Все разделы">{company.surfaces.map(s => link(s, () => setOpen(false)))}</nav>
     </Sheet>}
   </>;
+}
+function DrawerLogout() {
+  const session = useContext(EmployeeSessionContext);
+  return session ? <button type="button" className="ds-btn ds-btn-secondary" disabled={session.busy} onClick={session.logout}>Выйти</button> : null;
 }
 type Workspace = { company: Context; surface: string; href: (surface: string) => string; navigate: (url: string) => void; visit: number };
 function openTicket(navigate: (url: string) => void, href: (surface: string) => string) {
@@ -268,7 +274,7 @@ function DeniedRoute({ company, href, navigate }: { company: Context; href: (sur
       <h2 id="denied-available">Вам доступны</h2>
       <ul className="ds-row-list">{company.surfaces.map(s => <li key={s}>
         <a className="ds-row" href={href(s)} onClick={e => { e.preventDefault(); navigate(href(s)); }}>
-          <span className="ds-row-title">{names[s]}</span><span className="ds-row-chevron" aria-hidden="true">›</span>
+          <span className="ds-row-title">{names[s]}</span>
         </a></li>)}</ul>
     </section></>;
 }

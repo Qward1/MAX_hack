@@ -119,7 +119,7 @@ test("B09 full administrative lifecycle, separate surfaces, privacy and revoke",
     await expect(operator.getByRole("heading", { name: address, exact: true })).toBeVisible();
 
     await companyNav.getByRole("link", { name: "MAX-чаты", exact: true }).click();
-    await admin.getByRole("button", { name: "Подключить существующий MAX-чат" }).click();
+    await admin.getByRole("button", { name: "Подключить чат" }).click();
     const command = await admin.getByLabel("Команда подключения MAX").inputValue();
     fixture("connect", command.replace("/start ", ""));
     await admin.getByRole("button", { name: "Обновить", exact: true }).click();
