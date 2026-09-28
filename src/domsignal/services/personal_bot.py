@@ -55,6 +55,7 @@ from domsignal.services.bot_replies import (
     CONNECT_CLAIMED,
     CONNECT_INVALID,
     DM_JOB,
+    EXAMPLE_REPLIES,
     EXAMPLES,
     EXPIRED,
     GREETING,
@@ -279,8 +280,10 @@ class PersonalBotService:
         user = await ensure_max_user(session, event.actor, None)
         _touch_dialog(user, event.occurred_at)
         text = (event.text or "").strip()
-        # Кнопка-пример (D4) присылает свой текст: разбираем сам пример.
-        text = EXAMPLES.get(text, text)
+        # Кнопка-пример (D4) присылает свою подпись: ответ-пример без заявки, записи
+        # приёма и выбора дома (F2) — настоящую проблему житель пишет сам.
+        if text in EXAMPLES:
+            return await self._job(session, event.event_id, user.id, EXAMPLES[text])
         command, body = split_command(text)
         if command in {"/start", "/help", "/version"}:
             return await self._job(session, event.event_id, user.id, command[1:])
@@ -422,6 +425,7 @@ class PersonalBotService:
         else:
             text, buttons = {
                 "help": (self._with_privacy(HELP), [[open_app_button()]]),
+                **{key: (reply, [[open_app_button()]]) for key, reply in EXAMPLE_REPLIES.items()},
                 "version": (VERSION.format(version=self.version), []),
                 "short": (f"{NOT_A_PROBLEM}\n\n{HELP}", []),
                 "limit": (
