@@ -36,7 +36,6 @@ from domsignal.services.context import OperationContext, ScopeState, ScopeValue
 from domsignal.services.errors import ResourceNotFound, ServiceError
 from domsignal.services.membership import MembershipService
 
-
 #: Отказ подключения чата — словами для кабинета (F1: раньше приходило
 #: английское «Chat connection could not be completed»).
 CONNECTION_ERROR_TEXT: dict[str, str] = {
