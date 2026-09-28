@@ -550,7 +550,8 @@ async def test_the_reading_notice_is_sent_once_per_binding_version(pv) -> None: 
     assert len(pv.notices()) == 1
     chat_id, _, message = pv.notices()[0]
     assert chat_id == CHAT_1
-    assert "«УК Первая (тест)»" in message.text
+    # Название с формой «УК» — без лишних кавычек (company_quoted).
+    assert "подтверждено управляющей компанией УК Первая (тест)." in message.text
     assert "не является официальным обращением" in message.text
     delivery = await pv.scalar(
         select(NotificationDelivery).where(NotificationDelivery.purpose == "chat_reading_notice")

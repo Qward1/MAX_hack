@@ -32,7 +32,7 @@ TAG = "online-submission-final"
 
 # Числа проверок финальной версии — из прогонов 28.09.2026 (docs/TESTING.md).
 FACTS = {
-    "backend": "1 064",
+    "backend": "1 073",
     "integration": "536",
     "frontend": "343",
     "browser": "78",
@@ -485,6 +485,7 @@ table.kv th { width: 92px; background: none; color: #2358d0; font-size: 15px; pa
 table.kv td { font-size: 15.5px; padding: 7px 8px; }
 table.creds th, table.creds td { font-size: 14px; padding: 6px 8px; }
 code.totp { font-size: 12.5px; }
+table.creds code, .acc code { white-space: nowrap; }
 .svc-side { display: flex; flex-direction: column; gap: 14px; }
 .qrs { display: flex; gap: 18px; justify-content: center; }
 .qrs > div { display: flex; flex-direction: column; align-items: center; font-size: 13px; color: #4b5563; }
@@ -546,6 +547,7 @@ def main() -> None:
     parser.add_argument("--commit", help="финальный commit для закрытой версии")
     args = parser.parse_args()
     if args.private:
+        args.private = args.private.resolve()
         out = args.private / "DomSignal_presentation_PRIVATE.pdf"
     else:
         out = HERE / "DomSignal_presentation.pdf"
