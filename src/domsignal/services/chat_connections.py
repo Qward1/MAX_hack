@@ -120,6 +120,17 @@ class ChatConnectionService:
                 scope.scope_value,
             ):
                 return previous, None
+        await repo.lock(f"initiate-house:{house_id}")
+        if any(
+            not self.expire(item)
+            and (item.scope_type, item.scope_value) == (scope.scope_type, scope.scope_value)
+            for item in await repo.open_for_house(house_id)
+        ):
+            # U-01: у дома уже идёт подключение — второй запрос не создаётся.
+            raise ChatConnectionError(
+                "house_connection_in_progress",
+                detail="Для этого дома уже идёт подключение чата — продолжите или отмените его",
+            )
         token = "connect_" + secrets.token_urlsafe(32)
         request = ConnectionRequest(
             management_id=management_id,
@@ -131,6 +142,24 @@ class ChatConnectionService:
             scope_value=scope.scope_value,
         )
         await repo.add(request)
+        return request, token
+
+    async def reissue(
+        self, session: AsyncSession, *, request_id: UUID, actor_id: UUID
+    ) -> tuple[ConnectionRequest, str]:
+        """Новый код для незавершённого запроса: в базе хранится только хэш кода.
+
+        U-01: после перезагрузки страницы код не показать — его можно выдать
+        заново, пока бот его не получил (`created`). Прежний код перестаёт
+        действовать; срок запроса продлевается.
+        """
+        request = await self.locked_request(session, request_id)
+        await self.require_authority(session, request, actor_id)
+        if self.expire(request) or request.status != "created":
+            raise ChatConnectionError("connection_code_used")
+        token = "connect_" + secrets.token_urlsafe(32)
+        request.token_hash = self.token_digest(token)
+        request.expires_at = datetime.now(UTC) + timedelta(seconds=self.ttl_seconds)
         return request, token
 
     async def claim(

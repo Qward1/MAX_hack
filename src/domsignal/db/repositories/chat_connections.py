@@ -63,6 +63,17 @@ class ChatRepository:
             )
         )
 
+    async def open_for_house(self, house_id: UUID) -> list[ConnectionRequest]:
+        """U-01: незавершённые запросы подключения дома — у дома он один."""
+        return list(
+            await self.session.scalars(
+                select(ConnectionRequest).where(
+                    ConnectionRequest.house_id == house_id,
+                    ConnectionRequest.status.not_in(TERMINAL),
+                )
+            )
+        )
+
     async def chat(self, chat_id: str) -> MAXChat | None:
         return cast(
             MAXChat | None,
