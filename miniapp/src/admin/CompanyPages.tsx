@@ -418,7 +418,9 @@ function ConnectionSteps({ request, code, botUrl, lastSlot, busy, onReissue, onA
   const [copied, setCopied] = useState(false);
   const claimed = request.status !== "created";
   const detected = DETECTED.includes(request.status);
-  const ready = detected && !request.last_error_code;
+  // После ошибки проверки (нет прав, квота) кнопка остаётся: MAX не сообщает
+  // о выдаче прав, и повторная проверка идёт по нажатию.
+  const ready = detected;
   const command = code ? `/start ${code}` : "";
   return <div className="connect-block" aria-live="polite">
     <p><strong>Идёт подключение чата</strong> · до {formatStaffTime(request.expires_at)}</p>
@@ -446,7 +448,7 @@ function ConnectionSteps({ request, code, botUrl, lastSlot, busy, onReissue, onA
       </div></li>
       <li><div>
         <strong>Вы подтверждаете подключение</strong>
-        {request.last_error_code && <p className="admin-feedback">{connectionErrors[request.last_error_code] ?? "Проверка в MAX не прошла"}. Исправьте это в MAX — проверка пройдёт заново.</p>}
+        {request.last_error_code && <p className="admin-feedback">{connectionErrors[request.last_error_code] ?? "Проверка в MAX не прошла"}. Исправьте это в MAX и нажмите «Подтвердить подключение» — проверка пройдёт заново.</p>}
         {ready ? <div className="button-row"><button type="button" className="ds-btn ds-btn-primary" disabled={busy} onClick={onApprove}>Подтвердить подключение</button></div>
           : <p className="muted">Кнопка появится, когда бот будет в группе с нужными правами.</p>}
       </div></li>
