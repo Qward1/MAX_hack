@@ -3,9 +3,14 @@
     python -m domsignal.tools.showcase status
     python -m domsignal.tools.showcase mark-company --company-id … --operator … --reason …
     python -m domsignal.tools.showcase mark-reviewer --user-id … --operator … --reason …
+    python -m domsignal.tools.showcase create-platform-reviewer --login-name jury.platform
+        [--display-name "Проверяющий (платформа)"] --operator … --reason …
 
-`--off` снимает признак. Каждая смена оставляет квитанцию
-`operator.platform_ops` (как `platform_ops`) с прежним и новым значением.
+`--off` снимает признак. `create-platform-reviewer` создаёт отдельный аккаунт
+платформы для жюри (не аккаунт владельца): суперадмин с признаком
+проверочного аккаунта и временным паролем; первый вход — смена пароля и TOTP.
+Каждая смена оставляет квитанцию `operator.platform_ops` (как `platform_ops`)
+с прежним и новым значением.
 Что защищено и как — `domsignal.services.showcase`.
 """
 
@@ -18,7 +23,10 @@ from uuid import UUID
 from sqlalchemy import select
 
 from domsignal.bootstrap import build_container
-from domsignal.db.models import ManagementCompany, User
+from domsignal.db.models import EmployeeCredential, ManagementCompany, User
+from domsignal.db.repositories.reliability import authority_lock
+from domsignal.services.employee_auth import EmployeeAuthService
+from domsignal.services.onboarding import audit
 from domsignal.settings import get_settings
 from domsignal.tools import print_json
 from domsignal.tools.platform_ops import check_operator, receipt
@@ -49,6 +57,35 @@ async def run(args: argparse.Namespace) -> None:
                 )
                 return
             check_operator(args.operator, args.reason)
+            if args.command == "create-platform-reviewer":
+                await authority_lock(db := session, exclusive=True)
+                taken = await db.scalar(
+                    select(EmployeeCredential.id).where(
+                        EmployeeCredential.login_name == args.login_name.lower()
+                    )
+                )
+                if taken:
+                    raise SystemExit("login name is taken")
+                user = User(
+                    display_name=args.display_name, platform_role="superadmin", reviewer=True
+                )
+                db.add(user)
+                await db.flush()
+                audit(db, "platform.reviewer_created", user.id, user.id)
+                temporary = await EmployeeAuthService(container.settings).provision(
+                    db, user.id, "create", args.login_name
+                )
+                receipt(
+                    db,
+                    action="showcase.platform_reviewer",
+                    object_id=user.id,
+                    before=None,
+                    after={"platform_role": "superadmin", "reviewer": True},
+                    operator=args.operator,
+                    reason=args.reason,
+                )
+                print_json({"user_id": str(user.id), "temporary_password": temporary})
+                return
             value = not args.off
             if args.command == "mark-company":
                 company = await session.get(ManagementCompany, UUID(args.company_id))
@@ -67,21 +104,21 @@ async def run(args: argparse.Namespace) -> None:
                 )
                 print_json({"company_id": str(company.id), "showcase": value})
             else:
-                user = await session.get(User, UUID(args.user_id))
-                if user is None:
+                target = await session.get(User, UUID(args.user_id))
+                if target is None:
                     raise SystemExit("user not found")
-                before = user.reviewer
-                user.reviewer = value
+                before = target.reviewer
+                target.reviewer = value
                 receipt(
                     session,
                     action="showcase.reviewer",
-                    object_id=user.id,
+                    object_id=target.id,
                     before={"reviewer": before},
                     after={"reviewer": value},
                     operator=args.operator,
                     reason=args.reason,
                 )
-                print_json({"user_id": str(user.id), "reviewer": value})
+                print_json({"user_id": str(target.id), "reviewer": value})
     finally:
         await container.engine.dispose()
 
@@ -90,6 +127,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("status")
+    create = commands.add_parser("create-platform-reviewer")
+    create.add_argument("--login-name", required=True)
+    create.add_argument("--display-name", default="Проверяющий (платформа)")
+    create.add_argument("--operator", required=True)
+    create.add_argument("--reason", required=True)
     for name, key in (("mark-company", "--company-id"), ("mark-reviewer", "--user-id")):
         command = commands.add_parser(name)
         command.add_argument(key, required=True)
