@@ -245,3 +245,13 @@ def test_production_still_rejects_the_template_values(monkeypatch: pytest.Monkey
     placeholder = {**SYNTHETIC_VPS, **MODEL, "LLM_API_KEY": "replace_with_provider_key"}
     with pytest.raises(ValidationError, match="placeholder"):
         settings_of("ai-worker", placeholder, monkeypatch)
+
+
+def test_production_login_threshold_fits_a_jury_behind_one_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Финал: 30 попыток за 5 минут на логин и новых входов с адреса; локально — 10."""
+    assert settings_of("api", SYNTHETIC_VPS, monkeypatch).auth_rate_threshold == 30
+    custom = {**SYNTHETIC_VPS, "AUTH_RATE_THRESHOLD": "12"}
+    assert settings_of("api", custom, monkeypatch).auth_rate_threshold == 12
+    assert Settings.model_fields["auth_rate_threshold"].default == 10

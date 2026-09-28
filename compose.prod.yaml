@@ -58,6 +58,10 @@ services:
       # F1 §5.5: токен самопроверки витрины жюри (scripts/showcase_check.py,
       # uptime.yml); пусто — /api/v1/showcase/health отвечает 404.
       SHOWCASE_CHECK_TOKEN: ${SHOWCASE_CHECK_TOKEN:-}
+      # Финал: жюри входит из одной сети и под разными ролями — порог 30 попыток
+      # за 5 минут на логин и 30 новых входов с адреса (по умолчанию 10). Пароль
+      # от 12 символов + TOTP; на адрес в целом — ×5.
+      AUTH_RATE_THRESHOLD: ${AUTH_RATE_THRESHOLD:-30}
       PUBLIC_BASE_URL: https://${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN}
       CORS_ORIGINS: https://${PUBLIC_DOMAIN:?set PUBLIC_DOMAIN}
     logging: *production-logging

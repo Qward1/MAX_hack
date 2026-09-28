@@ -49,7 +49,7 @@ authentication:
       login: "/api/v1/auth/employee/login"         # POST {login_name, password} → {stage: mfa_challenge}
       mfa: "/api/v1/auth/employee/mfa/challenge"   # POST {code} → {stage: authenticated}
     limits: >-
-      Один код TOTP дважды не принимается (следующий — через 30 с). Больше 10
+      Один код TOTP дважды не принимается (следующий — через 30 с). Больше 30
       попыток входа за 5 минут по одному логину или новых входов с одного адреса —
       пауза 5 минут (HTTP 429, code auth_rate_limited).
   resident_max:
