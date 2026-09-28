@@ -83,7 +83,7 @@ test("B09 full administrative lifecycle, separate surfaces, privacy and revoke",
     await acceptNew(admin, firstLink, adminLogin);
     await expect(admin.getByRole("heading", { name: "Обзор", exact: true })).toBeVisible();
     const companyNav = admin.getByRole("navigation", { name: "Разделы кабинета" });
-    await expect(companyNav.getByRole("link")).toHaveCount(7);
+    await expect(companyNav.getByRole("link")).toHaveCount(10);
     await companyNav.getByRole("link", { name: "Сотрудники", exact: true }).click();
     await admin.getByRole("button", { name: "Пригласить сотрудника", exact: true }).click();
     const operatorLink = await admin.getByLabel("Одноразовая ссылка").inputValue();
@@ -91,7 +91,7 @@ test("B09 full administrative lifecycle, separate surfaces, privacy and revoke",
     const operatorLogin = `b09.operator.${suffix}`;
     await acceptNew(operator, operatorLink, operatorLogin);
     await expect(operator.getByRole("heading", { name: "Заявки", exact: true })).toBeVisible();
-    await expect(operator.getByRole("navigation", { name: "Разделы кабинета" }).getByRole("link")).toHaveText(["Заявки", "Сигналы", "Мои дома", "Обзор"]);
+    await expect(operator.getByRole("navigation", { name: "Разделы кабинета" }).getByRole("link")).toHaveText(["Заявки", "Сигналы", "Мои дома", "Обзор", "Уведомления", "Приём"]);
 
     await companyNav.getByRole("link", { name: "Дома", exact: true }).click();
     await admin.getByRole("button", { name: "Запросить управление домом" }).click();
@@ -102,6 +102,10 @@ test("B09 full administrative lifecycle, separate surfaces, privacy and revoke",
     await platform.getByRole("link", { name: "Заявки на дома", exact: true }).click();
     await platform.getByRole("button", { name: address, exact: true }).click();
     await platform.getByLabel("Решение о доме").selectOption("new");
+    // D4: регион дома обязателен при одобрении.
+    const decision = platform.getByRole("group", { name: "Регион дома" }).last();
+    await decision.locator('select[name="region"]').selectOption("RU-TA");
+    await decision.locator('select[name="municipality"]').selectOption({ label: "Казань" });
     await platform.getByLabel("Основание решения / уточнения").fill("B09 explicit new physical house");
     await platform.getByRole("button", { name: "Одобрить управление" }).click();
     await expect(platform.getByRole("button", { name: "Одобрить управление" })).toHaveCount(0);
@@ -122,9 +126,10 @@ test("B09 full administrative lifecycle, separate surfaces, privacy and revoke",
     await admin.getByRole("button", { name: "Подключить чат" }).click();
     const command = await admin.getByLabel("Команда подключения MAX").inputValue();
     fixture("connect", command.replace("/start ", ""));
-    await admin.getByRole("button", { name: "Обновить", exact: true }).click();
-    await admin.getByRole("button", { name: "Подтвердить подключение", exact: true }).click();
-    await expect(admin.getByText("Synthetic chat")).toBeVisible();
+    // Стенд без MAX: кнопка на месте, подтверждение — фикстурой с двойником MAX (как и проверка кода).
+    await expect(admin.getByRole("button", { name: "Подтвердить подключение", exact: true })).toBeVisible();
+    fixture("approve", adminLogin);
+    await expect(admin.getByText("Synthetic chat")).toBeVisible({ timeout: 20000 });
 
     // Real private marker in an existing resident report, then all platform read projections and rendering.
     const resident = await request.post("/api/v1/auth/test-session", { data: { actor: "a16-resident" } });

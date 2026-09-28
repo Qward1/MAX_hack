@@ -37,9 +37,36 @@ from domsignal.services.errors import ResourceNotFound, ServiceError
 from domsignal.services.membership import MembershipService
 
 
+#: Отказ подключения чата — словами для кабинета (F1: раньше приходило
+#: английское «Chat connection could not be completed»).
+CONNECTION_ERROR_TEXT: dict[str, str] = {
+    "bot_permission_missing": "Боту не выданы права администратора с чтением сообщений",
+    "connector_not_chat_admin": "Подключающий больше не администратор чата",
+    "bot_removed": "Бота удалили из чата",
+    "chat_type_unsupported": "Подключить можно только групповой чат MAX",
+    "chat_already_bound": "Этот чат уже подключён к другому дому",
+    "connection_expired": "Срок запроса истёк — начните подключение заново",
+    "connection_code_used": "Код подключения уже использован — начните подключение заново",
+    "connection_not_detected": "Бот ещё не появился в группе",
+    "connection_not_verified": "Проверка в MAX ещё не прошла",
+    "connection_changed_retry": "Подключение изменилось — повторите действие",
+    "connection_invalid_transition": "Это действие для подключения уже недоступно",
+    "binding_not_active": "Чат приостановлен: подключите его заново",
+    "stale_binding_version": "Настройки чата изменились — повторите действие",
+    "management_not_active": "Управление домом не действует",
+    "tenant_suspended": "Организация приостановлена: новые чаты не подключаются",
+    "max_temporarily_unavailable": "MAX временно недоступен — повторите через минуту",
+    "max_not_configured": "Связь с MAX на сервере не настроена",
+}
+
+
 class ChatConnectionError(ServiceError):
     def __init__(self, code: str, *, status: int = 409, detail: str | None = None) -> None:
-        super().__init__(detail or "Chat connection could not be completed")
+        super().__init__(
+            detail
+            or CONNECTION_ERROR_TEXT.get(code)
+            or "Подключение чата не удалось. Проверьте шаги подключения и повторите."
+        )
         self.code = code
         self.status = status
         self.retryable = status == 503

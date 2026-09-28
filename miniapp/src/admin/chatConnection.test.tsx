@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ApiProblem } from "../shared/api/client";
 import { adminClient, type Schema } from "./administration";
 import { ChatConnections } from "./CompanyPages";
 
@@ -15,8 +16,9 @@ const house = (connection: Schema["ConnectionView"]) => ({
   can_connect_chats: true, bindings: [], connection_requests: [connection],
 }) as unknown as Schema["CompanyHouseView"];
 
-function route(connection: Schema["ConnectionView"]) {
+function route(connection: Schema["ConnectionView"], approve?: () => never) {
   return vi.spyOn(adminClient, "request").mockImplementation(async (path: string) => {
+    if (approve && path.endsWith("/approve")) approve();
     if (path === `${BASE}/houses`) return [house(connection)] as never;
     if (path === `${BASE}/chat-quota`) return { quota: { used: 0, limit: 1, remaining: 1, exhausted: false, over_limit: false }, grants: [], requests: [] } as never;
     if (path === "/api/v1/capabilities") return { features: { passive_capture: true }, bot_url: null } as never;
@@ -39,5 +41,16 @@ describe("Подключение чата: повторная проверка �
     render(<ChatConnections base={BASE} />);
     expect(await screen.findByText("Кнопка появится, когда бот будет в группе с нужными правами.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Подтвердить подключение" })).toBeNull();
+  });
+
+  it("отказ подтверждения — по-русски по коду, даже если сервер прислал английский текст", async () => {
+    route(request({ last_error_code: "bot_permission_missing" }), () => {
+      throw new ApiProblem({ type: "about:blank", title: "Conflict", status: 409, code: "bot_permission_missing",
+        detail: "Chat connection could not be completed", retryable: false } as never);
+    });
+    render(<ChatConnections base={BASE} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Подтвердить подключение" }));
+    await waitFor(() => expect(screen.getAllByText(/Боту не выданы права администратора с чтением сообщений/)).toHaveLength(2));
+    expect(screen.queryByText(/could not be completed/)).toBeNull();
   });
 });

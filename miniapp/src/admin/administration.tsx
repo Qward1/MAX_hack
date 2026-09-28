@@ -85,6 +85,12 @@ export const connectionErrors: Record<string, string> = {
   connection_expired: "Срок запроса истёк — создайте новый",
   management_not_active: "Управление домом не действует",
   connector_connection_in_progress: "У администратора чата уже идёт другое подключение",
+  chat_type_unsupported: "Подключить можно только групповой чат MAX",
+  connection_code_used: "Код подключения уже использован — начните подключение заново",
+  connection_not_detected: "Бот ещё не появился в группе",
+  connection_not_verified: "Проверка в MAX ещё не прошла",
+  max_temporarily_unavailable: "MAX временно недоступен — повторите через минуту",
+  max_not_configured: "Связь с MAX на сервере не настроена",
 };
 export function Status({ value }: { value: string }) {
   return <span className={`admin-status status-${value}`}>{labels[value] ?? value}</span>;

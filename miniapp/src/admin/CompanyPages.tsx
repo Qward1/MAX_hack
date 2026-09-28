@@ -370,7 +370,8 @@ export function ChatConnections({ base, canRequest = true }: { base: string; can
       setOpen={setExpand} canRequest={canRequest} />
     {exceeded && <div className="admin-feedback" role="alert"><p><strong>Лимит исчерпан.</strong> {action.error}</p>
       {!canRequest && <p>Расширение квоты запрашивает администратор УК.</p>}</div>}
-    {!exceeded && <Feedback loading={houses.loading && !houses.data} error={houses.error ?? (action.error || undefined)} />}
+    {!exceeded && <Feedback loading={houses.loading && !houses.data}
+      error={houses.error ?? ((action.code && connectionErrors[action.code]) || action.error || undefined)} />}
     {!houses.error && houses.data?.length === 0 && <p className="state-panel">Подтверждённых домов пока нет. Сначала запросите управление домом в разделе «Дома».</p>}
     {!houses.error && houses.data?.map(h => {
       const request = h.connection_requests.find(r => OPEN_REQUEST(r.status));

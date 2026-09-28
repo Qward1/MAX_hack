@@ -9,7 +9,14 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 
 from domsignal.bootstrap import build_container
-from domsignal.db.models import EmployeeCredential, House, HouseManagement, ResidentMembership, User
+from domsignal.db.models import (
+    ConnectionRequest,
+    EmployeeCredential,
+    House,
+    HouseManagement,
+    ResidentMembership,
+    User,
+)
 from domsignal.services.employee_auth import EmployeeAuthService
 from domsignal.settings import AppEnvironment, get_settings
 from domsignal.tools.seed_tickets import seed_id
@@ -62,6 +69,25 @@ async def main():
                 await db.flush()
                 await container.chat_connections.verify(db, request.id)
                 print(json.dumps({"status": request.status}))
+            elif sys.argv[1] == "approve":
+                # Стенд браузера без MAX: подтверждение с тем же двойником MAX, что у "connect".
+                chat_id = f"b09-{os.environ['ND_RUN_ID']}"
+                provider = FakeMaxChatProvider()
+                provider.configure(chat_id, connector=chat_id)
+                container.chat_connections.provider = provider
+                credential = await db.scalar(
+                    select(EmployeeCredential).where(EmployeeCredential.login_name == sys.argv[2])
+                )
+                request = await db.scalar(
+                    select(ConnectionRequest)
+                    .where(ConnectionRequest.candidate_max_chat_id == chat_id)
+                    .order_by(ConnectionRequest.created_at.desc())
+                )
+                assert credential is not None and request is not None
+                binding = await container.chat_connections.approve(
+                    db, request_id=request.id, actor_id=credential.user_id
+                )
+                print(json.dumps({"binding": str(binding.id), "status": binding.status}))
             elif sys.argv[1] == "resident":
                 house = await db.scalar(select(House).where(House.address == sys.argv[2]))
                 assert house is not None and house.address.startswith("B09 новый дом")
