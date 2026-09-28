@@ -1,0 +1,333 @@
+# DATA-API.yaml — проверки собственного API ДомСигнала.
+#
+# Официального шаблона DATA-API.yaml в материалах хакатона нет. Файл покрывает
+# девять элементов из задания (стр. 10) — где какой:
+#   1. версия схемы/конфигурации файла ........ schema_version
+#   2. наименование решения / ID команды ........ solution
+#   3. единый HTTPS base URL .................... base_url
+#   4. перечень обязательных проверок ........... checks[] (required: true)
+#   5. HTTP-метод и относительный путь .......... checks[].request.method / path
+#   6. query/path-параметры, заголовки, тело .... checks[].request.query / headers / body
+#                                                 (+ test_data для подстановки {…})
+#   7. роль проверочной учётной записи ......... checks[].role → accounts
+#   8. допустимые ожидаемые HTTP-коды .......... checks[].expect.status
+#   9. Content-Type, структура, обязательные поля checks[].expect.content_type /
+#                                                 required_fields / equals
+#
+# Все проверки только читают данные — повторный прогон ничего не меняет.
+# Прогнать всё: uv run python scripts/data_api_check.py --accounts <accounts.json>
+# (без --accounts — только проверки без входа). Пароли и секреты TOTP в файле не
+# хранятся: они на закрытом служебном слайде у организаторов.
+
+schema_version: "1.0"
+
+solution:
+  name: "ДомСигнал"
+  track: "Умный город"
+  max_bot: "https://max.ru/t480_hakaton_max_bot"
+  repository: "https://github.com/Qward1/MAX_hack"
+  description: "API мини-приложения MAX и кабинетов УК и платформы"
+
+base_url: "https://domsignal.176-108-244-168.sslip.io"
+
+openapi:
+  version: "3.1.0"
+  url: "/openapi.json"            # из работающего сервиса
+  file: "docs/openapi.json"       # та же спецификация в репозитории
+  ui: "/docs"
+
+authentication:
+  anonymous:
+    description: "Без входа: служебные методы и отказы без сессии."
+  employee_session:
+    description: >-
+      Сотрудники УК и платформы: пароль + код TOTP (RFC 6238, 30 с, 6 цифр).
+      Сессия — cookie с флагами Secure, HttpOnly, SameSite=Lax; каждый изменяющий
+      запрос несёт X-CSRF-Token (из ответа входа) и Origin = base_url.
+    endpoints:
+      session: "/api/v1/auth/employee/session"     # GET → {stage: login, csrf_token}
+      login: "/api/v1/auth/employee/login"         # POST {login_name, password} → {stage: mfa_challenge}
+      mfa: "/api/v1/auth/employee/mfa/challenge"   # POST {code} → {stage: authenticated}
+    limits: >-
+      Один код TOTP дважды не принимается (следующий — через 30 с). Больше 10
+      попыток входа за 5 минут по одному логину или новых входов с одного адреса —
+      пауза 5 минут (HTTP 429, code auth_rate_limited).
+  resident_max:
+    description: >-
+      Житель входит только из MAX: мини-приложение передаёт подписанные данные
+      запуска (POST /api/v1/auth/max {init_data}) и получает bearer-сессию.
+      Подписать данные может только MAX, поэтому методы жителя проверяются в
+      клиенте MAX (бот → «Открыть ДомСигнал»); здесь — только отказ поддельной подписи.
+
+accounts:
+  operator:
+    login: "jury.operator"
+    role: "Оператор УК (назначен на демо-дом)"
+    password: "на закрытом служебном слайде"
+    reserve_login: "jury.operator.reserve"
+  company_admin:
+    login: "jury.admin"
+    role: "Администратор УК «Пилотная, 7»"
+    password: "на закрытом служебном слайде"
+    reserve_login: "jury.admin.reserve"
+  platform_admin:
+    login: "jury.platform"
+    role: "Администратор платформы"
+    password: "на закрытом служебном слайде"
+    reserve_login: "jury.platform.reserve"
+
+# Тестовые данные на стенде (синтетика): демо-УК, её дом и чужая УК для проверки
+# изоляции. Подставляются в пути и параметры вида {house_id}.
+test_data:
+  company_id: "9f0306fa-9660-40ab-8527-f1e361d48d61"        # УК «Пилотная, 7» (витрина)
+  house_id: "6edbf50b-4bb4-4a74-a6fd-40351010802e"          # «Казань, ул. Пилотная, 7»
+  other_company_id: "7e577850-7995-444b-9957-abb5434cff03"  # «УК для проверки регионов» — чужая для жюри
+  file: "docs/api/test_data.json"
+
+# Ошибки — RFC 7807 (application/problem+json) с полями
+# type, title, status, detail, code, retryable, trace_id.
+
+checks:
+  # --- без входа -----------------------------------------------------------
+  - id: health
+    required: true
+    role: anonymous
+    request: {method: GET, path: "/health"}
+    expect:
+      status: [200]
+      content_type: "application/json"
+      required_fields: [status]
+      equals: {status: "ok"}
+
+  - id: ready
+    required: true
+    role: anonymous
+    request: {method: GET, path: "/ready"}
+    expect:
+      status: [200]
+      content_type: "application/json"
+      required_fields: [status]
+      equals: {status: "ready"}
+
+  - id: version
+    required: true
+    role: anonymous
+    request: {method: GET, path: "/version"}
+    expect:
+      status: [200]
+      content_type: "application/json"
+      required_fields: [version, commit, region_packs]
+
+  - id: capabilities
+    required: true
+    role: anonymous
+    request: {method: GET, path: "/api/v1/capabilities"}
+    expect:
+      status: [200]
+      content_type: "application/json"
+      required_fields: [contract_version, environment, features.max_live, features.miniapp,
+                        features.admin, bot_url]
+      equals: {environment: "production", features.max_live: true, features.test_auth: false}
+
+  - id: openapi
+    required: true
+    role: anonymous
+    request: {method: GET, path: "/openapi.json"}
+    expect:
+      status: [200]
+      content_type: "application/json"
+      required_fields: [openapi, info.title, paths, components.schemas]
+      equals: {openapi: "3.1.0"}
+
+  - id: tickets_require_session
+    required: true
+    role: anonymous
+    request: {method: GET, path: "/api/v1/tickets", query: {house_id: "{house_id}"}}
+    expect:
+      status: [401]
+      content_type: "application/problem+json"
+      required_fields: [type, title, status, detail, code, retryable, trace_id]
+      equals: {code: "authentication_required"}
+
+  - id: profile_requires_session
+    required: true
+    role: anonymous
+    request: {method: GET, path: "/api/v1/me"}
+    expect:
+      status: [401]
+      content_type: "application/problem+json"
+      required_fields: [type, title, status, detail, code, retryable, trace_id]
+      equals: {code: "authentication_required"}
+
+  - id: platform_requires_session
+    required: true
+    role: anonymous
+    request: {method: GET, path: "/api/v1/platform/dashboard"}
+    expect:
+      status: [401]
+      content_type: "application/problem+json"
+      required_fields: [type, title, status, detail, code, retryable, trace_id]
+      equals: {code: "authentication_required"}
+
+  - id: max_login_rejects_forged_signature
+    required: true
+    role: anonymous
+    request:
+      method: POST
+      path: "/api/v1/auth/max"
+      headers: {Content-Type: "application/json"}
+      body: {init_data: "query_id=forged&auth_date=1&hash=0000"}
+    expect:
+      status: [401]
+      content_type: "application/problem+json"
+      required_fields: [type, title, status, detail, code, retryable, trace_id]
+      equals: {code: "invalid_init_data"}
+
+  - id: max_login_validates_body
+    required: true
+    role: anonymous
+    request:
+      method: POST
+      path: "/api/v1/auth/max"
+      headers: {Content-Type: "application/json"}
+      body: {}
+    expect:
+      status: [422]
+      content_type: "application/problem+json"
+      required_fields: [code, field_errors]
+      equals: {code: "validation_error"}
+
+  - id: webhook_requires_secret
+    required: true
+    role: anonymous
+    request:
+      method: POST
+      path: "/max/webhook"
+      headers: {Content-Type: "application/json"}
+      body: {}
+    expect:
+      status: [401]
+      content_type: "application/problem+json"
+      required_fields: [type, title, status, detail, code, retryable, trace_id]
+      equals: {code: "authentication_required"}
+
+  - id: unknown_route
+    required: true
+    role: anonymous
+    request: {method: GET, path: "/api/v1/no-such-method"}
+    expect:
+      status: [404]
+      content_type: "application/problem+json"
+      required_fields: [type, title, status, detail, code, retryable, trace_id]
+
+  # --- оператор УК ----------------------------------------------------------
+  - id: operator_bootstrap
+    required: true
+    role: operator
+    request: {method: GET, path: "/api/v1/admin/bootstrap"}
+    expect:
+      status: [200]
+      content_type: "application/json"
+      required_fields: [user_id, display_name, companies]
+
+  - id: operator_ticket_queue
+    required: true
+    role: operator
+    request: {method: GET, path: "/api/v1/tickets", query: {house_id: "{house_id}", limit: 20}}
+    expect:
+      status: [200]
+      content_type: "application/json"
+      required_fields: [items, page]
+
+  - id: operator_signal_inbox
+    required: true
+    role: operator
+    request: {method: GET, path: "/api/v1/signals", query: {house_id: "{house_id}"}}
+    expect:
+      status: [200]
+      content_type: "application/json"
+      required_fields: [items, page, counts, attention]
+
+  - id: operator_denied_platform
+    required: true
+    role: operator
+    request: {method: GET, path: "/api/v1/platform/dashboard"}
+    expect:
+      status: [403]
+      content_type: "application/problem+json"
+      required_fields: [type, title, status, detail, code, retryable, trace_id]
+
+  - id: operator_denied_foreign_company
+    required: true
+    role: operator
+    request: {method: GET, path: "/api/v1/companies/{other_company_id}/houses"}
+    expect:
+      status: [403, 404]
+      content_type: "application/problem+json"
+      required_fields: [type, title, status, detail, code, retryable, trace_id]
+
+  # --- администратор УК -----------------------------------------------------
+  - id: company_overview
+    required: true
+    role: company_admin
+    request: {method: GET, path: "/api/v1/companies/{company_id}/overview"}
+    expect:
+      status: [200]
+      content_type: "application/json"
+      required_fields: [open_tickets, unassigned_tickets, verification_pending, house_count,
+                        active_employees, binding_problems]
+
+  - id: company_houses
+    required: true
+    role: company_admin
+    request: {method: GET, path: "/api/v1/companies/{company_id}/houses"}
+    expect:
+      status: [200]
+      content_type: "application/json"
+      required_fields: ["[].house_id", "[].address", "[].bindings", "[].open_resident_access"]
+
+  - id: company_admin_denied_foreign_company
+    required: true
+    role: company_admin
+    request: {method: GET, path: "/api/v1/companies/{other_company_id}/houses"}
+    expect:
+      status: [403, 404]
+      content_type: "application/problem+json"
+      required_fields: [type, title, status, detail, code, retryable, trace_id]
+
+  # --- администратор платформы ----------------------------------------------
+  - id: platform_dashboard
+    required: true
+    role: platform_admin
+    request: {method: GET, path: "/api/v1/platform/dashboard"}
+    expect:
+      status: [200]
+      content_type: "application/json"
+      required_fields: [period_days, generated_at, totals, companies, funnel, model, delivery]
+
+  - id: platform_health
+    required: true
+    role: platform_admin
+    request: {method: GET, path: "/api/v1/platform/health"}
+    expect:
+      status: [200]
+      content_type: "application/json"
+      required_fields: [database, pending_jobs, failed_jobs, pending_deliveries]
+
+  - id: platform_companies
+    required: true
+    role: platform_admin
+    request: {method: GET, path: "/api/v1/platform/companies"}
+    expect:
+      status: [200]
+      content_type: "application/json"
+      required_fields: ["[].id", "[].name", "[].status"]
+
+  - id: platform_denied_resident_tickets
+    required: true
+    role: platform_admin
+    request: {method: GET, path: "/api/v1/tickets", query: {house_id: "{house_id}"}}
+    expect:
+      status: [403, 404]
+      content_type: "application/problem+json"
+      required_fields: [type, title, status, detail, code, retryable, trace_id]

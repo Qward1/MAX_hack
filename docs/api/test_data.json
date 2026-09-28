@@ -1,0 +1,43 @@
+{
+  "description": "Тестовые данные стенда для проверки API и сценариев ДомСигнала. Всё синтетическое: организации, дома и работы — тестовые данные. Пароли и секреты TOTP — на закрытом служебном слайде.",
+  "base_url": "https://domsignal.176-108-244-168.sslip.io",
+  "max_bot": "https://max.ru/t480_hakaton_max_bot",
+  "showcase": {
+    "company": {
+      "id": "9f0306fa-9660-40ab-8527-f1e361d48d61",
+      "name": "УК «Пилотная, 7»",
+      "protected_for_reviewers": true
+    },
+    "house": {
+      "id": "6edbf50b-4bb4-4a74-a6fd-40351010802e",
+      "address": "Казань, ул. Пилотная, 7",
+      "region": "RU-TA",
+      "open_resident_access": true,
+      "max_chat_title": "Дом · Казань, Пилотная, 7"
+    }
+  },
+  "isolation": {
+    "other_company": {
+      "id": "7e577850-7995-444b-9957-abb5434cff03",
+      "name": "УК для проверки регионов",
+      "expected_for_reviewers": "404 — чужая организация неотличима от несуществующей"
+    }
+  },
+  "accounts": [
+    {"role": "operator", "login": "jury.operator", "reserve_login": "jury.operator.reserve", "scope": "демо-дом «Казань, ул. Пилотная, 7»"},
+    {"role": "company_admin", "login": "jury.admin", "reserve_login": "jury.admin.reserve", "scope": "УК «Пилотная, 7»"},
+    {"role": "platform_admin", "login": "jury.platform", "reserve_login": "jury.platform.reserve", "scope": "платформа, без текстов жителей"},
+    {"role": "resident", "login": "свой аккаунт MAX", "scope": "демо-чат по ссылке-приглашению или открытый дом «Казань, ул. Пилотная, 7» в боте"}
+  ],
+  "resident_messages": [
+    {"text": "Во втором подъезде не работает лифт", "expected": "заявка в УК дома; карточка «Это зона ответственности вашей управляющей компании»"},
+    {"text": "/report во втором подъезде не работает лифт", "channel": "демо-чат", "expected": "пост «Заявка T-N» с кнопками «Меня тоже касается» и «Открыть»"},
+    {"text": "На улице у остановки не горят фонари", "expected": "«Проблема, вероятно, относится не к вашей УК»: официальный сервис региона и черновик обращения"},
+    {"text": "В подъезде пахнет газом", "expected": "первым — «При угрозе жизни и здоровью звоните 112», оповещение УК"},
+    {"text": "В доме напротив горит квартира", "expected": "памятки в чат нет"},
+    {"text": "Соседи, во сколько собрание?", "expected": "не проблема дома — сигнала и заявки нет"}
+  ],
+  "ticket_lifecycle": ["new", "accepted", "in_progress", "verification_pending", "closed"],
+  "ticket_side_statuses": ["needs_clarification", "waiting_external", "cancelled"],
+  "ticket_lifecycle_note": "«Проблема осталась» после отчёта исполнителя возвращает ту же заявку в работу; закрыть заявку может только подтверждение жителя «Исправлено»."
+}
