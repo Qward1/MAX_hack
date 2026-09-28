@@ -46,8 +46,11 @@ def http(method: str, url: str, body: bytes | None = None) -> tuple[int, str]:
         return 0, str(exc)
 
 
-def gitleaks(since: str | None) -> tuple[bool, str]:
-    log_opts = f"{since}..HEAD" if since else "-1"
+def gitleaks(since: str | None, head: str) -> tuple[bool, str]:
+    log_opts = f"{since}..{head}" if since else f"-1 {head}"
+    # В рабочем дереве (`git worktree`) история лежит в общем каталоге основного
+    # репозитория: сканируем его, диапазон задан явными SHA.
+    repo = Path(git("rev-parse", "--path-format=absolute", "--git-common-dir")).parent
     binary = shutil.which("gitleaks")
     if binary:
         command = [
@@ -57,7 +60,7 @@ def gitleaks(since: str | None) -> tuple[bool, str]:
             "--no-color",
             "--redact",
             f"--log-opts={log_opts}",
-            ".",
+            str(repo),
         ]
     elif shutil.which("docker"):
         command = [
@@ -65,7 +68,7 @@ def gitleaks(since: str | None) -> tuple[bool, str]:
             "run",
             "--rm",
             "-v",
-            f"{ROOT}:/repo",
+            f"{repo}:/repo",
             GITLEAKS_IMAGE,
             "git",
             "--no-banner",
@@ -77,8 +80,15 @@ def gitleaks(since: str | None) -> tuple[bool, str]:
     else:
         return False, "gitleaks не найден (ни программы, ни Docker)"
     result = subprocess.run(command, capture_output=True, text=True)
-    summary = (result.stderr or result.stdout).strip().splitlines()[-1:] or [""]
-    return result.returncode == 0, f"{log_opts}: {summary[0][:120]}"
+    lines = (result.stderr + result.stdout).splitlines()
+    scanned = next(
+        (line.split("INF", 1)[-1].strip() for line in lines if "commits scanned" in line), ""
+    )
+    verdict = next(
+        (line.split("INF", 1)[-1].strip() for line in lines if "leaks found" in line), ""
+    )
+    ok = result.returncode == 0 and not scanned.startswith("0 commits")
+    return ok, f"{log_opts[:30]}: {scanned or '?'} {verdict}".strip()
 
 
 def main() -> int:
@@ -145,7 +155,7 @@ def main() -> int:
         since = tags[0] if tags and git("rev-parse", tags[0]) != head else None
         if since is None and origin and origin != head:
             since = origin
-    clean, detail = gitleaks(since)
+    clean, detail = gitleaks(since, head)
     checks.append(("gitleaks по новым коммитам", clean, detail))
 
     width = max(len(name) for name, _, _ in checks)
