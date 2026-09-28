@@ -23,6 +23,7 @@ from typing import Any
 from domsignal.ai import WindowInput, WindowLine
 from domsignal.bootstrap import build_ai
 from domsignal.db.session import create_engine, create_session_factory
+from domsignal.services.ai_budget import estimate_tokens
 from domsignal.settings import get_settings
 
 #: Встроенные синтетические пробы: поломка, опасность, болтовня.
@@ -69,7 +70,15 @@ async def run(args: argparse.Namespace) -> int:
         ai = build_ai(settings, create_session_factory(engine))
         total_rub = 0.0
         for probe in load(args.file, args.limit):
-            analysis = await ai.analyzer.analyze(window(probe))
+            probe_window = window(probe)
+            if ai.budget is None:
+                analysis = await ai.analyzer.analyze(probe_window)
+            else:
+                # Как у конвейера: сначала единица дня и токены минуты, потом вызов.
+                # Вне резерва сторож бюджета честно отвечает «вызова не будет».
+                tokens = estimate_tokens([line.text for line in probe_window.lines])
+                async with ai.budget.reserve(None, tokens=tokens):
+                    analysis = await ai.analyzer.analyze(probe_window)
             execution = analysis.execution
             total_rub += execution.cost_rub or 0.0
             print(
