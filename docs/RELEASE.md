@@ -20,7 +20,8 @@ uv run python scripts/release_check.py --fetch
 production = `HEAD` (или после выкладки в `main` пришли только документы —
 `docs/`, `*.md`, `evaluation/reports/`: код образа тот же); `/ready`; вебхук без секрета → 401; OpenAPI из кода =
 `docs/openapi.json`; gitleaks по коммитам с прошлого выпуска. Последняя строка —
-для служебного слайда: репозиторий, commit, дата.
+для служебного слайда: репозиторий, commit, дата. Если после выкладки в `main` пришли
+только документы, на слайд идёт commit из `/version` (он же тег выпуска), а не `HEAD`.
 
 Витрина жюри — отдельно (раз в сутки то же делает задание `showcase` в
 `.github/workflows/uptime.yml`):
