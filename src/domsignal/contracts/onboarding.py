@@ -138,6 +138,9 @@ class CompanyContext(ContractModel):
     surfaces: list[Surface]
     #: Роль в этой УК (D2, аддитивно): интерфейс прячет действия администратора.
     role: Role | None = None
+    #: F1 §5.5: проверочный аккаунт в демо-УК — разрушающие действия над витриной
+    #: закрыты (API отвечает 403 `showcase_protected`), интерфейс их выключает.
+    protected: bool = False
 
 
 class AdminBootstrap(ContractModel):
@@ -149,6 +152,8 @@ class AdminBootstrap(ContractModel):
 class PlatformBootstrap(ContractModel):
     display_name: str
     surfaces: list[str]
+    #: F1 §5.5: проверочный аккаунт платформы — действия над витриной закрыты.
+    reviewer: bool = False
 
 
 class AuditView(ContractModel):
@@ -484,6 +489,8 @@ class PlatformOpenHouseView(ContractModel):
     company_id: UUID
     company_name: str
     open_access_changed_at: datetime | None
+    #: Дом демо-УК (витрина для жюри, F1 §5.5).
+    showcase: bool = False
 
 
 class OpenAccessClose(ContractModel):
@@ -506,6 +513,8 @@ class CompanyView(ContractModel):
     chat_quota: ChatQuotaView | None = None
     pending_quota_requests: int = 0
     open_registration_enabled: bool = False
+    #: Демо-УК для жюри (F1 §5.5): проверочные аккаунты её не меняют.
+    showcase: bool = False
 
 
 class CompanyOverview(ContractModel):

@@ -3244,6 +3244,11 @@
             "title": "Name",
             "type": "string"
           },
+          "protected": {
+            "default": false,
+            "title": "Protected",
+            "type": "boolean"
+          },
           "role": {
             "anyOf": [
               {
@@ -3942,6 +3947,11 @@
             "default": 0,
             "title": "Pending Quota Requests",
             "type": "integer"
+          },
+          "showcase": {
+            "default": false,
+            "title": "Showcase",
+            "type": "boolean"
           },
           "status": {
             "title": "Status",
@@ -8597,6 +8607,11 @@
             "title": "Display Name",
             "type": "string"
           },
+          "reviewer": {
+            "default": false,
+            "title": "Reviewer",
+            "type": "boolean"
+          },
           "surfaces": {
             "items": {
               "type": "string"
@@ -8929,6 +8944,11 @@
               }
             ],
             "title": "Open Access Changed At"
+          },
+          "showcase": {
+            "default": false,
+            "title": "Showcase",
+            "type": "boolean"
           }
         },
         "required": [

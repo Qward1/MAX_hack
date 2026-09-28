@@ -1,0 +1,80 @@
+{
+  "run": "load-failures-02",
+  "model": "Qwen/Qwen3-30B-A3B",
+  "started": "2026-09-28T04:00:36.174910+00:00",
+  "failures": {
+    "401": {
+      "windows": 6,
+      "lost": [],
+      "states": {
+        "fallback_provider_error": 3,
+        "fallback_circuit_open": 3
+      },
+      "model_share": 0.0,
+      "retries": 0,
+      "windows_retried": 0,
+      "total_ms_p50": 125,
+      "total_ms_max": 484,
+      "breaker_open_at_end": true,
+      "rate_limited_seen": 0,
+      "danger_windows_with_memo": 3,
+      "danger_windows": 3,
+      "rub": 0.0
+    },
+    "dns": {
+      "windows": 6,
+      "lost": [],
+      "states": {
+        "fallback_provider_error": 3,
+        "fallback_circuit_open": 3
+      },
+      "model_share": 0.0,
+      "retries": 0,
+      "windows_retried": 0,
+      "total_ms_p50": 11078,
+      "total_ms_max": 11094,
+      "breaker_open_at_end": true,
+      "rate_limited_seen": 0,
+      "danger_windows_with_memo": 3,
+      "danger_windows": 3,
+      "rub": 0.0
+    },
+    "500": {
+      "windows": 6,
+      "lost": [],
+      "states": {
+        "fallback_provider_error": 3,
+        "fallback_circuit_open": 3
+      },
+      "model_share": 0.0,
+      "retries": 0,
+      "windows_retried": 0,
+      "total_ms_p50": 16,
+      "total_ms_max": 31,
+      "breaker_open_at_end": true,
+      "rate_limited_seen": 0,
+      "danger_windows_with_memo": 3,
+      "danger_windows": 3,
+      "rub": 0.0
+    },
+    "slow": {
+      "windows": 6,
+      "lost": [],
+      "states": {
+        "fallback_timeout": 3,
+        "fallback_circuit_open": 3
+      },
+      "model_share": 0.0,
+      "retries": 0,
+      "windows_retried": 0,
+      "total_ms_p50": 20016,
+      "total_ms_max": 20031,
+      "breaker_open_at_end": true,
+      "rate_limited_seen": 0,
+      "danger_windows_with_memo": 3,
+      "danger_windows": 3,
+      "rub": 0.0
+    }
+  },
+  "provider_calls": 12
+}

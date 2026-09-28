@@ -77,6 +77,7 @@ from domsignal.db.models import (
     User,
 )
 from domsignal.db.repositories.reliability import ReliabilityRepository, authority_lock, stable_hash
+from domsignal.services import showcase
 from domsignal.services.bot_replies import enqueue_reply
 from domsignal.services.chat_quota import ChatQuotaService, quota_state
 from domsignal.services.employee_auth import EmployeeAuthService
@@ -168,9 +169,7 @@ APPLICATION_NOTICES = {
 }
 
 
-async def notify_application(
-    db: AsyncSession, row: CompanyOnboardingRequest, target: str
-) -> None:
+async def notify_application(db: AsyncSession, row: CompanyOnboardingRequest, target: str) -> None:
     """Сообщение в личку тому, кто подписался на заявку через бота."""
     text = APPLICATION_NOTICES.get(target)
     if row.notify_user_id is None or text is None:
@@ -557,6 +556,7 @@ class AdministrationService:
                     company_id=c.id,
                     name=c.name,
                     role=cast(Role, m.role),
+                    protected=bool(user.reviewer and c.showcase),
                     surfaces=(
                         [
                             "overview",
@@ -704,6 +704,7 @@ class AdministrationService:
         await authority_lock(db, exclusive=True)
         await require_company(db, actor, company)
         await require_company(db, user, company, admin=False)
+        await showcase.guard(db, actor, target_user_id=user)
         management = await db.scalar(
             select(HouseManagement).where(
                 HouseManagement.id == change.management_id,
@@ -731,6 +732,7 @@ class AdministrationService:
     async def revoke_member(self, db: AsyncSession, actor: UUID, company: UUID, user: UUID) -> None:
         await authority_lock(db, exclusive=True)
         await require_company(db, actor, company)
+        await showcase.guard(db, actor, target_user_id=user)
         member = await db.scalar(
             select(OrganizationMembership).where(
                 OrganizationMembership.user_id == user, OrganizationMembership.tenant_id == company
@@ -1141,6 +1143,7 @@ class AdministrationService:
         """«Задать регион» дому у платформы — та же запись профиля, что у CLI."""
         await authority_lock(db, exclusive=True)
         await require_platform(db, actor)
+        await showcase.guard(db, actor, house_id=house_id)
         house = await db.get(House, house_id)
         if house is None:
             raise ResourceNotFound("Дом не найден")
@@ -1297,6 +1300,8 @@ class AdministrationService:
         история остаются у УК.
         """
         await require_company(db, actor, company)
+        if not payload.enabled:
+            await showcase.guard(db, actor, house_id=house_id)
         await authority_lock(db)
         house = await db.scalar(
             select(House)
@@ -1349,6 +1354,7 @@ class AdministrationService:
                 company_id=company.id,
                 company_name=company.name,
                 open_access_changed_at=house.open_access_changed_at,
+                showcase=company.showcase,
             )
             for house, company in rows
         ]
@@ -1358,6 +1364,7 @@ class AdministrationService:
     ) -> OpenAccessView:
         """Суперадмин закрывает открытый доступ к дому; причина — в аудит."""
         await require_platform(db, actor)
+        await showcase.guard(db, actor, house_id=house_id)
         await authority_lock(db)
         house = await db.get(House, house_id, with_for_update=True, populate_existing=True)
         if house is None:
@@ -1452,6 +1459,8 @@ class AdministrationService:
     ) -> CompanyView:
         await authority_lock(db, exclusive=True)
         await require_platform(db, actor)
+        if status != "active":
+            await showcase.guard(db, actor, company_id=obj)
         row = await db.get(ManagementCompany, obj, with_for_update=True)
         if row is None:
             raise ResourceNotFound("Организация не найдена")

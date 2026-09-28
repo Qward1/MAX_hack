@@ -183,3 +183,35 @@ def test_tuning_set_new_families_have_no_memo_and_no_lost_danger() -> None:
             assert not has_memo, row["id"]
         else:
             assert alert, row["id"]
+
+
+# F1 (пробы §4): свет «горит» рядом с местом и статическое электричество —
+# памятки нет, оповещение оператора остаётся; настоящая опасность рядом — с памяткой.
+@pytest.mark.parametrize(
+    "text",
+    ["Горит свет в подвале уже третьи сутки", "в подвале горит лампочка, кто-то забыл выключить"],
+)
+def test_light_left_on_in_a_place_gives_no_memo(text: str) -> None:
+    assert "smoke_fire" not in memo(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "горит свет в подвале и пахнет гарью, дым из щитка",
+        "в подвале горит проводка, дым",
+        "горит подвал, дым валит из окон",
+    ],
+)
+def test_fire_in_the_basement_keeps_the_memo(text: str) -> None:
+    assert "smoke_fire" in memo(text)
+
+
+def test_static_shock_from_a_door_handle_alerts_but_gives_no_memo() -> None:
+    text = "Бьёт током от дверной ручки, зима же"
+    assert "electric" in active(text)
+    assert "electric" not in memo(text)
+
+
+def test_shock_from_a_panel_door_keeps_the_memo() -> None:
+    assert "electric" in memo("бьёт током от дверцы щитка, искрит")

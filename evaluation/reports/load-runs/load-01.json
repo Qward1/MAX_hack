@@ -1,0 +1,43 @@
+{
+  "run": "load-01",
+  "model": "Qwen/Qwen3-30B-A3B",
+  "started": "2026-09-28T04:02:22.126419+00:00",
+  "burst": {
+    "windows": 30,
+    "lost": [],
+    "states": {
+      "ok": 25,
+      "fallback_overloaded": 5
+    },
+    "model_share": 0.833,
+    "retries": 26,
+    "windows_retried": 13,
+    "total_ms_p50": 6468,
+    "total_ms_max": 135969,
+    "breaker_open_at_end": false,
+    "rate_limited_seen": 5,
+    "danger_windows_with_memo": 3,
+    "danger_windows": 6,
+    "rub": 2.4397
+  },
+  "parallel": {
+    "windows": 8,
+    "lost": [],
+    "states": {
+      "ok": 3,
+      "fallback_overloaded": 4,
+      "fallback_invalid_output": 1
+    },
+    "model_share": 0.375,
+    "retries": 0,
+    "windows_retried": 0,
+    "total_ms_p50": 4733,
+    "total_ms_max": 6203,
+    "breaker_open_at_end": false,
+    "rate_limited_seen": 0,
+    "danger_windows_with_memo": 0,
+    "danger_windows": 2,
+    "rub": 0.3897
+  },
+  "provider_calls": 34
+}

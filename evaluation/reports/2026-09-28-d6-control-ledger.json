@@ -1,0 +1,17 @@
+{
+  "calls": 166,
+  "max_calls": 220,
+  "max_rub": 30.0,
+  "rub": 16.994035,
+  "runs": {
+    "d6-d3_holdout-qwen": {
+      "calls": 96,
+      "rub": 10.378567
+    },
+    "d6-d5-qwen": {
+      "calls": 70,
+      "rub": 6.615468
+    }
+  },
+  "unknown_cost_calls": 0
+}

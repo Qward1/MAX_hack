@@ -43,6 +43,7 @@ addopts = "-ra --strict-markers"
 asyncio_mode = "auto"
 markers = [
   "integration: requires a real PostgreSQL database",
+  "acceptance: runs against a live local stand (ACCEPTANCE_BASE_URL)",
 ]
 testpaths = ["tests"]
 

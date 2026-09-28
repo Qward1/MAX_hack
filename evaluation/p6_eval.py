@@ -124,6 +124,14 @@ SLICES = {
         400,
         30.0,
     ),
+    # F1 §4.7 (CONTROL-M1-2026-09-28): один прогон контроля D5 и holdout D3
+    # для модели production; результат не для настройки.
+    "d6": Slice(
+        pathlib.Path("evaluation/reports/d6-runs"),
+        pathlib.Path("evaluation/reports/2026-09-28-d6-control-ledger.json"),
+        220,
+        30.0,
+    ),
 }
 RUNS_DIR = SLICES["p6"].runs
 LEDGER = SLICES["p6"].ledger

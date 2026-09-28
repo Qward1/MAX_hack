@@ -9,9 +9,17 @@
   входа, закрытые локальные режимы, публичные страницы; при `--jury-file`
   (приватный JSON вне git) — вход проверочными аккаунтами с TOTP и чтение их
   разделов. Ничего не создаёт и не меняет, кроме пробного входа.
-* `local` — тот же коммит на локальном стенде: pytest-кейсы `tests/acceptance`
-  (API и эмулятор MAX), браузерные кейсы `miniapp/tests/acceptance`,
-  сквозные сценарии `scripts/scenario_run.py` — каждый узел привязан к кейсу.
+* `local` — тот же коммит на локальном стенде: тесты, указанные в
+  `docs/qa/ACCEPTANCE_MATRIX.md` (колонка «Чем проверяется»), — pytest
+  (`tests/unit`, `tests/integration`, `tests/acceptance` на работающем стенде с
+  эмулятором MAX) и Playwright (`miniapp/tests`). Тест указан файлом или узлом
+  `файл::тест`; кейс проходит, если прошли все его тесты. Кейсы `human-MAX`
+  получают отметку HUMAN и результат своей автоматической части.
+
+  Базы разные: `ACCEPTANCE_PYTEST_DATABASE_URL` — для `tests/integration`,
+  `ACCEPTANCE_BROWSER_DATABASE_URL` — для фикстур Playwright (стенд
+  `PLAYWRIGHT_BASE_URL`, прочее окружение стенда — файл `ACCEPTANCE_BROWSER_ENV`);
+  `ACCEPTANCE_BASE_URL` — стенд `tests/acceptance`.
 """
 
 from __future__ import annotations
@@ -237,29 +245,38 @@ def jury_logins(base: str, accounts: list[dict[str, Any]]) -> list[CaseResult]:
     return results
 
 
-def local(matrix: Path) -> list[CaseResult]:
-    """Узлы pytest и Playwright, привязанные к кейсам в матрице (колонка «Тест»)."""
+def local(matrix: Path, out: Path) -> list[CaseResult]:
+    """Тесты, привязанные к кейсам в матрице, и результат по каждому кейсу."""
     rows = parse_matrix(matrix)
     results: list[CaseResult] = []
-    py_nodes = sorted({node for row in rows for node in row["tests"] if node.startswith("tests/")})
-    pw_specs = sorted(
-        {node for row in rows for node in row["tests"] if node.startswith("miniapp/")}
+    runnable = [row for row in rows if row["class"] in {"auto-local", "auto-prod", "human-MAX"}]
+    py_nodes = sorted({t for row in runnable for t in row["tests"] if t.startswith("tests/")})
+    # Приёмочный сценарий идёт шагами по порядку файла: его узлы запускаются
+    # файлом целиком, иначе pytest выполнил бы их в порядке сортировки имён.
+    scenario_files = sorted(
+        {n.split("::")[0] for n in py_nodes if n.startswith("tests/acceptance/")}
     )
+    py_nodes = [n for n in py_nodes if not n.startswith("tests/acceptance/")] + scenario_files
+    pw_specs = sorted({t for row in runnable for t in row["tests"] if t.startswith("miniapp/")})
     outcomes: dict[str, tuple[str, float]] = {}
     if py_nodes:
         outcomes.update(run_pytest(py_nodes))
     if pw_specs:
-        outcomes.update(run_playwright(pw_specs))
+        outcomes.update(run_playwright(pw_specs, out))
     for row in rows:
-        if row["class"] not in {"auto-local", "auto-prod+local"}:
+        if row["class"] == "N/A" or not row["tests"]:
+            results.append(CaseResult(row["case"], row["title"], "N/A", []))
             continue
         found = [(node, outcomes.get(node, ("NOT RUN", 0.0))) for node in row["tests"]]
-        ok = found and all(result == "PASS" for _, (result, _) in found)
+        ok = all(result == "PASS" for _, (result, _) in found)
+        verdict = "PASS" if ok else "FAIL"
+        if row["class"] == "human-MAX":
+            verdict = "HUMAN" if ok else "FAIL"
         results.append(
             CaseResult(
                 row["case"],
                 row["title"],
-                "PASS" if ok else "FAIL",
+                verdict,
                 [f"{result} {node}" for node, (result, _) in found],
                 round(sum(seconds for _, (_, seconds) in found), 2),
             )
@@ -281,33 +298,52 @@ def parse_matrix(path: Path) -> list[dict[str, Any]]:
 
 
 def run_pytest(nodes: list[str]) -> dict[str, tuple[str, float]]:
+    """Узлы и файлы pytest; у файла — FAIL, если упал хоть один тест, SKIP — если все пропущены."""
     report = ROOT / "output" / "acceptance" / "pytest.xml"
     report.parent.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ)
+    if os.getenv("ACCEPTANCE_PYTEST_DATABASE_URL"):
+        env["DATABASE_URL"] = os.environ["ACCEPTANCE_PYTEST_DATABASE_URL"]
     subprocess.run(
         ["uv", "run", "pytest", "-q", "-p", "no:cacheprovider", f"--junitxml={report}", *nodes],
         cwd=ROOT,
+        env=env,
         check=False,
     )
     outcomes: dict[str, tuple[str, float]] = {}
+    files: dict[str, list[tuple[str, float]]] = {}
     for case in ET.parse(report).getroot().iter("testcase"):
         path = case.get("classname", "").replace(".", "/") + ".py"
-        node = f"{path}::{case.get('name')}"
         failed = case.find("failure") is not None or case.find("error") is not None
         skipped = case.find("skipped") is not None
-        outcomes[node] = (
-            "FAIL" if failed else "SKIP" if skipped else "PASS",
-            float(case.get("time", 0)),
-        )
+        outcome = ("FAIL" if failed else "SKIP" if skipped else "PASS", float(case.get("time", 0)))
+        outcomes[f"{path}::{case.get('name')}"] = outcome
+        files.setdefault(path, []).append(outcome)
+    for path, items in files.items():
+        states = {state for state, _ in items}
+        state = "FAIL" if "FAIL" in states else "PASS" if "PASS" in states else "SKIP"
+        outcomes[path] = (state, round(sum(seconds for _, seconds in items), 2))
     return outcomes
 
 
-def run_playwright(specs: list[str]) -> dict[str, tuple[str, float]]:
+def run_playwright(specs: list[str], out: Path) -> dict[str, tuple[str, float]]:
     report = ROOT / "output" / "acceptance" / "playwright.json"
     env = dict(os.environ, PLAYWRIGHT_JSON_OUTPUT_NAME=str(report))
+    # Окружение стенда Playwright (фикстуры, тестовый вход) — только этому процессу:
+    # файл строк KEY=VALUE, чтобы оно не попало в pytest с интеграционной базой.
+    env_file = os.getenv("ACCEPTANCE_BROWSER_ENV")
+    if env_file:
+        for line in Path(env_file).read_text(encoding="utf-8").splitlines():
+            key, sep, value = line.partition("=")
+            if sep and key.strip() and not key.startswith("#"):
+                env[key.strip()] = value
+    if os.getenv("ACCEPTANCE_BROWSER_DATABASE_URL"):
+        env["DATABASE_URL"] = os.environ["ACCEPTANCE_BROWSER_DATABASE_URL"]
+    results_dir = out / "playwright"
     rel = [spec.removeprefix("miniapp/") for spec in specs]
     npx = "npx.cmd" if os.name == "nt" else "npx"
     subprocess.run(
-        [npx, "playwright", "test", "--reporter=json", *rel],
+        [npx, "playwright", "test", "--reporter=json", f"--output={results_dir}", *rel],
         cwd=ROOT / "miniapp",
         env=env,
         check=False,
@@ -357,7 +393,9 @@ def write_report(target: str, results: list[CaseResult], out: Path, meta: dict[s
         **meta,
         "target": target,
         "results": [asdict(r) for r in results],
-        "summary": {k: sum(r.result == k for r in results) for k in ("PASS", "FAIL", "SKIP")},
+        "summary": {
+            k: sum(r.result == k for r in results) for k in ("PASS", "FAIL", "SKIP", "HUMAN", "N/A")
+        },
     }
     (out / "report.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8"
@@ -401,18 +439,19 @@ def main(argv: list[str] | None = None) -> int:
         commit = json.loads(http("GET", f"{base}/version")[1] or "{}").get("commit")
     else:
         base = args.base_url or "local"
-        results = local(args.matrix)
+        # Коммит — на старте: код, который проверяется, а не тот, что появился за время прогона.
         commit = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True
         ).stdout.strip()
+        results = local(args.matrix, out)
     write_report(
         args.target, results, out, {"started": started, "commit": commit, "base_url": base}
     )
     failed = [r for r in results if r.result == "FAIL"]
-    print(
-        f"{args.target}: PASS {sum(r.result == 'PASS' for r in results)}, FAIL {len(failed)}, "
-        f"SKIP {sum(r.result == 'SKIP' for r in results)} → {out}"
-    )
+    counts = {
+        k: sum(r.result == k for r in results) for k in ("PASS", "FAIL", "SKIP", "HUMAN", "N/A")
+    }
+    print(f"{args.target}: " + ", ".join(f"{k} {v}" for k, v in counts.items() if v) + f" → {out}")
     for r in failed:
         bad = [e for e in r.evidence if e.startswith(("✗", "FAIL", "NOT RUN"))]
         print(f"FAIL {r.case}: {'; '.join(bad)}")

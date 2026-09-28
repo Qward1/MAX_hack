@@ -199,7 +199,9 @@ class Emulator:
         fields["hash"] = hmac.new(secret, check.encode("utf-8"), hashlib.sha256).hexdigest()
         return urlencode(fields)
 
-    def webapp(self, user_id: int, name: str, start_param: str | None) -> dict[str, Any]:
+    def webapp(
+        self, user_id: int, name: str, start_param: str | None, show_token: bool = False
+    ) -> dict[str, Any]:
         request = urllib.request.Request(
             f"{self.base_url}/api/v1/auth/max",
             data=json.dumps({"init_data": self.init_data(user_id, name, start_param)}).encode(
@@ -220,6 +222,9 @@ class Emulator:
             )
             result["me"] = self._send(me).get("body")
             result["body"] = {"access_token": "(выдан)"}
+            if show_token:
+                # Для приёмочных тестов: токен локального стенда, в production его нет.
+                result["token"] = token
         return result
 
     # ------------------------------------------------------------ исходящие
@@ -304,6 +309,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--user", type=int, required=True)
     p.add_argument("--name", default="Житель")
     p.add_argument("--start-param")
+    p.add_argument("--show-token", action="store_true", help="напечатать токен сессии жителя")
     p = sub.add_parser("outbox", help="что отправил бот")
     p.add_argument("--since-ms", type=int, default=0)
     p.add_argument("--json", action="store_true")
@@ -341,7 +347,7 @@ def main(argv: list[str] | None = None) -> int:
     elif command == "callback":
         result = emulator.callback(args.user, args.payload, args.message_id, args.chat_id)
     else:
-        result = emulator.webapp(args.user, args.name, args.start_param)
+        result = emulator.webapp(args.user, args.name, args.start_param, args.show_token)
     print(json.dumps(result, ensure_ascii=False))
     return 0 if 200 <= int(result.get("status", 500)) < 300 else 1
 

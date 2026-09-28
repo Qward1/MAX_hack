@@ -1,5 +1,83 @@
 # DEV-B — current handoff
 
+## F1 — готовность к сдаче — 28–29.09.2026
+
+**Выкладка A — DEPLOYED.** Ветка `agent/f1-release` (от `main` = `9932f80`),
+`eb115e0` → `--no-ff` в `dev/b-experience` — `c9fcf0e`; `main` и `dev/a-core` —
+fast-forward. Production `/version` = `c9fcf0e` с 28.09.2026 ≈ 06:00 МСК, до
+него `d38b6e7`. Выкладка B (§3–§5, витрина жюри, README) — раздел ниже.
+
+- **D6 целиком:** проблема закрывается вместе с заявкой (изменение A-16.1,
+  [INCIDENT-CLOSE-WITH-TICKET-2026-09-28](../decisions.md#incident-close-with-ticket-2026-09-28)),
+  доска «Сейчас открыто» и «Решённые за 30 дней», дубли — только среди
+  открытых; ложные памятки на реальных окнах 59 % → 49 %, верные памятки и
+  настоящая опасность не потеряны
+  ([MEMO-PRECISION-2026-09-28](../decisions.md#memo-precision-2026-09-28));
+  локальный ключ MFA (B-01); опасность в форме без дублей (B-06); даты в
+  поясе дома (B-05); честные формулировки в документах.
+- **Замечания QA:** B-08 (403 раздела не теряет сессию), F-06…F-18.
+- **Модель:** 429 — не отказ провайдера, повтор по `Retry-After`, общий
+  ограничитель `LLM_TOKENS_PER_MINUTE`
+  ([LLM-RATE-2026-09-29](../decisions.md#llm-rate-2026-09-29)).
+- **UX:** единый язык кабинетов, mini app и лендинга; экраны обновляются сами;
+  `scripts/text_lint.py`; `miniapp/tests/ui-lint.spec.ts` (все экраны, 5
+  ширин, 2 темы); новый лендинг — Lighthouse production `/site` 99 / 100 / 100
+  / 100, корень 98 / 100 / 100 / 100.
+- **Для проверки без MAX:** эмулятор `MAX_TRANSPORT=record` и
+  `scripts/max_emulator.py`; приёмочный прогон `scripts/acceptance_run.py`.
+
+**Проверки до выкладки A:** backend — 1055 passed; frontend — typecheck, 336
+vitest, сборка; contracts — PASS; integration (PostgreSQL 16) — 525 из 526,
+`test_d5_queue.py::test_claim_uses_the_partial_pool_index` — известная
+нестабильность выбора индекса (M1), повтор — 2 × passed; браузерные — все
+спеки, `ui-lint` — 10 вариантов × 39 экранов без замечаний (`notifications` и
+`administration` пропускаются без своих фикстур, как раньше); docker smoke с
+TOTP и перезапуском — PASS; сквозные сценарии — 38 из 38; gitleaks по
+коммитам F1 — одно ложное срабатывание (ключ идемпотентности), помечено.
+
+**Выкладка A по Safe redeploy:** активности в тестовой УК владельца за 10 минут
+нет; копия БД `domsignal-pre-f1A-20260928T025736Z.dump` (387 552 байта, 600,
+`pg_restore --list` — 513 записей), копия env, образ
+`domsignal-backend:pre-d38b6e7`; миграция `0015 → 0016` сначала на копии
+свежего дампа (подъём, откат, подъём — чисто, копия удалена), затем `up`.
+После: `/ready` — ready, `/version` = `c9fcf0e`, вебхук без секрета — 401,
+подписка MAX — одна, прежний URL, 8 типов; ошибок в журналах 10 минут — 0;
+приёмочный `prod-readonly` — 3 из 3 (вход жюри — после аккаунтов); вызов
+модели через сборку `ai-worker` на синтетическом окне — `ok`,
+`qwen3-30b-a3b`, 7,1 с, 0,099 ₽. В MAX не писал.
+
+### F1, выкладка B — приёмка, модель, доступ жюри, README
+
+- **Приёмка (§3):** эмулятор MAX для локального стенда; `tests/acceptance/test_jury_path.py` —
+  «своя УК с нуля» через эмулятор (15 шагов); матрица `docs/qa/ACCEPTANCE_MATRIX.md` — 160
+  кейсов (автоматически 137, на чтение production 8, живой MAX 14); журнал
+  `docs/qa/ACCEPTANCE_RUN_2026-09-29.md`; файлы кейсов — в `docs/qa/`, закрытые дефекты
+  помечены коммитами. Найдено и исправлено: кнопка «Подтвердить подключение» пропадала
+  после ошибки прав бота (`d28d4d9`); английские тексты отказа подключения (`ba0e08f`).
+- **Модель (§4):** контроль M1 один раз — D5 без пропусков опасности, holdout 37/39,
+  16,99 ₽ ([P6 §14](../../evaluation/reports/2026-09-23-p6-evaluation.md)); 81 проба,
+  нагрузка и отказы, 10 проб через `ai-worker` production —
+  [`2026-09-29-llm-probes.md`](../../evaluation/reports/2026-09-29-llm-probes.md);
+  памятка на «горит свет в подвале» и «ручку» убрана, оповещение оператора осталось
+  (`5bcaa90`); дневной бюджет 500 ([LLM-BUDGET-F1](../decisions.md#llm-budget-f1-2026-09-29)).
+- **Доступ жюри (§5.5):** признаки `reviewer` и `showcase`, отказ 403 `showcase_protected` на
+  разрушающих действиях над витриной и неактивные кнопки с пояснением (`70aae02`);
+  `scripts/showcase_check.py` в `uptime.yml`; `scripts/jury_setup.py`; гид
+  `docs/JURY_GUIDE.md`.
+- **Упаковка (§5):** README заново (16 пунктов) и проверка с чистого клона; сборка
+  `--no-cache` — 28 с; `docs/LICENSES.md`; `docs/RELEASE.md` и `scripts/release_check.py`;
+  `SHOWCASE_CHECK_TOKEN` в `compose.prod.yaml` (`dd23889`).
+
+**Проверки до выкладки B:** backend — 1062 passed; frontend — typecheck, 343 vitest, сборка;
+contracts — PASS; integration (PostgreSQL 16) — 533 из 534,
+`test_d5_queue.py::test_claim_uses_the_partial_pool_index` — известная нестабильность, повтор
+2 × passed; браузерные с `ui-lint` — 77 passed, 11 пропущено (спеки с отдельным стендом);
+docker smoke с TOTP — PASS; сквозные сценарии — 38 из 38; валидатор регионов — PASS;
+gitleaks по 36 коммитам после выкладки A — без находок; приёмка по матрице
+(`scripts/acceptance_run.py --target local`, коммит `d2e8be7`) — 160 кейсов: PASS 145, FAIL 0,
+HUMAN 14 (живые шаги — `Claude outputs/OWNER_MANUAL_MIN.md`), N/A 1; README с чистого клона —
+все шаги выполнены.
+
 ## M1 — смена модели: открытая неамериканская модель в Cloud.ru — 27.09.2026
 
 **MERGED · DEPLOYED.** Ветка `agent/m1-model` (от `origin/main` = `99037d6`,

@@ -145,6 +145,9 @@ class Settings(BaseSettings):
     display_timezone: str = "Europe/Moscow"
     # Контакт по вопросам данных на странице /privacy (D4); пусто — ссылка на /site.
     privacy_contact: str | None = Field(default=None, max_length=200)
+    #: F1 §5.5: токен ежедневной самопроверки витрины (`scripts/showcase_check.py`
+    #: из uptime.yml). Пусто — проверка выключена, адрес отвечает 404.
+    showcase_check_token: str | None = Field(default=None, repr=False, max_length=200)
     # Житель = участник домового чата (RESIDENT-BY-CHAT-2026-09-25). Если
     # активных привязок не больше этого числа, при входе проверяются все.
     resident_check_all_max_chats: int = Field(default=20, ge=0, le=200)

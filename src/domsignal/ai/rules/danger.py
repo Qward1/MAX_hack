@@ -198,6 +198,26 @@ _FIRE_OBJECTS = StemSet(
     )
 )
 _LIGHT_RADIUS = 3
+#: F1 (пробы §4): «горит свет в подвале» — место рядом с включённым светом, не
+#: горящий предмет. Если осветительный объект стоит вплотную к глаголу горения
+#: и в реплике нет материала возгорания, памятки в чат нет; оповещение
+#: оператора остаётся (не ослабляем опасность).
+_FIRE_MATERIALS = StemSet(
+    (
+        "проводк",
+        "провод",
+        "кабел",
+        "щит",
+        "мусор",
+        "машин",
+        "дым",
+        "гар",
+        "огон",
+        "пламя",
+        "пожар",
+        "искр",
+    )
+)
 #: Место, где «горит» скорее пожар, чем лампа: без него осветительный объект
 #: в той же реплике («гирлянду во дворе повесили, горит красиво») — не пожар.
 _FIRE_PLACES = StemSet(
@@ -510,6 +530,10 @@ _SHOCK_BENIGN = StemSet(
 _PETS = frozenset(
     {"кот", "кота", "коту", "котом", "котик", "котенок", "кошка", "кошку", "кошки", "кошкой"}
 )
+#: F1 (пробы §4): «бьёт током от дверной ручки, зима» — статическое
+#: электричество. Памятки в чат нет, оповещение оператора остаётся: ручка под
+#: напряжением бывает и настоящей аварией.
+_SHOCK_STATIC = StemSet(("ручк", "поручн", "перил", "дверн"))
 _ELECTRIC_HAZARD = StemSet(
     (
         "щит",
@@ -619,6 +643,27 @@ def _is_light_on(tokens: Sequence[Token], match: StemMatch) -> bool:
         and not _FIRE_OBJECTS.find_all(tokens)
         and not _FIRE_PLACES.find_all(tokens)
     )
+
+
+def _memo_exception(kind: str, tokens: Sequence[Token], combined: Sequence[StemMatch]) -> bool:
+    """Памятки в чат нет, оповещение оператора остаётся (F1, пробы §4)."""
+    if kind == "smoke_fire":
+        if _FIRE_MATERIALS.find_all(tokens):
+            return False
+        for match in combined:
+            if match.stem not in _BURN_STEMS:
+                return False
+            side = [
+                tokens[i]
+                for i in (match.first_token - 1, match.last_token + 1)
+                if 0 <= i < len(tokens)
+            ]
+            if not _LIGHT_OBJECTS.find_all(side):
+                return False
+        return bool(combined)
+    if kind == "electric":
+        return bool(_SHOCK_STATIC.find_all(tokens)) and not _ELECTRIC_HAZARD.find_all(tokens)
+    return False
 
 
 def _is_figurative(tokens: Sequence[Token], match: StemMatch) -> bool:
@@ -855,6 +900,7 @@ def _hits(normalized: NormalizedText, tokens: Sequence[Token], line_id: str) -> 
                     not negated
                     and not memo_blocked
                     and not _clause_hypothetical(text, tokens, combined)
+                    and not _memo_exception(kind, tokens, combined)
                     and _memo_pattern(kind, tokens, found)
                 ),
             )

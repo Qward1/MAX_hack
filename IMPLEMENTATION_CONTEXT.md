@@ -1,6 +1,6 @@
 # ДомСигнал — implementation context
 
-Состояние на 27.09.2026 (D5, затем UX-2, RA-01…RA-08 и «Мой дом»: ссылки и выбор дома). Интегратор — DEV-B; обновляется после
+Состояние на 29.09.2026 (срез F1 — готовность к сдаче). Интегратор — DEV-B; обновляется после
 значимого merge или выкладки. Подробности и проверки каждого среза —
 [docs/status/dev-b.md](docs/status/dev-b.md) (единый статус проекта с 24.09),
 AI-часть — [docs/status/dev-a.md](docs/status/dev-a.md). Прежние версии этого
@@ -23,9 +23,9 @@ AI-часть — [docs/status/dev-a.md](docs/status/dev-a.md). Прежние �
 - **LIVE VERIFIED** — проверено в настоящем MAX людьми по чекпоинту
   [MAX_LIVE_SMOKE](docs/MAX_LIVE_SMOKE.md).
 
-Production: `/version` = `d38b6e7` (M1: модель `Qwen/Qwen3-30B-A3B` через Cloud.ru вместо
-`gpt-5-mini`, выложен 27.09 в 21:40 МСК; до него — `9f0a68f`, «Мой дом»: ссылки и выбор дома). Выкладка и проверки — разделы «Мой дом», UX-3 и D5 в
-[dev-b.md](docs/status/dev-b.md).
+Production: `/version` = `c9fcf0e` (выкладка A среза F1, 28.09 06:00 МСК); выкладка B и журнал
+выпусков — [docs/RELEASE.md](docs/RELEASE.md). Проверка для жюри — [README](README.md) и
+[docs/JURY_GUIDE.md](docs/JURY_GUIDE.md).
 
 | Срез | Что | Статус | Чекпоинт / решения |
 |---|---|---|---|
@@ -41,11 +41,11 @@ Production: `/version` = `d38b6e7` (M1: модель `Qwen/Qwen3-30B-A3B` чер
 | UX-2 + RA-01…RA-08 | сервисная ясность интерфейса и замечания повторного аудита, только frontend | MERGED в `main` PR #2 (`99037d6`; `dev/a-core` не сдвигался) · DEPLOYED (`99037d6`, 27.09); публичные страницы проверены в браузере на production, MAX WebView и внутренние экраны — только локальный стенд | [UX.md](docs/UX.md#сервисная-ясность-ux-2--27092026) |
 | «Мой дом»: ссылки и выбор дома | строки сервисов и тихие текстовые ссылки вместо синих, `HouseSwitch` вместо нативного select, только frontend | MERGED в `main` PR #3 (`9f0a68f`; `dev/a-core` не сдвигался) · DEPLOYED (`9f0a68f`, 27.09); фронтенд production проверен в браузере с API стенда, MAX WebView — не проверялся | [UX.md](docs/UX.md#сервисная-ясность-ux-2--27092026) |
 | M1 | смена модели: открытая неамериканская `Qwen/Qwen3-30B-A3B` в Cloud.ru, резерв DeepSeek-V4-Flash, ₽ по цене профиля, `/privacy` | MERGED (`d38b6e7`, `main` = `dev/b-experience` = `dev/a-core`) · DEPLOYED (27.09); наборы настройки — пороги пройдены, контроль — D6 | [LLM-PROVIDER-2026-09-27](docs/decisions.md#llm-provider-2026-09-27) |
+| F1 | D6 (проблема закрывается с заявкой, точность памяток), замечания QA, единый язык интерфейса и `ui-lint`, устойчивость модели к 429, эмулятор MAX, приёмка по матрице, доступ жюри и защита витрины, README | MERGED · DEPLOYED выкладка A (`c9fcf0e`); выкладка B — [RELEASE](docs/RELEASE.md) | [ACCEPTANCE_MATRIX](docs/qa/ACCEPTANCE_MATRIX.md), [CONTROL-M1](docs/decisions.md#control-m1-2026-09-28), [LLM-BUDGET-F1](docs/decisions.md#llm-budget-f1-2026-09-29) |
 
-**Не проверено в настоящем MAX людьми:** живые шаги D4 (посторонний житель,
-«Политика данных», совет дома, рассылка в личку и отписка, дом RU-MOW);
-нажатия в рассылке, опросе, правке постов и сводке после D3 — транспорт
-проверен в D5 (§7), нажатия — тест-кейсы владельца.
+**Не проверено в настоящем MAX людьми:** живые шаги D4 и D3 из B-10 — список
+и шаги в [ACCEPTANCE_MATRIX](docs/qa/ACCEPTANCE_MATRIX.md) (способ `human-MAX`);
+их логика проходит автотесты с эмулятором MAX (`tests/acceptance`).
 
 ## Границы, которые держит код
 

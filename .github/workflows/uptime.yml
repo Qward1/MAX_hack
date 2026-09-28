@@ -12,10 +12,14 @@
 # ALERT_MAX_BOT_TOKEN и ALERT_MAX_USER_ID (личка с начатым диалогом с ботом).
 # Ручной запуск с test_alert проверяет доставку оповещений.
 #
-# Расписание (UTC) рассчитано на бесплатные минуты Actions приватного
-# репозитория: запуск стоит минуту. До сдачи — раз в час, в день сдачи — раз в
-# 30 минут, в период проверки жюри 1–14.10 — раз в 15 минут (≈ 1350 минут из
-# 2000 месячных, остаток — CI).
+# Расписание (UTC): до сдачи — раз в час, в день сдачи — раз в 30 минут, в
+# период проверки жюри 1–14.10 — раз в 15 минут, до финала 29.10 — раз в час.
+#
+# F1 §5.5: раз в сутки (08:41 МСК) до 29.10 job «showcase» проверяет витрину
+# жюри (`scripts/showcase_check.py`: УК «Пилотная, 7» активна, квота, демо-чат
+# подключён и читается, открытый доступ, проверочные аккаунты) по секрету
+# SHOWCASE_CHECK_TOKEN и при нарушении открывает issue. Восстановление —
+# docs/RELEASE.md, «Витрина жюри».
 name: Production uptime
 
 on:
@@ -23,6 +27,9 @@ on:
     - cron: "7 * 26-29 9 *"
     - cron: "*/30 * 30 9 *"
     - cron: "*/15 * 1-14 10 *"
+    - cron: "7 * 15-29 10 *"
+    - cron: "41 5 28-30 9 *"
+    - cron: "41 5 1-29 10 *"
   workflow_dispatch:
     inputs:
       test_alert:
@@ -105,3 +112,34 @@ jobs:
           curl -s -o /dev/null -w 'max alert: %{http_code}\n' --max-time 20 -X POST \
             -H "Authorization: $ALERT_MAX_BOT_TOKEN" -H 'content-type: application/json' \
             --data @payload.json "https://platform-api2.max.ru/messages?user_id=$ALERT_MAX_USER_ID"
+
+  showcase:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.schedule == '41 5 28-30 9 *' ||
+      github.event.schedule == '41 5 1-29 10 *'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    env:
+      SHOWCASE_URL: ${{ vars.DOMSIGNAL_URL || 'https://domsignal.176-108-244-168.sslip.io' }}
+      SHOWCASE_CHECK_TOKEN: ${{ secrets.SHOWCASE_CHECK_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Showcase invariants
+        run: python3 scripts/showcase_check.py
+      - name: Open an issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Витрина жюри: нарушен инвариант"
+          open=$(gh issue list --state open --search "$title in:title" --json number --jq 'length')
+          log="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          if [ "$open" = "0" ]; then
+            gh issue create --title "$title" --body "Самопроверка витрины не прошла $(date -u '+%d.%m %H:%M UTC'). Журнал: $log. Восстановление — docs/RELEASE.md, «Витрина жюри»."
+          else
+            echo "issue уже открыт"
+          fi

@@ -4066,6 +4066,11 @@ export interface components {
             company_id: string;
             /** Name */
             name: string;
+            /**
+             * Protected
+             * @default false
+             */
+            protected: boolean;
             /** Role */
             role?: ("operator" | "company_admin") | null;
             /** Surfaces */
@@ -4297,6 +4302,11 @@ export interface components {
              * @default 0
              */
             pending_quota_requests: number;
+            /**
+             * Showcase
+             * @default false
+             */
+            showcase: boolean;
             /** Status */
             status: string;
         };
@@ -6013,6 +6023,11 @@ export interface components {
         PlatformBootstrap: {
             /** Display Name */
             display_name: string;
+            /**
+             * Reviewer
+             * @default false
+             */
+            reviewer: boolean;
             /** Surfaces */
             surfaces: string[];
         };
@@ -6138,6 +6153,11 @@ export interface components {
             name: string;
             /** Open Access Changed At */
             open_access_changed_at: string | null;
+            /**
+             * Showcase
+             * @default false
+             */
+            showcase: boolean;
         };
         /** PlatformTotals */
         PlatformTotals: {

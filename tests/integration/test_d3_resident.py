@@ -13,7 +13,14 @@ from typing import Any
 
 from sqlalchemy import select
 
-from domsignal.db.models import AppealDraft, NotificationDelivery, Ticket
+from domsignal.db.models import (
+    AppealDraft,
+    Incident,
+    NotificationDelivery,
+    Report,
+    RouteOutcome,
+    Ticket,
+)
 from domsignal.services import community_texts
 from tests.integration.d3_harness import (  # noqa: F401 - фикстура стенда
     call,
@@ -332,6 +339,29 @@ async def test_followup_is_not_sent_after_an_answer(d3) -> None:  # noqa: F811
         row.followup_answer = "resolved"
         row.followup_answered_at = datetime.now(UTC)
     assert await d3.container.followups.enqueue_due(now=draft.filed_at + timedelta(days=15)) == 0
+
+
+async def test_tc084_followup_is_not_asked_when_the_problem_is_resolved(d3) -> None:  # noqa: F811
+    """F-16 (F1): проблема «Решена» — через 14 дней вопроса «Пришёл ли ответ?» нет."""
+    draft = await filed_draft(d3)
+    ticket = await resident_ticket(d3)
+    async with d3.container.session_factory() as session, session.begin():
+        # Итог маршрута связан с сообщением жителя, как на явном пути (личка бота).
+        report = await session.scalar(
+            select(Report).where(Report.incident_id == ticket.incident_id)
+        )
+        outcome = await session.get(RouteOutcome, draft.route_outcome_id)
+        outcome.report_id = report.id
+        incident = await session.get(Incident, ticket.incident_id)
+        incident.status = "resolved"
+        incident.closure = "residents_confirmed"
+        incident.resolved_at = datetime.now(UTC)
+    # Время сдвигается в тесте: 15 дней после отметки «Я отправил(а)».
+    assert await d3.container.followups.enqueue_due(now=draft.filed_at + timedelta(days=15)) == 0
+    await settle(d3)
+    assert not [item for item in d3.messaging.sent if "Пришёл ли ответ?" in item[2].text]
+    stored = await d3.scalar(select(AppealDraft).where(AppealDraft.id == draft.id))
+    assert stored.followup_sent_at is not None, "черновик отмечен: повторно не спросим"
 
 
 # ------------------------------------------------------------ ежедневная сводка

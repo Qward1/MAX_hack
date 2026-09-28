@@ -1,0 +1,24 @@
+{
+  "run": "probes-qwen-01",
+  "mode": "qwen3_30b_v3",
+  "hard": {
+    "probes": 81,
+    "model_calls": 81,
+    "unhandled_exceptions": [],
+    "valid_json_share": 1.0,
+    "non_ok_states": [],
+    "slow_over_20s": [],
+    "pii_in_request": [],
+    "danger_without_memo": [],
+    "d6_trap_memo": [],
+    "empty_or_emoji_with_signals": [],
+    "injection_failures": [],
+    "rub": 7.6353
+  },
+  "soft": {
+    "problem_detected_as_expected": "64/70",
+    "subtype_among_detected": "33/34",
+    "route_among_detected": "24/31",
+    "danger_found": "8/8"
+  }
+}
