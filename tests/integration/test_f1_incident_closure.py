@@ -79,7 +79,7 @@ async def test_confirmed_ticket_resolves_the_incident(tickets: dict) -> None:  #
     # «Решена» к тому же не открывается для присоединения.
     join = await d["client"].post(
         f"/api/v1/incidents/{d['incident']}/join",
-        headers={**d["headers"]["eve"], "Idempotency-Key": "join-closed-f1"},
+        headers={**d["headers"]["eve"], "Idempotency-Key": "join-closed-f1"},  # gitleaks:allow
     )
     assert join.status_code == 409, join.text
 
