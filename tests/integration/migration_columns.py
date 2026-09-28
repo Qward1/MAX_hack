@@ -83,7 +83,14 @@ D3_COLUMNS: dict[str, tuple[str, ...]] = {
     ),
     "notification_deliveries": ("broadcast_id",),
 }
-for _table, _columns in D3_COLUMNS.items():
+#: F1: проблема закрывается вместе с заявкой; признаки проверочного аккаунта
+#: и витрины (INCIDENT-CLOSE-WITH-TICKET-2026-09-28, миграция 20260930_0016).
+F1_COLUMNS: dict[str, tuple[str, ...]] = {
+    "incidents": ("resolved_at", "closure", "closure_reason", "status_changed_at"),
+    "users": ("reviewer",),
+    "management_companies": ("showcase",),
+}
+for _table, _columns in (*D3_COLUMNS.items(), *F1_COLUMNS.items()):
     P3B_COLUMNS[_table] = (*P3B_COLUMNS.get(_table, ()), *_columns)
 P3B_COLUMNS.pop("houses_d3")
 
@@ -112,6 +119,9 @@ ADDED_DEFAULTS: dict[str, object] = {
     "quiet_end_minute": 480,
     "daily_digest_enabled": False,
     "joined": False,
+    # F1: прежние пользователи и УК — не проверочные и не витрина.
+    "reviewer": False,
+    "showcase": False,
 }
 
 

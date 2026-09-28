@@ -30,6 +30,8 @@ LATER_COLUMNS = {
         "group_ack_at": None,
         # D3: от рассылок никто не отписан.
         "broadcast_opt_out_at": None,
+        # F1: прежние пользователи — не проверочные аккаунты.
+        "reviewer": False,
     },
     # D3: ежедневная сводка у прежних сотрудников выключена.
     "organization_memberships": {"daily_digest_enabled": False},
@@ -46,6 +48,8 @@ LATER_COLUMNS = {
         "open_registration_code_hash": None,
         "open_registration_changed_at": None,
         "open_registration_changed_by": None,
+        # F1: прежние УК — не витрина.
+        "showcase": False,
     },
 }
 
