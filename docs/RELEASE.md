@@ -79,5 +79,5 @@ SHOWCASE_CHECK_TOKEN=… python scripts/showcase_check.py
   и вручную перед каждой выкладкой.
 - **Сертификат** — Caddy продлевает Let's Encrypt для
   `domsignal.176-108-244-168.sslip.io` сам.
-- **Модель** — дневной бюджет 300 вызовов (≈ 30 ₽ в сутки), дальше правила;
+- **Модель** — дневной бюджет 500 вызовов (≈ 50 ₽ в сутки), дальше правила;
   прогноз расхода и нужный баланс Cloud.ru — [`evaluation/reports/2026-09-29-llm-probes.md`](../evaluation/reports/2026-09-29-llm-probes.md) §6.
