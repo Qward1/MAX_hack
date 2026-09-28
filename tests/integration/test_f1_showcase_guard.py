@@ -120,3 +120,31 @@ async def test_ordinary_staff_and_platform_keep_full_rights(env) -> None:  # noq
         env["platform"], f"/api/v1/platform/companies/{ALPHA}/suspend", {"reason": "штатно"}
     )
     assert suspended.status_code == 200, suspended.text
+
+
+async def test_showcase_health_needs_its_token_and_returns_only_booleans(env) -> None:  # noqa: F811
+    from httpx import ASGITransport, AsyncClient
+
+    from domsignal.main import create_app
+
+    settings = env["settings"].model_copy(update={"showcase_check_token": "check-token-123"})
+    app = create_app(settings)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="https://testserver") as c:
+        assert (await c.get("/api/v1/showcase/health")).status_code == 404
+        wrong = await c.get("/api/v1/showcase/health", headers={"X-Showcase-Check-Token": "x"})
+        assert wrong.status_code == 404
+        unmarked = await c.get(
+            "/api/v1/showcase/health", headers={"X-Showcase-Check-Token": "check-token-123"}
+        )
+        assert unmarked.json() == {"ok": False, "checks": {"showcase_marked": False}}
+        await _mark(env, showcase=[ALPHA])
+        marked = (
+            await c.get(
+                "/api/v1/showcase/health", headers={"X-Showcase-Check-Token": "check-token-123"}
+            )
+        ).json()
+    assert marked["checks"]["company_active"] and marked["checks"]["house_managed"]
+    # Чата у синтетической УК нет — проверка честно это говорит.
+    assert marked["checks"]["chat_active"] is False and marked["ok"] is False
+    assert all(isinstance(value, bool) for value in marked["checks"].values())
+    await app.state.container.engine.dispose()

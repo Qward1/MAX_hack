@@ -16,12 +16,23 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domsignal.db.models import ChatBinding, HouseManagement, ManagementCompany, User
+from domsignal.bot.chat_provider import MaxChatProvider, MaxProviderError
+from domsignal.db.models import (
+    ChatBinding,
+    EmployeeCredential,
+    House,
+    HouseManagement,
+    ManagementCompany,
+    OrganizationMembership,
+    User,
+)
+from domsignal.services import chat_quota
 from domsignal.services.errors import AccessDenied
 
 MESSAGE = (
@@ -79,3 +90,88 @@ async def guard(
         protected |= await house_is_showcase(db, house_id)
     if protected:
         raise ShowcaseProtected(MESSAGE)
+
+
+async def health(db: AsyncSession, chats: MaxChatProvider | None = None) -> dict[str, bool]:
+    """Инварианты витрины для ежедневной самопроверки — только да/нет, без данных.
+
+    Нарушение одного из них сорвёт сценарий проверяющих; как восстановить
+    каждый — `docs/RELEASE.md`, «Витрина жюри».
+    """
+    now = datetime.now(UTC)
+    company = await db.scalar(select(ManagementCompany).where(ManagementCompany.showcase.is_(True)))
+    if company is None:
+        return {"showcase_marked": False}
+    checks: dict[str, bool] = {
+        "showcase_marked": True,
+        "company_active": company.status == "active",
+    }
+    state = await chat_quota.quota_state(db, company.id)
+    checks["quota_covers_chats"] = state.limit is None or state.used <= state.limit
+    managements = (
+        (
+            await db.execute(
+                select(HouseManagement.house_id).where(
+                    HouseManagement.tenant_id == company.id,
+                    HouseManagement.status == "active",
+                    HouseManagement.valid_from <= now,
+                    or_(HouseManagement.valid_to.is_(None), HouseManagement.valid_to > now),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    checks["house_managed"] = bool(managements)
+    checks["open_access_on"] = bool(managements) and bool(
+        await db.scalar(
+            select(func.count())
+            .select_from(House)
+            .where(House.id.in_(managements), House.open_resident_access.is_(True))
+        )
+    )
+    bindings = (
+        (
+            await db.execute(
+                select(ChatBinding).where(
+                    ChatBinding.house_id.in_(managements),
+                    ChatBinding.status == "active",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    checks["chat_active"] = bool(bindings)
+    checks["chat_reading_on"] = any(b.passive_capture_enabled for b in bindings)
+    reviewers = (
+        await db.execute(
+            select(User.id, EmployeeCredential.revoked_at)
+            .join(EmployeeCredential, EmployeeCredential.user_id == User.id)
+            .where(User.reviewer.is_(True))
+        )
+    ).all()
+    checks["reviewers_present"] = bool(reviewers)
+    # Временная блокировка после неудачных попыток снимается сама за 5 минут;
+    # здесь — только отозванный вход.
+    checks["reviewers_not_revoked"] = all(revoked is None for _, revoked in reviewers)
+    memberships = (
+        (
+            await db.execute(
+                select(OrganizationMembership.status).where(
+                    OrganizationMembership.user_id.in_([r[0] for r in reviewers]),
+                    OrganizationMembership.tenant_id == company.id,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    checks["reviewer_staff_active"] = all(status == "active" for status in memberships)
+    if chats is not None and bindings:
+        try:
+            info = await chats.get_chat_info(bindings[0].max_chat_id)
+            checks["bot_in_chat"] = info.bot_present
+        except MaxProviderError:
+            checks["bot_in_chat"] = False
+    return checks

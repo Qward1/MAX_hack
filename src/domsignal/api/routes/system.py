@@ -1,11 +1,14 @@
+import hmac
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from fastapi.responses import HTMLResponse
 from sqlalchemy import text
 
 from domsignal.api.dependencies import ContainerDep, DbDep
 from domsignal.contracts.capabilities import CapabilitiesResponse, CapabilityFlags
+from domsignal.services import showcase
+from domsignal.services.errors import ResourceNotFound
 from domsignal.services.privacy import PRIVACY_PATH, render_privacy_page
 
 router = APIRouter(tags=["system"])
@@ -63,3 +66,20 @@ async def capabilities(container: ContainerDep) -> Any:
             else None
         ),
     )
+
+
+@router.get("/api/v1/showcase/health", include_in_schema=False)
+async def showcase_health(
+    session: DbDep,
+    container: ContainerDep,
+    token: str | None = Header(default=None, alias="X-Showcase-Check-Token"),
+) -> dict[str, Any]:
+    """Самопроверка витрины жюри (F1 §5.5): только да/нет по инвариантам, без данных.
+
+    Доступ — по отдельному токену `SHOWCASE_CHECK_TOKEN`; без него адрес не существует.
+    """
+    expected = container.settings.showcase_check_token
+    if not expected or not token or not hmac.compare_digest(token.encode(), expected.encode()):
+        raise ResourceNotFound("Not found")
+    checks = await showcase.health(session, container.chat_connections.provider)
+    return {"ok": all(checks.values()), "checks": checks}
