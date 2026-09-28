@@ -2,7 +2,13 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   // Браузерные сценарии, проверка вёрстки F1 (§2.5) и приёмочные кейсы (§3).
   testDir: "./tests",
-  testMatch: ["browser/**/*.spec.ts", "ui-lint.spec.ts", "acceptance/**/*.spec.ts"],
+  // Проверка вёрстки — первой, на свежем стенде: другие сценарии засевают
+  // тексты с идентификаторами, а правило «UUID на экране» их бы засчитало.
+  // Проекты без зависимости: сбой вёрстки не отменяет остальные сценарии.
+  projects: [
+    { name: "ui-lint", testMatch: "ui-lint.spec.ts" },
+    { name: "browser", testMatch: ["browser/**/*.spec.ts", "acceptance/**/*.spec.ts"] },
+  ],
   fullyParallel: false,
   workers: 1,
   timeout: 30000,

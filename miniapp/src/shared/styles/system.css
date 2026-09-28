@@ -43,12 +43,18 @@ a.ds-text-link:hover {
 .stat-link:hover {
   background: var(--ds-surface-2);
 }
+/* Шеврон рамкой, а не символом: символ попадал бы в доступное имя кнопки. */
 .ds-link-button::after,
 .record-link::after {
-  content: "›" / "";
-  margin-inline-start: 6px;
-  color: var(--ds-ink-2);
-  font-weight: 400;
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-top: 2px solid var(--ds-ink-2);
+  border-right: 2px solid var(--ds-ink-2);
+  transform: translateY(-1px) rotate(45deg);
+  vertical-align: middle;
+  margin-inline-start: 8px;
 }
 /* Переход к списку: акцентный цвет и шеврон, без подчёркивания. */
 .ds-action-link {
@@ -586,10 +592,15 @@ details > summary:hover {
   border-radius: inherit;
 }
 .stat-tile .stat-link::after {
-  content: "›" / "";
-  margin-inline-start: 8px;
-  color: var(--ds-ink-2);
-  font-weight: 400;
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-top: 2px solid var(--ds-ink-2);
+  border-right: 2px solid var(--ds-ink-2);
+  transform: translateY(-1px) rotate(45deg);
+  vertical-align: middle;
+  margin-inline-start: 10px;
 }
 .stat-tile .stat-link:hover {
   background: none;
