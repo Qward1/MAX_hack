@@ -51,6 +51,7 @@ from domsignal.db.models import (
 )
 from domsignal.db.models.employee_auth import AuthChallenge
 from domsignal.db.repositories.reliability import authority_lock
+from domsignal.services import showcase
 from domsignal.services.employee_auth import HASHER, EmployeeAuthService
 from domsignal.services.employee_auth import audit as auth_audit
 from domsignal.services.errors import AuthenticationRequired, ResourceNotFound
@@ -80,6 +81,8 @@ NOTIFY_INVALID = (
 
 def notify_digest(settings: Settings, code: str) -> str:
     return EmployeeAuthService(settings).digest(code, "application-notify")
+
+
 LINK_INVALID = "Ссылка недействительна или устарела. Запросите новую."
 
 
@@ -242,6 +245,7 @@ class CompanySignupService:
             raise AdministrationConflict(
                 "Свой пароль и аутентификатор сбрасывает другой администратор УК."
             )
+        await showcase.guard(db, actor, target_user_id=user)
         member = await db.scalar(
             select(OrganizationMembership).where(
                 OrganizationMembership.user_id == user,

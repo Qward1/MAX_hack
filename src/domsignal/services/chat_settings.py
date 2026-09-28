@@ -22,6 +22,7 @@ from domsignal.core.display_time import display_zone, zone_label
 from domsignal.core.quiet_hours import minutes_label, parse_minutes
 from domsignal.db.models import ChatBinding, InboxReceipt, User
 from domsignal.db.repositories.chat_connections import ChatRepository
+from domsignal.services import showcase
 from domsignal.services.chat_connections import ChatConnectionError, ChatConnectionService
 from domsignal.services.errors import AccessDenied, ResourceNotFound
 from domsignal.services.house_zone import HouseZones
@@ -84,9 +85,7 @@ def _state(binding: ChatBinding) -> dict[str, object]:
 
 
 class ChatSettingsService:
-    def __init__(
-        self, connections: ChatConnectionService, zones: HouseZones | None = None
-    ) -> None:
+    def __init__(self, connections: ChatConnectionService, zones: HouseZones | None = None) -> None:
         self.connections = connections
         self.memberships = MembershipService()
         self.zones = zones or HouseZones(None)
@@ -145,6 +144,7 @@ class ChatSettingsService:
         assert binding is not None
         if binding.status != "active":
             raise ChatConnectionError("binding_not_active")
+        await showcase.guard(session, actor_id, binding_id=binding_id)
         before = _state(binding)
         binding.post_ticket_status = payload.post_ticket_status
         binding.post_company_messages = payload.post_company_messages

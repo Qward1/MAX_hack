@@ -39,6 +39,7 @@ from domsignal.db.models import (
     ManagementCompany,
 )
 from domsignal.db.repositories.reliability import ReliabilityRepository, authority_lock, stable_hash
+from domsignal.services import showcase
 from domsignal.services.errors import IdempotencyConflict, ResourceNotFound, ServiceError
 
 #: Код problem+json и `last_error_code` запроса подключения при исчерпанной квоте.
@@ -246,6 +247,8 @@ class ChatQuotaService:
         await authority_lock(db, exclusive=True)
         await lock_company(db, company_id)
         previous = await current_limit(db, company_id)
+        if limit is not None and (previous is None or limit < previous):
+            await showcase.guard(db, actor_id, company_id=company_id)
         self.add_grant(
             db,
             company_id=company_id,

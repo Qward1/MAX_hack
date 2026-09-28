@@ -48,6 +48,7 @@ from domsignal.db.models import (
 from domsignal.db.repositories.chat_connections import ChatRepository
 from domsignal.db.repositories.passive import BufferedLine, PassiveRepository
 from domsignal.db.repositories.reliability import ReliabilityRepository
+from domsignal.services import showcase
 from domsignal.services.chat_connections import ChatConnectionError, ChatConnectionService
 from domsignal.services.chat_voice import (
     CHAT_MESSAGE_INTENT_KIND,
@@ -289,9 +290,7 @@ class PassiveCaptureService:
             await self._schedule_tick(session, window)
         return window.id
 
-    def _reason(
-        self, window: ConversationWindow, at: datetime, lines: list[BufferedLine]
-    ) -> str:
+    def _reason(self, window: ConversationWindow, at: datetime, lines: list[BufferedLine]) -> str:
         """Подпись причины для аудита. Решение уже принято политикой ядра."""
         policy = self.config.policy
         if (at - window.last_line_at).total_seconds() > policy.silence_seconds:
@@ -381,9 +380,7 @@ class PassiveCaptureService:
 
     def _silent(self, lines: list[BufferedLine], now: datetime) -> bool:
         """Закрыла бы политика ядра окно, если бы следующая реплика пришла сейчас."""
-        probe = WindowLine(
-            line_id="__tick__", author_ref="__tick__", text=_PROBE_TEXT, sent_at=now
-        )
+        probe = WindowLine(line_id="__tick__", author_ref="__tick__", text=_PROBE_TEXT, sent_at=now)
         groups = split_stream([*map(_window_line, lines), probe], self.config.policy)
         return len(groups[-1]) == 1 and groups[-1][0].line_id == "__tick__"
 
@@ -527,6 +524,8 @@ class PassiveCaptureService:
             raise ChatConnectionError("binding_not_active")
         if enabled and not self.config.capture_enabled:
             raise ChatConnectionError("passive_capture_disabled")
+        if not enabled:
+            await showcase.guard(session, actor_id, binding_id=binding_id)
         changed = binding.passive_capture_enabled != enabled
         binding.passive_capture_enabled = enabled
         notice = await self._notice(session, binding) if enabled else False
