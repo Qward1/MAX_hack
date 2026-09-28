@@ -93,4 +93,17 @@ test.describe.serial("F1 refresh and access", () => {
       await ctx.close();
     }
   });
+
+  test("an address the cabinet does not have is not blamed on the role", async ({ browser }) => {
+    const ctx = await context(browser);
+    const page = await ctx.newPage();
+    try {
+      await page.goto("/admin/no-such-section?test_actor=a16-admin");
+      await expect(page.getByRole("heading", { level: 1, name: "Такой страницы нет" })).toBeVisible();
+      await expect(page.getByText("Этот раздел доступен другой роли")).toHaveCount(0);
+      await expect(page.getByText("Вход в кабинет")).toHaveCount(0);
+    } finally {
+      await ctx.close();
+    }
+  });
 });

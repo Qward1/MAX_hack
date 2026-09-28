@@ -241,7 +241,7 @@ function CompanyWorkspace({ company, surface, href, navigate, visit }: Workspace
     case "mailings": return <Mailings key={visit} base={base} />;
     case "notices": return <Notices base={base} />;
     case "reception": return <ReceptionAdmin base={base} admin />;
-    default: return <DeniedRoute company={company} href={href} navigate={navigate} />;
+    default: return <DeniedRoute company={company} surface={surface} href={href} navigate={navigate} />;
   }
 }
 function OperatorWorkspace({ company, surface, href, navigate, visit }: Workspace) {
@@ -255,7 +255,7 @@ function OperatorWorkspace({ company, surface, href, navigate, visit }: Workspac
   if (surface === "mailings" && company.surfaces.includes("mailings")) return <Mailings key={visit} base={base} />;
   if (surface === "notices") return <Notices base={base} />;
   if (surface === "reception") return <ReceptionAdmin base={base} admin={false} />;
-  return <DeniedRoute company={company} href={href} navigate={navigate} />;
+  return <DeniedRoute company={company} surface={surface} href={href} navigate={navigate} />;
 }
 /** Переходы из пустого обзора — только в разделы, доступные этой роли. */
 function overviewLinks(company: Context, href: (surface: string) => string, navigate: (url: string) => void) {
@@ -270,8 +270,12 @@ function overviewLinks(company: Context, href: (surface: string) => string, navi
  * доступные разделы; вход и меню не теряются. Данные раздела защищает API
  * (403), навигация границей доступа не является.
  */
-function DeniedRoute({ company, href, navigate }: { company: Context; href: (surface: string) => string; navigate: (url: string) => void }) {
-  return <><Title description="Этот раздел доступен другой роли. Доступ выдаёт администратор управляющей компании.">Раздел недоступен</Title>
+function DeniedRoute({ company, surface, href, navigate }: { company: Context; surface: string; href: (surface: string) => string; navigate: (url: string) => void }) {
+  // Известный раздел без права — «Раздел недоступен»; адрес, которого в кабинете нет вовсе, — «Такой страницы нет».
+  const known = surface in paths || Object.values(paths).includes(surface);
+  return <>{known
+    ? <Title description="Этот раздел доступен другой роли. Доступ выдаёт администратор управляющей компании.">Раздел недоступен</Title>
+    : <Title description="Возможно, в адресе опечатка. Выберите раздел из списка.">Такой страницы нет</Title>}
     <section className="admin-detail" aria-labelledby="denied-available">
       <h2 id="denied-available">Вам доступны</h2>
       <ul className="ds-row-list">{company.surfaces.map(s => <li key={s}>
