@@ -1,5 +1,5 @@
 import { formatStaffTime } from "../shared/ui/format";
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ApiProblem } from "../shared/api/client";
 import { ticketClient } from "../shared/api/tickets";
 import type { components } from "../shared/api/schema";
@@ -7,6 +7,17 @@ import { notify } from "../shared/ui/Toast";
 import { type ResourceOptions, useResource } from "../shared/api/useResource";
 
 export type Schema = components["schemas"];
+/**
+ * Проверочный аккаунт жюри в демо-УК (F1 §5.5): разрушающие действия над
+ * витриной закрыты и в API (403 `showcase_protected`), и здесь — кнопка
+ * выключена, рядом та же фраза, что у сервера.
+ */
+export const SHOWCASE_NOTE = "Недоступно для проверочного аккаунта: это действие изменило бы витрину, которую проверяют и другие.";
+export const ShowcaseLock = createContext(false);
+export function useShowcaseLock() { return useContext(ShowcaseLock); }
+export function LockNote({ show }: { show: boolean }) {
+  return show ? <p className="muted showcase-note">{SHOWCASE_NOTE}</p> : null;
+}
 export const adminClient = ticketClient;
 export function useRead<T>(path: string, revision = 0, options: ResourceOptions = {}) {
   const load = useCallback((signal: AbortSignal) => adminClient.request<T>(path, { signal }), [path]);

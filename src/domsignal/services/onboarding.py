@@ -556,6 +556,7 @@ class AdministrationService:
                     company_id=c.id,
                     name=c.name,
                     role=cast(Role, m.role),
+                    protected=bool(user.reviewer and c.showcase),
                     surfaces=(
                         [
                             "overview",
@@ -1353,6 +1354,7 @@ class AdministrationService:
                 company_id=company.id,
                 company_name=company.name,
                 open_access_changed_at=house.open_access_changed_at,
+                showcase=company.showcase,
             )
             for house, company in rows
         ]

@@ -322,9 +322,7 @@ async def house_detail(
     return found
 
 
-@router.post(
-    "/companies/{company_id}/houses/{house_id}/open-access", response_model=OpenAccessView
-)
+@router.post("/companies/{company_id}/houses/{house_id}/open-access", response_model=OpenAccessView)
 async def set_open_access(
     company_id: UUID,
     house_id: UUID,
@@ -420,6 +418,7 @@ async def platform_bootstrap(user: Employee, db: DbDep) -> PlatformBootstrap:
         actor = await require_platform(db, user.id)
         return PlatformBootstrap(
             display_name=actor.display_name,
+            reviewer=bool(actor.reviewer),
             surfaces=[
                 "overview",
                 "applications",
@@ -547,9 +546,7 @@ async def platform_requests(
         ]
 
 
-@router.post(
-    "/platform/house-management-requests/approve-batch", response_model=HouseBatchApproved
-)
+@router.post("/platform/house-management-requests/approve-batch", response_model=HouseBatchApproved)
 async def approve_houses_batch(
     payload: HouseBatchApproval, user: Employee, db: DbDep, container: ContainerDep
 ) -> HouseBatchApproved:

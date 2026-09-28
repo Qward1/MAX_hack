@@ -4,7 +4,7 @@ import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
 import { AddressListForm } from "./HouseBatch";
 import { useEffect, useState, type FormEvent } from "react";
 import { POLL_LIST_MS, POLL_WAITING_MS } from "../shared/api/useResource";
-import { Feedback, History, OneTimeLink, Status, Title, connectionErrors, dateInput, formValue, labels, submitted, useAction, useRead, type Schema } from "./administration";
+import { Feedback, History, LockNote, OneTimeLink, Status, Title, connectionErrors, dateInput, formValue, labels, submitted, useAction, useRead, useShowcaseLock, type Schema } from "./administration";
 import { QuotaMeter } from "./charts";
 import { ChatSettingsPanel, CompanyProfileForm, HouseFactsForm } from "./CommunityPages";
 
@@ -75,6 +75,7 @@ export function Staff({ base }: { base: string }) {
 function StaffAssignments({ base, user, houses, refresh }: { base: string; user: string; houses: House[]; refresh: () => void }) {
   const r = useRead<Schema["StaffDetail"]>(`${base}/staff/${user}`);
   const [confirm, setConfirm] = useState(false);
+  const locked = useShowcaseLock();
   const [saved, setSaved] = useState("");
   const action = useAction(() => { r.refresh(); refresh(); });
   const guard = useConfirm();
@@ -92,7 +93,7 @@ function StaffAssignments({ base, user, houses, refresh }: { base: string; user:
             <span id={`access-${h.management_id}`}>{h.address}</span>
             <div className="ds-segmented" role="group" aria-label={`Доступ: ${h.address}`}>
               {ACCESS_CHOICES.map(([value, label]) => <button key={value} type="button" aria-pressed={current === value}
-                disabled={action.busy} onClick={() => {
+                disabled={action.busy || locked} onClick={() => {
                   if (current === value) return;
                   setSaved("");
                   const apply = async () => {
@@ -108,13 +109,15 @@ function StaffAssignments({ base, user, houses, refresh }: { base: string; user:
           </div>;
         })}
         {saved && <p role="status" className="ds-notice ds-tone-success">{saved}</p>}
+        <LockNote show={locked} />
         <p className="muted">Администратор УК имеет доступ ко всем текущим домам своей организации. Назначение ответственного определяет работу с заявками дома.</p>
       </section>
         <CredentialReset base={base} user={user} />
         <section className="staff-block staff-danger" aria-labelledby="staff-revoke-title">
           <h3 id="staff-revoke-title">Отзыв доступа</h3>
           <p>{name} потеряет доступ к кабинету этой УК со следующего действия. Незакрытые заявки сотрудника вернутся в очередь без исполнителя; история работы сохранится.</p>
-          {!confirm ? <div><button className="ds-btn ds-btn-danger" onClick={() => setConfirm(true)}>Отозвать доступ сотрудника</button></div> :
+          {!confirm ? <div><button className="ds-btn ds-btn-danger" disabled={locked} onClick={() => setConfirm(true)}>Отозвать доступ сотрудника</button>
+            <LockNote show={locked} /></div> :
             <div className="ds-notice ds-tone-danger" role="group" aria-label="Подтверждение отзыва доступа">
               <p><strong>Отозвать доступ: {name}?</strong> Вход в ДомСигнал и доступ к другим организациям у сотрудника останутся.</p>
               <div className="button-row"><button className="ds-btn ds-btn-destructive" disabled={action.busy} onClick={() => void action.run(`${base}/staff/${user}/revoke`)}>Подтвердить отзыв</button>
@@ -130,6 +133,7 @@ function CredentialReset({ base, user }: { base: string; user: string }) {
   const [confirming, setConfirming] = useState(false);
   const [link, setLink] = useState("");
   const action = useAction();
+  const locked = useShowcaseLock();
   return <section className="staff-block passive-switch" aria-labelledby="staff-reset-title">
     <h3 id="staff-reset-title">Пароль и аутентификатор</h3>
     {link ? <OneTimeLink url={link} title="Передайте ссылку сброса сотруднику" label="Ссылка сброса" /> : <>
@@ -139,7 +143,8 @@ function CredentialReset({ base, user }: { base: string; user: string }) {
         <label><input type="radio" name={`reset-${user}`} value="password" checked={kind === "password"} onChange={() => setKind("password")} />Только пароль</label>
       </div></fieldset>
       <Feedback error={action.error || undefined} />
-      {!confirming ? <div><button className="ticket-button secondary" onClick={() => setConfirming(true)}>Сбросить пароль/MFA</button></div> :
+      {!confirming ? <div><button className="ticket-button secondary" disabled={locked} onClick={() => setConfirming(true)}>Сбросить пароль/MFA</button>
+        <LockNote show={locked} /></div> :
         <div className="admin-feedback" role="group" aria-label="Подтверждение сброса">
           <p>Сотрудник сразу выйдет из кабинета на всех устройствах. Войти он сможет только по новой ссылке.</p>
           <div className="button-row"><button className="ticket-button" disabled={action.busy} onClick={async () => {
@@ -265,6 +270,7 @@ export function OpenAccessSwitch({ base, house, refresh }: { base: string; house
   const [confirming, setConfirming] = useState(false);
   const action = useAction(refresh);
   const enabled = house.open_resident_access === true;
+  const locked = useShowcaseLock() && enabled;
   const change = async () => {
     const result = await action.run<Schema["OpenAccessView"]>(`${base}/houses/${house.house_id}/open-access`,
       enabled ? { enabled: false } : { enabled: true, confirm: true });
@@ -277,8 +283,8 @@ export function OpenAccessSwitch({ base, house, refresh }: { base: string; house
       ? "Любой пользователь MAX может выбрать этот дом и сообщать о проблемах."
       : "Сообщать о проблемах и видеть доску могут только участники домового чата."}</p>
     <Feedback error={action.error || undefined} />
-    {!confirming ? <button className="ticket-button secondary" disabled={action.busy} onClick={() => setConfirming(true)}>
-      {enabled ? "Выключить открытый доступ" : "Включить открытый доступ"}</button>
+    {!confirming ? <><button className="ticket-button secondary" disabled={action.busy || locked} onClick={() => setConfirming(true)}>
+      {enabled ? "Выключить открытый доступ" : "Включить открытый доступ"}</button><LockNote show={locked} /></>
     : <div className="admin-feedback" role="group" aria-label="Подтверждение открытого доступа">
       <p>{enabled
         ? "Жители, выбравшие дом сами, сразу потеряют доступ. Их заявки и история останутся у вас."
@@ -482,13 +488,15 @@ export function PassiveSwitch({ binding, available, aiAnalysis, busy, confirming
 }) {
   const enabled = binding.passive_capture_enabled === true;
   const hint = `passive-hint-${binding.id}`;
+  const locked = useShowcaseLock() && enabled;
   return <div className="passive-switch">
     <p>Чтение чата: <strong>{enabled ? "включено" : "выключено"}</strong></p>
     {enabled && <p className="muted">Разбор переписки: {aiAnalysis ? "правила и модель (ИИ)" : "только правила, модель в чатах выключена"}</p>}
     {!confirming ? <>
-      <button className="ticket-button secondary" disabled={busy || (!enabled && !available)}
+      <button className="ticket-button secondary" disabled={busy || locked || (!enabled && !available)}
         aria-describedby={!enabled && !available ? hint : undefined} onClick={ask}>
         {enabled ? "Выключить чтение чата" : "Включить чтение чата"}</button>
+      <LockNote show={locked} />
       {!enabled && !available && <p id={hint} className="muted">Чтение чатов выключено на сервере ДомСигнала.</p>}
     </> : <div className="admin-feedback" role="group" aria-label="Подтверждение">
       <p>{enabled

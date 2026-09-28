@@ -3,7 +3,7 @@ import { Toaster } from "../shared/ui/Toast";
 import { POLL_LIST_MS } from "../shared/api/useResource";
 import { countLabel, formatStaffTime, formatDay } from "../shared/ui/format";
 import { useState } from "react";
-import { Feedback, History, OneTimeLink, Status, Title, dateInput, formValue, submitted, useAction, useRead, useRoute, type Schema } from "./administration";
+import { Feedback, History, LockNote, OneTimeLink, ShowcaseLock, Status, Title, dateInput, formValue, submitted, useAction, useRead, useRoute, useShowcaseLock, type Schema } from "./administration";
 import { QuotaMeter } from "./charts";
 import { PlatformOverview } from "./Dashboards";
 import { Mailings } from "./CommunityPages";
@@ -27,7 +27,9 @@ export function PlatformApp() {
     <p className="admin-sidebar-note">Рассмотрение заявок и состояние организаций</p>
   </aside><main className="app-shell admin-main"><Feedback loading={bootstrap.loading} error={bootstrap.error} />
     {bootstrap.data && !bootstrap.error && <>
-      <PlatformPage key={page} page={page} open={next => navigate(`/platform-admin/${next}`)} /></>}
+      <ShowcaseLock.Provider value={bootstrap.data.reviewer === true}>
+        <PlatformPage key={page} page={page} open={next => navigate(`/platform-admin/${next}`)} />
+      </ShowcaseLock.Provider></>}
   </main></div>;
 }
 function PlatformPage({ page, open }: { page: string; open: (page: string) => void }) {
@@ -166,17 +168,20 @@ function PlatformCompanies() {
 function PlatformCompany({ id, refresh }: { id: string; refresh: () => void }) {
   const r = useRead<Schema["CompanyView"]>(`/api/v1/platform/companies/${id}`);
   const action = useAction(() => { r.refresh(); refresh(); });
+  const reviewer = useShowcaseLock();
+  const locked = reviewer && r.data?.showcase === true;
   const [link, setLink] = useState("");
   const [key, setKey] = useState(() => crypto.randomUUID());
   return <section className="admin-detail"><Feedback loading={r.loading} error={r.error ?? action.error} />{r.data && <>
     <h2>{r.data.legal_name ?? r.data.name}</h2><p>ИНН {r.data.inn ?? "не указан"}</p><Status value={r.data.status} />
-    <CompanyQuota id={id} refresh={() => { r.refresh(); refresh(); }} />
+    <CompanyQuota id={id} locked={locked} refresh={() => { r.refresh(); refresh(); }} />
     <OpenRegistration id={id} active={r.data.status === "active"} />
     <form className="ticket-form" onSubmit={e => { const data = submitted(e);
       void action.run(`/api/v1/platform/companies/${id}/${r.data?.status === "active" ? "suspend" : "reactivate"}`, { reason: formValue(data, "reason") });
     }}><label>Основание<textarea name="reason" required maxLength={2000} /></label>
       <p>Приостановка закрывает рабочий доступ сотрудников и приём приглашений. История сохраняется.</p>
-      <button className="ticket-button" disabled={action.busy || r.data.status === "archived"}>{r.data.status === "active" ? "Приостановить организацию" : "Возобновить организацию"}</button></form>
+      <button className="ticket-button" disabled={action.busy || r.data.status === "archived" || (locked && r.data.status === "active")}>{r.data.status === "active" ? "Приостановить организацию" : "Возобновить организацию"}</button>
+      <LockNote show={locked && r.data.status === "active"} /></form>
     {r.data.employee_count === 0 && r.data.inn && r.data.status === "active" && <form className="ticket-form" onSubmit={async e => {
       const data = submitted(e);
       const invitation = await action.run<Schema["InvitationView"]>(`/api/v1/platform/companies/${id}/invitations/first-admin`, { reason: formValue(data, "reason") }, key);
@@ -231,12 +236,14 @@ function OpenHouses() {
   const r = useRead<Schema["PlatformOpenHouseView"][]>("/api/v1/platform/open-houses");
   const action = useAction(r.refresh);
   const [closing, setClosing] = useState<string | null>(null);
+  const reviewer = useShowcaseLock();
   return <section className="admin-detail" aria-labelledby="open-houses-title"><h2 id="open-houses-title">Открытый доступ</h2>
     <Feedback loading={r.loading} error={r.error ?? (action.error || undefined)} />
     {r.data?.length === 0 && <p>Домов с открытым доступом нет.</p>}
     <ul className="admin-records">{r.data?.map(h => <li key={h.house_id}><span>{h.address}</span><span>{h.company_name}</span>
       {h.open_access_changed_at && <time>С {formatStaffTime(h.open_access_changed_at)}</time>}
-      {closing !== h.house_id ? <button className="ticket-button secondary" onClick={() => setClosing(h.house_id)}>Закрыть доступ</button>
+      {reviewer && h.showcase ? <><button className="ticket-button secondary" disabled>Закрыть доступ</button><LockNote show /></>
+        : closing !== h.house_id ? <button className="ticket-button secondary" onClick={() => setClosing(h.house_id)}>Закрыть доступ</button>
         : <form className="inline-form" onSubmit={async e => {
           const data = submitted(e);
           const result = await action.run(`/api/v1/platform/houses/${h.house_id}/open-access/close`, { reason: formValue(data, "reason") });
@@ -272,7 +279,7 @@ function Pages({ offset, set, count }: { offset: number; set: (value: number) =>
 }
 
 /** Квота чатов организации: текущее состояние, изменение с причиной, история. */
-function CompanyQuota({ id, refresh }: { id: string; refresh: () => void }) {
+function CompanyQuota({ id, refresh, locked = false }: { id: string; refresh: () => void; locked?: boolean }) {
   const r = useRead<Schema["CompanyQuotaView"]>(`/api/v1/platform/companies/${id}/chat-quota`);
   const action = useAction(() => { r.refresh(); refresh(); });
   const [unlimited, setUnlimited] = useState(false);
@@ -287,7 +294,7 @@ function CompanyQuota({ id, refresh }: { id: string; refresh: () => void }) {
           defaultValue={r.data.quota.limit ?? r.data.quota.used} /></label>
         <label className="checkbox-label"><input type="checkbox" checked={unlimited} onChange={e => setUnlimited(e.target.checked)} />Без ограничения</label>
         <label>Причина<input name="reason" required minLength={3} maxLength={2000} /></label>
-        <button className="ticket-button" disabled={action.busy}>Изменить квоту</button></form>
+        <button className="ticket-button" disabled={action.busy || locked}>Изменить квоту</button><LockNote show={locked} /></form>
       <p className="muted">Снижение не отключает подключённые чаты: УК будет отмечена как превысившая квоту, новые подключения заблокируются.</p>
       <details><summary>История выдач</summary><ul className="admin-records">{r.data.grants.map((g, i) => <li key={i}>
         <span>{g.limit_after === null || g.limit_after === undefined ? "Без ограничения" : `Квота ${g.limit_after}`}</span>

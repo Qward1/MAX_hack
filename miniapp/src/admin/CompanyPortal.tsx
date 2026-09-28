@@ -4,7 +4,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AdminApp } from "./AdminApp";
 import { TICKETS_CHANGED_EVENT } from "./TicketDetail";
 import { SignalsApp } from "./SignalsApp";
-import { adminClient, Feedback, Title, useRoute, type Schema } from "./administration";
+import { adminClient, Feedback, ShowcaseLock, Title, useRoute, type Schema } from "./administration";
 import { useResource } from "../shared/api/useResource";
 import { problemStatus } from "../shared/api/client";
 import type { SignalList } from "../shared/api/signals";
@@ -166,7 +166,9 @@ export function CompanyPortal() {
         aria-current={s === surface ? "page" : undefined} aria-describedby={described(s)} href={href(s)}
         onClick={e => { e.preventDefault(); navigate(href(s)); }}><span>{names[s]}</span>{countFor(s)}</a>)}</nav>
     </aside><main className="app-shell admin-main">
-      {isOrganization ? <CompanyWorkspace key={selected.company_id} {...shared} /> : <OperatorWorkspace key={selected.company_id} {...shared} />}
+      <ShowcaseLock.Provider value={selected.protected === true}>
+        {isOrganization ? <CompanyWorkspace key={selected.company_id} {...shared} /> : <OperatorWorkspace key={selected.company_id} {...shared} />}
+      </ShowcaseLock.Provider>
     </main>
   </div>;
 }

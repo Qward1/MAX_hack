@@ -3,7 +3,7 @@ import { useConfirm } from "../shared/ui/useConfirm";
 import { POLL_LIST_MS } from "../shared/api/useResource";
 import { formatStaffTime, sentence } from "../shared/ui/format";
 import { useEffect, useState } from "react";
-import { adminClient, Feedback, Title, useAction, useRead, type Schema } from "./administration";
+import { adminClient, Feedback, LockNote, Title, useAction, useRead, useShowcaseLock, type Schema } from "./administration";
 
 /**
  * D3 в кабинете: объявления, рассылки и опросы (один механизм), настройки
@@ -369,6 +369,7 @@ export function PollResultsView({ poll }: { poll: Schema["PollResults"] }) {
 export function ChatSettingsPanel({ bindingId }: { bindingId: string }) {
   const r = useRead<Schema["ChatSettingsView"]>(`/api/v1/chat-bindings/${bindingId}/settings`);
   const action = useAction(r.refresh);
+  const locked = useShowcaseLock();
   const [form, setForm] = useState<Schema["ChatSettingsUpdate"] | null>(null);
   const [saved, setSaved] = useState(false);
   const view = r.data;
@@ -392,12 +393,12 @@ export function ChatSettingsPanel({ bindingId }: { bindingId: string }) {
       const result = await action.run(`/api/v1/chat-bindings/${bindingId}/settings`, value);
       if (result) { setForm(null); setSaved(true); }
     }}>
-      <fieldset className="choice-row" disabled={!view.can_edit}><legend>По решению человека</legend>
+      <fieldset className="choice-row" disabled={!view.can_edit || locked}><legend>По решению человека</legend>
         {flags.map(([name, label]) => <label key={name} className="checkbox-label"><input type="checkbox" checked={Boolean(value[name])}
           onChange={e => setForm({ ...value, [name]: e.target.checked })} />{label}</label>)}
       </fieldset>
       <p className="muted">Памятка безопасности и сообщение о чтении чата не отключаются: это автоматический голос бота.</p>
-      <fieldset className="choice-row" disabled={!view.can_edit}><legend>Тихие часы, {view.timezone_label}</legend>
+      <fieldset className="choice-row" disabled={!view.can_edit || locked}><legend>Тихие часы, {view.timezone_label}</legend>
         <label className="checkbox-label"><input type="checkbox" checked={noQuiet}
           onChange={e => setForm({ ...value, quiet_start: e.target.checked ? "00:00" : "22:00", quiet_end: e.target.checked ? "00:00" : "08:00" })} />Без тихих часов</label>
         {!noQuiet && <div className="inline-form">
@@ -407,8 +408,9 @@ export function ChatSettingsPanel({ bindingId }: { bindingId: string }) {
         <p className="muted">Объявления, опросы и необязательные правки ждут конца тихих часов; факт принятия заявки — нет.</p>
       </fieldset>
       <Feedback error={action.error || undefined} />
-      {view.can_edit ? <button className="ticket-button" disabled={action.busy || !form}>Сохранить настройки</button>
+      {view.can_edit ? <button className="ticket-button" disabled={action.busy || !form || locked}>Сохранить настройки</button>
         : <p className="muted">Настройки меняет администратор УК или ответственный за дом.</p>}
+      <LockNote show={locked && view.can_edit} />
       {saved && <p role="status" className="muted">Настройки сохранены.</p>}
     </form>}
     {view && (view.history ?? []).length > 0 && <><h4>История изменений</h4><ol className="admin-history">

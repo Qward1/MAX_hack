@@ -111,6 +111,19 @@ async def test_reviewer_admin_cannot_touch_other_reviewers_or_close_access(env) 
     assert opened.status_code == 200, opened.text
 
 
+async def test_bootstrap_tells_the_interface_what_is_locked(env) -> None:  # noqa: F811
+    """Интерфейс выключает кнопки по тем же признакам, по которым API отвечает 403."""
+    admin = seed_id("admin")
+    before = (await env["admin"].get("/api/v1/admin/bootstrap")).json()
+    assert [c["protected"] for c in before["companies"]] == [False]
+    await _mark(env, reviewers=[admin, env["platform_id"]], showcase=[ALPHA])
+    after = (await env["admin"].get("/api/v1/admin/bootstrap")).json()
+    assert [c["protected"] for c in after["companies"]] == [True]
+    assert (await env["platform"].get("/api/v1/platform/bootstrap")).json()["reviewer"] is True
+    company = (await env["platform"].get(f"/api/v1/platform/companies/{ALPHA}")).json()
+    assert company["showcase"] is True
+
+
 async def test_ordinary_staff_and_platform_keep_full_rights(env) -> None:  # noqa: F811
     await _mark(env, showcase=[ALPHA])
     operator = seed_id("operator")
