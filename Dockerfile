@@ -31,11 +31,14 @@ RUN apt-get update \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && addgroup --system --gid 10001 domsignal \
-    && adduser --system --uid 10001 --ingroup domsignal --home /nonexistent domsignal
+    && adduser --system --uid 10001 --ingroup domsignal --home /nonexistent domsignal     && mkdir -p /app/output/max-record     && chown -R 10001:10001 /app/output
 COPY --from=python-build --chown=domsignal:domsignal /app/.venv /app/.venv
 COPY --chown=domsignal:domsignal alembic.ini ./
 COPY --chown=domsignal:domsignal migrations/ ./migrations/
 COPY --chown=domsignal:domsignal regions/ ./regions/
+# F1 §3.2: эмулятор MAX для локального стенда (`MAX_TRANSPORT=record`):
+# docker compose exec api python scripts/max_emulator.py …
+COPY --chown=domsignal:domsignal scripts/max_emulator.py ./scripts/max_emulator.py
 COPY --from=frontend-build --chown=domsignal:domsignal /build/miniapp/dist ./miniapp/dist/
 USER 10001:10001
 EXPOSE 8000

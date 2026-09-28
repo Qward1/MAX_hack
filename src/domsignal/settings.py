@@ -26,6 +26,9 @@ class MaxTransportMode(StrEnum):
     OFF = "off"
     RECORDING = "recording"
     WEBHOOK = "webhook"
+    #: F1 §3.2: локальный эмулятор MAX — вебхук с локальным секретом, исходящие
+    #: вызовы пишет двойник API в MAX_RECORD_DIR. В production невозможен.
+    RECORD = "record"
 
 
 class LlmProvider(StrEnum):
@@ -76,6 +79,8 @@ class Settings(BaseSettings):
     max_webhook_secret: str | None = Field(default=None, repr=False)
     max_api_base_url: str = MAX_API_ORIGIN
     max_api_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
+    #: Каталог двойника MAX API (`MAX_TRANSPORT=record`): state.json и outbox.jsonl.
+    max_record_dir: str = "output/max-record"
     max_bot_username: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_]{1,100}$")
     max_required_permissions: frozenset[str] = frozenset({"read_all_messages"})
     chat_connection_ttl_seconds: int = Field(default=900, ge=60, le=3600)
@@ -349,11 +354,27 @@ class Settings(BaseSettings):
         if 0 < self.llm_tokens_per_minute < MIN_TOKENS_PER_MINUTE:
             # Как у LLM_MAX_CONCURRENCY: ограничитель, в который не помещается
             # ни одно окно, молча отдал бы всё правилам.
-            problems.append(
-                f"LLM_TOKENS_PER_MINUTE must be 0 or at least {MIN_TOKENS_PER_MINUTE}"
-            )
+            problems.append(f"LLM_TOKENS_PER_MINUTE must be 0 or at least {MIN_TOKENS_PER_MINUTE}")
         if problems:
             raise ValueError("worker concurrency: " + "; ".join(problems))
+        return self
+
+    @model_validator(mode="after")
+    def require_record_settings(self) -> Settings:
+        """Эмулятор MAX подписывает события секретом и данные входа токеном бота."""
+        if self.max_transport is not MaxTransportMode.RECORD:
+            return self
+        missing = [
+            name
+            for name, value in (
+                ("MAX_WEBHOOK_SECRET", self.max_webhook_secret),
+                ("MAX_BOT_TOKEN", self.max_bot_token),
+                ("MAX_BOT_USERNAME", self.max_bot_username),
+            )
+            if not value
+        ]
+        if missing:
+            raise ValueError("MAX_TRANSPORT=record requires " + ", ".join(missing))
         return self
 
     @model_validator(mode="after")

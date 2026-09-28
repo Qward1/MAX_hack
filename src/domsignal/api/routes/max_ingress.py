@@ -15,7 +15,8 @@ router = APIRouter(prefix="/max", tags=["max"])
 @router.post("/webhook", response_model=InboundAccepted)
 async def webhook(request: Request, session: DbDep, container: ContainerDep) -> InboundAccepted:
     settings = container.settings
-    if settings.max_transport != MaxTransportMode.WEBHOOK or not settings.max_webhook_secret:
+    live = settings.max_transport in (MaxTransportMode.WEBHOOK, MaxTransportMode.RECORD)
+    if not live or not settings.max_webhook_secret:
         raise FeatureUnavailable("MAX webhook is disabled")
     supplied = request.headers.getlist("X-Max-Bot-Api-Secret")
     if len(supplied) != 1 or not hmac.compare_digest(

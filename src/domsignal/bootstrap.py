@@ -20,6 +20,7 @@ from domsignal.ai.schema_modes import SchemaMode
 from domsignal.bot.chat_provider import HttpMaxChatProvider
 from domsignal.bot.ingress import InboundService
 from domsignal.bot.messaging import HttpMaxMessagingProvider
+from domsignal.bot.recording_api import RecordingMaxApi
 from domsignal.bot.transport import MaxTransport, OffTransport, RecordingTransport
 from domsignal.db.session import create_engine, create_session_factory
 from domsignal.services.action_cards import ActionCardBuilder
@@ -275,13 +276,17 @@ def build_container(settings: Settings) -> Container:
         routing=routing,
         action_cards=action_cards,
     )
+    # Бот говорит с MAX: настоящий вебхук или локальный эмулятор (F1 §3.2), у
+    # которого исходящие вызовы пишет двойник API, а не сеть.
+    live_max = settings.max_transport in (MaxTransportMode.WEBHOOK, MaxTransportMode.RECORD)
     chat_provider = HttpMaxChatProvider(
         base_url=settings.max_api_base_url,
         # Off/recording must never cause outbound MAX calls, even if a token is present.
-        token=settings.max_bot_token
-        if settings.max_transport == MaxTransportMode.WEBHOOK
-        else None,
+        token=settings.max_bot_token if live_max else None,
         timeout=settings.max_api_timeout_seconds,
+        transport=RecordingMaxApi(Path(settings.max_record_dir))
+        if settings.max_transport is MaxTransportMode.RECORD
+        else None,
     )
     chat_connections = ChatConnectionService(
         chat_provider,
@@ -292,7 +297,7 @@ def build_container(settings: Settings) -> Container:
     messaging = HttpMaxMessagingProvider(
         chat_provider.client, bot_username=settings.max_bot_username
     )
-    webhook_mode = settings.max_transport == MaxTransportMode.WEBHOOK
+    webhook_mode = live_max
     notifications = TicketNotificationHandler(
         session_factory=session_factory,
         tickets=ticket_service,

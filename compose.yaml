@@ -25,7 +25,13 @@ services:
       SESSION_SECRET: local-only-change-me
       ALLOW_TEST_SESSION: "true"
       DEMO_SEED: "true"
-      MAX_TRANSPORT: "off"
+      MAX_TRANSPORT: ${MAX_TRANSPORT:-off}
+      # F1 §3.2: эмулятор MAX — MAX_TRANSPORT=record. Значения ниже — только для
+      # локального стенда: production-конфигурация их отвергает.
+      MAX_WEBHOOK_SECRET: ${MAX_WEBHOOK_SECRET:-local-emulator-secret}
+      MAX_BOT_TOKEN: ${MAX_BOT_TOKEN:-local-emulator-token}
+      MAX_BOT_USERNAME: ${MAX_BOT_USERNAME:-domsignal_local_bot}
+      MAX_RECORD_DIR: /app/output/max-record
       LLM_PROVIDER: rules
       # Пассивное чтение чата выключено, пока его не включат явно. Локальный
       # стенд показа закрывает окно после 20 секунд тишины, а не 120.
@@ -74,6 +80,8 @@ services:
         condition: service_completed_successfully
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
+    volumes:
+      - max-record:/app/output/max-record
     restart: unless-stopped
 
   worker:
@@ -86,6 +94,8 @@ services:
       BUILD_COMMIT: ${BUILD_COMMIT:-dev}
       # D5: параллельные циклы операционного пула в процессе.
       OPERATIONAL_WORKER_CONCURRENCY: ${OPERATIONAL_WORKER_CONCURRENCY:-1}
+    volumes:
+      - max-record:/app/output/max-record
     depends_on:
       db:
         condition: service_healthy
@@ -111,6 +121,8 @@ services:
       # Провайдер модели (M1): Cloud.ru; локально модель выключена (rules).
       LLM_BASE_URL: ${LLM_BASE_URL:-https://foundation-models.api.cloud.ru/v1}
       AI_WORKER_CONCURRENCY: ${AI_WORKER_CONCURRENCY:-1}
+    volumes:
+      - max-record:/app/output/max-record
     depends_on:
       db:
         condition: service_healthy
@@ -122,3 +134,5 @@ services:
 
 volumes:
   postgres-data:
+  # Двойник MAX API (MAX_TRANSPORT=record): состояние эмулятора и исходящие бота.
+  max-record:
