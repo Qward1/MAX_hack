@@ -4,8 +4,9 @@
 17.09.2026). Каждый пункт проверен, рядом — чем. Итог проверок — в
 [`FINAL_JURY_READINESS_REPORT.md`](FINAL_JURY_READINESS_REPORT.md).
 
-**Финальная версия:** тег `online-submission-final` · commit — `git rev-parse online-submission-final` =
+**Финальная версия:** тег `online-submission-final` · commit — `git rev-parse online-submission-final^{commit}` =
 `/version` production (строка «commit» на служебном слайде) · проверено 28.09.2026.
+`/version` возвращает этот же коммит; короткий вид — первые 7 символов.
 
 ## Обязательно для всех решений
 
@@ -41,7 +42,11 @@
 - [x] **Тестовые данные** — демо-УК «Пилотная, 7» и дом на production; [`docs/api/test_data.json`](docs/api/test_data.json).
 - [x] **DATA-API.yaml существует** — [`DATA-API.yaml`](DATA-API.yaml), девять элементов задания.
 - [x] **DATA-API.yaml валиден** — YAML разбирается; `scripts/data_api_check.py` на production —
-  24 из 24 (PASS) на коммите `ff5573c`, 28.09.2026 19:50 МСК.
+  24 из 24 на финальном коммите: «без входа: 12 из 12», «с входом по TOTP: 12 из 12», 28.09.2026.
+- [x] **Проверки с TOTP помечены** — 12 из 24 проверок `requires_totp: true` (`required: true` сохранён);
+  в начале `DATA-API.yaml` — `automation_notes`: если платформа оценки не поддерживает TOTP, они будут
+  показаны непройденными; запасные пути — раннер с `--accounts` (шаблон
+  [`docs/api/accounts.example.json`](docs/api/accounts.example.json)) и ручная проверка по `JURY_GUIDE.md`.
 
 ## Дополнительно
 

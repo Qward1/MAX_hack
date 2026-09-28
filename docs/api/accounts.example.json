@@ -1,0 +1,20 @@
+[
+  {
+    "login": "jury.operator",
+    "role": "operator",
+    "password": "<пароль со служебного слайда>",
+    "totp_secret": "<секрет TOTP со служебного слайда>"
+  },
+  {
+    "login": "jury.admin",
+    "role": "company_admin",
+    "password": "<пароль со служебного слайда>",
+    "totp_secret": "<секрет TOTP со служебного слайда>"
+  },
+  {
+    "login": "jury.platform",
+    "role": "platform_admin",
+    "password": "<пароль со служебного слайда>",
+    "totp_secret": "<секрет TOTP со служебного слайда>"
+  }
+]

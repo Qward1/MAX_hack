@@ -32,7 +32,7 @@
 | Сквозной с эмулятором MAX (`tests/acceptance`) | **15 из 15** |
 | Сценарии (`scenario_run.py`) | **38 из 38** шагов |
 | ML-модуль | 7 из 7 юнит-тестов; смоук-цепочка на синтетике — работает |
-| `DATA-API.yaml` на production | 24 из 24 (PASS) на коммите `ff5573c`, 28.09.2026 19:50 МСК; повтор после финальной выкладки — [`FINAL_JURY_READINESS_REPORT.md`](../FINAL_JURY_READINESS_REPORT.md) |
+| `DATA-API.yaml` на production | 24 из 24 на финальном коммите: «без входа: 12 из 12», «с входом по TOTP: 12 из 12» ([`FINAL_JURY_READINESS_REPORT.md`](../FINAL_JURY_READINESS_REPORT.md)) |
 | Чистый клон → `docker compose build --no-cache` → `up` | сборка 34 с, `/ready` через 20 с |
 | Перезапуск `api`, `worker`, `ai-worker`, `db`, весь стек | готов за 0–4 с, данные на месте; при остановленном `worker` приём работает, задачи ждут |
 | Повтор `POST /reports` с тем же `Idempotency-Key` | тот же инцидент; тот же ключ с другим телом — 409 `idempotency_conflict` |
