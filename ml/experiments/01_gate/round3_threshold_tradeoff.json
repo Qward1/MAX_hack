@@ -1,0 +1,82 @@
+{
+  "split": "reused_val",
+  "warning": "Thresholds selected on the same val; exploratory only.",
+  "policies": {
+    "old_gate": {
+      "0.7": {
+        "threshold": 0.3038,
+        "routed_to_review": 548,
+        "review_share": 0.1304,
+        "gate_precision": 0.7007,
+        "gate_recall": 0.8807,
+        "source_macro_f1": {
+          "real_whatsapp": 0.7927,
+          "real_telegram": 0.6222
+        },
+        "mean_macro_f1": 0.7074
+      },
+      "0.8": {
+        "threshold": 0.5462,
+        "routed_to_review": 432,
+        "review_share": 0.1028,
+        "gate_precision": 0.8009,
+        "gate_recall": 0.7936,
+        "source_macro_f1": {
+          "real_whatsapp": 0.763,
+          "real_telegram": 0.6307
+        },
+        "mean_macro_f1": 0.6968
+      },
+      "0.9": {
+        "threshold": 0.8115,
+        "routed_to_review": 334,
+        "review_share": 0.0795,
+        "gate_precision": 0.9012,
+        "gate_recall": 0.6904,
+        "source_macro_f1": {
+          "real_whatsapp": 0.7409,
+          "real_telegram": 0.5829
+        },
+        "mean_macro_f1": 0.6619
+      }
+    },
+    "new_gate": {
+      "0.7": {
+        "threshold": 0.3064,
+        "routed_to_review": 574,
+        "review_share": 0.1366,
+        "gate_precision": 0.7003,
+        "gate_recall": 0.922,
+        "source_macro_f1": {
+          "real_whatsapp": 0.7877,
+          "real_telegram": 0.6129
+        },
+        "mean_macro_f1": 0.7003
+      },
+      "0.8": {
+        "threshold": 0.5034,
+        "routed_to_review": 451,
+        "review_share": 0.1073,
+        "gate_precision": 0.8004,
+        "gate_recall": 0.828,
+        "source_macro_f1": {
+          "real_whatsapp": 0.778,
+          "real_telegram": 0.6669
+        },
+        "mean_macro_f1": 0.7225
+      },
+      "0.9": {
+        "threshold": 0.7189,
+        "routed_to_review": 354,
+        "review_share": 0.0842,
+        "gate_precision": 0.9011,
+        "gate_recall": 0.7317,
+        "source_macro_f1": {
+          "real_whatsapp": 0.7719,
+          "real_telegram": 0.6085
+        },
+        "mean_macro_f1": 0.6902
+      }
+    }
+  }
+}

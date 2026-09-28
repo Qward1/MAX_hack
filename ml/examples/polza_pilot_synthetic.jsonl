@@ -1,0 +1,4 @@
+{"id":"synthetic-link-a","task":"link","message":"у нас тоже нет горячей воды","case_summary":"в доме ранее сообщили об отсутствии горячей воды","gold":"same_case","privacy_reviewed":true}
+{"id":"synthetic-link-b","task":"link","message":"лифт остановился","case_summary":"в доме ранее сообщили об отсутствии горячей воды","gold":"new_case","privacy_reviewed":true}
+{"id":"synthetic-class-a","task":"classify","message":"в подъезде не работает лифт","allowed_classes":["elevator_out","no_hot_water","power_outage"],"gold":"elevator_out","privacy_reviewed":true}
+{"id":"synthetic-class-b","task":"classify","message":"всем добрый день","allowed_classes":["no_hot_water","power_outage"],"gold":"not_a_problem","privacy_reviewed":true}

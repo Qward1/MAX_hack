@@ -1,0 +1,522 @@
+{
+  "split": "val",
+  "encoder": "fine-tuned positive ruBERT-base frozen",
+  "device": "cuda",
+  "train_rows": 17668,
+  "total_seconds": 33.07,
+  "best_ap": {
+    "name": "hybrid_plus_rubert",
+    "C": 0.1,
+    "rubert_weight": 0.25,
+    "threshold": 0.533508,
+    "val_pooled_precision": 0.8004,
+    "val_pooled_recall": 0.8188,
+    "sources": {
+      "real_whatsapp": {
+        "gate_ap": 0.9223,
+        "gate_precision": 0.8525,
+        "gate_recall": 0.7879,
+        "end_f1_sparse_class": 0.6356,
+        "end_f1_blended_class": 0.7698
+      },
+      "real_telegram": {
+        "gate_ap": 0.8954,
+        "gate_precision": 0.7809,
+        "gate_recall": 0.8322,
+        "end_f1_sparse_class": 0.5603,
+        "end_f1_blended_class": 0.6346
+      }
+    },
+    "mean_ap": 0.9088,
+    "mean_f1_blended_class": 0.7022
+  },
+  "selected_f1_diagnostic": {
+    "name": "hybrid_plus_rubert",
+    "C": 10.0,
+    "rubert_weight": 0.25,
+    "threshold": 0.50343,
+    "val_pooled_precision": 0.8004,
+    "val_pooled_recall": 0.828,
+    "sources": {
+      "real_whatsapp": {
+        "gate_ap": 0.917,
+        "gate_precision": 0.8537,
+        "gate_recall": 0.7955,
+        "end_f1_sparse_class": 0.6427,
+        "end_f1_blended_class": 0.778
+      },
+      "real_telegram": {
+        "gate_ap": 0.8934,
+        "gate_precision": 0.7805,
+        "gate_recall": 0.8421,
+        "end_f1_sparse_class": 0.5899,
+        "end_f1_blended_class": 0.6669
+      }
+    },
+    "mean_ap": 0.9052,
+    "mean_f1_blended_class": 0.7225
+  },
+  "paired_family_bootstrap_selected_vs_baseline": {
+    "real_whatsapp": {
+      "families": 135,
+      "delta_f1_point": 0.015,
+      "delta_f1_group_bootstrap_p025_p975": [
+        -0.0227,
+        0.0481
+      ],
+      "bootstrap_probability_nonpositive": 0.258
+    },
+    "real_telegram": {
+      "families": 380,
+      "delta_f1_point": 0.0362,
+      "delta_f1_group_bootstrap_p025_p975": [
+        0.0019,
+        0.0657
+      ],
+      "bootstrap_probability_nonpositive": 0.014
+    }
+  },
+  "selection_warning": "All configurations and thresholds inspected on reused val; intervals are exploratory, not independent confirmation.",
+  "results": [
+    {
+      "name": "existing_hybrid_gate",
+      "threshold": 0.546176,
+      "val_pooled_precision": 0.8009,
+      "val_pooled_recall": 0.7936,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.9097,
+          "gate_precision": 0.8718,
+          "gate_recall": 0.7727,
+          "end_f1_sparse_class": 0.6254,
+          "end_f1_blended_class": 0.763
+        },
+        "real_telegram": {
+          "gate_ap": 0.8829,
+          "gate_precision": 0.7746,
+          "gate_recall": 0.8026,
+          "end_f1_sparse_class": 0.5502,
+          "end_f1_blended_class": 0.6307
+        }
+      },
+      "mean_ap": 0.8963,
+      "mean_f1_blended_class": 0.6968
+    },
+    {
+      "name": "frozen_rubert_lr",
+      "C": 0.01,
+      "fit_seconds": 1.51,
+      "threshold": 0.909365,
+      "val_pooled_precision": 0.8014,
+      "val_pooled_recall": 0.5092,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.7985,
+          "gate_precision": 0.8235,
+          "gate_recall": 0.5303,
+          "end_f1_sparse_class": 0.49,
+          "end_f1_blended_class": 0.5084
+        },
+        "real_telegram": {
+          "gate_ap": 0.7445,
+          "gate_precision": 0.7917,
+          "gate_recall": 0.5,
+          "end_f1_sparse_class": 0.3589,
+          "end_f1_blended_class": 0.3743
+        }
+      },
+      "mean_ap": 0.7715,
+      "mean_f1_blended_class": 0.4414
+    },
+    {
+      "name": "hybrid_plus_rubert",
+      "C": 0.01,
+      "rubert_weight": 0.25,
+      "threshold": 0.559368,
+      "val_pooled_precision": 0.8,
+      "val_pooled_recall": 0.7982,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.9215,
+          "gate_precision": 0.8729,
+          "gate_recall": 0.7803,
+          "end_f1_sparse_class": 0.638,
+          "end_f1_blended_class": 0.773
+        },
+        "real_telegram": {
+          "gate_ap": 0.8941,
+          "gate_precision": 0.7729,
+          "gate_recall": 0.8059,
+          "end_f1_sparse_class": 0.5476,
+          "end_f1_blended_class": 0.6248
+        }
+      },
+      "mean_ap": 0.9078,
+      "mean_f1_blended_class": 0.6989
+    },
+    {
+      "name": "hybrid_plus_rubert",
+      "C": 0.01,
+      "rubert_weight": 0.5,
+      "threshold": 0.592789,
+      "val_pooled_precision": 0.8004,
+      "val_pooled_recall": 0.828,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.9184,
+          "gate_precision": 0.8387,
+          "gate_recall": 0.7879,
+          "end_f1_sparse_class": 0.637,
+          "end_f1_blended_class": 0.7772
+        },
+        "real_telegram": {
+          "gate_ap": 0.8917,
+          "gate_precision": 0.7859,
+          "gate_recall": 0.8454,
+          "end_f1_sparse_class": 0.5641,
+          "end_f1_blended_class": 0.6399
+        }
+      },
+      "mean_ap": 0.9051,
+      "mean_f1_blended_class": 0.7086
+    },
+    {
+      "name": "hybrid_plus_rubert",
+      "C": 0.01,
+      "rubert_weight": 0.75,
+      "threshold": 0.71377,
+      "val_pooled_precision": 0.8009,
+      "val_pooled_recall": 0.7844,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.8906,
+          "gate_precision": 0.8559,
+          "gate_recall": 0.7652,
+          "end_f1_sparse_class": 0.6323,
+          "end_f1_blended_class": 0.7367
+        },
+        "real_telegram": {
+          "gate_ap": 0.8667,
+          "gate_precision": 0.7799,
+          "gate_recall": 0.7928,
+          "end_f1_sparse_class": 0.5312,
+          "end_f1_blended_class": 0.5901
+        }
+      },
+      "mean_ap": 0.8786,
+      "mean_f1_blended_class": 0.6634
+    },
+    {
+      "name": "frozen_rubert_lr",
+      "C": 0.1,
+      "fit_seconds": 2.88,
+      "threshold": 0.921475,
+      "val_pooled_precision": 0.8019,
+      "val_pooled_recall": 0.594,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.8226,
+          "gate_precision": 0.81,
+          "gate_recall": 0.6136,
+          "end_f1_sparse_class": 0.5162,
+          "end_f1_blended_class": 0.5862
+        },
+        "real_telegram": {
+          "gate_ap": 0.7615,
+          "gate_precision": 0.7982,
+          "gate_recall": 0.5855,
+          "end_f1_sparse_class": 0.3789,
+          "end_f1_blended_class": 0.397
+        }
+      },
+      "mean_ap": 0.792,
+      "mean_f1_blended_class": 0.4916
+    },
+    {
+      "name": "hybrid_plus_rubert",
+      "C": 0.1,
+      "rubert_weight": 0.25,
+      "threshold": 0.533508,
+      "val_pooled_precision": 0.8004,
+      "val_pooled_recall": 0.8188,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.9223,
+          "gate_precision": 0.8525,
+          "gate_recall": 0.7879,
+          "end_f1_sparse_class": 0.6356,
+          "end_f1_blended_class": 0.7698
+        },
+        "real_telegram": {
+          "gate_ap": 0.8954,
+          "gate_precision": 0.7809,
+          "gate_recall": 0.8322,
+          "end_f1_sparse_class": 0.5603,
+          "end_f1_blended_class": 0.6346
+        }
+      },
+      "mean_ap": 0.9088,
+      "mean_f1_blended_class": 0.7022
+    },
+    {
+      "name": "hybrid_plus_rubert",
+      "C": 0.1,
+      "rubert_weight": 0.5,
+      "threshold": 0.554404,
+      "val_pooled_precision": 0.8004,
+      "val_pooled_recall": 0.8555,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.9141,
+          "gate_precision": 0.8516,
+          "gate_recall": 0.8258,
+          "end_f1_sparse_class": 0.6446,
+          "end_f1_blended_class": 0.7956
+        },
+        "real_telegram": {
+          "gate_ap": 0.8956,
+          "gate_precision": 0.7811,
+          "gate_recall": 0.8684,
+          "end_f1_sparse_class": 0.5708,
+          "end_f1_blended_class": 0.6405
+        }
+      },
+      "mean_ap": 0.9048,
+      "mean_f1_blended_class": 0.718
+    },
+    {
+      "name": "hybrid_plus_rubert",
+      "C": 0.1,
+      "rubert_weight": 0.75,
+      "threshold": 0.717427,
+      "val_pooled_precision": 0.8005,
+      "val_pooled_recall": 0.7913,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.888,
+          "gate_precision": 0.8374,
+          "gate_recall": 0.7803,
+          "end_f1_sparse_class": 0.6377,
+          "end_f1_blended_class": 0.7441
+        },
+        "real_telegram": {
+          "gate_ap": 0.8733,
+          "gate_precision": 0.7857,
+          "gate_recall": 0.7961,
+          "end_f1_sparse_class": 0.5672,
+          "end_f1_blended_class": 0.6135
+        }
+      },
+      "mean_ap": 0.8806,
+      "mean_f1_blended_class": 0.6788
+    },
+    {
+      "name": "frozen_rubert_lr",
+      "C": 1.0,
+      "fit_seconds": 4.33,
+      "threshold": 0.947555,
+      "val_pooled_precision": 0.8,
+      "val_pooled_recall": 0.5872,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.8194,
+          "gate_precision": 0.8211,
+          "gate_recall": 0.5909,
+          "end_f1_sparse_class": 0.5772,
+          "end_f1_blended_class": 0.6516
+        },
+        "real_telegram": {
+          "gate_ap": 0.7534,
+          "gate_precision": 0.7911,
+          "gate_recall": 0.5855,
+          "end_f1_sparse_class": 0.3884,
+          "end_f1_blended_class": 0.4093
+        }
+      },
+      "mean_ap": 0.7864,
+      "mean_f1_blended_class": 0.5304
+    },
+    {
+      "name": "hybrid_plus_rubert",
+      "C": 1.0,
+      "rubert_weight": 0.25,
+      "threshold": 0.514368,
+      "val_pooled_precision": 0.8009,
+      "val_pooled_recall": 0.8211,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.9185,
+          "gate_precision": 0.8667,
+          "gate_recall": 0.7879,
+          "end_f1_sparse_class": 0.6442,
+          "end_f1_blended_class": 0.7833
+        },
+        "real_telegram": {
+          "gate_ap": 0.8948,
+          "gate_precision": 0.7768,
+          "gate_recall": 0.8355,
+          "end_f1_sparse_class": 0.5608,
+          "end_f1_blended_class": 0.6359
+        }
+      },
+      "mean_ap": 0.9066,
+      "mean_f1_blended_class": 0.7096
+    },
+    {
+      "name": "hybrid_plus_rubert",
+      "C": 1.0,
+      "rubert_weight": 0.5,
+      "threshold": 0.57103,
+      "val_pooled_precision": 0.8005,
+      "val_pooled_recall": 0.8096,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.9056,
+          "gate_precision": 0.8346,
+          "gate_recall": 0.803,
+          "end_f1_sparse_class": 0.6348,
+          "end_f1_blended_class": 0.7317
+        },
+        "real_telegram": {
+          "gate_ap": 0.8909,
+          "gate_precision": 0.7866,
+          "gate_recall": 0.8125,
+          "end_f1_sparse_class": 0.5689,
+          "end_f1_blended_class": 0.6155
+        }
+      },
+      "mean_ap": 0.8982,
+      "mean_f1_blended_class": 0.6736
+    },
+    {
+      "name": "hybrid_plus_rubert",
+      "C": 1.0,
+      "rubert_weight": 0.75,
+      "threshold": 0.737034,
+      "val_pooled_precision": 0.801,
+      "val_pooled_recall": 0.7661,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.8794,
+          "gate_precision": 0.8115,
+          "gate_recall": 0.75,
+          "end_f1_sparse_class": 0.6422,
+          "end_f1_blended_class": 0.7221
+        },
+        "real_telegram": {
+          "gate_ap": 0.8664,
+          "gate_precision": 0.7966,
+          "gate_recall": 0.773,
+          "end_f1_sparse_class": 0.5419,
+          "end_f1_blended_class": 0.5997
+        }
+      },
+      "mean_ap": 0.8729,
+      "mean_f1_blended_class": 0.6609
+    },
+    {
+      "name": "frozen_rubert_lr",
+      "C": 10.0,
+      "fit_seconds": 5.05,
+      "threshold": 0.979855,
+      "val_pooled_precision": 0.8,
+      "val_pooled_recall": 0.5138,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.7981,
+          "gate_precision": 0.8193,
+          "gate_recall": 0.5152,
+          "end_f1_sparse_class": 0.5396,
+          "end_f1_blended_class": 0.604
+        },
+        "real_telegram": {
+          "gate_ap": 0.7337,
+          "gate_precision": 0.7919,
+          "gate_recall": 0.5132,
+          "end_f1_sparse_class": 0.375,
+          "end_f1_blended_class": 0.3753
+        }
+      },
+      "mean_ap": 0.7659,
+      "mean_f1_blended_class": 0.4897
+    },
+    {
+      "name": "hybrid_plus_rubert",
+      "C": 10.0,
+      "rubert_weight": 0.25,
+      "threshold": 0.50343,
+      "val_pooled_precision": 0.8004,
+      "val_pooled_recall": 0.828,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.917,
+          "gate_precision": 0.8537,
+          "gate_recall": 0.7955,
+          "end_f1_sparse_class": 0.6427,
+          "end_f1_blended_class": 0.778
+        },
+        "real_telegram": {
+          "gate_ap": 0.8934,
+          "gate_precision": 0.7805,
+          "gate_recall": 0.8421,
+          "end_f1_sparse_class": 0.5899,
+          "end_f1_blended_class": 0.6669
+        }
+      },
+      "mean_ap": 0.9052,
+      "mean_f1_blended_class": 0.7225
+    },
+    {
+      "name": "hybrid_plus_rubert",
+      "C": 10.0,
+      "rubert_weight": 0.5,
+      "threshold": 0.560071,
+      "val_pooled_precision": 0.8009,
+      "val_pooled_recall": 0.7936,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.8994,
+          "gate_precision": 0.8226,
+          "gate_recall": 0.7727,
+          "end_f1_sparse_class": 0.6223,
+          "end_f1_blended_class": 0.7241
+        },
+        "real_telegram": {
+          "gate_ap": 0.8833,
+          "gate_precision": 0.7922,
+          "gate_recall": 0.8026,
+          "end_f1_sparse_class": 0.5769,
+          "end_f1_blended_class": 0.6201
+        }
+      },
+      "mean_ap": 0.8913,
+      "mean_f1_blended_class": 0.6721
+    },
+    {
+      "name": "hybrid_plus_rubert",
+      "C": 10.0,
+      "rubert_weight": 0.75,
+      "threshold": 0.752705,
+      "val_pooled_precision": 0.8,
+      "val_pooled_recall": 0.7339,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.8731,
+          "gate_precision": 0.8174,
+          "gate_recall": 0.7121,
+          "end_f1_sparse_class": 0.627,
+          "end_f1_blended_class": 0.7131
+        },
+        "real_telegram": {
+          "gate_ap": 0.8564,
+          "gate_precision": 0.793,
+          "gate_recall": 0.7434,
+          "end_f1_sparse_class": 0.5407,
+          "end_f1_blended_class": 0.5856
+        }
+      },
+      "mean_ap": 0.8648,
+      "mean_f1_blended_class": 0.6493
+    }
+  ]
+}

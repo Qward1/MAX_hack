@@ -1,0 +1,42 @@
+{
+  "name": "tiny_debug",
+  "mode": "multi",
+  "model": "ml\\artifacts\\models\\rubert-tiny2",
+  "seed": 42,
+  "epochs": 1,
+  "batch_size": 8,
+  "max_length": 96,
+  "lr": 3e-05,
+  "class_weights": "moderate",
+  "train_rows": 64,
+  "real_train": 16933,
+  "synthetic_train": 2008,
+  "device": "cuda",
+  "gpu_peak_mb": 573.1,
+  "rss_mb": 878.2,
+  "total_seconds": 11.7,
+  "best_val_mean_macro_f1": -1.0,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 2.1267,
+      "seconds_so_far": 11.7,
+      "sources": {
+        "real_whatsapp": {
+          "macro_f1": 0.0127,
+          "gate_ap_flat": 0.1239,
+          "gate_ap_head": 0.335,
+          "class_f1_true_positives": 0.0042
+        },
+        "real_telegram": {
+          "macro_f1": 0.0154,
+          "gate_ap_flat": 0.0909,
+          "gate_ap_head": 0.2135,
+          "class_f1_true_positives": 0.018
+        }
+      },
+      "mean_macro_f1": 0.014
+    }
+  ],
+  "checkpoint_bytes": null
+}

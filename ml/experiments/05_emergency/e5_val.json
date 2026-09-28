@@ -1,0 +1,14 @@
+{
+  "model": "intfloat/multilingual-e5-base",
+  "split": "val",
+  "train_n": 761,
+  "val_n": 196,
+  "ap": 0.7903,
+  "fpr_05_operating": {
+    "threshold": 0.6522750204304018,
+    "val_recall": 0.4383561643835616,
+    "val_fpr": 0.04878048780487805
+  },
+  "seconds": 5.39,
+  "gpu_peak_allocated_mb": 1142.0
+}

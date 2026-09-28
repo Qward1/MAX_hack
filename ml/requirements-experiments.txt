@@ -1,0 +1,3 @@
+-r requirements-embeddings.txt
+catboost>=1.2,<2
+lightgbm>=4.3,<5

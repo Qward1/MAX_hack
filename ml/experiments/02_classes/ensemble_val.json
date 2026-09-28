@@ -1,0 +1,141 @@
+{
+  "split": "val",
+  "selection": "mean source macro-F1",
+  "results": [
+    {
+      "gate_scale": 0.5,
+      "sparse_weight": 0.0,
+      "end_macro_f1": {
+        "real_whatsapp": 0.7098,
+        "real_telegram": 0.5947
+      },
+      "mean": 0.6522
+    },
+    {
+      "gate_scale": 0.5,
+      "sparse_weight": 0.1,
+      "end_macro_f1": {
+        "real_whatsapp": 0.7098,
+        "real_telegram": 0.5982
+      },
+      "mean": 0.654
+    },
+    {
+      "gate_scale": 0.5,
+      "sparse_weight": 0.2,
+      "end_macro_f1": {
+        "real_whatsapp": 0.7058,
+        "real_telegram": 0.6221
+      },
+      "mean": 0.664
+    },
+    {
+      "gate_scale": 0.5,
+      "sparse_weight": 0.3,
+      "end_macro_f1": {
+        "real_whatsapp": 0.7109,
+        "real_telegram": 0.6444
+      },
+      "mean": 0.6776
+    },
+    {
+      "gate_scale": 0.5,
+      "sparse_weight": 0.5,
+      "end_macro_f1": {
+        "real_whatsapp": 0.755,
+        "real_telegram": 0.6329
+      },
+      "mean": 0.694
+    },
+    {
+      "gate_scale": 0.5,
+      "sparse_weight": 0.7,
+      "end_macro_f1": {
+        "real_whatsapp": 0.7011,
+        "real_telegram": 0.622
+      },
+      "mean": 0.6615
+    },
+    {
+      "gate_scale": 0.5,
+      "sparse_weight": 1.0,
+      "end_macro_f1": {
+        "real_whatsapp": 0.626,
+        "real_telegram": 0.5518
+      },
+      "mean": 0.5889
+    },
+    {
+      "gate_scale": 1.0,
+      "sparse_weight": 0.0,
+      "end_macro_f1": {
+        "real_whatsapp": 0.7205,
+        "real_telegram": 0.5898
+      },
+      "mean": 0.6552
+    },
+    {
+      "gate_scale": 1.0,
+      "sparse_weight": 0.1,
+      "end_macro_f1": {
+        "real_whatsapp": 0.7205,
+        "real_telegram": 0.5932
+      },
+      "mean": 0.6568
+    },
+    {
+      "gate_scale": 1.0,
+      "sparse_weight": 0.2,
+      "end_macro_f1": {
+        "real_whatsapp": 0.7165,
+        "real_telegram": 0.6181
+      },
+      "mean": 0.6673
+    },
+    {
+      "gate_scale": 1.0,
+      "sparse_weight": 0.3,
+      "end_macro_f1": {
+        "real_whatsapp": 0.7217,
+        "real_telegram": 0.6405
+      },
+      "mean": 0.6811
+    },
+    {
+      "gate_scale": 1.0,
+      "sparse_weight": 0.5,
+      "end_macro_f1": {
+        "real_whatsapp": 0.763,
+        "real_telegram": 0.6307
+      },
+      "mean": 0.6968
+    },
+    {
+      "gate_scale": 1.0,
+      "sparse_weight": 0.7,
+      "end_macro_f1": {
+        "real_whatsapp": 0.7088,
+        "real_telegram": 0.6223
+      },
+      "mean": 0.6655
+    },
+    {
+      "gate_scale": 1.0,
+      "sparse_weight": 1.0,
+      "end_macro_f1": {
+        "real_whatsapp": 0.6254,
+        "real_telegram": 0.5502
+      },
+      "mean": 0.5878
+    }
+  ],
+  "best": {
+    "gate_scale": 1.0,
+    "sparse_weight": 0.5,
+    "end_macro_f1": {
+      "real_whatsapp": 0.763,
+      "real_telegram": 0.6307
+    },
+    "mean": 0.6968
+  }
+}

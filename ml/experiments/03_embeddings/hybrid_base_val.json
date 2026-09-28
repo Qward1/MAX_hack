@@ -1,0 +1,60 @@
+{
+  "split": "val",
+  "class_checkpoint_epoch": 3,
+  "results": [
+    {
+      "name": "sparse",
+      "threshold": 0.533688210083243,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.8928,
+          "gate_precision": 0.8443,
+          "gate_recall": 0.7803,
+          "end_macro_f1": 0.6736
+        },
+        "real_telegram": {
+          "gate_ap": 0.8615,
+          "gate_precision": 0.7833,
+          "gate_recall": 0.773,
+          "end_macro_f1": 0.5451
+        }
+      }
+    },
+    {
+      "name": "hybrid_0.5",
+      "threshold": 0.5115159623158407,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.9072,
+          "gate_precision": 0.8512,
+          "gate_recall": 0.7803,
+          "end_macro_f1": 0.7098
+        },
+        "real_telegram": {
+          "gate_ap": 0.8816,
+          "gate_precision": 0.7814,
+          "gate_recall": 0.7993,
+          "end_macro_f1": 0.5947
+        }
+      }
+    },
+    {
+      "name": "hybrid_1.0",
+      "threshold": 0.5461758434221454,
+      "sources": {
+        "real_whatsapp": {
+          "gate_ap": 0.9097,
+          "gate_precision": 0.8718,
+          "gate_recall": 0.7727,
+          "end_macro_f1": 0.7205
+        },
+        "real_telegram": {
+          "gate_ap": 0.8829,
+          "gate_precision": 0.7746,
+          "gate_recall": 0.8026,
+          "end_macro_f1": 0.5898
+        }
+      }
+    }
+  ]
+}

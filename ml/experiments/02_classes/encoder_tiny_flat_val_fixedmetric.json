@@ -1,0 +1,21 @@
+{
+  "checkpoint": "ml\\artifacts\\encoder_tiny_flat.pt",
+  "epoch": 3,
+  "split": "val",
+  "frozen_gate": false,
+  "sources": {
+    "real_whatsapp": {
+      "macro_f1": 0.5388,
+      "gate_ap_flat": 0.848,
+      "gate_ap_head": 0.4082,
+      "class_f1_true_positives": 0.5702
+    },
+    "real_telegram": {
+      "macro_f1": 0.4474,
+      "gate_ap_flat": 0.7897,
+      "gate_ap_head": 0.2766,
+      "class_f1_true_positives": 0.5225
+    }
+  },
+  "mean_macro_f1": 0.4931
+}
