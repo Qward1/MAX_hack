@@ -1,0 +1,6 @@
+# Ложные срабатывания gitleaks в истории: заглушки и тестовые значения, не секреты.
+bd8d89540cbb22beb75016e89f01d24cfb95bb66:tests/integration/test_f1_incident_closure.py:generic-api-key:80
+02bb61c593fbaf4e0180d264fddab0b6c24355fb:docs/status/dev-b.md:generic-api-key:66
+ede9b05331248131929b894b920e2722bbdf3019:deploy/.env.example:generic-api-key:4
+ede9b05331248131929b894b920e2722bbdf3019:deploy/.env.example:generic-api-key:7
+ede9b05331248131929b894b920e2722bbdf3019:tests/unit/test_settings.py:generic-api-key:58

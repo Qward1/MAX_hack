@@ -111,5 +111,5 @@ curl -s -X POST $H/api/v1/auth/max -H 'Content-Type: application/json' -d '{"ini
 
 Вход сотрудника и чтение очереди с ролью — готовая реализация в
 [`scripts/data_api_check.py`](../scripts/data_api_check.py) (`login()`): сессия,
-пароль, код TOTP, cookie и CSRF. Все проверки `DATA-API.yaml` для трёх ролей прошли
-на production 28.09.2026 (журнал — [`FINAL_JURY_READINESS_REPORT.md`](../FINAL_JURY_READINESS_REPORT.md)).
+пароль, код TOTP, cookie и CSRF. Раннер выполняет все 24 проверки `DATA-API.yaml`,
+12 из них — со входом по TOTP.

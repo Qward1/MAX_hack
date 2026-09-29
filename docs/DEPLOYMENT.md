@@ -1,8 +1,8 @@
 # Развёртывание ДомСигнала
 
 Три режима: **локальная проверка** одной командой Docker, **разработка** без Docker и
-**production** (VPS за Caddy с TLS). Подробный журнал сервера —
-[`deploy/README.md`](../deploy/README.md), выпуск и восстановление витрины —
+**production** (VPS за Caddy с TLS). Пошаговый runbook сервера —
+[`deploy/README.md`](../deploy/README.md), выпуск, проверка версии и витрина жюри —
 [`RELEASE.md`](RELEASE.md), эксплуатация — [`OPERATIONS.md`](OPERATIONS.md).
 
 ## Что нужно
@@ -25,9 +25,9 @@ docker compose up --build
 (healthcheck `/health`), `worker` (операционный пул), `ai-worker` (пул модели).
 Готовность: `curl http://localhost:8000/ready` → `{"status":"ready"}`.
 
-**Замер 28.09.2026** (чистый клон ветки финальной версии, Windows 11, Docker Desktop
-28.3, базовые образы уже скачаны): `docker compose build --no-cache` — **34 с**
-(лимит задания — 5 минут); от `up -d` до `ready` — **20 с**.
+**Замер 28.09.2026** (чистый клон, Windows 11, Docker Desktop 28.3, базовые образы
+уже скачаны): `docker compose build --no-cache` — **34 с** (лимит задания —
+5 минут); от `up -d` до `ready` — **20 с**.
 
 Переменные для локального запуска задавать не нужно — `compose.yaml` подставляет
 безопасные локальные значения. Полный список — [`.env.example`](../.env.example),
@@ -82,11 +82,12 @@ curl https://<домен>/version               # commit = BUILD_COMMIT
 curl -X POST https://<домен>/max/webhook   # 401 без секрета
 ```
 
-Безопасная выкладка — [`deploy/README.md`](../deploy/README.md) §6: копия базы до
-выкладки (`scripts/backup_postgres.py`), образ прежней версии под тегом
-`domsignal-backend:pre-<sha>` для отката, миграция сначала на копии базы, затем
-проверка выпуска `uv run python scripts/release_check.py --fetch`. Подписка вебхука
-MAX — §5. Ежедневная копия базы — `domsignal-backup.timer` в 03:00 МСК, 14 копий.
+Безопасная выкладка — [`deploy/README.md`](../deploy/README.md), §6 «Safe redeploy»:
+копия базы до выкладки (`scripts/backup_postgres.py`), образ прежней версии под
+тегом `domsignal-backend:pre-<sha>` для отката, миграция сначала на копии базы,
+затем проверка выпуска `uv run python scripts/release_check.py --fetch`
+([`RELEASE.md`](RELEASE.md)). Подписка вебхука MAX — §5. Ежедневная копия базы —
+`domsignal-backup.timer` в 03:00 МСК, 14 копий (§7).
 
 ## Проверки здоровья и журналы
 
@@ -111,4 +112,4 @@ MAX — §5. Ежедневная копия базы — `domsignal-backup.time
 | Бот не отвечает в MAX (production) | `/ready`; вебхук без секрета должен давать 401; подписка — `deploy/README.md` §5; журнал `api` (события вебхука) |
 | Сигналы из чата не появляются | чтение чата выключено («MAX-чаты» → «Включить чтение чата») или ещё не прошла пауза окна (production — 30 секунд тишины, затем до минуты на разбор) |
 | Модель не отвечает, кончился баланс | ничего не делать: окна разбирают правила, опасность — всегда правила; обзор платформы показывает долю окон у правил |
-| Сломана витрина жюри | `docs/RELEASE.md`, «Восстановление витрины» — каждый инвариант штатной командой |
+| Сломана витрина жюри | [`RELEASE.md`](RELEASE.md), «Витрина жюри» — каждый инвариант штатной командой |
