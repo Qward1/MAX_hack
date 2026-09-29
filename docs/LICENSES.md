@@ -1,6 +1,7 @@
 # Лицензии зависимостей
 
-Срез D5, 27.09.2026; дополнено в F1 (29.09.2026): `pymorphy3` для проверки текстов интерфейса и модель. Списки собраны из установленных пакетов: Python — метаданные
+Списки собраны 27.09.2026 и дополнены 29.09.2026 (`pymorphy3` для проверки текстов
+интерфейса, раздел о модели) из установленных пакетов: Python — метаданные
 окружения `uv sync --frozen --group dev` (`importlib.metadata`, отметка runtime —
 по `uv export --no-dev`), npm — `npx license-checker-rseidelsohn@4.4.2` по
 `miniapp/node_modules` после `npm ci` (отметка «прод» — `--production`).
@@ -8,7 +9,7 @@
 
 ## Итог
 
-- Python: 58 пакетов (42 runtime, 16 dev; F1 добавил dev-пакеты `pymorphy3`, `pymorphy3-dicts-ru`, `dawg2-python` — MIT).
+- Python: 58 пакетов (42 runtime, 16 dev; среди dev — `pymorphy3`, `pymorphy3-dicts-ru`, `dawg2-python` для проверки текстов, MIT).
 - npm: 131 пакет, из них в сборку мини-приложения попадают 8 (все MIT). Список снят на Windows: платформенные сборки (`lightningcss-win32-x64-msvc`, `@rollup/rollup-win32-*`) в Linux-образе заменяются своими `linux-x64` вариантами с той же лицензией.
 - Несвободных лицензий нет. Слабый копилефт — MPL-2.0 (Python: certifi, pathspec; npm: axe-core, lightningcss, lightningcss-win32-x64-msvc) — используются без изменений, условие MPL о раскрытии изменённых файлов не затрагивается.
 
@@ -84,6 +85,7 @@ DeepSeek-V4-Flash (MIT), в production не включена.
 | typing_extensions | 4.16.0 | PSF-2.0 | runtime |
 | tzdata | 2026.4 | Apache-2.0 | runtime |
 | uvicorn | 0.53.0 | BSD-3-Clause | runtime |
+| uvloop | 0.22.1 | MIT OR Apache-2.0 | runtime (только Linux-образ) |
 | watchfiles | 1.2.0 | MIT License | runtime |
 | websockets | 17.1 | BSD-3-Clause | runtime |
 

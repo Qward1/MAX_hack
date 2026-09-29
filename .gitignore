@@ -42,17 +42,11 @@ logs/
 data/
 uploads/
 
-# Local agent scratch and worktrees
-.agent-scratch/
-.codex/
+# Local worktrees and tool caches
 .playwright-cli/
-# Результаты прогонов (приёмка, снимки) и рабочие материалы вне репозитория.
+# Результаты прогонов (приёмка, снимки) вне репозитория.
 output/
-Claude outputs/
 miniapp/test-results/
 miniapp/playwright-report/
 .worktrees/
 worktrees/
-
-# Снимки и журналы Playwright MCP (локальные прогоны агента)
-.playwright-mcp/

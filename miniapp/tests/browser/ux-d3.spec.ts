@@ -6,7 +6,7 @@ import { createRequire } from "node:module";
 // UX-D3: независимый проход по поверхностям продукта на 390×844 и 1280×800.
 // На каждом экране: загрузка завершилась результатом, есть путь назад или
 // меню, axe WCAG 2 AA без нарушений, горизонтальной прокрутки нет. Снимки —
-// в test-results/ux-d3 для разбора человеком (таблица в scenarios/acceptance.md).
+// в test-results/ux-d3 для разбора человеком.
 const require = createRequire(import.meta.url);
 const SHOTS = "test-results/ux-d3";
 

@@ -1,6 +1,6 @@
-# Журнал приёмочного прогона — 29.09.2026 (срез F1)
+# Журнал приёмочного прогона — 29.09.2026
 
-**Коммит:** `d2e8be7` — код выкладки B (после него в `main` только документы). **Прогон:** `scripts/acceptance_run.py --target local`, 2026-09-28T09-20-58; сырые результаты — `output/acceptance/2026-09-28T09-20-58-local/report.json` (вне git). Матрица — [`ACCEPTANCE_MATRIX.md`](ACCEPTANCE_MATRIX.md).
+**Коммит:** `d2e8be7`. **Прогон:** `scripts/acceptance_run.py --target local`, 2026-09-28T09-20-58; сырые результаты — `output/acceptance/2026-09-28T09-20-58-local/report.json` (вне git). Матрица — [`ACCEPTANCE_MATRIX.md`](ACCEPTANCE_MATRIX.md).
 
 **Окружение `local`:** стенд `docker compose up --build` в режиме эмулятора MAX (`MAX_TRANSPORT=record`) для `tests/acceptance`; PostgreSQL 16 для `tests/integration`; стенд Playwright с фикстурами для `miniapp/tests`. Модель — правила (ключ модели стенду не нужен); модель проверена отдельно — `evaluation/reports/2026-09-29-llm-probes.md`.
 
@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | Кейсы (TC + ПР = 160) | 145 | 0 | 14 | 1 |
 
-**HUMAN** — автоматическая часть кейса прошла, остаются живые шаги в клиенте MAX (`Claude outputs/OWNER_MANUAL_MIN.md`). **N/A** — кейс без проверки в этом прогоне (TC-004 «запуск одной командой» проверен отдельно — раздел «README с чистого клона»).
+**HUMAN** — автоматическая часть кейса прошла, остаются живые шаги в клиенте MAX (способ human-MAX в [матрице приёмки](ACCEPTANCE_MATRIX.md)). **N/A** — кейс без проверки в этом прогоне (TC-004 «запуск одной командой» проверен отдельно — раздел «README с чистого клона»).
 
 ## Первый полный прогон (`c3f85d2`, 28.09 07:28) — FAIL и их причины
 
